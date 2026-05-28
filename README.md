@@ -173,4 +173,4 @@ conexia-app/
 
 ---
 
-CONÉXIA · "Networking, além do cafezinho" · Rafael Milléo
+CONÉXIA · "Networking, além do cafezinho" · Rafael Milléo...
