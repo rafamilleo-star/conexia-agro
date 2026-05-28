@@ -1,4 +1,4 @@
-export const ADMIN_EMAIL = "rafaelmilleo@yahoo.com.br
+export const ADMIN_EMAIL = "rafaelmilleo@yahoo.com.br"
 export const ENABLE_ADMIN_TOOL = false
 
 export const is Admin = (email) =>
