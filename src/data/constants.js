@@ -91,11 +91,11 @@ export const UFS = [
 ];
 
 export const CATS = [
-  { value: "mentor",    label: "Mentor",    color: "#C9A84C" },
-  { value: "aliado",    label: "Aliado",    color: "#5B9BD5" },
-  { value: "ponte",     label: "Ponte",     color: "#70AD47" },
-  { value: "potencial", label: "Potencial", color: "#ED7D31" },
-  { value: "dormindo",  label: "Dormindo",  color: "#95A5A6" },
+  { value: "mentor",    label: "Mentor",    color: "#C9A84C", icon: "🧭" },
+  { value: "aliado",    label: "Aliado",    color: "#5B9BD5", icon: "🤝" },
+  { value: "ponte",     label: "Ponte",     color: "#70AD47", icon: "🔗" },
+  { value: "potencial", label: "Potencial", color: "#ED7D31", icon: "🌱" },
+  { value: "dormindo",  label: "Dormindo",  color: "#95A5A6", icon: "💤" },
 ];
 
 export const ITYPES = [
@@ -110,8 +110,8 @@ export const ITYPES = [
 ];
 
 export const SENTS = [
-  { value: "muito_positivo", label: "Muito positivo", color: "#27AE60" },
-  { value: "positivo",       label: "Positivo",       color: "#2ECC71" },
-  { value: "neutro",         label: "Neutro",         color: "#95A5A6" },
-  { value: "negativo",       label: "Negativo",       color: "#E74C3C" },
+  { value: "muito_positivo", label: "Muito positivo", color: "#27AE60", icon: "😊" },
+  { value: "positivo",       label: "Positivo",       color: "#2ECC71", icon: "🙂" },
+  { value: "neutro",         label: "Neutro",         color: "#95A5A6", icon: "😐" },
+  { value: "negativo",       label: "Negativo",       color: "#E74C3C", icon: "😕" },
 ];
