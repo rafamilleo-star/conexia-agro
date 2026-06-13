@@ -31,7 +31,11 @@ function calcScores(answers) {
   const scores = {};
   DIMS.forEach((dim, di) => {
     const qs = QS.filter(q => q.dim === di);
-    const vals = qs.map(q => { const raw = Number(answers[q.id] || 3); return q.rev ? (6 - raw) : raw; });
+    const vals = qs.map(q => {
+      const letra = answers[q.id];
+      const raw = letra && q.scores ? (q.scores[letra] || 3) : 3;
+      return q.rev ? (6 - raw) : raw;
+    });
     scores[dim.key] = Math.round((vals.reduce((a, b) => a + b, 0) / (vals.length * 5)) * 100);
   });
   const overall = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length);
@@ -262,10 +266,12 @@ function Assess({ profile, onDone }) {
         </div>
         <div style={{ height: 4, borderRadius: 2, background: C.w06, marginBottom: 32 }}><div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${((qi + 1) / QS.length) * 100}%`, transition: "width .3s" }} /></div>
         <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: C.txt, lineHeight: 1.35, margin: "0 0 28px", minHeight: 80 }}>{q.text}</p>
-        {[{ v: 1, l: "Discordo totalmente" }, { v: 2, l: "Discordo parcialmente" }, { v: 3, l: "Neutro" }, { v: 4, l: "Concordo parcialmente" }, { v: 5, l: "Concordo totalmente" }].map(o => (
+        {(q.opcoes || []).map(o => (
           <button key={o.v} onClick={() => setAns(p => ({ ...p, [q.id]: o.v }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: cur === o.v ? C.gD : C.sf, border: `1.5px solid ${cur === o.v ? C.gold : C.brd}`, borderRadius: 10, padding: "14px 18px", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
-            <div style={{ width: 22, height: 22, borderRadius: 11, border: `2px solid ${cur === o.v ? C.gold : C.brd}`, display: "flex", alignItems: "center", justifyContent: "center", background: cur === o.v ? C.gold : "transparent" }}>{cur === o.v && <div style={{ width: 8, height: 8, borderRadius: 4, background: C.bg }} />}</div>
-            <span style={{ fontFamily: "'DM Sans'", fontSize: 14, color: cur === o.v ? C.gold : C.txM, fontWeight: cur === o.v ? 600 : 400 }}>{o.l}</span>
+            <div style={{ width: 28, height: 28, borderRadius: 6, border: `2px solid ${cur === o.v ? C.gold : C.brd}`, display: "flex", alignItems: "center", justifyContent: "center", background: cur === o.v ? C.gold : "transparent", flexShrink: 0 }}>
+              <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 700, color: cur === o.v ? C.bg : C.txL }}>{o.v}</span>
+            </div>
+            <span style={{ fontFamily: "'DM Sans'", fontSize: 14, color: cur === o.v ? C.gold : C.txM, fontWeight: cur === o.v ? 600 : 400, lineHeight: 1.4 }}>{o.l}</span>
           </button>
         ))}
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
