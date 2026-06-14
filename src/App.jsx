@@ -4,53 +4,15 @@ import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
 
 /* ─── Profiles ────────────────────────────────────────── */
-// 5 perfis oficiais — fonte: CONEXIADocumentoCompleto.docx (Maio 2026)
 const PROFILES = {
-  conector: {
-    name: "O Conector", emoji: "◉", top: "top 12%",
-    tagline: "Arquiteto de pontes genuínas.",
-    desc: "O Conector é o perfil mais raro e mais valioso. Combina escuta profunda com disposição genuína de gerar valor — sem agenda, sem calculismo. As pessoas ao redor sentem que foram realmente ouvidas e que o contato gera algo real. A rede cresce por indicação espontânea, não por esforço ativo.",
-    dims: ["Reciprocidade ≥ 7", "Empatia ≥ 7"],
-    strengths: ["Cria vínculos de alta qualidade com naturalidade", "Quando está presente, o ambiente muda", "Indicações espontâneas e defensores ativos"],
-    risks: ["Profundidade sem escala — o círculo interno é extraordinário, mas pequeno", "Por não se promover, permanece desconhecido fora do círculo atual"],
-    actions: ["Ampliar o alcance sem perder a profundidade", "Usar os aliados existentes como pontes para novas conexões", "Construir visibilidade estratégica para que o mercado descubra quem já está dentro do círculo"]
-  },
-  estrategista: {
-    name: "O Estrategista", emoji: "◈", top: "top 18%",
-    tagline: "Arquiteto da rede de longo prazo.",
-    desc: "O Estrategista sabe exatamente onde quer chegar e constrói a rede com esse propósito. Não networka por acidente — cada relação tem um porquê. Combina visão clara com a disciplina de manter contato regular, o que cria uma rede que realmente funciona ao longo do tempo.",
-    dims: ["Estratégia ≥ 8", "Consistência ≥ 6"],
-    strengths: ["A rede é um ativo deliberado, não um acidente", "Sabe quais relações investir, como e quando", "A Consistência garante que as relações não adormecem entre os momentos"],
-    risks: ["Eficiência sem warmth — as pessoas sentem que as relações têm agenda", "Empatia frequentemente mais baixa cria conversas competentes mas que raramente transformam"],
-    actions: ["Desenvolver a escuta como complemento à visão estratégica", "Tenha 1 conversa sem agenda nas próximas 2 semanas", "Quando a profundidade emocional se encontra com a clareza estratégica, a rede vai além do transacional"]
-  },
-  empatico: {
-    name: "O Empático", emoji: "◉", top: "top 15%",
-    tagline: "O profissional que faz você pensar diferente.",
-    desc: "O Empático cria conversas que transformam. As pessoas saem do contato sentindo que foram genuinamente ouvidas e que algo mudou na forma como pensam. A combinação de escuta profunda com autenticidade cria vínculos duradouros baseados em confiança real.",
-    dims: ["Empatia ≥ 8", "Autenticidade ≥ 7"],
-    strengths: ["Lealdade extraordinária dos aliados", "Quem está próximo não troca esse profissional por ninguém", "Indicações espontâneas e defensores ativos"],
-    risks: ["Frequentemente invisível para quem ainda não conhece", "Sem Presença ou Estratégia altas, as oportunidades não chegam a quem merece"],
-    actions: ["Construir visibilidade que permita que mais pessoas acessem o que os aliados próximos já sabem", "A qualidade já existe — o trabalho é de alcance", "Participe de 1 evento estratégico do setor por mês"]
-  },
-  influenciador: {
-    name: "O Influenciador", emoji: "◎", top: "top 20%",
-    tagline: "Estratégia que precisa de método.",
-    desc: "O Influenciador aparece com impacto. Quando está em um ambiente, é notado. Tem clareza estratégica sobre onde quer chegar e sabe como se posicionar. O problema não é o que acontece quando está presente — é o que acontece quando some. A Consistência baixa cria um padrão de picos e vales.",
-    dims: ["Presença ≥ 8", "Estratégia ≥ 6"],
-    strengths: ["Marca pessoal forte — o nome surge naturalmente nas conversas certas", "Nos momentos de contato, deixa impressão duradoura", "Alta capacidade de circular em ambientes relevantes com intenção"],
-    risks: ["Presente nos picos, ausente nos vales", "A percepção do mercado: 'aparece nos grandes momentos mas some depois'", "Isso limita a profundidade e a lealdade das relações"],
-    actions: ["Instalar o sistema de nutrição que converte presença episódica em presença regular", "CRM pessoal + regra das 48h + revisão semanal", "O comportamento já existe — falta o método que o torna consistente"]
-  },
-  cultivador: {
-    name: "O Cultivador", emoji: "◍", top: "top 22%",
-    tagline: "Raízes que precisam de mais solo.",
-    desc: "O Cultivador tem os dois ativos mais raros do networking de longo prazo: Consistência e Autenticidade. Não some entre os momentos, não performa — é genuíno e aparece regularmente. O paradoxo é que esse profissional extraordinário frequentemente é pouco visto.",
-    dims: ["Consistência ≥ 7", "Autenticidade ≥ 9"],
-    strengths: ["As relações que constrói são as mais duradouras", "Quem está no círculo do Cultivador sabe que ele vai estar lá — sempre", "Esse tipo de confiança é impossível de simular"],
-    risks: ["Medo de parecer calculista ao nutrir relações proativamente", "Presença e Iniciativa baixas criam invisibilidade involuntária"],
-    actions: ["Visibilidade sem perder autenticidade — aparecer em público com a mesma naturalidade do privado", "A autenticidade já é a maior força: usá-la como diferencial de marca pessoal", "Definir 3 ambientes estratégicos para aparecer com regularidade"]
-  },
+  estrategista: { name: "O Estrategista", emoji: "🎯", tagline: "Você joga xadrez relacional.", desc: "Você não faz networking por acaso. Sabe exatamente quem precisa na sua rede, por quê, e cultiva com disciplina. Sua força está na clareza de intenção combinada com consistência.", strengths: ["Visão estratégica de longo prazo", "Disciplina no follow-up", "Capacidade de priorizar relações"], risks: ["Pode parecer transacional", "Subestima conexões sem utilidade imediata"], actions: ["Liste 3 pessoas que mantém contato por obrigação — existe algo genuíno ali?", "Tenha 1 conversa sem agenda nas próximas 2 semanas.", "Envie reconhecimento para alguém que te ajudou, sem pedir nada."] },
+  influenciador: { name: "O Influenciador", emoji: "🌟", tagline: "Onde você está, as coisas acontecem.", desc: "Presença de mercado e generosidade natural. As pessoas te procuram porque sabem que você conecta, indica e gera valor. Rede viva e diversa.", strengths: ["Alta visibilidade", "Generosidade natural", "Confiança rápida"], risks: ["Pode se sobrecarregar", "Rede ampla mas nem sempre profunda"], actions: ["Transforme 2 contatos superficiais em relações profundas.", "Crie critério claro para dizer não sem culpa.", "Documente os 10 contatos que mais geram valor mútuo."] },
+  conector: { name: "O Conector", emoji: "🔗", tagline: "Você tece redes vivas.", desc: "Escuta de verdade e conecta A com B criando valor para ambos. Confiança natural porque se importa genuinamente.", strengths: ["Escuta ativa genuína", "Conecta pessoas certas", "Alta reciprocidade"], risks: ["Falta de direcionamento estratégico", "Pode dar mais do que recebe"], actions: ["Liste 10 conexões valiosas que fez para outros — peça algo para 3.", "Defina 3 objetivos para sua rede nos próximos 90 dias.", "Para cada conexão: isso me aproxima de qual objetivo?"] },
+  tecnico_invisivel: { name: "O Técnico Invisível", emoji: "🔬", tagline: "Competente demais para ser ignorado — mas é o que acontece.", desc: "Competência inquestionável. Mas sua rede não sabe porque você não aparece. Confiança alta, presença baixa.", strengths: ["Competência reconhecida por quem convive", "Autenticidade", "Relações profundas"], risks: ["Invisibilidade profissional", "Perde oportunidades"], actions: ["Participe de 1 evento do setor nos próximos 30 dias.", "Publique 1 conteúdo técnico no LinkedIn esta semana.", "Peça a 3 pessoas: me indica para uma conversa importante."] },
+  relacional_intuitivo: { name: "O Relacional Intuitivo", emoji: "💫", tagline: "Você sente as pessoas. Falta transformar em sistema.", desc: "Dom natural para relações, opera por intuição. Quando a vida aperta, networking cai primeiro — porque não tem estrutura.", strengths: ["Inteligência emocional alta", "Relações autênticas", "Confiança rápida"], risks: ["Networking inconsistente", "Reativo — só cultiva quando precisa"], actions: ["Configure o CONÉXIA com 10 contatos mais importantes.", "Ritual semanal: toda segunda, escolha 2 pessoas para contatar.", "Escreva o que cada contato precisa. Envie algo relevante sem pedir nada."] },
+  ativador_intermitente: { name: "O Ativador Intermitente", emoji: "⚡", tagline: "Quando ativa, é poderoso. O problema é que nem sempre ativa.", desc: "Visão e presença. Mas a inconsistência faz sua rede nunca saber se pode contar com você.", strengths: ["Alta capacidade quando engajado", "Boa visão estratégica", "Presença forte"], risks: ["Inconsistência crônica", "Perde credibilidade pela oscilação"], actions: ["Ative alertas para contatos com mais de 15 dias sem interação.", "Comprometa-se com 3 interações por semana.", "Agende networking como reunião fixa no calendário."] },
+  construtor_confianca: { name: "O Construtor de Confiança", emoji: "🏛️", tagline: "Você constrói devagar, mas o que constrói não cai.", desc: "Rede sólida. Cultiva com consistência e autenticidade. O que falta é expandir.", strengths: ["Alta confiabilidade", "Consistência no cultivo", "Autenticidade reconhecida"], risks: ["Rede pode ser pequena demais", "Dificuldade em expandir zona de conforto"], actions: ["Identifique 3 pessoas FORA do seu círculo que seriam estratégicas.", "Peça a um aliado para te apresentar a alguém novo.", "Participe de 1 evento onde não conhece ninguém."] },
+  explorador_rede: { name: "O Explorador de Rede", emoji: "🧭", tagline: "Você está no começo. E isso é vantagem.", desc: "Sem padrão dominante — pode construir do zero, com método, sem vícios. O CONÉXIA será sua fundação.", strengths: ["Mente aberta", "Sem vícios de networking", "Alto potencial"], risks: ["Pode se sentir perdido", "Risco de desistir cedo"], actions: ["Liste 15 pessoas que importam — classifique cada uma no CONÉXIA.", "Escolha 3 e envie mensagem genuína esta semana.", "Leia o capítulo 1 do livro e aplique 1 conceito."] },
 };
 
 const PLAN = [
@@ -69,11 +31,7 @@ function calcScores(answers) {
   const scores = {};
   DIMS.forEach((dim, di) => {
     const qs = QS.filter(q => q.dim === di);
-    const vals = qs.map(q => {
-      const letra = answers[q.id];
-      const raw = letra && q.scores ? (q.scores[letra] || 3) : 3;
-      return q.rev ? (6 - raw) : raw;
-    });
+    const vals = qs.map(q => { const raw = Number(answers[q.id] || 3); return q.rev ? (6 - raw) : raw; });
     scores[dim.key] = Math.round((vals.reduce((a, b) => a + b, 0) / (vals.length * 5)) * 100);
   });
   const overall = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length);
@@ -81,26 +39,15 @@ function calcScores(answers) {
 }
 
 function getProfile(scores) {
-  // Lógica oficial — fonte: CONEXIADocumentoCompleto.docx (Maio 2026)
-  // Scores são 0–100 (equivalente a 0–10 na escala do documento)
   const { intencao_estrategica: IE = 0, escuta_relacional: ER = 0, presenca_mercado: PM = 0, reciprocidade_ativa: RA = 0, ritual_consistencia: RC = 0, confianca_autentica: CA = 0 } = scores;
-  // Conector: Reciprocidade ≥ 7 + Empatia ≥ 7 (escala 0-10 → 70+ em 0-100)
-  if (RA >= 70 && ER >= 70) return "conector";
-  // Estrategista: Estratégia ≥ 8 + Consistência ≥ 6
-  if (IE >= 80 && RC >= 60) return "estrategista";
-  // Empático: Empatia ≥ 8 + Autenticidade ≥ 7
-  if (ER >= 80 && CA >= 70) return "empatico";
-  // Cultivador: Consistência ≥ 7 + Autenticidade ≥ 9
-  if (RC >= 70 && CA >= 90) return "cultivador";
-  // Influenciador: Presença ≥ 8 + Estratégia ≥ 6
-  if (PM >= 80 && IE >= 60) return "influenciador";
-  // Fallback: perfil com maior score
-  const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0];
-  if (top === "reciprocidade_ativa" || top === "escuta_relacional") return "conector";
-  if (top === "intencao_estrategica") return "estrategista";
-  if (top === "presenca_mercado") return "influenciador";
-  if (top === "ritual_consistencia" || top === "confianca_autentica") return "cultivador";
-  return "influenciador"; // perfil dominante do grupo (46%)
+  if (IE >= 80 && RC >= 70) return "estrategista";
+  if (PM >= 80 && RA >= 75) return "influenciador";
+  if (ER >= 80 && RA >= 75) return "conector";
+  if (CA >= 70 && ER >= 70 && PM < 60) return "tecnico_invisivel";
+  if (ER >= 75 && CA >= 75 && IE < 65) return "relacional_intuitivo";
+  if ((PM >= 75 || IE >= 75) && RC < 60) return "ativador_intermitente";
+  if (RC >= 75 && CA >= 75) return "construtor_confianca";
+  return "explorador_rede";
 }
 
 /* ─── UI Components ───────────────────────────────────── */
@@ -315,12 +262,10 @@ function Assess({ profile, onDone }) {
         </div>
         <div style={{ height: 4, borderRadius: 2, background: C.w06, marginBottom: 32 }}><div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${((qi + 1) / QS.length) * 100}%`, transition: "width .3s" }} /></div>
         <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: C.txt, lineHeight: 1.35, margin: "0 0 28px", minHeight: 80 }}>{q.text}</p>
-        {(q.opcoes || []).map(o => (
+        {[{ v: 1, l: "Discordo totalmente" }, { v: 2, l: "Discordo parcialmente" }, { v: 3, l: "Neutro" }, { v: 4, l: "Concordo parcialmente" }, { v: 5, l: "Concordo totalmente" }].map(o => (
           <button key={o.v} onClick={() => setAns(p => ({ ...p, [q.id]: o.v }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: cur === o.v ? C.gD : C.sf, border: `1.5px solid ${cur === o.v ? C.gold : C.brd}`, borderRadius: 10, padding: "14px 18px", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, border: `2px solid ${cur === o.v ? C.gold : C.brd}`, display: "flex", alignItems: "center", justifyContent: "center", background: cur === o.v ? C.gold : "transparent", flexShrink: 0 }}>
-              <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 700, color: cur === o.v ? C.bg : C.txL }}>{o.v}</span>
-            </div>
-            <span style={{ fontFamily: "'DM Sans'", fontSize: 14, color: cur === o.v ? C.gold : C.txM, fontWeight: cur === o.v ? 600 : 400, lineHeight: 1.4 }}>{o.l}</span>
+            <div style={{ width: 22, height: 22, borderRadius: 11, border: `2px solid ${cur === o.v ? C.gold : C.brd}`, display: "flex", alignItems: "center", justifyContent: "center", background: cur === o.v ? C.gold : "transparent" }}>{cur === o.v && <div style={{ width: 8, height: 8, borderRadius: 4, background: C.bg }} />}</div>
+            <span style={{ fontFamily: "'DM Sans'", fontSize: 14, color: cur === o.v ? C.gold : C.txM, fontWeight: cur === o.v ? 600 : 400 }}>{o.l}</span>
           </button>
         ))}
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
