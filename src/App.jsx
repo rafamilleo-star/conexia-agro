@@ -880,9 +880,9 @@ export default function App() {
 
   const loadUserData = async (userId) => {
     try {
-      const { data: p } = await supabase.from("users_profile").select("*").eq("id", userId).single();
+      const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).single();
       setProfile(p);
-      const { data: a } = await supabase.from("assessment_results").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
+      const { data: a } = await supabase.from("assessments").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
       const assess = a?.[0] || null;
       if (assess) {
         setAssessment({
@@ -911,7 +911,7 @@ export default function App() {
 
   const handleOnboard = async (form) => {
     try {
-      await supabase.from("users_profile").upsert({
+      await supabase.from("profiles").upsert({
         id: user.id, first_name: form.name, email: form.email,
         role: form.role, segment: form.segment, state: form.state,
         objective: form.objectives.join(","), onboarding_completed: true,
@@ -924,7 +924,7 @@ export default function App() {
   const handleAssess = async (result) => {
     try {
       const scores = result.scores;
-      await supabase.from("assessment_results").insert({
+      await supabase.from("assessments").insert({
         user_id: user.id,
         ...Object.fromEntries(DIMS.map(d => [d.key, scores[d.key]])),
         overall_score: result.overall,
@@ -932,7 +932,7 @@ export default function App() {
         profile_name: result.profileName,
         report_json: result,
       });
-      await supabase.from("users_profile").update({
+      await supabase.from("profiles").update({
         assessment_completed: true,
         profile_key: result.profileKey,
         profile_name: result.profileName,
