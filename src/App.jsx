@@ -143,7 +143,7 @@ function Onboard({ onDone }) {
         <Inp label="Email" value={form.email} onChange={v => setForm({ ...form, email: v })} placeholder="seu@email.com" type="email" />
         <Inp label="Função/cargo" value={form.role} onChange={v => setForm({ ...form, role: v })} placeholder="Ex: Gerente Comercial, RTV..." />
         <Sel label="Segmento" value={form.segment} onChange={v => setForm({ ...form, segment: v })} options={SEGMENTS} placeholder="Selecione..." />
-        <Sel label="Estado" value={form.state} onChange={v => setForm({ ...form, state: v })} options={UFS.map(s => ({ value: s, label: s }))} placeholder="UF" />
+        <Sel label="Estado" value={form.state} onChange={v => setForm({ ...form, state: v })} options={UFS} placeholder="UF" />
         <Btn onClick={() => setStep(2)} disabled={!form.name.trim() || !form.email.trim() || !form.role.trim() || !form.segment} full>Continuar</Btn>
       </div>
     </div>
@@ -880,7 +880,7 @@ export default function App() {
 
   const loadUserData = async (userId) => {
     try {
-      const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).single();
+      const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       setProfile(p);
       const { data: a } = await supabase.from("assessments").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
       const assess = a?.[0] || null;
