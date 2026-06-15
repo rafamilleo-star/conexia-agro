@@ -184,7 +184,7 @@ function Assess({ profile, onDone }) {
   const cur = ans[q?.id];
 
   const save = async () => {
-    const result = { scores, overall, profileKey: pKey, profileName: prof.name, createdAt: new Date().toISOString() };
+    const result = { scores, overall, profileKey: pKey, profileName: prof.name, createdAt: new Date().toISOString(), answers: ans };
     onDone(result);
   };
 
@@ -921,6 +921,45 @@ export default function App() {
     setState("assess");
   };
 
+  const MAKE_WEBHOOK = "https://hook.us2.make.com/ao22pba9b6y41uuxnj50hev7m1oq790r";
+  const sendToMake = async (result) => {
+    try {
+      const p = profile || {};
+      const payload = {
+        timestamp: new Date().toISOString(),
+        userId: user?.id || "",
+        nome: p.first_name || p.name || "",
+        email: user?.email || p.email || "",
+        cargo: p.role || "",
+        segmento: p.segment || "",
+        estado: p.state || "",
+        objetivos: p.objective || "",
+        perfilKey: result.profileKey || "",
+        perfilNome: result.profileName || "",
+        scoreGeral: result.overall || 0,
+        scoreEstrategia: result.scores?.intencao_estrategica || 0,
+        scoreEmpatia: result.scores?.escuta_relacional || 0,
+        scorePresenca: result.scores?.presenca_mercado || 0,
+        scoreReciprocidade: result.scores?.reciprocidade_ativa || 0,
+        scoreConsistencia: result.scores?.ritual_consistencia || 0,
+        scoreAutenticidade: result.scores?.confianca_autentica || 0,
+        p01: result.answers?.p01 || "", p02: result.answers?.p02 || "",
+        p03: result.answers?.p03 || "", p04: result.answers?.p04 || "",
+        p05: result.answers?.p05 || "", p06: result.answers?.p06 || "",
+        p07: result.answers?.p07 || "", p08: result.answers?.p08 || "",
+        p09: result.answers?.p09 || "", p10: result.answers?.p10 || "",
+        p11: result.answers?.p11 || "", p12: result.answers?.p12 || "",
+        onboardingOk: true,
+        assessmentOk: true,
+      };
+      await fetch(MAKE_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) { console.warn("[Make webhook]", e); }
+  };
+
   const handleAssess = async (result) => {
     try {
       const scores = result.scores;
@@ -939,6 +978,7 @@ export default function App() {
         overall_score: result.overall,
       }).eq("id", user.id);
     } catch (e) { console.error(e); }
+    sendToMake(result);
     setAssessment(result);
     setState("app");
   };
