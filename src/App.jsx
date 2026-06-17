@@ -313,13 +313,17 @@ function CRM({ profile, assessment, onReset, user }) {
   const [selId, setSelId] = useState(null);
   const [modal, setModal] = useState(null);
   const [intCid, setIntCid] = useState(null);
+  const [dbgMsg, setDbgMsg] = useState("");
   const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "" });
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
 
   const load = useCallback(async () => {
-    if (!user?.id) return;
-    const { data: c } = await supabase.from("contacts").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-    const { data: i } = await supabase.from("interactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (!user?.id) { setDbgMsg("⚠️ user.id ausente — não autenticado"); return; }
+    const { data: c, error: ce } = await supabase.from("contacts").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    const { data: i, error: ie } = await supabase.from("interactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (ce) { setDbgMsg("❌ Erro ao buscar contatos: " + ce.message); return; }
+    if (ie) { setDbgMsg("❌ Erro ao buscar interações: " + ie.message); return; }
+    setDbgMsg("✅ user:" + user.id.slice(0,8) + " | contatos:" + (c?.length || 0));
     setCts((c || []).map(ct => ({ ...ct, health: hScore(ct.last_interaction_at, ct.ideal_frequency_days || 30), notes: ct.personal_notes, howMet: ct.how_met, idealFreq: ct.ideal_frequency_days, lastInteraction: ct.last_interaction_at, nextAction: ct.next_action, nextActionDate: ct.next_action_date, whatsapp: ct.whatsapp, contactEmail: ct.contact_email, linkedin: ct.linkedin, birthday: ct.birthday, hobbies: ct.hobbies, mainCulture: ct.main_culture, city: ct.city, stateCode: ct.state_code })));
     setIts((i || []).map(it => ({ ...it, desc: it.description, contactId: it.contact_id, createdAt: it.created_at, valueGen: it.value_generated })));
   }, [user?.id]);
@@ -327,7 +331,8 @@ function CRM({ profile, assessment, onReset, user }) {
   useEffect(() => { load(); }, [load]);
 
   const addC = async () => {
-    if (!cf.name.trim() || !user?.id) return;
+    if (!cf.name.trim() || !user?.id) { setDbgMsg("⚠️ Bloqueado: " + (!user?.id ? "sem user.id" : "nome vazio")); return; }
+    setDbgMsg("⏳ Salvando...");
     const { data: newContact, error } = await supabase.from("contacts").insert({
       user_id: user.id, name: cf.name.trim(), company: cf.company.trim(),
       role: cf.role.trim(), category: cf.category, proximity: parseInt(cf.proximity),
@@ -344,36 +349,26 @@ function CRM({ profile, assessment, onReset, user }) {
       next_action: cf.nextAction.trim() || null,
       next_action_date: cf.nextActionDate || null,
     }).select().single();
-    if (!error && newContact) {
-      // Push para Make webhook
+    if (error) { setDbgMsg("❌ " + error.message + " [" + error.code + "]"); return; }
+    setDbgMsg("✅ Salvo: " + newContact?.name);
+    if (newContact) {
       try {
         const p = profile || {};
         await fetch(MAKE_WEBHOOK, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            event: "novo_contato",
-            timestamp: new Date().toISOString(),
-            userId: user?.id || "",
-            usuarioNome: p.first_name || p.name || "",
-            usuarioEmail: user?.email || "",
-            contatoNome: newContact.name,
-            contatoEmpresa: newContact.company || "",
-            contatoCargo: newContact.role || "",
-            contatoCategoria: newContact.category,
-            contatoWhatsapp: newContact.whatsapp || "",
-            contatoEmail: newContact.contact_email || "",
-            contatoLinkedin: newContact.linkedin || "",
-            contatoAniversario: newContact.birthday || "",
-            contatoCultura: newContact.main_culture || "",
-            contatoCidade: newContact.city || "",
-            contatoEstado: newContact.state_code || "",
-            contatoHobbies: newContact.hobbies || "",
-            contatoProximidade: newContact.proximity,
-            contatoFrequencia: newContact.ideal_frequency_days,
-            contatoComoConheceu: newContact.how_met || "",
-            contatoNotas: newContact.personal_notes || "",
-            totalContatos: cts.length + 1,
+            event: "novo_contato", timestamp: new Date().toISOString(),
+            userId: user?.id || "", usuarioNome: p.first_name || p.name || "",
+            usuarioEmail: user?.email || "", contatoNome: newContact.name,
+            contatoEmpresa: newContact.company || "", contatoCargo: newContact.role || "",
+            contatoCategoria: newContact.category, contatoWhatsapp: newContact.whatsapp || "",
+            contatoEmail: newContact.contact_email || "", contatoLinkedin: newContact.linkedin || "",
+            contatoAniversario: newContact.birthday || "", contatoCultura: newContact.main_culture || "",
+            contatoCidade: newContact.city || "", contatoEstado: newContact.state_code || "",
+            contatoHobbies: newContact.hobbies || "", contatoProximidade: newContact.proximity,
+            contatoFrequencia: newContact.ideal_frequency_days, contatoComoConheceu: newContact.how_met || "",
+            contatoNotas: newContact.personal_notes || "", totalContatos: cts.length + 1,
           }),
         });
       } catch (e) { console.warn("[Make push contato]", e); }
@@ -753,6 +748,7 @@ function CRM({ profile, assessment, onReset, user }) {
     }
     return (
       <div>
+        {dbgMsg && <div style={{ background: dbgMsg.startsWith("❌") ? "#2d0a0a" : dbgMsg.startsWith("✅") ? "#0a2d0a" : "#1a1a0a", border: `1px solid ${dbgMsg.startsWith("❌") ? "#ff4444" : dbgMsg.startsWith("✅") ? "#44ff44" : "#ffaa00"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontFamily: "'JetBrains Mono'", fontSize: 11, color: dbgMsg.startsWith("❌") ? "#ff8888" : dbgMsg.startsWith("✅") ? "#88ff88" : "#ffcc44", wordBreak: "break-all" }}>{dbgMsg}</div>}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: 0 }}>Contatos</h2>
           <Btn small onClick={() => setModal("addC")}>+ Novo</Btn>
@@ -1138,3 +1134,4 @@ export default function App() {
     </>
   );
 }
+
