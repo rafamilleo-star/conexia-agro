@@ -386,6 +386,8 @@ function CRM({ profile, assessment, onReset, user }) {
       tags: inf.tags ? inf.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
       value_generated: inf.valueGen,
     });
+    // Atualiza last_interaction_at no contato (essencial para Health Score)
+    await supabase.from("contacts").update({ last_interaction_at: new Date().toISOString() }).eq("id", intCid).eq("user_id", user.id);
     // Push interação para Make
     const contact = cts.find(c => c.id === intCid);
     if (contact) {
@@ -861,7 +863,7 @@ function CRM({ profile, assessment, onReset, user }) {
 
   const renderReport = () => {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
-    const isPro = profile?.is_pro || profile?.email === "rafamilleo@gmail.com";
+    const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
     const downloadReport = () => {
       const vals = Object.entries(sc);
       const maxD = DIMS.find(d => d.key === [...vals].sort((a,b)=>b[1]-a[1])[0]?.[0]);
@@ -1288,4 +1290,5 @@ export default function App() {
     </>
   );
 }
+
 
