@@ -435,6 +435,7 @@ function CRM({ profile, assessment, onReset, user }) {
     { id: "dash", icon: "◎", label: "Dashboard" },
     { id: "contacts", icon: "◈", label: "Contatos" },
     { id: "teia", icon: "⊛", label: "Teia" },
+    { id: "plano", icon: "🗺️", label: "Plano" },
     { id: "report", icon: "📊", label: "Relatório" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }, { id: "export", icon: "⬇", label: "Exportar" }] : []),
   ];
@@ -509,6 +510,72 @@ function CRM({ profile, assessment, onReset, user }) {
         <div style={{ background: C.ambD, border: `1px solid ${C.amb}28`, borderRadius: 10, padding: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, marginBottom: 6 }}>Google Drive · Em breve</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>No deploy com Supabase, este botão conectará ao Google Drive via OAuth exclusivo do admin. Relatórios, contatos e backups serão salvos automaticamente na pasta MILLÉO STRATEGIC HUB.</div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPlan = () => {
+    const week = Math.min(4, Math.max(1, Math.ceil(dSince(assessment?.createdAt) / 7) || 1));
+    const profileActions = pf?.actions || [];
+    return (
+      <div>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Plano de Ativação</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Seu guia de 4 semanas para transformar networking em hábito.</p>
+
+        {pf && <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 ações como {pf.name}</div>
+          {profileActions.map((a, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: C.gD, border: `1px solid ${C.gL}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono'", fontSize: 11, fontWeight: 700, color: C.gold, flexShrink: 0 }}>{i + 1}</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{a}</div>
+            </div>
+          ))}
+        </div>}
+
+        {PLAN.map((w, i) => {
+          const isCurrent = w.week === week;
+          const isDone = w.week < week;
+          return (
+            <div key={i} style={{ background: isCurrent ? `${C.gold}06` : C.card, border: `1px solid ${isCurrent ? C.gL : C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: isDone ? C.grnD : isCurrent ? C.gD : C.w06, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{isDone ? "✅" : w.icon}</div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Tag color={isCurrent ? C.gold : isDone ? C.grn : C.txL} small>Semana {w.week}</Tag>
+                    {isCurrent && <Tag color={C.gold} small>↑ Agora</Tag>}
+                  </div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 600, color: C.txt, marginTop: 3 }}>{w.title}</div>
+                </div>
+              </div>
+              <p style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, margin: "0 0 10px", fontStyle: "italic" }}>{w.goal}</p>
+              {w.tasks.map((t, j) => (
+                <div key={j} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
+                  <span style={{ color: isCurrent ? C.gold : C.txL, fontSize: 12, marginTop: 1 }}>→</span>
+                  <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: isCurrent ? C.txt : C.txM, lineHeight: 1.5 }}>{t}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: 12, background: C.w06, borderRadius: 6, padding: "8px 12px" }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: "uppercase" }}>Meta: </span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: isCurrent ? C.gold : C.txM, fontWeight: isCurrent ? 600 : 400 }}>{w.metric}</span>
+              </div>
+            </div>
+          );
+        })}
+
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginTop: 8 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Dicas de uso do CONÉXIA</div>
+          {[
+            { icon: "📅", title: "Ritual semanal", desc: "Toda segunda-feira, 15 minutos: veja os alertas do Dashboard e escolha 2 contatos para contatar." },
+            { icon: "📋", title: "Registre interações", desc: "Sempre que falar com alguém relevante, registre na aba Contatos. Quanto mais você registra, mais preciso o Health Score fica." },
+            { icon: "🎯", title: "Próxima ação", desc: "Todo contato deve ter sempre uma próxima ação definida. Relacionamento sem direção esfria." },
+            { icon: "🌱", title: "Diversifique categorias", desc: "Equilibre sua rede entre Mentores, Aliados, Pontes e Potenciais. Redes diversas geram mais oportunidades." },
+          ].map((tip, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: i < 3 ? `1px solid ${C.brd}` : "none" }}>
+              <span style={{ fontSize: 20 }}>{tip.icon}</span>
+              <div><div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, marginBottom: 3 }}>{tip.title}</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>{tip.desc}</div></div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -748,7 +815,6 @@ function CRM({ profile, assessment, onReset, user }) {
     }
     return (
       <div>
-        {dbgMsg && <div style={{ background: dbgMsg.startsWith("❌") ? "#2d0a0a" : dbgMsg.startsWith("✅") ? "#0a2d0a" : "#1a1a0a", border: `1px solid ${dbgMsg.startsWith("❌") ? "#ff4444" : dbgMsg.startsWith("✅") ? "#44ff44" : "#ffaa00"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontFamily: "'JetBrains Mono'", fontSize: 11, color: dbgMsg.startsWith("❌") ? "#ff8888" : dbgMsg.startsWith("✅") ? "#88ff88" : "#ffcc44", wordBreak: "break-all" }}>{dbgMsg}</div>}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: 0 }}>Contatos</h2>
           <Btn small onClick={() => setModal("addC")}>+ Novo</Btn>
@@ -795,16 +861,95 @@ function CRM({ profile, assessment, onReset, user }) {
 
   const renderReport = () => {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
+    const isPro = profile?.is_pro || profile?.email === "rafamilleo@gmail.com";
+    const downloadReport = () => {
+      const vals = Object.entries(sc);
+      const maxD = DIMS.find(d => d.key === [...vals].sort((a,b)=>b[1]-a[1])[0]?.[0]);
+      const minD = DIMS.find(d => d.key === [...vals].sort((a,b)=>a[1]-b[1])[0]?.[0]);
+      const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório CONÉXIA — ${profile?.name || ""}</title>
+<style>body{font-family:'Segoe UI',Arial,sans-serif;background:#0d0d0f;color:#e8e4da;margin:0;padding:40px}
+h1{font-size:32px;color:#c9a227;margin-bottom:4px}h2{font-size:20px;color:#c9a227;margin:32px 0 12px}
+.tag{display:inline-block;background:#c9a22718;border:1px solid #c9a22740;color:#c9a227;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.card{background:#161618;border:1px solid #2a2825;border-radius:12px;padding:24px;margin-bottom:16px}
+.bar-wrap{height:8px;border-radius:4px;background:#2a2825;margin-top:4px}
+.bar{height:8px;border-radius:4px}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.score{font-family:monospace;font-size:13px;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.action{display:flex;gap:12px;margin-bottom:10px}
+.action-num{width:28px;height:28px;border-radius:7px;background:#c9a22718;border:1px solid #c9a22740;display:flex;align-items:center;justify-content:center;font-weight:700;color:#c9a227;font-size:12px;flex-shrink:0;text-align:center;line-height:28px}
+.footer{margin-top:40px;padding-top:20px;border-top:1px solid #2a2825;font-size:11px;color:#5a5650;text-align:center}
+</style></head><body>
+<div class="tag">Diagnóstico Relacional Profissional</div>
+<h1>${pf?.emoji} ${pf?.name}</h1>
+<p style="color:#8a8480;font-style:italic;margin:4px 0 8px">${pf?.tagline}</p>
+<p style="font-family:monospace;color:#c9a227">Score geral: ${assessment.overall}%</p>
+<p style="color:#6a6460;font-size:12px">Gerado em ${new Date().toLocaleDateString("pt-BR")} · ${profile?.name || ""} · ${profile?.email || ""}</p>
+
+<div class="card">
+<h2 style="margin-top:0">Suas 6 Dimensões</h2>
+${DIMS.map(d => `<div class="row"><span>${d.label}</span><span class="score" style="color:${d.color}">${sc[d.key]||0}%</span></div><div class="bar-wrap"><div class="bar" style="width:${sc[d.key]||0}%;background:${d.color}"></div></div>`).join("")}
+</div>
+
+<div class="grid">
+<div class="card" style="margin-bottom:0"><div style="font-size:10px;font-weight:700;color:#4caf50;text-transform:uppercase;margin-bottom:4px">Sua força</div><div style="font-weight:600">${maxD?.label||""}</div></div>
+<div class="card" style="margin-bottom:0"><div style="font-size:10px;font-weight:700;color:#ef5350;text-transform:uppercase;margin-bottom:4px">Oportunidade</div><div style="font-weight:600">${minD?.label||""}</div></div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">Análise do Perfil</h2>
+<p style="color:#8a8480;line-height:1.7">${pf?.desc||""}</p>
+<h2>Forças</h2>
+${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:#4caf50">✓</span><span style="color:#8a8480">${s}</span></div>`).join("")}
+<h2>Riscos</h2>
+${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:#ef5350">⚠</span><span style="color:#8a8480">${r}</span></div>`).join("")}
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">Suas 3 Ações Prioritárias</h2>
+${(pf?.actions||[]).map((a,i)=>`<div class="action"><div class="action-num">${i+1}</div><p style="margin:0;color:#8a8480;line-height:1.5">${a}</p></div>`).join("")}
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">Plano de Ativação — 4 Semanas</h2>
+${PLAN.map(w=>`<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #2a2825">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">${w.icon}<strong style="color:#c9a227">Semana ${w.week}: ${w.title}</strong></div>
+<p style="color:#6a6460;margin:0 0 8px;font-style:italic">${w.goal}</p>
+${w.tasks.map(t=>`<div style="color:#8a8480;font-size:13px;margin-bottom:4px">→ ${t}</div>`).join("")}
+<div style="margin-top:8px;background:#2a2825;padding:8px 12px;border-radius:6px;font-size:12px;color:#c9a227">Meta: ${w.metric}</div>
+</div>`).join("")}
+</div>
+
+<div class="footer">CONÉXIA · Diagnóstico Relacional Profissional · Rafael Milléo · "Networking, além do cafezinho"</div>
+</body></html>`;
+      const blob = new Blob([html], { type: "text/html;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `conexia-relatorio-${(profile?.name||"").replace(/\s+/g,"-").toLowerCase()}.html`; a.click();
+      URL.revokeObjectURL(url);
+    };
+
     return (
       <div style={{ overflowY: "auto", paddingBottom: 40 }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 44, marginBottom: 8 }}>{pf?.emoji}</div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.gold, margin: "0 0 4px", fontStyle: "italic" }}>{pf?.name}</h1>
-          <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, fontStyle: "italic" }}>{pf?.tagline}</p>
-          <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.gold, marginTop: 6 }}>Score geral: {assessment.overall}%</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 44, marginBottom: 8 }}>{pf?.emoji}</div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.gold, margin: "0 0 4px", fontStyle: "italic" }}>{pf?.name}</h1>
+            <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, fontStyle: "italic", margin: "0 0 6px" }}>{pf?.tagline}</p>
+            <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.gold }}>Score geral: {assessment.overall}%</div>
+          </div>
+          {isPro ? (
+            <Btn small onClick={downloadReport}>⬇ Baixar relatório</Btn>
+          ) : (
+            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 4 }}>🔒 PRO</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>Download completo</div>
+            </div>
+          )}
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}><RadarChart scores={sc} /></div>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Suas 6 dimensões</div>
           {DIMS.map((d, i) => { const v = sc[d.key] || 0; return (
             <div key={i} style={{ marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, color: d.color }}>{v}%</span></div>
@@ -812,14 +957,18 @@ function CRM({ profile, assessment, onReset, user }) {
             </div>
           ); })}
         </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+          {(pf?.strengths || []).map((s, i) => <div key={i} style={{ background: C.grnD, border: `1px solid ${C.grn}28`, borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 4 }}>✓ Força</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{s}</div></div>)}
+          {(pf?.risks || []).map((r, i) => <div key={i} style={{ background: C.corD, border: `1px solid ${C.cor}28`, borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.cor, marginBottom: 4 }}>⚠ Risco</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{r}</div></div>)}
+        </div>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Análise</div>
-          <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.65 }}>{pf?.desc}</p>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Análise profunda</div>
+          <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.65, margin: 0 }}>{pf?.desc}</p>
         </div>
         <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 24 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 4 }}>Você é {pf?.name}.</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 14 }}>Agora faça estas 3 ações:</div>
-          {pf?.actions.map((a, i) => (
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 14 }}>Suas 3 ações prioritárias:</div>
+          {(pf?.actions || []).map((a, i) => (
             <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
               <div style={{ width: 28, height: 28, borderRadius: 7, background: C.gD, border: `1px solid ${C.gL}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 600, color: C.gold, flexShrink: 0 }}>{i + 1}</div>
               <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5, margin: 0 }}>{a}</p>
@@ -856,7 +1005,7 @@ function CRM({ profile, assessment, onReset, user }) {
             <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{profile?.name}</div>
             {admin && <Tag color={C.vio} small>Admin</Tag>}
           </div>
-          <Btn variant="ghost" small onClick={onReset}>Recomeçar</Btn>
+          <Btn variant="ghost" small onClick={onReset}>Sair</Btn>
         </nav>
       )}
 
@@ -874,6 +1023,7 @@ function CRM({ profile, assessment, onReset, user }) {
         {view === "dash" && renderDash()}
         {view === "contacts" && renderContacts()}
         {view === "teia" && renderTeia()}
+        {view === "plano" && renderPlan()}
         {view === "report" && renderReport()}
         {view === "mentor" && admin && renderMentor()}
         {view === "export" && admin && renderExport()}
@@ -1012,19 +1162,21 @@ export default function App() {
   const loadUserData = async (userId) => {
     try {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+      if (p) p.name = p.name || p.first_name || "";
       setProfile(p);
       const { data: a } = await supabase.from("assessments").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
       const assess = a?.[0] || null;
       if (assess) {
+        const rawScores = assess.scores || {};
+        const profileKey = rawScores.profileKey || getProfile(rawScores);
         setAssessment({
           id: assess.id,
-          scores: Object.fromEntries(DIMS.map(d => [d.key, assess[d.key]])),
-          overall: assess.overall_score,
-          profileKey: assess.profile_key,
-          profileName: assess.profile_name,
+          scores: rawScores,
+          overall: assess.overall || rawScores.overall || 0,
+          profileKey,
+          profileName: rawScores.profileName || PROFILES[profileKey]?.name || "Perfil Relacional",
           createdAt: assess.created_at,
         });
-        // Tem assessment → vai direto pro CRM, independente do perfil
         setState("app");
         return;
       }
@@ -1046,7 +1198,7 @@ export default function App() {
   const handleOnboard = async (form) => {
     try {
       await supabase.from("profiles").upsert({
-        id: user.id, first_name: form.name, email: form.email,
+        id: user.id, first_name: form.name, name: form.name, email: form.email,
         role: form.role, segment: form.segment, state: form.state,
         objective: form.objectives.join(","), onboarding_completed: true,
       });
@@ -1098,17 +1250,12 @@ export default function App() {
       const scores = result.scores;
       await supabase.from("assessments").insert({
         user_id: user.id,
-        ...Object.fromEntries(DIMS.map(d => [d.key, scores[d.key]])),
-        overall_score: result.overall,
-        profile_key: result.profileKey,
-        profile_name: result.profileName,
-        report_json: result,
+        scores: { ...scores, profileKey: result.profileKey, profileName: result.profileName, overall: result.overall },
+        overall: result.overall,
       });
       await supabase.from("profiles").update({
         assessment_completed: true,
-        profile_key: result.profileKey,
-        profile_name: result.profileName,
-        overall_score: result.overall,
+        onboarding_completed: true,
       }).eq("id", user.id);
     } catch (e) { console.error(e); }
     sendToMake(result);
@@ -1137,6 +1284,3 @@ export default function App() {
     </>
   );
 }
-
-
-
