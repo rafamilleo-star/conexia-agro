@@ -22,10 +22,34 @@ const PLAN = [
   { week: 4, title: "Criar sistema", icon: "⚙️", goal: "Transformar ação em hábito.", tasks: ["Defina ritual semanal", "Configure alertas", "Defina 3 metas para 90 dias"], metric: "Ritual + metas documentadas" },
 ];
 
+/* ─── Culturas Agro ───────────────────────────────────── */
+const MAIN_CULTURES = [
+  { value: "soja",        label: "🌱 Soja" },
+  { value: "milho",       label: "🌽 Milho" },
+  { value: "cafe",        label: "☕ Café" },
+  { value: "algodao",     label: "🌿 Algodão" },
+  { value: "cana",        label: "🎋 Cana-de-açúcar" },
+  { value: "trigo",       label: "🌾 Trigo" },
+  { value: "hortifruti",  label: "🥦 Hortifruti" },
+  { value: "pecuaria",    label: "🐄 Pecuária" },
+  { value: "citrus",      label: "🍊 Citrus" },
+  { value: "cacau",       label: "🍫 Cacau" },
+  { value: "feijao",      label: "🫘 Feijão" },
+  { value: "arroz",       label: "🍚 Arroz" },
+  { value: "outro",       label: "🌍 Outro" },
+];
+
 /* ─── Helpers ─────────────────────────────────────────── */
 const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999;
 const hScore = (last, freq) => { const d = dSince(last); if (!last || d > freq * 3) return 0; return Math.max(0, Math.round((1 - d / (freq * 1.5)) * 100)); };
 const fD = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—";
+const birthdayDaysAway = (birthday) => {
+  if (!birthday) return null;
+  const today = new Date(); const b = new Date(birthday);
+  const next = new Date(today.getFullYear(), b.getMonth(), b.getDate());
+  if (next < today) next.setFullYear(today.getFullYear() + 1);
+  return Math.round((next - today) / 86400000);
+};
 
 function calcScores(answers) {
   const scores = {};
@@ -286,14 +310,14 @@ function CRM({ profile, assessment, onReset, user }) {
   const [selId, setSelId] = useState(null);
   const [modal, setModal] = useState(null);
   const [intCid, setIntCid] = useState(null);
-  const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "" });
+  const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "" });
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     const { data: c } = await supabase.from("contacts").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
     const { data: i } = await supabase.from("interactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-    setCts((c || []).map(ct => ({ ...ct, health: hScore(ct.last_interaction_at, ct.ideal_frequency_days || 30), notes: ct.personal_notes, howMet: ct.how_met, idealFreq: ct.ideal_frequency_days, lastInteraction: ct.last_interaction_at, nextAction: ct.next_action })));
+    setCts((c || []).map(ct => ({ ...ct, health: hScore(ct.last_interaction_at, ct.ideal_frequency_days || 30), notes: ct.personal_notes, howMet: ct.how_met, idealFreq: ct.ideal_frequency_days, lastInteraction: ct.last_interaction_at, nextAction: ct.next_action, nextActionDate: ct.next_action_date, whatsapp: ct.whatsapp, contactEmail: ct.contact_email, linkedin: ct.linkedin, birthday: ct.birthday, hobbies: ct.hobbies, mainCulture: ct.main_culture, city: ct.city, stateCode: ct.state_code })));
     setIts((i || []).map(it => ({ ...it, desc: it.description, contactId: it.contact_id, createdAt: it.created_at, valueGen: it.value_generated })));
   }, [user?.id]);
 
@@ -301,13 +325,57 @@ function CRM({ profile, assessment, onReset, user }) {
 
   const addC = async () => {
     if (!cf.name.trim() || !user?.id) return;
-    await supabase.from("contacts").insert({
+    const { data: newContact, error } = await supabase.from("contacts").insert({
       user_id: user.id, name: cf.name.trim(), company: cf.company.trim(),
       role: cf.role.trim(), category: cf.category, proximity: parseInt(cf.proximity),
       ideal_frequency_days: parseInt(cf.idealFreq) || 30, how_met: cf.howMet.trim(),
       personal_notes: cf.notes.trim(),
-    });
-    setCf({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "" });
+      whatsapp: cf.whatsapp.trim() || null,
+      contact_email: cf.contactEmail.trim() || null,
+      linkedin: cf.linkedin.trim() || null,
+      birthday: cf.birthday || null,
+      hobbies: cf.hobbies.trim() || null,
+      main_culture: cf.mainCulture || null,
+      city: cf.city.trim() || null,
+      state_code: cf.stateCode || null,
+      next_action: cf.nextAction.trim() || null,
+      next_action_date: cf.nextActionDate || null,
+    }).select().single();
+    if (!error && newContact) {
+      // Push para Make webhook
+      try {
+        const p = profile || {};
+        await fetch(MAKE_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "novo_contato",
+            timestamp: new Date().toISOString(),
+            userId: user?.id || "",
+            usuarioNome: p.first_name || p.name || "",
+            usuarioEmail: user?.email || "",
+            contatoNome: newContact.name,
+            contatoEmpresa: newContact.company || "",
+            contatoCargo: newContact.role || "",
+            contatoCategoria: newContact.category,
+            contatoWhatsapp: newContact.whatsapp || "",
+            contatoEmail: newContact.contact_email || "",
+            contatoLinkedin: newContact.linkedin || "",
+            contatoAniversario: newContact.birthday || "",
+            contatoCultura: newContact.main_culture || "",
+            contatoCidade: newContact.city || "",
+            contatoEstado: newContact.state_code || "",
+            contatoHobbies: newContact.hobbies || "",
+            contatoProximidade: newContact.proximity,
+            contatoFrequencia: newContact.ideal_frequency_days,
+            contatoComoConheceu: newContact.how_met || "",
+            contatoNotas: newContact.personal_notes || "",
+            totalContatos: cts.length + 1,
+          }),
+        });
+      } catch (e) { console.warn("[Make push contato]", e); }
+    }
+    setCf({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "" });
     setModal(null);
     await load();
   };
@@ -320,6 +388,34 @@ function CRM({ profile, assessment, onReset, user }) {
       tags: inf.tags ? inf.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
       value_generated: inf.valueGen,
     });
+    // Push interação para Make
+    const contact = cts.find(c => c.id === intCid);
+    if (contact) {
+      try {
+        const p = profile || {};
+        await fetch(MAKE_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "nova_interacao",
+            timestamp: new Date().toISOString(),
+            userId: user?.id || "",
+            usuarioNome: p.first_name || p.name || "",
+            usuarioEmail: user?.email || "",
+            contatoNome: contact.name,
+            contatoEmpresa: contact.company || "",
+            contatoCategoria: contact.category,
+            contatoWhatsapp: contact.whatsapp || "",
+            interacaoTipo: inf.type,
+            interacaoDescricao: inf.desc.trim(),
+            interacaoSentimento: inf.sentiment,
+            interacaoValorGerado: inf.valueGen,
+            interacaoTags: inf.tags,
+            healthAnterior: contact.health,
+          }),
+        });
+      } catch (e) { console.warn("[Make push interação]", e); }
+    }
     setInf({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
     setModal(null);
     await load();
@@ -453,8 +549,13 @@ function CRM({ profile, assessment, onReset, user }) {
         alerts.push({ type: "concentrada", icon: "🎯", severity: "medium", color: C.amb, title: "Rede pouco diversa", msg: `${Math.round(maxCat / cts.length * 100)}% dos seus contatos são "${catLabel}". Diversifique para criar mais oportunidades.`, action: "Busque 2 contatos de categorias diferentes." });
       }
     }
-    // Ritual de consistência
-    if (assessment && rc < 60) {
+    // Aniversários próximos (7 dias)
+    cts.forEach(c => {
+      const days = birthdayDaysAway(c.birthday);
+      if (days !== null && days <= 7) {
+        alerts.push({ type: "aniversario", icon: "🎂", severity: days === 0 ? "critical" : "high", color: C.vio, title: days === 0 ? `Hoje é aniversário de ${c.name}!` : `Aniversário de ${c.name} em ${days} dia${days > 1 ? "s" : ""}`, msg: days === 0 ? `Envie uma mensagem personalizada agora — é um momento único para fortalecer o vínculo.` : `Prepare uma mensagem especial com antecedência. Demonstra que você se importa de verdade.`, action: `Envie uma mensagem genuína${c.whatsapp ? ` pelo WhatsApp ${c.whatsapp}` : ""}.`, cid: c.id });
+      }
+    });
       alerts.push({ type: "consistencia", icon: "⚡", severity: "medium", color: C.vio, title: "Ritual de Consistência em atenção", msg: `Seu score está em ${rc}%. Sua rede esfria mais rápido do que você nutre.`, action: "Crie um ritual: toda segunda, 15min, 2 contatos." });
     }
 
@@ -617,6 +718,17 @@ function CRM({ profile, assessment, onReset, user }) {
             <Btn variant="danger" small onClick={() => { if (confirm("Remover contato?")) delC(sel.id); }}>Remover</Btn>
           </div>
           {sel.notes && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 14, marginBottom: 10, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{sel.notes}</div>}
+          {/* Info grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+            {sel.whatsapp && <a href={`https://wa.me/55${sel.whatsapp.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 2 }}>📱 WhatsApp</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{sel.whatsapp}</div></a>}
+            {sel.contactEmail && <a href={`mailto:${sel.contactEmail}`} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.blu, marginBottom: 2 }}>✉️ Email</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sel.contactEmail}</div></a>}
+            {sel.linkedin && <a href={sel.linkedin.startsWith("http") ? sel.linkedin : `https://${sel.linkedin}`} target="_blank" rel="noreferrer" style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: "#0A66C2", marginBottom: 2 }}>🔗 LinkedIn</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Ver perfil</div></a>}
+            {sel.birthday && (() => { const days = birthdayDaysAway(sel.birthday); const bDate = new Date(sel.birthday); return <div style={{ background: days !== null && days <= 7 ? `${C.vio}12` : C.card, border: `1px solid ${days !== null && days <= 7 ? C.vio : C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.vio, marginBottom: 2 }}>🎂 Aniversário</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{bDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}{days !== null && days <= 7 && <span style={{ color: C.vio, fontWeight: 600 }}> · em {days === 0 ? "hoje!" : `${days}d`}</span>}</div></div>; })()}
+            {sel.mainCulture && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 2 }}>🌱 Cultura</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{MAIN_CULTURES.find(m => m.value === sel.mainCulture)?.label || sel.mainCulture}</div></div>}
+            {(sel.city || sel.stateCode) && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, marginBottom: 2 }}>📍 Localização</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{[sel.city, sel.stateCode].filter(Boolean).join(", ")}</div></div>}
+          </div>
+          {sel.hobbies && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 12, marginBottom: 10 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.amb }}>🎯 Hobbies: </span><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>{sel.hobbies}</span></div>}
+          {sel.nextAction && <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: 12, marginBottom: 10 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 4 }}>📋 Próxima ação{sel.nextActionDate ? ` · ${fD(sel.nextActionDate)}` : ""}</div><div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{sel.nextAction}</div></div>}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase" }}>Timeline ({cI.length})</span>
             <Btn variant="success" small onClick={() => { setIntCid(sel.id); setModal("addI"); }}>+ Interação</Btn>
@@ -654,7 +766,7 @@ function CRM({ profile, assessment, onReset, user }) {
   };
 
   const renderTeia = () => {
-    if (cts.length < 2) return <div><h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 12px" }}>Teia</h2><div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 50, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Cadastre ao menos 2 contatos.</div></div>;
+    if (cts.length < 2) return <div><h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 12px" }}>Teia</h2><div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 50, textAlign: "center" }}><div style={{ fontSize: 32, marginBottom: 12 }}>⊛</div><div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, marginBottom: 8 }}>Você tem {cts.length} contato cadastrado</div><div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txL, marginBottom: 16 }}>Cadastre mais {2 - cts.length} contato{2 - cts.length > 1 ? "s" : ""} para visualizar sua Teia</div><Btn small onClick={() => { setView("contacts"); setModal("addC"); }}>+ Adicionar contato</Btn></div></div>;
     const CX = 300, CY = 260, R = 195;
     const sorted = [...cts].sort((a, b) => { const o = { mentor: 0, aliado: 1, ponte: 2, potencial: 3, dormindo: 4 }; return (o[a.category] || 4) - (o[b.category] || 4); });
     const step = (2 * Math.PI) / sorted.length;
@@ -783,13 +895,31 @@ function CRM({ profile, assessment, onReset, user }) {
           <Inp label="Empresa" value={cf.company} onChange={v => setCf({ ...cf, company: v })} placeholder="Empresa" />
           <Inp label="Cargo" value={cf.role} onChange={v => setCf({ ...cf, role: v })} placeholder="Cargo" />
         </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="📱 WhatsApp" value={cf.whatsapp} onChange={v => setCf({ ...cf, whatsapp: v })} placeholder="(00) 00000-0000" />
+          <Inp label="✉️ Email" value={cf.contactEmail} onChange={v => setCf({ ...cf, contactEmail: v })} placeholder="email@empresa.com" type="email" />
+        </div>
+        <Inp label="🔗 LinkedIn" value={cf.linkedin} onChange={v => setCf({ ...cf, linkedin: v })} placeholder="linkedin.com/in/nome" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="🎂 Aniversário" value={cf.birthday} onChange={v => setCf({ ...cf, birthday: v })} type="date" />
+          <Sel label="🌱 Cultura principal" value={cf.mainCulture} onChange={v => setCf({ ...cf, mainCulture: v })} options={MAIN_CULTURES} placeholder="Selecione..." />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="📍 Cidade" value={cf.city} onChange={v => setCf({ ...cf, city: v })} placeholder="Cidade" />
+          <Sel label="Estado" value={cf.stateCode} onChange={v => setCf({ ...cf, stateCode: v })} options={UFS} placeholder="UF" />
+        </div>
+        <Inp label="🎯 Hobbies / Interesses" value={cf.hobbies} onChange={v => setCf({ ...cf, hobbies: v })} placeholder="Pesca, futebol, leitura..." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
           <Sel label="Categoria" value={cf.category} onChange={v => setCf({ ...cf, category: v })} options={CATS.map(c => ({ value: c.value, label: `${c.icon} ${c.label}` }))} />
           <Sel label="Proximidade" value={cf.proximity} onChange={v => setCf({ ...cf, proximity: v })} options={[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: `${n}/5` }))} />
           <Inp label="Freq. (dias)" value={cf.idealFreq} onChange={v => setCf({ ...cf, idealFreq: v })} type="number" />
         </div>
-        <Inp label="Como conheceu?" value={cf.howMet} onChange={v => setCf({ ...cf, howMet: v })} placeholder="Evento, indicação..." />
-        <Inp label="Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa sobre essa pessoa..." textarea />
+        <Inp label="Como conheceu?" value={cf.howMet} onChange={v => setCf({ ...cf, howMet: v })} placeholder="Evento, indicação, campo..." />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="📋 Próxima ação" value={cf.nextAction} onChange={v => setCf({ ...cf, nextAction: v })} placeholder="Ligar, enviar artigo..." />
+          <Inp label="📅 Data da ação" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
+        </div>
+        <Inp label="📝 Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn small onClick={addC} disabled={!cf.name.trim()}>Salvar</Btn></div>
       </Modal>}
       {modal === "addI" && <Modal title="Registrar interação" onClose={() => setModal(null)}>
@@ -1004,3 +1134,4 @@ export default function App() {
     </>
   );
 }
+
