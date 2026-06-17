@@ -302,6 +302,9 @@ function Assess({ profile, onDone }) {
   );
 }
 
+/* ═══ MAKE WEBHOOK ════════════════════════════════════════ */
+const MAKE_WEBHOOK = "https://hook.us2.make.com/ao22pba9b6y41uuxnj50hev7m1oq790r";
+
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user }) {
   const [view, setView] = useState("dash");
@@ -556,6 +559,8 @@ function CRM({ profile, assessment, onReset, user }) {
         alerts.push({ type: "aniversario", icon: "🎂", severity: days === 0 ? "critical" : "high", color: C.vio, title: days === 0 ? `Hoje é aniversário de ${c.name}!` : `Aniversário de ${c.name} em ${days} dia${days > 1 ? "s" : ""}`, msg: days === 0 ? `Envie uma mensagem personalizada agora — é um momento único para fortalecer o vínculo.` : `Prepare uma mensagem especial com antecedência. Demonstra que você se importa de verdade.`, action: `Envie uma mensagem genuína${c.whatsapp ? ` pelo WhatsApp ${c.whatsapp}` : ""}.`, cid: c.id });
       }
     });
+    // Ritual de consistência
+    if (assessment && rc < 60) {
       alerts.push({ type: "consistencia", icon: "⚡", severity: "medium", color: C.vio, title: "Ritual de Consistência em atenção", msg: `Seu score está em ${rc}%. Sua rede esfria mais rápido do que você nutre.`, action: "Crie um ritual: toda segunda, 15min, 2 contatos." });
     }
 
@@ -1051,7 +1056,6 @@ export default function App() {
     setState("assess");
   };
 
-  const MAKE_WEBHOOK = "https://hook.us2.make.com/ao22pba9b6y41uuxnj50hev7m1oq790r";
   const sendToMake = async (result) => {
     try {
       const p = profile || {};
@@ -1134,4 +1138,3 @@ export default function App() {
     </>
   );
 }
-
