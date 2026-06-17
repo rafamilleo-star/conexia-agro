@@ -1160,6 +1160,7 @@ export default function App() {
   }, []);
 
   const loadUserData = async (userId) => {
+    const lsKey = "conexia_done_" + userId;
     try {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       if (p) p.name = p.name || p.first_name || "";
@@ -1177,14 +1178,17 @@ export default function App() {
           profileName: rawScores.profileName || PROFILES[profileKey]?.name || "Perfil Relacional",
           createdAt: assess.created_at,
         });
+        localStorage.setItem(lsKey, "1");
         setState("app");
         return;
       }
-      // Sem assessment → verifica onboarding
+      // Sem assessment no DB — verifica fallbacks
+      if (p?.assessment_completed || localStorage.getItem(lsKey)) { setState("app"); return; }
       if (!p?.onboarding_completed) setState("onboard");
       else setState("assess");
     } catch (e) {
       console.error("[Load]", e);
+      if (localStorage.getItem(lsKey)) { setState("app"); return; }
       setState("onboard");
     }
   };
@@ -1284,3 +1288,4 @@ export default function App() {
     </>
   );
 }
+
