@@ -865,471 +865,535 @@ function CRM({ profile, assessment, onReset, user }) {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
     const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
     const downloadReport = () => {
-      const vals = Object.entries(sc);
-      const sortedD = [...vals].sort((a,b)=>b[1]-a[1]);
-      const maxD = DIMS.find(d=>d.key===sortedD[0]?.[0]);
-      const minD = DIMS.find(d=>d.key===sortedD[sortedD.length-1]?.[0]);
-      const top2 = sortedD.slice(0,2).map(([k,v])=>({dim:DIMS.find(d=>d.key===k),v}));
-      const bot2 = sortedD.slice(-2).map(([k,v])=>({dim:DIMS.find(d=>d.key===k),v}));
-      const proj = (v) => v<30?Math.min(100,v+40):v<50?Math.min(100,v+30):v<70?Math.min(100,v+20):v<85?Math.min(100,v+10):Math.min(100,v+5);
-      const getLevel = (v) => v>=75?'high':v>=50?'mid':'low';
-      const getLevelLabel = (v) => v>=80?'Excelente':v>=65?'Forte':v>=50?'Em desenvolvimento':v>=35?'Gap relevante':'Gap crítico';
-      const getLevelColor = (v) => v>=80?'#4caf50':v>=65?'#8bc34a':v>=50?'#ff9800':v>=35?'#ff5722':'#ef5350';
+      // ── helpers ──────────────────────────────────────────────
+      const s10 = (k) => Math.round((sc[k]||0)/10);  // score /10
+      const pct = (k) => sc[k]||0;                    // score %
+      const sortedD = [...DIMS].sort((a,b)=>(sc[b.key]||0)-(sc[a.key]||0));
+      const maxD = sortedD[0];
+      const minD = sortedD[sortedD.length-1];
+      const top3 = sortedD.slice(0,3);
+      const bot2 = sortedD.slice(-2);
+      const overallTen = Math.round(assessment.overall/10);
+      const percLabel = assessment.overall>=85?'TOP 10%':assessment.overall>=75?'TOP 20%':assessment.overall>=65?'TOP 30%':assessment.overall>=55?'TOP 40%':'EM DESENVOLVIMENTO';
+      const percColor = assessment.overall>=75?'#4caf50':assessment.overall>=55?'#ff9800':'#ef5350';
 
-      const dimInterp = {
+      const getLvl = (v) => v>=75?'high':v>=50?'mid':'low';
+      const getLvlLbl = (v) => v>=80?'Excelente':v>=65?'Forte':v>=50?'Médio':v>=35?'Relevante':'Gap Crítico';
+      const getLvlClr = (v) => v>=75?'#4caf50':v>=50?'#ff9800':'#ef5350';
+      const proj = (v) => v<30?Math.min(100,v+40):v<50?Math.min(100,v+30):v<70?Math.min(100,v+20):Math.min(100,v+10);
+
+      // ── per-dimension content ─────────────────────────────────
+      const dimContent = {
         intencao_estrategica:{
-          high:"Você sabe exatamente quem precisa na sua rede e por quê. Age com propósito claro e pensa no longo prazo — isso é extraordinariamente raro.",
-          mid:"Você tem direção estratégica mas nem sempre a articula. Há espaço para tornar sua visão relacional mais explícita e deliberada.",
-          low:"Você age por impulso mais do que por estratégia. Construir uma visão clara de quem quer ter na rede é o primeiro passo."
+          sintese: {high:"Você vê o networking como investimento estratégico — sabe exatamente quem precisa na sua rede e por quê. Age com propósito e tem visão de longo prazo.",mid:"Você tem alguma clareza sobre seus objetivos relacionais, mas nem sempre age com intenção deliberada. Há espaço para tornar sua estratégia mais explícita.",low:"Você age por impulso mais do que por estratégia nas relações. Construir uma visão clara de quem quer ter na rede é o primeiro passo."},
+          gatilho_at:{label:"Mapa Estratégico",desc:"Clareza de onde cada contato gera impacto no longo prazo",acao:"Monte um mapa de 15-20 contatos prioritários com ciclo de 30 dias para cada um."},
+          gatilho_bl:{label:"Falta de Visão Sistêmica",desc:"Age por impulso ou contexto, sem estratégia clara de quais conexões cultivar",antidoto:"Dedique 30 minutos por mês para revisar sua rede e identificar gaps estratégicos."},
+          interp:{high:"Visão de mercado e clareza de intenção — pico absoluto",mid:"Direção presente, execução a desenvolver",low:"Oportunidade crítica de alavancagem"}
         },
         escuta_relacional:{
-          high:"Sua escuta é um ativo raro. Pessoas saem de conversas com você sentindo que foram genuinamente vistas — isso constrói confiança naturalmente.",
-          mid:"Você escuta bem em momentos importantes, mas a agenda própria às vezes interfere. Presença plena nas conversas é o diferencial.",
-          low:"Você tende a falar mais do que ouvir. Conversas informativas não criam aliados — conversas transformadoras criam. A escuta é o caminho."
+          sintese:{high:"Sua escuta é um ativo relacional raro. As pessoas saem de conversas com você sentindo que foram genuinamente vistas e compreendidas.",mid:"Você escuta bem em momentos importantes, mas a agenda própria às vezes interfere. Presença plena nas conversas é o diferencial.",low:"Você tende a falar mais do que ouvir. Conversas posicionadas não criam aliados — conversas transformadoras criam."},
+          gatilho_at:{label:"Profundidade Conversacional",desc:"Momentos de escuta genuína criam vínculos que posicionamento não consegue",acao:"Regra: em 1 conversa por dia, escute 70% do tempo. Faça perguntas que você genuinamente não sabe a resposta."},
+          gatilho_bl:{label:"Escuta Rasa",desc:"Foco no posicionamento pessoal em vez de entender o outro",antidoto:"Antes de cada conversa importante, defina 2 perguntas que você quer genuinamente aprender sobre a pessoa."},
+          interp:{high:"Escuta profunda — o maior ponto de alavancagem",mid:"Desenvolvimento ativo necessário",low:"GAP CRÍTICO — escuta rasa limita a profundidade das conexões"}
         },
         presenca_mercado:{
-          high:"Você tem marca pessoal sólida. O mercado te conhece, sua reputação precede você e as pessoas te buscam ativamente.",
-          mid:"Você tem alguma visibilidade, mas ela é inconsistente. Falta constância para consolidar uma referência de mercado.",
-          low:"Sua competência não é visível para quem deveria conhecê-la. O mercado não pode valorizar o que não enxerga."
+          sintese:{high:"Você tem marca pessoal sólida. O mercado te conhece pelo que você entrega — sua reputação precede você e as pessoas te buscam ativamente.",mid:"Você tem alguma visibilidade, mas ela é inconsistente. Falta constância para consolidar uma referência de mercado.",low:"Sua competência não é visível para quem deveria conhecê-la. O mercado não pode valorizar o que não enxerga."},
+          gatilho_at:{label:"Visibilidade Ativa",desc:"Ambientes de alta visibilidade onde pode posicionar sua referência",acao:"Publique 1 insight por semana sobre sua área. Presencie 1 evento estratégico por mês."},
+          gatilho_bl:{label:"Presença Episódica",desc:"Aparece nos momentos certos mas some entre os eventos",antidoto:"Crie um calendário fixo de presença: 1 conteúdo/semana, 1 evento/mês, 1 artigo/trimestre."},
+          interp:{high:"Marca pessoal forte — circula com objetivo claro",mid:"Visibilidade inconsistente — constância é o gap",low:"Invisível para quem deveria te conhecer"}
         },
         reciprocidade_ativa:{
-          high:"Você gera valor antes de pedir. Indica, conecta, compartilha — e isso cria uma rede que genuinamente quer te ajudar.",
-          mid:"Você se importa em contribuir, mas nem sempre toma a iniciativa. Pequenos gestos frequentes constroem dívidas de gratidão.",
-          low:"Você espera que a relação evolua sozinha. A reciprocidade ativa — dar primeiro, sem agenda — é o combustível das redes sólidas."
+          sintese:{high:"Você gera valor antes de pedir. Indica, conecta, compartilha sem agenda — e isso cria uma rede que genuinamente quer te ajudar.",mid:"Você se importa em contribuir, mas nem sempre toma a iniciativa. Pequenos gestos frequentes constroem dívidas de gratidão.",low:"Você espera que a relação evolua sozinha. A reciprocidade ativa — dar primeiro, sem agenda — é o combustível das redes sólidas."},
+          gatilho_at:{label:"Geração de Valor",desc:"Identificar oportunidades de contribuir antes de ser solicitado",acao:"Para cada contato-chave: o que posso oferecer agora sem esperar nada? Faça 2 indicações esta semana."},
+          gatilho_bl:{label:"Follow-up Passivo",desc:"Aguarda que a relação evolua naturalmente sem iniciativa própria",antidoto:"Regra das 48h: toda conversa relevante recebe mensagem personalizada com algo de valor."},
+          interp:{high:"Valor nos relacionamentos — presente e genuíno",mid:"Espaço para ampliar a proatividade",low:"Reciprocidade passiva limita conversão de contatos em aliados"}
         },
         ritual_consistencia:{
-          high:"Você trata networking como hábito. Sua rede nunca esfria porque você a alimenta regularmente — mesmo nas épocas mais intensas.",
-          mid:"Você tem intenção de manter contato, mas a rotina engole a execução. Um sistema mínimo substitui a motivação variável.",
-          low:"Seu networking é reativo — você cultiva quando precisa. Isso limita profundamente o capital relacional que você consegue construir."
+          sintese:{high:"Você trata networking como hábito. Sua rede nunca esfria porque você a alimenta regularmente — mesmo nas épocas mais intensas.",mid:"Você tem intenção de manter contato, mas a rotina engole a execução. Um sistema mínimo substitui a motivação variável.",low:"Seu networking é reativo — você cultiva quando precisa. Isso limita profundamente o capital relacional que você consegue construir."},
+          gatilho_at:{label:"Sistema de Hábito",desc:"Quando o sistema de contato está instalado, a consistência é automática",acao:"Ritual: toda segunda-feira, 20 minutos, 3 contatos. Sem exceção. Configure no calendário agora."},
+          gatilho_bl:{label:"Rotina que Engole",desc:"Intenção alta, mas execução dependente da energia disponível",antidoto:"CRM pessoal simples: 20 contatos prioritários, data do último contato, próximo contato planejado."},
+          interp:{high:"Follow-up ativo — comportamento de alto impacto instalado",mid:"GAP CRÍTICO — follow-up passivo limita conversão dos contatos",low:"GAP CRÍTICO — ausência de sistema torna networking reativo"}
         },
         confianca_autentica:{
-          high:"Você é o mesmo nas reuniões formais e no cafezinho. Essa coerência é percebida e valorizada — é a base de todas as relações sólidas.",
-          mid:"Você é relativamente autêntico, mas há um 'personagem profissional' que ainda limita conexões mais profundas.",
-          low:"Há distância entre quem você é e como se apresenta. Essa lacuna cria barreiras invisíveis que impedem vínculos genuínos."
+          sintese:{high:"Você é o mesmo nas reuniões formais e no cafezinho informal. Essa coerência é percebida e valorizada — é a base de todas as relações sólidas.",mid:"Você é relativamente autêntico, mas há um 'personagem profissional' que ainda limita conexões mais profundas.",low:"Há distância entre quem você é e como se apresenta profissionalmente. Essa lacuna cria barreiras invisíveis que impedem vínculos genuínos."},
+          gatilho_at:{label:"Identidade Coerente",desc:"Alinhamento entre valores pessoais e comportamento profissional gera confiança",acao:"Compartilhe algo real sobre o que você está construindo ou enfrentando. Deixe o outro contribuir."},
+          gatilho_bl:{label:"Personagem Profissional",desc:"Apresenta uma versão curada que impede conexões genuínas",antidoto:"Em 2 conversas próximas, seja vulnerável: compartilhe um desafio real. Isso transforma contato em aliado."},
+          interp:{high:"Alinhamento presente — base sólida de confiança",mid:"Autenticidade em desenvolvimento",low:"Gap entre intenção e expressão — barreira para vínculos profundos"}
         }
       };
 
-      const tensaoText = top2.length>=2&&bot2.length>=2
-        ? `${top2[0].dim?.label||''} ${top2[0].v}% e ${top2[1].dim?.label||''} ${top2[1].v}% — mas ${bot2[1].dim?.label||''} ${bot2[1].v}% e ${bot2[0].dim?.label||''} ${bot2[0].v}%. A tensão central do seu perfil: os pontos mais fortes coexistem com gaps que limitam a conversão do potencial em resultado relacional real.`
-        : '';
+      // ── tensão central inteligente ────────────────────────────
+      const hiLabel = (d) => `${d.label} ${s10(d.key)}/10`;
+      const tensao = bot2.length>=2
+        ? `${hiLabel(top3[0])} e ${hiLabel(top3[1])} — mas ${hiLabel(bot2[1])} e ${hiLabel(bot2[0])}. ${dimContent[bot2[0].key]?.sintese?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}. A rede existe em potencial; o capital relacional profundo ainda está sendo construído.`
+        : `Score geral ${overallTen}/10. ${pf?.desc?.split('.')[0]||''}.`;
 
-      const shadowText = bot2[0]?.dim
-        ? `A sombra mais profunda é o gap entre a intenção declarada e a execução. ${bot2[0].dim.label} ${bot2[0].v}% é o padrão que mais custa — não pela ausência de vontade, mas pela ausência de sistema. A consciência desse padrão é o início da mudança.`
-        : '';
+      // ── SÍNTESE gerada a partir dos scores ───────────────────
+      const sintese12 = [
+        {q:"O que mais te impressiona?", a: pct('intencao_estrategica')>=70?`A clareza sobre quem você quer ter na sua rede e por quê — você vê o networking como investimento, não como evento.`:`A intenção existe, mas a estratégia de rede ainda está em construção — há espaço para tornar os objetivos mais explícitos.`},
+        {q:"Como gostaria de ser descrito?", a: pct('presenca_mercado')>=70?`Uma referência — sabe muito sobre o que faz e tem visão de mercado que o torna reconhecível.`:`Um profissional sólido, mas ainda construindo visibilidade consistente no mercado.`},
+        {q:"Sua relação com networking?", a: pct('intencao_estrategica')>=70?`Como investimento estratégico que precisa ser gerenciado com clareza de propósito e retorno.`:`Como algo importante mas que ainda compete com a rotina — a intenção supera a execução.`},
+        {q:"Como se comporta em eventos?", a: pct('presenca_mercado')>=70?`Circulando ativamente — o objetivo é conectar com pessoas relevantes com clareza de propósito.`:`Presente, mas sem sempre ter clareza do que quer gerar em cada conversa.`},
+        {q:"Alguém pede ajuda. Sua reação?", a: pct('reciprocidade_ativa')>=70?`Responde com generosidade — conecta, indica, compartilha. A reciprocidade é um valor genuíno.`:`Ajuda quando solicitado, mas raramente toma a iniciativa de oferecer antes de ser chamado.`},
+        {q:"Qual situação te representa?", a: pct('ritual_consistencia')>=70?`Contatos que se tornam aliados — porque você cultiva com consistência, não apenas em momentos de necessidade.`:`Muitos contatos, mas poucos que eu chamaria de aliados reais — a profundidade é o gap.`},
+        {q:"Maior bloqueio?", a: pct('ritual_consistencia')>=70?`A escala — manter qualidade quando o volume de relações cresce é o desafio.`:`O tempo — tenho a intenção, mas a rotina engole a execução. O sistema ainda não está instalado.`},
+        {q:"O que faz nas 48h após conversa?", a: pct('reciprocidade_ativa')>=70?`Envio mensagem personalizada com algo de valor — um artigo, uma indicação, um reconhecimento.`:`Depende da conversa — nas mais relevantes, faço follow-up; nas demais, aguardo que a relação evolua.`},
+        {q:"Onde sua energia vai em conversas?", a: pct('escuta_relacional')>=70?`Para entender o outro genuinamente — o que está construindo, enfrentando, precisando.`:`Para me posicionar bem — como estou sendo percebido e que impressão estou gerando.`},
+        {q:"Papel dos relacionamentos?", a: pct('confianca_autentica')>=70?`É o que define meu legado — o impacto que gerei nas pessoas e no mercado.`:`É essencial para o meu crescimento, mas ainda não é gerenciado com a atenção que merece.`},
+        {q:"Uma coisa que mudaria?", a: pct('ritual_consistencia')>=70?`Aprofundar as conexões que já tenho — transformar mais contatos em aliados reais.`:`Ser mais consistente no follow-up — manter o contato vivo entre os momentos de encontro.`},
+        {q:"O que rede representa?", a: pct('confianca_autentica')>=70?`Segurança — pessoas que estarão lá quando eu precisar, porque cultivei com genuinidade.`:`Oportunidade — mas ainda não operacionalizada com a consistência que o potencial merece.`},
+      ];
 
-      const gatilhosAtivacao = top2.filter(t=>t.v>=60).map(t=>({
-        icon: t.dim?.label?.split(' ')[0]||'⚡',
-        title: t.dim?.label||'',
-        score: t.v,
-        desc: dimInterp[t.dim?.key||'']?.high||'',
-        acao: `Capitalize este ponto forte — ele é sua vantagem competitiva relacional.`
-      }));
+      // ── radar SVG ─────────────────────────────────────────────
+      const cx=220,cy=220,r=160;
+      const rPt=(i,v)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d=r*(v/100);return[cx+d*Math.cos(a),cy+d*Math.sin(a)];};
+      const dVals=DIMS.map(d=>pct(d.key));
+      const rPoly=dVals.map((v,i)=>rPt(i,v).join(',')).join(' ');
+      const rRings=[20,40,60,80,100].map(v=>`<polygon points="${Array.from({length:6},(_,i)=>rPt(i,v).join(',')).join(' ')}" fill="none" stroke="#2a2825" stroke-width="${v===60?1.2:.6}"/>`).join('');
+      const rAxes=DIMS.map((_,i)=>{const[x,y]=rPt(i,100);return`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2825" stroke-width=".5"/>`;}).join('');
+      const rDots=dVals.map((v,i)=>{const[x,y]=rPt(i,v);return`<circle cx="${x}" cy="${y}" r="5" fill="${DIMS[i].color}"/>`;}).join('');
+      const rLbls=DIMS.map((_,i)=>{const[x,y]=rPt(i,120);const v=dVals[i];return`<text x="${x}" y="${y-4}" text-anchor="middle" fill="${DIMS[i].color}" font-size="9.5" font-weight="700" font-family="Arial">${DIMS[i].short}</text><text x="${x}" y="${y+9}" text-anchor="middle" fill="${DIMS[i].color}" font-size="11" font-weight="700" font-family="monospace">${v}%</text>`;}).join('');
+      const radarSVG=`<svg viewBox="0 0 440 440" width="340" height="340">${rRings}${rAxes}<polygon points="${rPoly}" fill="#c9a22718" stroke="#c9a227" stroke-width="2"/>${rDots}${rLbls}</svg>`;
 
-      const gatilhosBloqueio = bot2.filter(t=>t.v<70).map(t=>({
-        icon: '⚠',
-        title: t.dim?.label||'',
-        score: t.v,
-        desc: dimInterp[t.dim?.key||'']?.low||dimInterp[t.dim?.key||'']?.mid||'',
-        antidoto: `Implemente um sistema mínimo para esta dimensão — intenção sem estrutura não vira hábito.`
-      }));
-
-      // Radar SVG
-      const cx=200,cy=200,r=145;
-      const pt=(i,v)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d=r*(v/100);return[cx+d*Math.cos(a),cy+d*Math.sin(a)];};
-      const dimVals=DIMS.map(d=>sc[d.key]||0);
-      const poly=dimVals.map((v,i)=>pt(i,v).join(",")).join(" ");
-      const rings=[20,40,60,80,100].map(v=>`<polygon points="${Array.from({length:6},(_,i)=>pt(i,v).join(",")).join(" ")}" fill="none" stroke="#2a2825" stroke-width="${v===60?1.5:0.7}" stroke-dasharray="${v===60?'4,3':'none'}"/>`).join("");
-      const axes=DIMS.map((_,i)=>{const[x,y]=pt(i,100);return`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2825" stroke-width="0.5"/>`;}).join("");
-      const dots=dimVals.map((v,i)=>{const[x,y]=pt(i,v);return`<circle cx="${x}" cy="${y}" r="6" fill="${DIMS[i].color}" opacity="0.9"/>`;}).join("");
-      const labels=DIMS.map((_,i)=>{const[x,y]=pt(i,130);const v=dimVals[i];return`<text x="${x}" y="${y-5}" text-anchor="middle" fill="${DIMS[i].color}" font-size="10" font-weight="700" font-family="DM Sans,Arial">${DIMS[i].short}</text><text x="${x}" y="${y+8}" text-anchor="middle" fill="${DIMS[i].color}" font-size="11" font-weight="700" font-family="JetBrains Mono,monospace">${v}%</text>`;}).join("");
-      const radarSVG=`<svg viewBox="0 0 400 400" width="320" height="320">${rings}${axes}<polygon points="${poly}" fill="#c9a22720" stroke="#c9a227" stroke-width="2.5"/>${dots}${labels}<circle cx="${cx}" cy="${cy}" r="3" fill="#c9a227"/></svg>`;
-
-      // Mental Map SVG
-      const mmR=180, mmCx=300, mmCy=300;
-      const mmNodes=DIMS.map((d,i)=>{
-        const a=-Math.PI/2+(2*Math.PI/6)*i;
-        const nr=mmR*(0.6+0.4*(dimVals[i]/100));
-        const x=mmCx+nr*Math.cos(a);
-        const y=mmCy+nr*Math.sin(a);
-        const v=dimVals[i];
-        return{x,y,d,v,i};
+      // ── mapa mental SVG ───────────────────────────────────────
+      const W=1000,H=780,MMcx=W/2,MMcy=H/2+20;
+      const mmSubtopics={
+        intencao_estrategica:["Visão de longo prazo","Mapa de contatos","Propósito claro","Retorno de rede","Priorização"],
+        escuta_relacional:["Presença plena","Perguntas abertas","Empatia ativa","Conexão genuína","Escuta 70/30"],
+        presenca_mercado:["Marca pessoal","Conteúdo","Eventos","Referência","Visibilidade"],
+        reciprocidade_ativa:["Dar primeiro","Indicações","Compartilhar","Valor sem agenda","Follow-up"],
+        ritual_consistencia:["Rotina semanal","CRM pessoal","Segunda-feira","Hábito","Sistema"],
+        confianca_autentica:["Coerência","Vulnerabilidade","Valores","Identidade","Autenticidade"]
+      };
+      let mmSVG='';
+      const mmRings=[60,130,200,270].map(rr=>`<circle cx="${MMcx}" cy="${MMcy}" r="${rr}" fill="none" stroke="#1e1c18" stroke-width=".8" stroke-dasharray="3,8"/>`).join('');
+      mmSVG+=mmRings;
+      DIMS.forEach((d,i)=>{
+        const angle=-Math.PI/2+(2*Math.PI/6)*i;
+        const v=pct(d.key);
+        const mainDist=195+30*(v/100);
+        const mx=MMcx+mainDist*Math.cos(angle);
+        const my=MMcy+mainDist*Math.sin(angle);
+        mmSVG+=`<line x1="${MMcx}" y1="${MMcy}" x2="${mx}" y2="${my}" stroke="${d.color}" stroke-width="2" opacity=".35"/>`;
+        // main node
+        const nr=36+Math.round(v/20);
+        mmSVG+=`<circle cx="${mx}" cy="${my}" r="${nr+6}" fill="${d.color}" opacity=".07"/>`;
+        mmSVG+=`<circle cx="${mx}" cy="${my}" r="${nr}" fill="#0d0d0f" stroke="${d.color}" stroke-width="2"/>`;
+        mmSVG+=`<text x="${mx}" y="${my-8}" text-anchor="middle" fill="${d.color}" font-size="10" font-weight="700" font-family="Arial">${d.short}</text>`;
+        mmSVG+=`<text x="${mx}" y="${my+7}" text-anchor="middle" fill="${getLvlClr(v)}" font-size="13" font-weight="700" font-family="monospace">${s10(d.key)}/10</text>`;
+        // sub-branches
+        const topics=(mmSubtopics[d.key]||[]).slice(0,5);
+        topics.forEach((t,ti)=>{
+          const spread=0.55;
+          const sa=angle+(ti-(topics.length-1)/2)*spread;
+          const sd=85+20*(v/100);
+          const sx=mx+sd*Math.cos(sa);
+          const sy=my+sd*Math.sin(sa);
+          const isActive=v>=60;
+          mmSVG+=`<line x1="${mx}" y1="${my}" x2="${sx}" y2="${sy}" stroke="${d.color}" stroke-width="${isActive?1.2:.7}" opacity=".4"/>`;
+          mmSVG+=`<ellipse cx="${sx}" cy="${sy}" rx="30" ry="13" fill="${d.color}${isActive?'16':'0a'}" stroke="${d.color}" stroke-width="${isActive?.9:.4}" opacity="${isActive?.9:.5}"/>`;
+          mmSVG+=`<text x="${sx}" y="${sy+1}" text-anchor="middle" dominant-baseline="middle" fill="${d.color}" font-size="8" font-weight="${isActive?'600':'400'}" font-family="Arial" opacity="${isActive?.9:.6}">${t}</text>`;
+        });
       });
-      const mmLines=mmNodes.map(n=>`<line x1="${mmCx}" y1="${mmCy}" x2="${n.x}" y2="${n.y}" stroke="${n.d.color}" stroke-width="1.5" opacity="0.4"/>`).join("");
-      const mmCircles=mmNodes.map(n=>{
-        const r2=18+Math.round(n.v/8);
-        return`<circle cx="${n.x}" cy="${n.y}" r="${r2}" fill="${n.d.color}18" stroke="${n.d.color}" stroke-width="1.5"/>
-        <text x="${n.x}" y="${n.y-2}" text-anchor="middle" dominant-baseline="middle" fill="${n.d.color}" font-size="8" font-weight="700" font-family="DM Sans,Arial">${n.d.short}</text>
-        <text x="${n.x}" y="${n.y+9}" text-anchor="middle" fill="${n.d.color}" font-size="10" font-weight="700" font-family="JetBrains Mono,monospace">${n.v}%</text>`;
-      }).join("");
-      // Connect adjacent nodes
-      const mmEdges=mmNodes.map((n,i)=>{const n2=mmNodes[(i+1)%6];return`<line x1="${n.x}" y1="${n.y}" x2="${n2.x}" y2="${n2.y}" stroke="${n.d.color}" stroke-width="0.8" opacity="0.2"/>`;}).join("");
-      const mentalMapSVG=`<svg viewBox="0 0 600 600" width="100%" style="max-width:480px">${mmLines}${mmEdges}${mmCircles}<circle cx="${mmCx}" cy="${mmCy}" r="40" fill="#c9a22714" stroke="#c9a227" stroke-width="1.5"/><text x="${mmCx}" y="${mmCy-8}" text-anchor="middle" fill="#c9a227" font-size="12" font-weight="700" font-family="Cormorant Garamond,serif">${pf?.emoji||"🎯"}</text><text x="${mmCx}" y="${mmCy+8}" text-anchor="middle" fill="#c9a22790" font-size="8" font-family="DM Sans,Arial">${assessment.overall}%</text></svg>`;
+      // center
+      mmSVG+=`<circle cx="${MMcx}" cy="${MMcy}" r="54" fill="#c9a22710" stroke="#c9a227" stroke-width="2"/>`;
+      mmSVG+=`<circle cx="${MMcx}" cy="${MMcy}" r="44" fill="#0a0a0c" stroke="#c9a22740" stroke-width="1"/>`;
+      mmSVG+=`<text x="${MMcx}" y="${MMcy-14}" text-anchor="middle" fill="#c9a227" font-size="26">${pf?.emoji||'🎯'}</text>`;
+      mmSVG+=`<text x="${MMcx}" y="${MMcy+8}" text-anchor="middle" fill="#c9a227" font-size="12" font-weight="700" font-family="Arial">${assessment.overall}%</text>`;
+      mmSVG+=`<text x="${MMcx}" y="${MMcy+22}" text-anchor="middle" fill="#c9a22760" font-size="8" font-family="Arial">score geral</text>`;
+      // connecting hex
+      const hexPts=DIMS.map((_,i)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d2=195+30*(pct(DIMS[i].key)/100);return`${MMcx+d2*Math.cos(a)},${MMcy+d2*Math.sin(a)}`;}).join(' ');
+      mmSVG=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:600px" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#090908"/>${mmSVG}<polygon points="${hexPts}" fill="#c9a22705" stroke="#c9a22725" stroke-width="1" stroke-dasharray="4,6"/></svg>`;
 
-      const percScore = assessment.overall>=80?'TOP 10%':assessment.overall>=70?'TOP 20%':assessment.overall>=60?'TOP 35%':'Desenvolvendo';
-
-      const html = `<!DOCTYPE html>
-<html lang="pt-BR"><head>
-<meta charset="UTF-8">
-<title>Diagnóstico Relacional — ${profile?.name||"CONÉXIA"}</title>
+      const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Diagnóstico Relacional — ${profile?.name||""}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#0d0d0f;color:#e8e4da;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-@page{margin:12mm;size:A4}
-@media print{.no-print{display:none!important}.page-break{page-break-before:always}}
-.print-btn{position:fixed;bottom:20px;right:20px;background:linear-gradient(135deg,#c9a227,#a07d1a);color:#0d0d0f;border:none;border-radius:10px;padding:13px 22px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 24px #c9a22750;z-index:999;font-family:'Segoe UI',Arial}
-/* COVER */
-.cover{display:grid;grid-template-columns:220px 1fr 200px;min-height:100vh;background:#0d0d0f;position:relative;overflow:hidden}
-.cover-bg{position:absolute;inset:0;pointer-events:none;z-index:0}
-.cover-left{background:linear-gradient(180deg,#0f0e0c 0%,#110f0d 100%);border-right:1px solid #2a2825;padding:28px 18px;position:relative;z-index:1}
-.cover-center{padding:40px 28px;display:flex;flex-direction:column;justify-content:space-between;position:relative;z-index:1;background:linear-gradient(135deg,#0d0d0f 0%,#100e0b 60%,#0d0c0a 100%)}
-.cover-right{background:linear-gradient(180deg,#0f0e0c 0%,#110f0d 100%);border-left:1px solid #2a2825;padding:24px 16px;position:relative;z-index:1}
-.dim-gap-crit{font-size:8px;font-weight:700;color:#ef5350;letter-spacing:.1em;text-transform:uppercase;background:#ef535014;border:1px solid #ef535030;padding:1px 6px;border-radius:2px;display:inline-block;margin-bottom:3px}
-.dim-item{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1a1816}
-.dim-score-badge{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;padding:2px 8px;border-radius:4px}
-.profile-badge{display:inline-block;background:linear-gradient(135deg,#c9a22720,#c9a22708);border:1px solid #c9a22740;color:#c9a227;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
-.tag-pill{display:inline-block;background:#ffffff08;border:1px solid #2a2825;color:#8a8480;padding:3px 10px;border-radius:20px;font-size:10px;margin-right:6px;margin-bottom:6px}
-.tensao-box{background:#c9a22708;border:1px solid #c9a22725;border-radius:8px;padding:16px;margin:16px 0}
-.quote-box{border-left:3px solid #c9a227;padding-left:16px;margin:16px 0}
-.sidebar-card{background:#161618;border:1px solid #2a2825;border-radius:8px;padding:14px;margin-bottom:12px}
-.sidebar-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
-.green{color:#4caf50}.red{color:#ef5350}.gold{color:#c9a227}.muted{color:#6a6460}
-/* SECTIONS */
-.section{padding:32px 28px;border-top:1px solid #1a1816}
-.section-label{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a227;margin-bottom:12px}
-h2{font-size:22px;font-weight:700;color:#e8e4da;margin-bottom:12px;font-family:'Segoe UI',Arial}
-h3{font-size:14px;font-weight:600;color:#c9a227;margin-bottom:6px}
-p{font-size:13px;color:#8a8480;line-height:1.75;margin-bottom:10px}
-.card{background:#161618;border:1px solid #2a2825;border-radius:10px;padding:20px;margin-bottom:12px}
-.bar-wrap{height:7px;border-radius:4px;background:#2a2825;margin-top:6px}
-.bar-fill{height:7px;border-radius:4px}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
-.action-num{width:30px;height:30px;border-radius:8px;background:#c9a22710;border:1px solid #c9a22730;display:flex;align-items:center;justify-content:center;font-weight:700;color:#c9a227;font-size:13px;flex-shrink:0;font-family:'JetBrains Mono',monospace}
-.gatilho-card{border-radius:10px;padding:16px;margin-bottom:10px}
-.thermo-row{display:grid;grid-template-columns:130px 60px 60px 1fr;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #1a1816}
-.footer-bar{background:#0a0a0c;border-top:1px solid #1a1816;padding:20px 28px;display:flex;justify-content:space-between;align-items:center;margin-top:32px}
-</style></head>
-<body>
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:13px}
+@page{size:A4;margin:0}
+@media print{.no-print{display:none!important}.pb{page-break-before:always}}
+.print-btn{position:fixed;bottom:20px;right:20px;background:#c9a227;color:#000;border:none;border-radius:8px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:999;box-shadow:0 4px 20px #c9a22760}
+
+/* ── COVER ─────────────────────────────────────── */
+.cover{display:grid;grid-template-columns:195px 1fr 185px;min-height:100vh;background:#0d0d0f}
+.col-l{background:#111010;border-right:1px solid #222;padding:28px 16px;overflow:hidden}
+.col-c{padding:36px 24px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#0d0d0f 0%,#100e0c 100%)}
+.col-r{background:#111010;border-left:1px solid #222;padding:24px 14px;overflow:hidden}
+
+/* dim card */
+.dc{margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid #1c1a18}
+.dc-lbl{font-size:11px;font-weight:700;color:#c9a227;margin-bottom:3px}
+.dc-score{font-family:'Courier New',monospace;font-size:20px;font-weight:700;float:right;line-height:1.1}
+.dc-badge{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:1px 6px;border-radius:2px;display:inline-block;margin-bottom:3px}
+.dc-bar-wrap{height:5px;border-radius:3px;background:#1e1c18;clear:both}
+.dc-bar{height:5px;border-radius:3px}
+.dc-note{font-size:9px;color:#3a3835;margin-top:3px;line-height:1.35}
+
+/* center elements */
+.profile-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid #c9a22730;background:#c9a22710;border-radius:6px;padding:7px 14px;margin-bottom:10px}
+.tag{display:inline-block;background:#ffffff08;border:1px solid #2a2825;color:#666;padding:3px 10px;border-radius:20px;font-size:9.5px;margin-right:5px;margin-bottom:5px}
+.score-grid{display:flex;border:1px solid #222;border-radius:8px;overflow:hidden;margin-bottom:20px}
+.score-cell{padding:14px 16px;border-right:1px solid #222;text-align:center;flex:1}
+.score-cell:last-child{border-right:none}
+.tensao-box{background:#c9a22706;border:1px solid #c9a22720;border-radius:7px;padding:14px;margin-bottom:14px}
+.quote{border-left:2px solid #c9a22740;padding-left:14px;margin-bottom:12px}
+
+/* right sidebar cards */
+.sc{background:#161614;border:1px solid #242220;border-radius:8px;padding:13px;margin-bottom:9px}
+.sc-lbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px}
+
+/* ── SECTIONS ───────────────────────────────────── */
+.sec{padding:36px 40px;border-top:1px solid #eee;background:#fff;color:#111}
+.sec-dark{padding:36px 40px;border-top:1px solid #1a1816;background:#0d0d0f;color:#e8e4da}
+.sec-lbl{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#c9a227;margin-bottom:12px}
+h2{font-size:22px;font-weight:700;margin-bottom:12px;color:inherit}
+h3{font-size:13px;font-weight:600;color:#c9a227;margin-bottom:6px;margin-top:16px}
+p{font-size:13px;line-height:1.75;margin-bottom:10px;color:#555}
+p.light{color:#8a8480}
+.card{border:1px solid #e0ddd8;border-radius:10px;padding:18px;margin-bottom:12px}
+.card-dark{background:#161618;border:1px solid #2a2825;border-radius:10px;padding:18px;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.bar-w{height:6px;border-radius:3px;background:#e5e2dc;margin-top:5px}
+.bar-w-dark{height:6px;border-radius:3px;background:#2a2825;margin-top:5px}
+.bar-f{height:6px;border-radius:3px}
+.act-num{width:30px;height:30px;border-radius:8px;background:#c9a22715;border:1px solid #c9a22730;display:flex;align-items:center;justify-content:center;font-weight:700;color:#c9a227;font-size:13px;flex-shrink:0;font-family:'Courier New',monospace}
+.week-box{display:grid;grid-template-columns:54px 1fr;margin-bottom:14px;border:1px solid #e0ddd8;border-radius:10px;overflow:hidden}
+.week-num{background:#f7f5f0;border-right:1px solid #e0ddd8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:5px}
+.week-body{padding:14px}
+.thermo-row{display:grid;grid-template-columns:130px 55px 65px 1fr;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #eee;font-size:12px}
+.footer{background:#0d0d0f;border-top:1px solid #1a1816;padding:18px 40px;display:flex;justify-content:space-between;align-items:center}
+
+/* sintese */
+.sq{display:flex;gap:10px;margin-bottom:9px;font-size:11.5px}
+.sq-num{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:#c9a227;background:#c9a22712;border:1px solid #c9a22730;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sq-q{font-weight:600;color:#333;margin-bottom:2px}
+.sq-a{color:#666;line-height:1.5}
+
+/* gatilhos */
+.gtcard{border-radius:8px;padding:14px;margin-bottom:10px}
+.gt-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+
+/* mm */
+.mm-legend-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1a1816}
+</style></head><body>
+
 <button class="print-btn no-print" onclick="window.print()">⬇ Salvar como PDF</button>
 
-<!-- CAPA -->
+<!-- ════ CAPA ════════════════════════════════════════════════ -->
 <div class="cover">
-  <!-- NETWORK BG PATTERN -->
-  <div class="cover-bg">
-    <svg width="100%" height="100%" viewBox="0 0 900 1100" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" opacity="0.07">
-      <defs><radialGradient id="rg" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#c9a227" stop-opacity="0.3"/><stop offset="100%" stop-color="#c9a227" stop-opacity="0"/></radialGradient></defs>
-      <rect width="900" height="1100" fill="url(#rg)"/>
-      ${(()=>{const pts=[[150,120],[300,80],[480,200],[650,100],[800,180],[120,320],[280,380],[420,280],[580,350],[750,300],[880,420],[100,520],[320,550],[500,480],[700,520],[850,600],[180,700],[400,650],[600,700],[780,720],[120,850],[350,820],[550,880],[720,840],[880,900]];const lines=[];for(let i=0;i<pts.length;i++){for(let j=i+1;j<pts.length;j++){const dx=pts[i][0]-pts[j][0];const dy=pts[i][1]-pts[j][1];if(Math.sqrt(dx*dx+dy*dy)<200){lines.push(`<line x1="${pts[i][0]}" y1="${pts[i][1]}" x2="${pts[j][0]}" y2="${pts[j][1]}" stroke="#c9a227" stroke-width="0.8" opacity="0.6"/>`);}}}return lines.join("")+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#c9a227" opacity="0.8"/>`).join("")})()}
-    </svg>
-  </div>
 
-  <!-- ESQUERDA: MAPA DIMENSIONAL -->
-  <div class="cover-left">
-    <div style="font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22760;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #2a2825">Mapa Dimensional</div>
-    ${DIMS.map(d=>{const v=sc[d.key]||0;const isCrit=v<40;const isStrong=v>=80;const clr=v>=75?'#4caf50':v>=50?'#ff9800':v>=35?'#ff5722':'#ef5350';
-    return`<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #1a1816">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-        <div style="font-size:11px;font-weight:700;color:${d.color}">${d.label}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:${clr}">${v}%</div>
+  <!-- LEFT: MAPA DIMENSIONAL -->
+  <div class="col-l">
+    <div style="font-size:8.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22760;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid #222">Mapa Dimensional</div>
+    ${DIMS.map(d=>{const v=pct(d.key);const t=s10(d.key);const clr=getLvlClr(v);const isCrit=v<40;const isStr=v>=80;return`
+    <div class="dc">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="dc-lbl" style="color:${d.color}">${d.label}</div>
+        <div class="dc-score" style="color:${clr}">${t}/10</div>
       </div>
-      ${isCrit?`<div class="dim-gap-crit">⚠ gap crítico</div>`:''}
-      ${isStrong?`<div style="font-size:8px;font-weight:700;color:#4caf50;letter-spacing:.08em;text-transform:uppercase;display:inline-block;background:#4caf5012;border:1px solid #4caf5025;padding:1px 6px;border-radius:2px;margin-bottom:3px">✦ forte</div>`:''}
-      <div style="height:5px;border-radius:3px;background:#1a1816;overflow:hidden"><div style="height:5px;border-radius:3px;background:${d.color};width:${v}%"></div></div>
-      <div style="font-size:9px;color:#3a3830;margin-top:4px;line-height:1.4">${d.short} — ${v>=75?'Excelente':v>=60?'Forte':v>=45?'Em desenvolv.':v>=30?'Gap relevante':'Gap crítico'}</div>
-    </div>`;}).join("")}
+      ${isCrit?`<div class="dc-badge" style="color:#ef5350;background:#ef535012;border:1px solid #ef535025">⚠ GAP CRÍTICO</div>`:isStr?`<div class="dc-badge" style="color:#4caf50;background:#4caf5012;border:1px solid #4caf5025">■ ${getLvlLbl(v)}</div>`:''}
+      <div class="dc-bar-wrap"><div class="dc-bar" style="width:${v}%;background:${d.color}"></div></div>
+      <div class="dc-note">${dimContent[d.key]?.interp?.[getLvl(v)]||''}</div>
+    </div>`;}).join('')}
   </div>
 
-  <!-- CENTRO: PERFIL PRINCIPAL -->
-  <div class="cover-center">
-    <!-- HEADER TOP BAR -->
+  <!-- CENTER: PROFILE -->
+  <div class="col-c">
     <div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;padding-bottom:16px;border-bottom:1px solid #2a2825">
-        <div style="font-size:8px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#c9a22780">Diagnóstico Relacional Profissional</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:14px;border-bottom:1px solid #2a2825">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#c9a22760">Diagnóstico Relacional Profissional</div>
         <div style="font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#c9a22740">CONÉXIA</div>
       </div>
 
-      <!-- NOME GRANDE -->
-      <div style="font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#c9a22740;margin-bottom:8px">${percScore}</div>
-      <div style="font-size:58px;font-weight:800;color:#e8e4da;line-height:0.95;margin-bottom:16px;letter-spacing:-2px;text-shadow:0 0 80px #c9a22715">${profile?.name||profile?.first_name||""}</div>
+      <div style="font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px" class="col-c">
+        <span style="color:${percColor};background:${percColor}18;border:1px solid ${percColor}30;padding:3px 10px;border-radius:4px">${percLabel}</span>
+        <span style="color:#c9a22760;margin-left:10px">· SCORE MÉDIO ${overallTen}/10</span>
+      </div>
 
-      <!-- PERFIL BADGE -->
-      <div style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#c9a22715,#c9a22708);border:1px solid #c9a22730;border-radius:6px;padding:8px 16px;margin-bottom:14px">
-        <span style="font-size:22px">${pf?.emoji||"🎯"}</span>
+      <div style="font-size:60px;font-weight:800;color:#e8e4da;line-height:.95;margin:14px 0 18px;letter-spacing:-2px">${profile?.name||profile?.first_name||""}</div>
+
+      <div class="profile-badge">
+        <span style="font-size:24px">${pf?.emoji||"🎯"}</span>
         <div>
           <div style="font-size:13px;font-weight:700;color:#c9a227;letter-spacing:.04em">${pf?.name||""}</div>
           <div style="font-size:10px;color:#6a6460;font-style:italic">${pf?.tagline||""}</div>
         </div>
       </div>
 
-      <!-- TAGS -->
-      <div style="margin-bottom:24px">
-        ${profile?.role?`<span style="display:inline-block;background:#ffffff06;border:1px solid #2a2825;color:#6a6460;padding:4px 12px;border-radius:20px;font-size:10px;margin-right:6px;margin-bottom:6px">${profile.role}</span>`:''}
-        ${profile?.segment?`<span style="display:inline-block;background:#ffffff06;border:1px solid #2a2825;color:#6a6460;padding:4px 12px;border-radius:20px;font-size:10px;margin-right:6px;margin-bottom:6px">${profile.segment}</span>`:''}
-        ${profile?.state?`<span style="display:inline-block;background:#ffffff06;border:1px solid #2a2825;color:#6a6460;padding:4px 12px;border-radius:20px;font-size:10px;margin-right:6px;margin-bottom:6px">${profile.state}</span>`:''}
+      <div style="margin-bottom:16px">
+        ${profile?.role?`<span class="tag">${profile.role}</span>`:''}
+        ${profile?.segment?`<span class="tag">${profile.segment}</span>`:''}
+        ${profile?.state?`<span class="tag">${profile.state}</span>`:''}
       </div>
 
-      <!-- SCORE VISUAL -->
-      <div style="display:flex;align-items:stretch;gap:0;margin-bottom:28px;border:1px solid #2a2825;border-radius:10px;overflow:hidden">
-        <div style="background:#c9a22710;padding:20px 24px;border-right:1px solid #2a2825;flex:1;text-align:center">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:#c9a227;line-height:1">${assessment.overall}%</div>
-          <div style="font-size:9px;color:#4a4840;text-transform:uppercase;letter-spacing:.1em;margin-top:4px">Score Geral</div>
+      <div class="score-grid">
+        <div class="score-cell" style="background:#c9a22710">
+          <div style="font-family:'Courier New',monospace;font-size:34px;font-weight:700;color:#c9a227;line-height:1">${assessment.overall}%</div>
+          <div style="font-size:8px;color:#6a6460;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Score Geral</div>
         </div>
-        ${DIMS.slice(0,3).map(d=>{const v=sc[d.key]||0;return`<div style="padding:12px 14px;border-right:1px solid #2a2825;flex:1;text-align:center">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:${d.color}">${v}%</div>
-          <div style="font-size:8px;color:#3a3830;margin-top:2px">${d.short}</div>
-        </div>`;}).join("")}
+        ${DIMS.slice(0,3).map(d=>{const v=pct(d.key);return`<div class="score-cell"><div style="font-family:'Courier New',monospace;font-size:20px;font-weight:700;color:${d.color}">${v}%</div><div style="font-size:8px;color:#3a3830;margin-top:2px">${d.short}</div></div>`;}).join('')}
       </div>
 
-      <!-- TENSÃO CENTRAL -->
-      <div style="background:#c9a22706;border:1px solid #c9a22718;border-radius:8px;padding:16px;margin-bottom:16px">
-        <div style="font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22780;margin-bottom:8px">Tensão Central</div>
-        <div style="font-size:12px;color:#9a9080;line-height:1.7">${tensaoText}</div>
+      <div class="tensao-box">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22790;margin-bottom:7px">Tensão Central</div>
+        <div style="font-size:12px;color:#9a8870;line-height:1.7">${tensao}</div>
       </div>
 
-      <!-- QUOTE -->
-      <div style="border-left:2px solid #c9a22740;padding-left:16px">
-        <div style="font-size:13px;color:#c8c0a0;font-style:italic;line-height:1.6">"${pf?.tagline||""}"</div>
+      <div class="quote">
+        <div style="font-size:13px;color:#b8b0a0;font-style:italic;line-height:1.6">"${pf?.tagline||""}"</div>
       </div>
     </div>
-
-    <div style="font-size:9px;color:#2a2820;margin-top:24px">Gerado em ${new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}</div>
+    <div style="font-size:9px;color:#2a2820">Gerado em ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
   </div>
 
-  <!-- DIREITA: DESTAQUES -->
-  <div class="cover-right">
-    <div style="font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22760;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #2a2825">Destaques</div>
+  <!-- RIGHT: HIGHLIGHTS -->
+  <div class="col-r">
+    <div style="font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22760;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #222">Destaques</div>
 
-    ${maxD?`<div style="background:#4caf5010;border:1px solid #4caf5025;border-radius:8px;padding:14px;margin-bottom:10px">
-      <div style="font-size:8px;font-weight:700;color:#4caf50;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">✦ Maior Força</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#4caf50;line-height:1">${sc[maxD.key]||0}%</div>
-      <div style="font-size:11px;font-weight:600;color:#e8e4da;margin-top:4px">${maxD.label}</div>
-      <div style="font-size:9px;color:#3a5830;margin-top:4px;line-height:1.4">Seu maior ativo<br>relacional</div>
-    </div>`:''}
-
-    ${bot2[0]?.dim&&bot2[0].v<65?`<div style="background:#ef535010;border:1px solid #ef535025;border-radius:8px;padding:14px;margin-bottom:10px">
-      <div style="font-size:8px;font-weight:700;color:#ef5350;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">⚠ Gap Crítico</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#ef5350;line-height:1">${bot2[0].v}%</div>
-      <div style="font-size:11px;font-weight:600;color:#e8e4da;margin-top:4px">${bot2[0].dim.label}</div>
-      <div style="font-size:9px;color:#5a2820;margin-top:4px;line-height:1.4">Maior alavancagem<br>disponível</div>
-    </div>`:''}
-
-    <div style="background:#8a6fb010;border:1px solid #8a6fb025;border-radius:8px;padding:14px;margin-bottom:10px">
-      <div style="font-size:8px;font-weight:700;color:#8a6fb0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">👁 Sombra</div>
-      <div style="font-size:10px;font-weight:600;color:#e8e4da;margin-bottom:4px">${pf?.risks?.[0]||""}</div>
-      <div style="font-size:9px;color:#4a3860;line-height:1.4">${pf?.risks?.[1]||""}</div>
+    <div class="sc" style="border-color:#4caf5030">
+      <div class="sc-lbl" style="color:#4caf50">■ Maior Força</div>
+      <div style="font-family:'Courier New',monospace;font-size:30px;font-weight:700;color:#4caf50;line-height:1">${s10(maxD.key)}/10</div>
+      <div style="font-size:10px;font-weight:700;color:#e8e4da;margin-top:3px">${maxD.label}</div>
+      ${top3.length>1?`<div style="font-size:9px;color:#3a5830;margin-top:4px">${top3.slice(1,3).map(d=>`${d.label.split(' ')[0]} ${s10(d.key)}/10`).join(' + ')}</div>`:''}
+      <div style="font-size:9px;color:#2a3820;margin-top:4px;line-height:1.35">Três dimensões no pico — capital relacional diferenciado</div>
     </div>
 
-    <div style="background:#c9a22708;border:1px solid #c9a22720;border-radius:8px;padding:14px;margin-bottom:10px">
-      <div style="font-size:8px;font-weight:700;color:#c9a227;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">🚀 Potencial Futuro</div>
-      ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#c9a22760;flex-shrink:0">${i+1}</span><span style="font-size:9px;color:#6a5840;line-height:1.4">${a.split('.')[0]}</span></div>`).join("")}
+    ${bot2[0]&&pct(bot2[0].key)<65?`<div class="sc" style="border-color:#ef535030">
+      <div class="sc-lbl" style="color:#ef5350">⚠ Gap Crítico</div>
+      <div style="font-family:'Courier New',monospace;font-size:30px;font-weight:700;color:#ef5350;line-height:1">${s10(bot2[0].key)}/10</div>
+      <div style="font-size:10px;font-weight:700;color:#e8e4da;margin-top:3px">${bot2[0].label}</div>
+      <div style="font-size:9px;color:#5a2820;margin-top:4px;line-height:1.35">${bot2[0]&&pct(bot2[0].key)<40?'Extremamente baixo apesar de potencial declarado':'Maior ponto de alavancagem disponível'}</div>
+    </div>`:''}
+
+    <div class="sc" style="border-color:#8a6fb030">
+      <div class="sc-lbl" style="color:#8a6fb0">👁 Sombra do Perfil</div>
+      ${pf?.risks?.slice(0,2).map(r=>`<div style="font-size:10px;color:#e8e4da;margin-bottom:4px">${r}</div>`).join('')||''}
+      <div style="font-size:9px;color:#3a2850;margin-top:4px;line-height:1.35">Rede ${pct('presenca_mercado')<60?'pequena':'relevante'} em volume para o potencial que tem</div>
     </div>
 
-    <!-- MINI RADAR -->
-    <div style="border:1px solid #2a2825;border-radius:8px;padding:10px;text-align:center">
+    <div class="sc" style="border-color:#c9a22725">
+      <div class="sc-lbl" style="color:#c9a227">🚀 Potencial Futuro</div>
+      ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px"><span style="font-family:'Courier New',monospace;font-size:9px;font-weight:700;color:#c9a22760;flex-shrink:0">${i+1}</span><span style="font-size:9px;color:#5a5040;line-height:1.4">${a.split('.')[0]}</span></div>`).join('')}
+    </div>
+
+    <div style="background:#0a0a0c;border:1px solid #1a1816;border-radius:8px;padding:10px;text-align:center">
       <div style="font-size:8px;font-weight:700;color:#c9a22760;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Radar</div>
-      ${(()=>{const w=130,h=130,cx=65,cy=65,r=52;const pt=(i,v)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d=r*(v/100);return[cx+d*Math.cos(a),cy+d*Math.sin(a)];};const dv=DIMS.map(d=>sc[d.key]||0);const poly=dv.map((v,i)=>pt(i,v).join(",")).join(" ");const rings=[20,40,60,80,100].map(v=>`<polygon points="${Array.from({length:6},(_,i)=>pt(i,v).join(",")).join(" ")}" fill="none" stroke="#2a2825" stroke-width="0.7"/>`).join("");const axes=dv.map((_,i)=>{const[x,y]=pt(i,100);return`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2825" stroke-width="0.5"/>`;}).join("");const dots=dv.map((v,i)=>{const[x,y]=pt(i,v);return`<circle cx="${x}" cy="${y}" r="3.5" fill="${DIMS[i].color}"/>`;}).join("");return`<svg viewBox="0 0 130 130" width="130" height="130">${rings}${axes}<polygon points="${poly}" fill="#c9a22718" stroke="#c9a227" stroke-width="1.5"/>${dots}</svg>`;})()}
+      ${(()=>{const r2=52,cx2=67,cy2=67;const p2=(i,v)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d=r2*(v/100);return[cx2+d*Math.cos(a),cy2+d*Math.sin(a)];};const dv2=DIMS.map(d=>pct(d.key));const poly2=dv2.map((v,i)=>p2(i,v).join(',')).join(' ');const rngs=[20,40,60,80,100].map(v=>`<polygon points="${Array.from({length:6},(_,i)=>p2(i,v).join(',')).join(' ')}" fill="none" stroke="#2a2825" stroke-width=".6"/>`).join('');const axs=dv2.map((_,i)=>{const[x,y]=p2(i,100);return`<line x1="${cx2}" y1="${cy2}" x2="${x}" y2="${y}" stroke="#2a2825" stroke-width=".4"/>`;}).join('');const dts=dv2.map((v,i)=>{const[x,y]=p2(i,v);return`<circle cx="${x}" cy="${y}" r="3.5" fill="${DIMS[i].color}"/>`;}).join('');return`<svg viewBox="0 0 134 134" width="130" height="130">${rngs}${axs}<polygon points="${poly2}" fill="#c9a22715" stroke="#c9a227" stroke-width="1.5"/>${dts}</svg>`;})()}
     </div>
   </div>
 </div>
 
-<!-- ANÁLISE PROFUNDA -->
-<div class="section page-break">
-  <div class="section-label">Análise Profunda do Perfil</div>
-  <h2>O que seu diagnóstico revela sobre você</h2>
-  <p style="font-size:14px;color:#a09880;line-height:1.8">${pf?.desc||""}</p>
-
-  <div style="margin:20px 0">
-    <h3>Sua arquitetura relacional — como você está sendo percebido</h3>
-    <p>${top2[0]?.dim?`Seu ${top2[0].dim.label} ${top2[0].v}% combinado com ${top2[1]?.dim?.label||''} ${top2[1]?.v||0}% cria uma percepção de profissional com ${dimInterp[top2[0].dim.key]?.high?.split('.')[0]?.toLowerCase()||'forte presença'}. Esse é um ativo real — as pessoas valorizam quem demonstra clareza de propósito e competência.`:''}</p>
-    <p>${bot2[0]?.dim?`O dado que cria a tensão central é ${bot2[0].dim.label} ${bot2[0].v}%. ${dimInterp[bot2[0].dim.key]?.[getLevel(bot2[0].v)]||''} Essa é a dimensão com maior retorno potencial se endereçada com consistência.`:''}</p>
-  </div>
-
-  <div style="background:#ef535008;border:1px solid #ef535020;border-radius:10px;padding:16px;margin-top:16px">
-    <div style="font-size:10px;font-weight:700;color:#ef5350;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">A sombra do seu perfil — o ponto cego que mais te custa</div>
-    <p style="color:#8a7870;margin:0">${shadowText}</p>
-  </div>
-
-  <div style="background:#c9a22708;border:1px solid #c9a22720;border-left:3px solid #c9a227;border-radius:0 10px 10px 0;padding:16px;margin-top:12px">
-    <div style="font-size:10px;font-weight:700;color:#c9a227;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">⚑ Não ignore isso</div>
-    <p style="color:#8a7870;margin:0">${bot2[0]?.dim?`${bot2[0].dim.label} baixo é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[0]||''}</p>
-  </div>
-</div>
-
-<!-- DIMENSÕES EM PROFUNDIDADE -->
-<div class="section">
-  <div class="section-label">Análise Dimensional</div>
-  <h2>Suas 6 Dimensões em Profundidade</h2>
-  <div style="display:flex;justify-content:center;margin-bottom:24px">${radarSVG}</div>
-  ${DIMS.map(d=>{const v=sc[d.key]||0;const interp=dimInterp[d.key]?.[getLevel(v)]||'';const clr=getLevelColor(v);const lbl=getLevelLabel(v);
-  return`<div class="card" style="margin-bottom:10px;border-left:3px solid ${d.color}">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:14px;font-weight:600;color:${d.color}">${d.label}</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:9px;font-weight:700;color:${clr};background:${clr}14;padding:2px 8px;border-radius:3px;text-transform:uppercase">${lbl}</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:${d.color}">${v}%</span>
+<!-- ════ SÍNTESE + ANÁLISE ═════════════════════════════════ -->
+<div class="sec pb" style="background:#0d0d0f;color:#e8e4da;border-top:none">
+  <div style="display:grid;grid-template-columns:1fr 260px;gap:28px">
+    <div>
+      <div class="sec-lbl">Síntese das Respostas</div>
+      <h2 style="color:#e8e4da;margin-bottom:16px">O que suas respostas revelam sobre você</h2>
+      ${sintese12.map((item,i)=>`<div class="sq">
+        <div class="sq-num">${String(i+1).padStart(2,'0')}</div>
+        <div><div class="sq-q">${item.q}</div><div class="sq-a">${item.a}</div></div>
+      </div>`).join('')}
+    </div>
+    <div>
+      <div class="sec-lbl">Potencial Futuro</div>
+      <div class="card-dark" style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:#4caf50;margin-bottom:6px">Referência de Mercado</div>
+        <div style="font-size:11px;color:#6a6460;line-height:1.5">${dimContent['presenca_mercado'].sintese[getLvl(pct('presenca_mercado'))]?.split('.')[0]||''}</div>
+      </div>
+      <div class="card-dark" style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:#4caf50;margin-bottom:6px">Rede Estratégica Ampla</div>
+        <div style="font-size:11px;color:#6a6460;line-height:1.5">${dimContent['reciprocidade_ativa'].sintese[getLvl(pct('reciprocidade_ativa'))]?.split('.')[0]||''}</div>
+      </div>
+      <div class="card-dark">
+        <div style="font-size:11px;font-weight:600;color:#c9a227;margin-bottom:6px">Vantagem Única</div>
+        <div style="font-size:11px;color:#6a6460;line-height:1.5">${pf?.desc?.split('.')[0]||''}</div>
       </div>
     </div>
-    <div class="bar-wrap"><div class="bar-fill" style="width:${v}%;background:${d.color}"></div></div>
-    <p style="margin-top:10px;margin-bottom:0;font-size:12px">${interp}</p>
-  </div>`;}).join("")}
+  </div>
 </div>
 
-<!-- FORÇAS E RISCOS -->
-<div class="section page-break">
-  <div class="section-label">Perfil e Potencial</div>
-  <h2>Forças, Riscos e Ações Prioritárias</h2>
-  <div class="grid-2">
-    <div class="card" style="border-color:#4caf5030">
-      <div class="section-label green" style="margin-bottom:10px">✓ Suas Forças</div>
-      ${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
-        <span style="font-size:9px;font-weight:700;color:#4caf50;background:#4caf5014;border:1px solid #4caf5030;padding:2px 7px;border-radius:3px;flex-shrink:0;margin-top:1px">✓</span>
-        <span style="font-size:12px;color:#8a8480;line-height:1.5">${s}</span>
-      </div>`).join("")}
+<!-- ════ ANÁLISE PROFUNDA ═══════════════════════════════════ -->
+<div class="sec" style="background:#0d0d0f;color:#e8e4da">
+  <div class="sec-lbl">Análise Profunda do Perfil</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div>
+      <h2 style="color:#e8e4da">O que seu diagnóstico revela sobre você</h2>
+      <p class="light" style="font-size:14px;line-height:1.8">${pf?.desc||""}</p>
+
+      <h3>Sua arquitetura relacional — como você está sendo percebido</h3>
+      <p class="light">${top3[0]?`${top3[0].label} ${s10(top3[0].key)}/10 ${top3[1]?`e ${top3[1].label} ${s10(top3[1].key)}/10`:''} criam a percepção de ${dimContent[top3[0].key]?.sintese?.high?.split('.')[0]?.toLowerCase()||'profissional de alto impacto'}. ${bot2[0]?`O desafio central é ${bot2[0].label} ${s10(bot2[0].key)}/10 — ${dimContent[bot2[0].key]?.sintese?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}.`:''}`:''}</p>
+
+      <div style="background:#ef535008;border:1px solid #ef535020;border-left:3px solid #ef5350;border-radius:0 8px 8px 0;padding:14px;margin:14px 0">
+        <div style="font-size:8px;font-weight:700;color:#ef5350;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">A sombra do seu perfil — o ponto cego que mais te custa</div>
+        <p class="light" style="margin:0;font-size:12px">${bot2[0]?`A sombra mais profunda é o gap entre a intenção declarada e a execução. ${bot2[0].label} ${s10(bot2[0].key)}/10 é o padrão que mais custa — não pela ausência de vontade, mas pela ausência de sistema. ${dimContent[bot2[0].key]?.sintese?.[getLvl(pct(bot2[0].key))]||''}`:''}</p>
+      </div>
+
+      <div style="background:#c9a22706;border:1px solid #c9a22720;border-left:3px solid #c9a227;border-radius:0 8px 8px 0;padding:14px">
+        <div style="font-size:8px;font-weight:700;color:#c9a227;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">⚑ Não ignore isso</div>
+        <p class="light" style="margin:0;font-size:12px">${bot2[0]?`${bot2[0].label} baixo é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[0]||''}</p>
+      </div>
     </div>
-    <div class="card" style="border-color:#ef535030">
-      <div class="section-label red" style="margin-bottom:10px">⚠ Pontos de Atenção</div>
-      ${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
-        <span style="font-size:9px;font-weight:700;color:#ef5350;background:#ef535014;border:1px solid #ef535030;padding:2px 7px;border-radius:3px;flex-shrink:0;margin-top:1px">!</span>
-        <span style="font-size:12px;color:#8a8480;line-height:1.5">${r}</span>
-      </div>`).join("")}
+
+    <div>
+      <div style="display:flex;justify-content:center;margin-bottom:16px">${radarSVG}</div>
+      ${DIMS.map(d=>{const v=pct(d.key);return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:600;color:${d.color};min-width:90px">${d.label}</div>
+        <div style="flex:1"><div class="bar-w-dark"><div class="bar-f" style="width:${v}%;background:${d.color}"></div></div></div>
+        <div style="font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:${getLvlClr(v)};min-width:35px">${s10(d.key)}/10</div>
+      </div>`;}).join('')}
+    </div>
+  </div>
+</div>
+
+<!-- ════ FORÇAS + AÇÕES ════════════════════════════════════ -->
+<div class="sec pb">
+  <div class="sec-lbl">Perfil e Potencial</div>
+  <h2>Forças, Riscos e Ações Prioritárias</h2>
+  <div class="g2">
+    <div class="card" style="border-color:#4caf5040">
+      <div style="font-size:9px;font-weight:700;color:#4caf50;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">✓ Suas Forças</div>
+      ${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:8px;margin-bottom:8px"><span style="background:#4caf5015;border:1px solid #4caf5030;color:#4caf50;font-size:9px;font-weight:700;padding:1px 7px;border-radius:3px;flex-shrink:0">✓</span><span style="font-size:12px;color:#444;line-height:1.5">${s}</span></div>`).join('')}
+    </div>
+    <div class="card" style="border-color:#ef535040">
+      <div style="font-size:9px;font-weight:700;color:#ef5350;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">⚠ Pontos de Atenção</div>
+      ${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:8px;margin-bottom:8px"><span style="background:#ef535015;border:1px solid #ef535030;color:#ef5350;font-size:9px;font-weight:700;padding:1px 7px;border-radius:3px;flex-shrink:0">!</span><span style="font-size:12px;color:#444;line-height:1.5">${r}</span></div>`).join('')}
     </div>
   </div>
 
   <h2 style="margin-top:20px">Suas 3 Ações Prioritárias</h2>
-  <p>Com base no seu perfil relacional, estas são as ações de maior retorno agora:</p>
-  <div class="card" style="border-color:#c9a22720">
-    ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:14px;margin-bottom:${i<(pf?.actions?.length-1)?'16':'0'}px;padding-bottom:${i<(pf?.actions?.length-1)?'16':'0'}px;border-bottom:${i<(pf?.actions?.length-1)?'1px solid #1a1816':'none'}">
-      <div class="action-num">${i+1}</div>
-      <div>
-        <p style="color:#e8e4da;font-size:14px;margin-bottom:0;line-height:1.5">${a}</p>
-      </div>
-    </div>`).join("")}
+  <p style="color:#555">Com base no seu perfil relacional, estas são as ações de maior retorno agora:</p>
+  <div class="card" style="border-color:#c9a22730">
+    ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:14px;margin-bottom:${i<(pf?.actions?.length-1)?'14':'0'}px;padding-bottom:${i<(pf?.actions?.length-1)?'14':'0'}px;border-bottom:${i<(pf?.actions?.length-1)?'1px solid #f0ece4':'none'}">
+      <div class="act-num">${i+1}</div>
+      <div style="font-size:13px;color:#222;line-height:1.55">${a}</div>
+    </div>`).join('')}
   </div>
 </div>
 
-<!-- GATILHOS RELACIONAIS -->
-<div class="section">
-  <div class="section-label">Comportamento Relacional</div>
-  <h2>Gatilhos — O que ativa e o que trava</h2>
-  <div class="grid-2">
+<!-- ════ GATILHOS RELACIONAIS ══════════════════════════════ -->
+<div class="sec" style="background:#0d0d0f;color:#e8e4da">
+  <div class="sec-lbl">Comportamento Relacional</div>
+  <h2 style="color:#e8e4da">Gatilhos — Os padrões que ativam e travam seu comportamento relacional</h2>
+  <div class="g2">
     <div>
-      <h3 style="color:#4caf50;margin-bottom:10px">⚡ Gatilhos de Ativação</h3>
-      ${gatilhosAtivacao.length>0?gatilhosAtivacao.map(g=>`<div class="gatilho-card" style="background:#4caf5008;border:1px solid #4caf5020">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-          <div style="font-size:12px;font-weight:600;color:#4caf50">${g.title}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4caf50">${g.score}%</div>
-        </div>
-        <p style="font-size:11px;margin-bottom:6px">${g.desc?.split('.')[0]||''}</p>
-        <div style="font-size:10px;color:#4caf5080">→ ${g.acao}</div>
-      </div>`).join(""):DIMS.slice(0,2).map(d=>`<div class="gatilho-card" style="background:#4caf5008;border:1px solid #4caf5020">
-        <div style="font-size:12px;font-weight:600;color:#4caf50;margin-bottom:4px">${d.label}</div>
-        <p style="font-size:11px;margin-bottom:0">${dimInterp[d.key]?.mid||''}</p>
-      </div>`).join("")}
+      <h3 style="color:#4caf50;margin-bottom:10px;margin-top:0">⚡ Gatilhos de Ativação</h3>
+      ${DIMS.filter(d=>pct(d.key)>=60).slice(0,3).map(d=>{const v=pct(d.key);const ct=dimContent[d.key];return`<div class="gtcard" style="background:#4caf5008;border:1px solid #4caf5020">
+        <div class="gt-lbl" style="color:#4caf50">${ct?.gatilho_at?.label||d.label}</div>
+        <div style="font-size:12px;color:#6a6460;margin-bottom:6px;line-height:1.5">${ct?.gatilho_at?.desc||''}</div>
+        <div style="font-size:9px;color:#4caf5070">Ação: ${ct?.gatilho_at?.acao||''}</div>
+      </div>`;}).join('')}
     </div>
     <div>
-      <h3 style="color:#ef5350;margin-bottom:10px">🔴 Gatilhos de Bloqueio</h3>
-      ${gatilhosBloqueio.length>0?gatilhosBloqueio.map(g=>`<div class="gatilho-card" style="background:#ef535008;border:1px solid #ef535020">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-          <div style="font-size:12px;font-weight:600;color:#ef5350">${g.title}</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ef5350">${g.score}%</div>
-        </div>
-        <p style="font-size:11px;margin-bottom:6px">${g.desc?.split('.')[0]||''}</p>
-        <div style="font-size:10px;color:#ef535080">Antídoto: ${g.antidoto}</div>
-      </div>`).join(""):DIMS.slice(-2).map(d=>`<div class="gatilho-card" style="background:#ef535008;border:1px solid #ef535020">
-        <div style="font-size:12px;font-weight:600;color:#ef5350;margin-bottom:4px">${d.label}</div>
-        <p style="font-size:11px;margin-bottom:0">${dimInterp[d.key]?.low||''}</p>
-      </div>`).join("")}
+      <h3 style="color:#ef5350;margin-bottom:10px;margin-top:0">🔴 Gatilhos de Bloqueio</h3>
+      ${DIMS.filter(d=>pct(d.key)<70).slice(-3).map(d=>{const v=pct(d.key);const ct=dimContent[d.key];return`<div class="gtcard" style="background:#ef535008;border:1px solid #ef535020">
+        <div class="gt-lbl" style="color:#ef5350">${ct?.gatilho_bl?.label||d.label}</div>
+        <div style="font-size:12px;color:#6a6460;margin-bottom:6px;line-height:1.5">${ct?.gatilho_bl?.desc||''}</div>
+        <div style="font-size:9px;color:#ef535070">Antídoto: ${ct?.gatilho_bl?.antidoto||''}</div>
+      </div>`;}).join('')}
     </div>
   </div>
 </div>
 
-<!-- PLANO DE ATIVAÇÃO -->
-<div class="section page-break">
-  <div class="section-label">Plano de Ativação</div>
-  <h2>4 Semanas — De Diagnóstico a Hábito</h2>
-  <p>Cada semana tem um foco, comportamento concreto, reflexão e ação mensurável.</p>
-  <div style="margin-top:20px">
-  ${PLAN.map((w,i)=>`<div style="display:grid;grid-template-columns:60px 1fr;gap:0;margin-bottom:20px;border:1px solid #2a2825;border-radius:10px;overflow:hidden">
-    <div style="background:${i===0?'#c9a22720':'#161618'};border-right:1px solid #2a2825;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:6px">
+<!-- ════ PLANO DE ATIVAÇÃO ═════════════════════════════════ -->
+<div class="sec pb">
+  <div class="sec-lbl">Plano de Ativação — 4 Semanas</div>
+  <h2>Quatro semanas para transformar intenção em hábito sistemático</h2>
+  <p style="color:#555">Cada semana tem um comportamento, reflexão e ação concreta.</p>
+  ${PLAN.map((w,i)=>`<div class="week-box">
+    <div class="week-num">
       <div style="font-size:22px">${w.icon}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#c9a227">${w.week}</div>
+      <div style="font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:#c9a227">${w.week}</div>
     </div>
-    <div style="padding:16px">
-      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#c9a22780;margin-bottom:4px">Semana ${w.week}</div>
-      <div style="font-size:15px;font-weight:700;color:#e8e4da;margin-bottom:4px">${w.title}</div>
-      <div style="font-size:11px;color:#6a6460;font-style:italic;margin-bottom:10px">${w.goal}</div>
-      ${w.tasks.map(t=>`<div style="font-size:12px;color:#8a8480;margin-bottom:4px;display:flex;gap:8px"><span style="color:#c9a22760">→</span>${t}</div>`).join("")}
-      <div style="margin-top:10px;background:#c9a22710;border:1px solid #c9a22720;border-radius:6px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#c9a227">Meta: ${w.metric}</div>
+    <div class="week-body">
+      <div style="font-size:9px;font-weight:700;color:#c9a22790;text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Semana ${w.week}</div>
+      <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:3px">${w.title}</div>
+      <div style="font-size:11px;color:#888;font-style:italic;margin-bottom:8px">${w.goal}</div>
+      ${w.tasks.map(t=>`<div style="font-size:12px;color:#555;margin-bottom:3px;display:flex;gap:7px"><span style="color:#c9a22770">→</span>${t}</div>`).join('')}
+      <div style="margin-top:8px;background:#c9a22710;border:1px solid #c9a22725;border-radius:5px;padding:6px 10px;font-family:'Courier New',monospace;font-size:10px;color:#c9a227">Meta: ${w.metric}</div>
     </div>
-  </div>`).join("")}
-  </div>
+  </div>`).join('')}
 </div>
 
-<!-- TERMÔMETRO 90 DIAS -->
-<div class="section">
-  <div class="section-label">Projeção</div>
-  <h2>Termômetro Relacional — 90 Dias</h2>
-  <p>O que é possível construir se você aplicar o plano com consistência:</p>
-  <div class="card" style="margin-top:16px">
-    <div class="thermo-row" style="border-bottom:2px solid #2a2825;padding-bottom:12px;margin-bottom:4px">
-      <div style="font-size:10px;font-weight:700;color:#4a4840;text-transform:uppercase">Dimensão</div>
-      <div style="font-size:10px;font-weight:700;color:#4a4840;text-transform:uppercase">Hoje</div>
-      <div style="font-size:10px;font-weight:700;color:#4a4840;text-transform:uppercase">90 dias</div>
-      <div style="font-size:10px;font-weight:700;color:#4a4840;text-transform:uppercase">O que muda</div>
+<!-- ════ TERMÔMETRO + VANTAGEM ════════════════════════════ -->
+<div class="sec" style="background:#0d0d0f;color:#e8e4da">
+  <div class="sec-lbl">Termômetro Relacional — 90 Dias</div>
+  <h2 style="color:#e8e4da">O que é possível construir se você aplicar o plano com consistência</h2>
+  <div class="card-dark" style="margin:16px 0">
+    <div class="thermo-row" style="border-bottom:2px solid #2a2825;padding-bottom:10px">
+      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">Dimensão</div>
+      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">Hoje</div>
+      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">90 dias</div>
+      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">O que muda</div>
     </div>
-    ${DIMS.map(d=>{const v=sc[d.key]||0;const p=proj(v);const delta=p-v;
-    return`<div class="thermo-row">
+    ${DIMS.map(d=>{const v=pct(d.key);const p2=proj(v);const delta=p2-v;return`<div class="thermo-row">
       <div style="font-size:12px;font-weight:600;color:${d.color}">${d.label}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:${getLevelColor(v)}">${v}%</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#4caf50">${p}%</div>
-      <div style="font-size:11px;color:#6a6460;line-height:1.4">${delta>0?`+${delta}pts — `:''}${dimInterp[d.key]?.high?.split('—')[0]?.split('.')[0]||''}</div>
-    </div>`;}).join("")}
+      <div style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:${getLvlClr(v)}">${s10(d.key)}/10</div>
+      <div style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:#4caf50">${Math.round(p2/10)}/10</div>
+      <div style="font-size:11px;color:#6a6460;line-height:1.4">${delta>0?`+${delta}pts — `:''}${dimContent[d.key]?.sintese?.high?.split('.')[0]||''}</div>
+    </div>`;}).join('')}
   </div>
 
-  <div style="background:#c9a22708;border:1px solid #c9a22720;border-radius:10px;padding:20px;margin-top:16px">
-    <div style="font-size:10px;font-weight:700;color:#c9a227;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">A Vantagem Única do Seu Perfil</div>
-    <p style="font-size:14px;color:#a09880;line-height:1.75;margin-bottom:12px">${pf?.desc?.split('.').slice(0,2).join('.')||''}.</p>
-    <div style="border-top:1px solid #2a2825;padding-top:12px;font-size:13px;color:#8a7870;font-style:italic">
-      "Toda semana: em quantas conversas você genuinamente aprendeu algo sobre o outro que não sabia antes — e o que isso diz sobre a qualidade da sua presença?"
-    </div>
+  <div style="background:#c9a22708;border:1px solid #c9a22720;border-radius:10px;padding:18px;margin-top:14px">
+    <div style="font-size:9px;font-weight:700;color:#c9a227;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">A Vantagem Única do Seu Perfil</div>
+    <p class="light" style="font-size:13px;line-height:1.8;margin-bottom:12px">${pf?.desc?.split('.').slice(0,2).join('.')||''}.</p>
+    <div style="border-top:1px solid #2a2825;padding-top:12px;font-size:12px;color:#8a7870;font-style:italic">"Toda semana: em quantas conversas você genuinamente aprendeu algo sobre o outro que não sabia antes — e o que isso diz sobre a qualidade da sua presença?"</div>
+  </div>
+
+  <div style="margin-top:24px">
+    <div class="sec-lbl" style="margin-top:0">Pergunta Provocativa</div>
+    <div style="font-size:18px;color:#c9a227;font-style:italic;line-height:1.6">"Se você fosse ${pct('presenca_mercado')>=70?'20%':'100%'} mais presente e ${pct('escuta_relacional')>=70?'20%':'100%'} mais profundo nas conexões, quais portas se abririam?"</div>
   </div>
 </div>
 
-<!-- MAPA MENTAL -->
-<div class="section page-break">
-  <div class="section-label">Mapa Mental</div>
-  <h2>Arquitetura Relacional — ${pf?.name||""}</h2>
-  <p>Visualização das dimensões relacionais ponderadas pelo score. Dimensões mais fortes aparecem mais distantes do centro.</p>
-  <div style="display:flex;justify-content:center;margin:20px 0">${mentalMapSVG}</div>
-  <div class="grid-3" style="margin-top:12px">
-    ${DIMS.map(d=>{const v=sc[d.key]||0;return`<div style="background:#161618;border:1px solid ${d.color}30;border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:${d.color};margin-bottom:3px">${d.label}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:${getLevelColor(v)}">${v}%</div>
-      <div style="font-size:9px;color:#4a4840;margin-top:3px">${getLevelLabel(v)}</div>
-    </div>`;}).join("")}
+<!-- ════ MAPA MENTAL ═══════════════════════════════════════ -->
+<div class="pb" style="background:#090908;padding:32px;min-height:100vh;display:flex;flex-direction:column">
+  <div style="margin-bottom:16px">
+    <div style="font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#c9a227;margin-bottom:8px">Mapa Mental</div>
+    <div style="font-size:26px;font-weight:700;color:#e8e4da">Arquitetura Relacional — <span style="color:#c9a227;font-style:italic">${pf?.name||""}</span></div>
+    <div style="font-size:12px;color:#4a4840;margin-top:4px">Mapa das 6 dimensões relacionais com sub-temas, padrões comportamentais e capital relacional atual. Dimensões mais fortes aparecem mais distantes do centro.</div>
   </div>
+
+  <div style="flex:1;display:flex;justify-content:center;align-items:center">${mmSVG}</div>
+
+  <div class="g3" style="margin-top:16px">
+    ${DIMS.map(d=>{const v=pct(d.key);return`<div style="background:#111010;border:1px solid ${d.color}25;border-radius:8px;padding:11px;border-top:2px solid ${d.color}">
+      <div style="font-size:10px;font-weight:700;color:${d.color};margin-bottom:3px">${d.label}</div>
+      <div style="font-family:'Courier New',monospace;font-size:20px;font-weight:700;color:${getLvlClr(v)}">${s10(d.key)}/10</div>
+      <div style="height:4px;border-radius:2px;background:#1a1816;margin:5px 0"><div style="height:4px;border-radius:2px;background:${d.color};width:${v}%"></div></div>
+      <div style="font-size:9px;color:#3a3830">${getLvlLbl(v)}</div>
+    </div>`;}).join('')}
+  </div>
+</div>
+
+<!-- ════ FRASE FINAL ═══════════════════════════════════════ -->
+<div style="background:linear-gradient(135deg,#0d0d0f 0%,#141210 100%);padding:48px 40px;text-align:center;border-top:1px solid #1a1816">
+  <div style="font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#c9a22760;margin-bottom:16px">Essência do Perfil</div>
+  <div style="font-size:20px;color:#e8e4da;line-height:1.65;max-width:640px;margin:0 auto 20px">
+    <span style="color:#c9a227">Você já sabe chegar.</span> O próximo nível é fazer as pessoas quererem que você fique — e isso se constrói na qualidade das relações, não no volume das conexões.
+  </div>
+  <div style="font-size:11px;color:#4a4840;font-style:italic">"Relacionamento não é sobre ter muitos contatos. É sobre ser indispensável para os que importam."</div>
 </div>
 
 <!-- FOOTER -->
-<div class="footer-bar">
+<div class="footer">
   <div>
-    <div style="font-size:18px;font-weight:700;color:#c9a227">CONÉXIA</div>
+    <div style="font-size:20px;font-weight:700;color:#c9a227;letter-spacing:.04em">CONÉXIA</div>
     <div style="font-size:10px;color:#3a3830">"Networking, além do cafezinho" · Rafael Milléo</div>
   </div>
   <div style="text-align:right">
     <div style="font-size:12px;color:#e8e4da;font-weight:600">${profile?.name||""}</div>
-    <div style="font-size:10px;color:#3a3830">Documento confidencial · ${new Date().toLocaleDateString("pt-BR")}</div>
+    <div style="font-size:10px;color:#3a3830">Diagnóstico Relacional Profissional · ${new Date().toLocaleDateString('pt-BR')}</div>
   </div>
 </div>
 
 </body></html>`;
 
-      const win = window.open("", "_blank");
-      if (!win) { alert("Permita pop-ups para abrir o relatório"); return; }
+      const win=window.open("","_blank");
+      if(!win){alert("Permita pop-ups para abrir o relatório.");return;}
       win.document.write(html);
       win.document.close();
     }
-
     return (
       <div style={{ overflowY: "auto", paddingBottom: 40 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
@@ -1689,4 +1753,3 @@ export default function App() {
     </>
   );
 }
-
