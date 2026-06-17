@@ -866,69 +866,232 @@ function CRM({ profile, assessment, onReset, user }) {
     const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
     const downloadReport = () => {
       const vals = Object.entries(sc);
-      const maxD = DIMS.find(d => d.key === [...vals].sort((a,b)=>b[1]-a[1])[0]?.[0]);
-      const minD = DIMS.find(d => d.key === [...vals].sort((a,b)=>a[1]-b[1])[0]?.[0]);
-      const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório CONÉXIA — ${profile?.name || ""}</title>
-<style>body{font-family:'Segoe UI',Arial,sans-serif;background:#0d0d0f;color:#e8e4da;margin:0;padding:40px}
-h1{font-size:32px;color:#c9a227;margin-bottom:4px}h2{font-size:20px;color:#c9a227;margin:32px 0 12px}
-.tag{display:inline-block;background:#c9a22718;border:1px solid #c9a22740;color:#c9a227;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.card{background:#161618;border:1px solid #2a2825;border-radius:12px;padding:24px;margin-bottom:16px}
-.bar-wrap{height:8px;border-radius:4px;background:#2a2825;margin-top:4px}
-.bar{height:8px;border-radius:4px}
-.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.score{font-family:monospace;font-size:13px;font-weight:700}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-.action{display:flex;gap:12px;margin-bottom:10px}
-.action-num{width:28px;height:28px;border-radius:7px;background:#c9a22718;border:1px solid #c9a22740;display:flex;align-items:center;justify-content:center;font-weight:700;color:#c9a227;font-size:12px;flex-shrink:0;text-align:center;line-height:28px}
-.footer{margin-top:40px;padding-top:20px;border-top:1px solid #2a2825;font-size:11px;color:#5a5650;text-align:center}
-</style></head><body>
-<div class="tag">Diagnóstico Relacional Profissional</div>
-<h1>${pf?.emoji} ${pf?.name}</h1>
-<p style="color:#8a8480;font-style:italic;margin:4px 0 8px">${pf?.tagline}</p>
-<p style="font-family:monospace;color:#c9a227">Score geral: ${assessment.overall}%</p>
-<p style="color:#6a6460;font-size:12px">Gerado em ${new Date().toLocaleDateString("pt-BR")} · ${profile?.name || ""} · ${profile?.email || ""}</p>
+      const sorted = [...vals].sort((a,b)=>b[1]-a[1]);
+      const maxD = DIMS.find(d => d.key === sorted[0]?.[0]);
+      const minD = DIMS.find(d => d.key === sorted[sorted.length-1]?.[0]);
+      const avgHealth = cts.length ? Math.round(cts.reduce((s,c)=>s+c.health,0)/cts.length) : 0;
+      const activeCount = cts.filter(c=>c.health>40).length;
 
-<div class="card">
-<h2 style="margin-top:0">Suas 6 Dimensões</h2>
-${DIMS.map(d => `<div class="row"><span>${d.label}</span><span class="score" style="color:${d.color}">${sc[d.key]||0}%</span></div><div class="bar-wrap"><div class="bar" style="width:${sc[d.key]||0}%;background:${d.color}"></div></div>`).join("")}
+      // Radar SVG
+      const cx=200,cy=200,r=140;
+      const pt=(i,v)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d=r*(v/100);return[cx+d*Math.cos(a),cy+d*Math.sin(a)];};
+      const dimVals=DIMS.map(d=>sc[d.key]||0);
+      const poly=dimVals.map((v,i)=>pt(i,v).join(",")).join(" ");
+      const rings=[20,40,60,80,100].map(v=>`<polygon points="${Array.from({length:6},(_,i)=>pt(i,v).join(",")).join(" ")}" fill="none" stroke="#2a2825" stroke-width="0.8"/>`).join("");
+      const axes=dimVals.map((_,i)=>{const[x,y]=pt(i,100);return`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2825" stroke-width="0.5"/>`;}).join("");
+      const dots=dimVals.map((v,i)=>{const[x,y]=pt(i,v);return`<circle cx="${x}" cy="${y}" r="5" fill="${DIMS[i].color}"/>`;}).join("");
+      const labels=dimVals.map((_,i)=>{const[x,y]=pt(i,118);return`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="${DIMS[i].color}" font-size="11" font-weight="700" font-family="Arial">${DIMS[i].short} ${dimVals[i]}%</text>`;}).join("");
+      const radarSVG=`<svg viewBox="0 0 400 400" width="340" height="340">${rings}${axes}<polygon points="${poly}" fill="#c9a22715" stroke="#c9a227" stroke-width="2"/>${dots}${labels}</svg>`;
+
+      // Dimension interpretations
+      const dimInterp = {
+        intencao_estrategica: {low:"Você age mais por impulso do que por estratégia nas relações. Oportunidade de desenvolver visão sistêmica de quem precisa ter na sua rede e por quê.", mid:"Você tem clareza parcial sobre seus objetivos relacionais. Há espaço para tornar sua estratégia mais explícita e direcionada.", high:"Você navega as relações com intencionalidade. Sabe quem precisa na sua rede, cultiva com propósito e pensa no longo prazo."},
+        escuta_relacional: {low:"Você tende a falar mais do que ouvir. Desenvolver escuta ativa vai transformar suas conversas em conexões genuínas.", mid:"Você escuta razoavelmente bem, mas ainda há momentos em que a agenda própria interfere. Praticar presença plena faz diferença.", high:"Sua escuta é um ativo relacional raro. Pessoas se sentem vistas e compreendidas ao conversar com você — isso gera confiança naturalmente."},
+        presenca_mercado: {low:"Você é mais invisível do que sua competência merece. O mercado não te conhece pelo que você entrega. É hora de aparecer.", mid:"Você tem alguma visibilidade, mas ela é inconsistente. Falta constância para construir uma marca pessoal sólida.", high:"Você tem presença no mercado. Sua reputação precede você e as pessoas te buscam ativamente — isso é resultado de consistência e valor."},
+        reciprocidade_ativa: {low:"Você tende a receber mais do que oferece, ou não toma iniciativa de gerar valor primeiro. Relações exigem trocas equilibradas.", mid:"Você se importa em gerar valor, mas nem sempre age com proatividade. Pequenos gestos frequentes constroem dívidas de gratidão.", high:"Você é um gerador nato de valor. Indica, conecta, compartilha sem esperar retorno imediato — e isso cria uma rede que genuinamente quer te ajudar."},
+        ritual_consistencia: {low:"Seu networking é reativo — você cultiva relações quando precisa de algo. Isso limita muito o impacto das suas conexões.", mid:"Você tem alguma rotina, mas ela falha nos momentos de pressão. A consistência é o que separa redes sólidas de contatos esquecidos.", high:"Você trata networking como um hábito, não como evento. Sua rede nunca esfria porque você alimenta regularmente — mesmo nas épocas intensas."},
+        confianca_autentica: {low:"Há uma distância entre quem você é e como você se apresenta profissionalmente. Isso cria barreiras que impedem conexões profundas.", mid:"Você é relativamente autêntico, mas ainda carrega um 'personagem profissional' que não reflete totalmente quem você é.", high:"Você é o mesmo nas reuniões formais e no cafezinho informal. Essa coerência é percebida e valorizada — é a base de todas as suas relações sólidas."}
+      };
+
+      const getLevel = (v) => v >= 75 ? 'high' : v >= 50 ? 'mid' : 'low';
+
+      const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Diagnóstico Relacional — ${profile?.name || "CONÉXIA"}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',Arial,sans-serif;background:#0d0d0f;color:#e8e4da;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{margin:0;size:A4}
+  @media print{
+    .no-print{display:none!important}
+    .page-break{page-break-before:always}
+    body{background:#0d0d0f}
+  }
+  .cover{background:linear-gradient(160deg,#0d0d0f 0%,#161210 50%,#0d0d0f 100%);min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:60px;position:relative;overflow:hidden}
+  .cover-accent{position:absolute;top:-60px;right:-60px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,#c9a22708 0%,transparent 70%)}
+  .cover-label{font-family:'DM Sans';font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#c9a227;border:1px solid #c9a22730;display:inline-block;padding:6px 16px;border-radius:4px;margin-bottom:32px}
+  .cover-emoji{font-size:72px;margin-bottom:20px;line-height:1}
+  .cover-profile{font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700;color:#c9a227;font-style:italic;line-height:1.1;margin-bottom:8px}
+  .cover-tagline{font-family:'DM Sans';font-size:16px;color:#8a8480;font-style:italic;margin-bottom:24px}
+  .cover-score{font-family:'JetBrains Mono',monospace;font-size:18px;color:#c9a227;margin-bottom:48px}
+  .cover-meta{font-family:'DM Sans';font-size:12px;color:#4a4840;line-height:1.8}
+  .section{padding:40px 60px;border-top:1px solid #1a1816}
+  .section-label{font-family:'DM Sans';font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#c9a227;margin-bottom:20px}
+  h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:#e8e4da;margin-bottom:16px}
+  h3{font-family:'DM Sans';font-size:14px;font-weight:600;color:#c9a227;margin-bottom:8px}
+  p{font-family:'DM Sans';font-size:14px;color:#8a8480;line-height:1.75;margin-bottom:12px}
+  .card{background:#161618;border:1px solid #2a2825;border-radius:12px;padding:24px;margin-bottom:12px}
+  .dim-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #1a1816}
+  .dim-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .dim-label{font-family:'DM Sans';font-size:13px;font-weight:600;color:#e8e4da;min-width:130px}
+  .dim-score{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;min-width:45px}
+  .dim-bar{flex:1;height:8px;border-radius:4px;background:#2a2825}
+  .dim-interp{font-family:'DM Sans';font-size:12px;color:#6a6460;line-height:1.55;margin-top:6px}
+  .action-item{display:flex;gap:14px;margin-bottom:14px;align-items:flex-start}
+  .action-num{width:32px;height:32px;border-radius:8px;background:#c9a22710;border:1px solid #c9a22730;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#c9a227;flex-shrink:0}
+  .tag-good{display:inline-block;background:#4caf5014;border:1px solid #4caf5030;color:#4caf50;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .tag-risk{display:inline-block;background:#ef535014;border:1px solid #ef535030;color:#ef5350;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .plan-week{border-left:3px solid #c9a22740;padding-left:20px;margin-bottom:24px}
+  .plan-week.active{border-left-color:#c9a227}
+  .week-label{font-family:'DM Sans';font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#c9a227;margin-bottom:4px}
+  .week-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:#e8e4da;margin-bottom:6px}
+  .week-goal{font-family:'DM Sans';font-size:12px;color:#6a6460;font-style:italic;margin-bottom:8px}
+  .week-task{font-family:'DM Sans';font-size:12px;color:#8a8480;margin-bottom:4px}
+  .week-metric{font-family:'JetBrains Mono',monospace;font-size:11px;color:#c9a22790;margin-top:8px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .stat-card{background:#161618;border:1px solid #2a2825;border-radius:10px;padding:18px}
+  .stat-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:#c9a227}
+  .stat-label{font-family:'DM Sans';font-size:11px;color:#4a4840;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+  .footer-bar{background:#0a0a0c;border-top:1px solid #1a1816;padding:28px 60px;display:flex;justify-content:space-between;align-items:center}
+  .radar-wrap{display:flex;justify-content:center;margin:20px 0}
+  .print-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#c9a227,#a07d1a);color:#0d0d0f;border:none;border-radius:10px;padding:14px 24px;font-family:'DM Sans';font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 24px #c9a22740;z-index:999}
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">⬇ Salvar como PDF</button>
+
+<!-- CAPA -->
+<div class="cover">
+  <div class="cover-accent"></div>
+  <div class="cover-label">Diagnóstico Relacional Profissional · CONÉXIA</div>
+  <div class="cover-emoji">${pf?.emoji||"🎯"}</div>
+  <div class="cover-profile">${pf?.name||""}</div>
+  <div class="cover-tagline">"${pf?.tagline||""}"</div>
+  <div class="cover-score">Score Relacional Geral: ${assessment.overall}%</div>
+  <div class="cover-meta">
+    ${profile?.name||""}<br>
+    ${profile?.role||""} ${profile?.segment ? "· "+profile.segment : ""}<br>
+    Diagnóstico gerado em ${new Date().toLocaleDateString("pt-BR", {day:"2-digit",month:"long",year:"numeric"})}<br>
+    Plataforma CONÉXIA · "Networking, além do cafezinho" · Rafael Milléo
+  </div>
 </div>
 
-<div class="grid">
-<div class="card" style="margin-bottom:0"><div style="font-size:10px;font-weight:700;color:#4caf50;text-transform:uppercase;margin-bottom:4px">Sua força</div><div style="font-weight:600">${maxD?.label||""}</div></div>
-<div class="card" style="margin-bottom:0"><div style="font-size:10px;font-weight:700;color:#ef5350;text-transform:uppercase;margin-bottom:4px">Oportunidade</div><div style="font-weight:600">${minD?.label||""}</div></div>
+<!-- RADAR -->
+<div class="section">
+  <div class="section-label">Mapa Relacional</div>
+  <h2>Seu Hexágono de Competências</h2>
+  <p>O radar abaixo representa suas 6 dimensões relacionais. Quanto mais próximo da borda externa, maior a competência naquela dimensão.</p>
+  <div class="radar-wrap">${radarSVG}</div>
 </div>
 
-<div class="card">
-<h2 style="margin-top:0">Análise do Perfil</h2>
-<p style="color:#8a8480;line-height:1.7">${pf?.desc||""}</p>
-<h2>Forças</h2>
-${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:#4caf50">✓</span><span style="color:#8a8480">${s}</span></div>`).join("")}
-<h2>Riscos</h2>
-${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:#ef5350">⚠</span><span style="color:#8a8480">${r}</span></div>`).join("")}
+<!-- DIMENSÕES -->
+<div class="section page-break">
+  <div class="section-label">Análise Dimensional</div>
+  <h2>Suas 6 Dimensões em Profundidade</h2>
+  <div class="card">
+    ${DIMS.map(d => {
+      const v = sc[d.key]||0;
+      const interp = dimInterp[d.key]?.[getLevel(v)] || "";
+      return `
+      <div class="dim-row">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="dim-label" style="color:${d.color}">${d.label}</div>
+            <div class="dim-score" style="color:${d.color}">${v}%</div>
+          </div>
+          <div class="dim-bar"><div style="height:8px;border-radius:4px;background:${d.color};width:${v}%"></div></div>
+          <div class="dim-interp">${interp}</div>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>
 </div>
 
-<div class="card">
-<h2 style="margin-top:0">Suas 3 Ações Prioritárias</h2>
-${(pf?.actions||[]).map((a,i)=>`<div class="action"><div class="action-num">${i+1}</div><p style="margin:0;color:#8a8480;line-height:1.5">${a}</p></div>`).join("")}
+<!-- PERFIL -->
+<div class="section">
+  <div class="section-label">Perfil Relacional</div>
+  <h2>Você é ${pf?.name||""}</h2>
+  <p style="font-size:15px;color:#a09880;line-height:1.8">${pf?.desc||""}</p>
+  
+  <div class="grid-2" style="margin-top:20px">
+    <div class="card">
+      <div class="section-label" style="color:#4caf50;margin-bottom:12px">Suas forças</div>
+      ${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start"><span class="tag-good">✓</span><span style="font-family:'DM Sans';font-size:13px;color:#8a8480;line-height:1.5">${s}</span></div>`).join("")}
+    </div>
+    <div class="card">
+      <div class="section-label" style="color:#ef5350;margin-bottom:12px">Pontos de atenção</div>
+      ${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start"><span class="tag-risk">!</span><span style="font-family:'DM Sans';font-size:13px;color:#8a8480;line-height:1.5">${r}</span></div>`).join("")}
+    </div>
+  </div>
 </div>
 
-<div class="card">
-<h2 style="margin-top:0">Plano de Ativação — 4 Semanas</h2>
-${PLAN.map(w=>`<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #2a2825">
-<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">${w.icon}<strong style="color:#c9a227">Semana ${w.week}: ${w.title}</strong></div>
-<p style="color:#6a6460;margin:0 0 8px;font-style:italic">${w.goal}</p>
-${w.tasks.map(t=>`<div style="color:#8a8480;font-size:13px;margin-bottom:4px">→ ${t}</div>`).join("")}
-<div style="margin-top:8px;background:#2a2825;padding:8px 12px;border-radius:6px;font-size:12px;color:#c9a227">Meta: ${w.metric}</div>
-</div>`).join("")}
+<!-- AÇÕES -->
+<div class="section page-break">
+  <div class="section-label">Direcionamento</div>
+  <h2>Suas 3 Ações Prioritárias</h2>
+  <p>Com base no seu perfil relacional, estas são as ações com maior retorno para você agora:</p>
+  <div class="card" style="margin-top:16px">
+    ${(pf?.actions||[]).map((a,i)=>`
+    <div class="action-item">
+      <div class="action-num">${i+1}</div>
+      <div>
+        <p style="color:#e8e4da;font-size:14px;margin-bottom:0">${a}</p>
+      </div>
+    </div>`).join("")}
+  </div>
 </div>
 
-<div class="footer">CONÉXIA · Diagnóstico Relacional Profissional · Rafael Milléo · "Networking, além do cafezinho"</div>
+<!-- PLANO 4 SEMANAS -->
+<div class="section">
+  <div class="section-label">Plano de Ativação</div>
+  <h2>Roadmap · 4 Semanas</h2>
+  <p>Transforme o diagnóstico em ação. Cada semana tem um foco, tarefas e uma meta mensurável.</p>
+  <div style="margin-top:24px">
+    ${PLAN.map(w=>`
+    <div class="plan-week">
+      <div class="week-label">Semana ${w.week} ${w.icon}</div>
+      <div class="week-title">${w.title}</div>
+      <div class="week-goal">${w.goal}</div>
+      ${w.tasks.map(t=>`<div class="week-task">→ ${t}</div>`).join("")}
+      <div class="week-metric">Meta: ${w.metric}</div>
+    </div>`).join("")}
+  </div>
+</div>
+
+<!-- REDE (se tem contatos) -->
+${cts.length > 0 ? `
+<div class="section page-break">
+  <div class="section-label">Sua Rede Atual</div>
+  <h2>Panorama dos Contatos</h2>
+  <div class="grid-2" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-value">${cts.length}</div><div class="stat-label">Contatos cadastrados</div></div>
+    <div class="stat-card"><div class="stat-value">${activeCount}</div><div class="stat-label">Relações ativas</div></div>
+    <div class="stat-card"><div class="stat-value">${avgHealth}%</div><div class="stat-label">Saúde média da rede</div></div>
+    <div class="stat-card"><div class="stat-value">${its.length}</div><div class="stat-label">Interações registradas</div></div>
+  </div>
+  <div class="card">
+    <div class="section-label" style="margin-bottom:12px">Seus contatos</div>
+    ${cts.map(c=>{const ci=CATS.find(x=>x.value===c.category);return`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1a1816">
+      <div style="width:32px;height:32px;border-radius:8px;background:${ci?.color||"#c9a227"}14;display:flex;align-items:center;justify-content:center;font-family:'DM Sans';font-size:13px;font-weight:700;color:${ci?.color||"#c9a227"}">${c.name[0]}</div>
+      <div style="flex:1"><div style="font-family:'DM Sans';font-size:13px;font-weight:500;color:#e8e4da">${c.name}</div><div style="font-family:'DM Sans';font-size:11px;color:#4a4840">${c.company||"—"} ${c.role?"· "+c.role:""}</div></div>
+      <div style="font-family:'JetBrains Mono';font-size:12px;font-weight:600;color:${c.health>=70?"#4caf50":c.health>=40?"#ff9800":"#ef5350"}">${c.health}%</div>
+      <div style="font-family:'DM Sans';font-size:10px;font-weight:600;color:${ci?.color||"#c9a227"};background:${ci?.color||"#c9a227"}12;padding:2px 8px;border-radius:3px">${ci?.label||c.category}</div>
+    </div>`;}).join("")}
+  </div>
+</div>` : ""}
+
+<!-- FOOTER -->
+<div class="footer-bar">
+  <div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#c9a227">CONÉXIA</div>
+    <div style="font-family:'DM Sans';font-size:11px;color:#3a3830">"Networking, além do cafezinho" · Rafael Milléo</div>
+  </div>
+  <div style="font-family:'DM Sans';font-size:11px;color:#3a3830;text-align:right">
+    Documento confidencial<br>
+    ${new Date().toLocaleDateString("pt-BR")}
+  </div>
+</div>
+
 </body></html>`;
-      const blob = new Blob([html], { type: "text/html;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `conexia-relatorio-${(profile?.name||"").replace(/\s+/g,"-").toLowerCase()}.html`; a.click();
-      URL.revokeObjectURL(url);
+
+      const win = window.open("", "_blank");
+      win.document.write(html);
+      win.document.close();
     };
 
     return (
@@ -1290,5 +1453,3 @@ export default function App() {
     </>
   );
 }
-
-
