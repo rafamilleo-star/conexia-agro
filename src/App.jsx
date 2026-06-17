@@ -1024,10 +1024,13 @@ export default function App() {
           profileName: assess.profile_name,
           createdAt: assess.created_at,
         });
+        // Tem assessment → vai direto pro CRM, independente do perfil
+        setState("app");
+        return;
       }
+      // Sem assessment → verifica onboarding
       if (!p?.onboarding_completed) setState("onboard");
-      else if (!p?.assessment_completed) setState("assess");
-      else setState("app");
+      else setState("assess");
     } catch (e) {
       console.error("[Load]", e);
       setState("onboard");
@@ -1134,4 +1137,6 @@ export default function App() {
     </>
   );
 }
+
+
 
