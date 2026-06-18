@@ -865,526 +865,338 @@ function CRM({ profile, assessment, onReset, user }) {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
     const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
     const downloadReport = () => {
-      // ── helpers ──────────────────────────────────────────────
-      const s10 = (k) => Math.round((sc[k]||0)/10);  // score /10
-      const pct = (k) => sc[k]||0;                    // score %
+      const s10 = (k) => Math.round((sc[k]||0)/10);
+      const pct = (k) => sc[k]||0;
       const sortedD = [...DIMS].sort((a,b)=>(sc[b.key]||0)-(sc[a.key]||0));
-      const maxD = sortedD[0];
-      const minD = sortedD[sortedD.length-1];
-      const top3 = sortedD.slice(0,3);
+      const top2 = sortedD.slice(0,2);
       const bot2 = sortedD.slice(-2);
-      const overallTen = Math.round(assessment.overall/10);
-      const percLabel = assessment.overall>=85?'TOP 10%':assessment.overall>=75?'TOP 20%':assessment.overall>=65?'TOP 30%':assessment.overall>=55?'TOP 40%':'EM DESENVOLVIMENTO';
-      const percColor = assessment.overall>=75?'#4caf50':assessment.overall>=55?'#ff9800':'#ef5350';
-
+      const proj = (v) => v<30?Math.min(100,v+40):v<50?Math.min(100,v+30):v<70?Math.min(100,v+20):Math.min(100,v+10);
       const getLvl = (v) => v>=75?'high':v>=50?'mid':'low';
       const getLvlLbl = (v) => v>=80?'Excelente':v>=65?'Forte':v>=50?'Médio':v>=35?'Relevante':'Gap Crítico';
-      const getLvlClr = (v) => v>=75?'#4caf50':v>=50?'#ff9800':'#ef5350';
-      const proj = (v) => v<30?Math.min(100,v+40):v<50?Math.min(100,v+30):v<70?Math.min(100,v+20):Math.min(100,v+10);
+      const getLvlClr = (v) => v>=75?'#2e7d32':v>=50?'#e65100':'#c62828';
+      const percLabel = assessment.overall>=85?'TOP 10%':assessment.overall>=75?'TOP 20%':assessment.overall>=65?'TOP 30%':'EM DESENVOLVIMENTO';
+      const overallTen = Math.round(assessment.overall/10);
 
-      // ── per-dimension content ─────────────────────────────────
-      const dimContent = {
-        intencao_estrategica:{
-          sintese: {high:"Você vê o networking como investimento estratégico — sabe exatamente quem precisa na sua rede e por quê. Age com propósito e tem visão de longo prazo.",mid:"Você tem alguma clareza sobre seus objetivos relacionais, mas nem sempre age com intenção deliberada. Há espaço para tornar sua estratégia mais explícita.",low:"Você age por impulso mais do que por estratégia nas relações. Construir uma visão clara de quem quer ter na rede é o primeiro passo."},
-          gatilho_at:{label:"Mapa Estratégico",desc:"Clareza de onde cada contato gera impacto no longo prazo",acao:"Monte um mapa de 15-20 contatos prioritários com ciclo de 30 dias para cada um."},
-          gatilho_bl:{label:"Falta de Visão Sistêmica",desc:"Age por impulso ou contexto, sem estratégia clara de quais conexões cultivar",antidoto:"Dedique 30 minutos por mês para revisar sua rede e identificar gaps estratégicos."},
-          interp:{high:"Visão de mercado e clareza de intenção — pico absoluto",mid:"Direção presente, execução a desenvolver",low:"Oportunidade crítica de alavancagem"}
-        },
-        escuta_relacional:{
-          sintese:{high:"Sua escuta é um ativo relacional raro. As pessoas saem de conversas com você sentindo que foram genuinamente vistas e compreendidas.",mid:"Você escuta bem em momentos importantes, mas a agenda própria às vezes interfere. Presença plena nas conversas é o diferencial.",low:"Você tende a falar mais do que ouvir. Conversas posicionadas não criam aliados — conversas transformadoras criam."},
-          gatilho_at:{label:"Profundidade Conversacional",desc:"Momentos de escuta genuína criam vínculos que posicionamento não consegue",acao:"Regra: em 1 conversa por dia, escute 70% do tempo. Faça perguntas que você genuinamente não sabe a resposta."},
-          gatilho_bl:{label:"Escuta Rasa",desc:"Foco no posicionamento pessoal em vez de entender o outro",antidoto:"Antes de cada conversa importante, defina 2 perguntas que você quer genuinamente aprender sobre a pessoa."},
-          interp:{high:"Escuta profunda — o maior ponto de alavancagem",mid:"Desenvolvimento ativo necessário",low:"GAP CRÍTICO — escuta rasa limita a profundidade das conexões"}
-        },
-        presenca_mercado:{
-          sintese:{high:"Você tem marca pessoal sólida. O mercado te conhece pelo que você entrega — sua reputação precede você e as pessoas te buscam ativamente.",mid:"Você tem alguma visibilidade, mas ela é inconsistente. Falta constância para consolidar uma referência de mercado.",low:"Sua competência não é visível para quem deveria conhecê-la. O mercado não pode valorizar o que não enxerga."},
-          gatilho_at:{label:"Visibilidade Ativa",desc:"Ambientes de alta visibilidade onde pode posicionar sua referência",acao:"Publique 1 insight por semana sobre sua área. Presencie 1 evento estratégico por mês."},
-          gatilho_bl:{label:"Presença Episódica",desc:"Aparece nos momentos certos mas some entre os eventos",antidoto:"Crie um calendário fixo de presença: 1 conteúdo/semana, 1 evento/mês, 1 artigo/trimestre."},
-          interp:{high:"Marca pessoal forte — circula com objetivo claro",mid:"Visibilidade inconsistente — constância é o gap",low:"Invisível para quem deveria te conhecer"}
-        },
-        reciprocidade_ativa:{
-          sintese:{high:"Você gera valor antes de pedir. Indica, conecta, compartilha sem agenda — e isso cria uma rede que genuinamente quer te ajudar.",mid:"Você se importa em contribuir, mas nem sempre toma a iniciativa. Pequenos gestos frequentes constroem dívidas de gratidão.",low:"Você espera que a relação evolua sozinha. A reciprocidade ativa — dar primeiro, sem agenda — é o combustível das redes sólidas."},
-          gatilho_at:{label:"Geração de Valor",desc:"Identificar oportunidades de contribuir antes de ser solicitado",acao:"Para cada contato-chave: o que posso oferecer agora sem esperar nada? Faça 2 indicações esta semana."},
-          gatilho_bl:{label:"Follow-up Passivo",desc:"Aguarda que a relação evolua naturalmente sem iniciativa própria",antidoto:"Regra das 48h: toda conversa relevante recebe mensagem personalizada com algo de valor."},
-          interp:{high:"Valor nos relacionamentos — presente e genuíno",mid:"Espaço para ampliar a proatividade",low:"Reciprocidade passiva limita conversão de contatos em aliados"}
-        },
-        ritual_consistencia:{
-          sintese:{high:"Você trata networking como hábito. Sua rede nunca esfria porque você a alimenta regularmente — mesmo nas épocas mais intensas.",mid:"Você tem intenção de manter contato, mas a rotina engole a execução. Um sistema mínimo substitui a motivação variável.",low:"Seu networking é reativo — você cultiva quando precisa. Isso limita profundamente o capital relacional que você consegue construir."},
-          gatilho_at:{label:"Sistema de Hábito",desc:"Quando o sistema de contato está instalado, a consistência é automática",acao:"Ritual: toda segunda-feira, 20 minutos, 3 contatos. Sem exceção. Configure no calendário agora."},
-          gatilho_bl:{label:"Rotina que Engole",desc:"Intenção alta, mas execução dependente da energia disponível",antidoto:"CRM pessoal simples: 20 contatos prioritários, data do último contato, próximo contato planejado."},
-          interp:{high:"Follow-up ativo — comportamento de alto impacto instalado",mid:"GAP CRÍTICO — follow-up passivo limita conversão dos contatos",low:"GAP CRÍTICO — ausência de sistema torna networking reativo"}
-        },
-        confianca_autentica:{
-          sintese:{high:"Você é o mesmo nas reuniões formais e no cafezinho informal. Essa coerência é percebida e valorizada — é a base de todas as relações sólidas.",mid:"Você é relativamente autêntico, mas há um 'personagem profissional' que ainda limita conexões mais profundas.",low:"Há distância entre quem você é e como se apresenta profissionalmente. Essa lacuna cria barreiras invisíveis que impedem vínculos genuínos."},
-          gatilho_at:{label:"Identidade Coerente",desc:"Alinhamento entre valores pessoais e comportamento profissional gera confiança",acao:"Compartilhe algo real sobre o que você está construindo ou enfrentando. Deixe o outro contribuir."},
-          gatilho_bl:{label:"Personagem Profissional",desc:"Apresenta uma versão curada que impede conexões genuínas",antidoto:"Em 2 conversas próximas, seja vulnerável: compartilhe um desafio real. Isso transforma contato em aliado."},
-          interp:{high:"Alinhamento presente — base sólida de confiança",mid:"Autenticidade em desenvolvimento",low:"Gap entre intenção e expressão — barreira para vínculos profundos"}
-        }
+      const dimInterp = {
+        intencao_estrategica:{high:"Visão de mercado e clareza de intenção — alto nível. Age com propósito e pensa no longo prazo.",mid:"Direção estratégica presente. Há espaço para tornar os objetivos relacionais mais explícitos e deliberados.",low:"Oportunidade de desenvolver visão sistêmica de quem precisa ter na rede e por quê."},
+        escuta_relacional:{high:"Escuta ativa presente — base sólida para conexões genuínas. Pessoas se sentem vistas nas conversas.",mid:"Escuta razoável, mas a agenda própria às vezes interfere. Presença plena é o diferencial.",low:"GAP CRÍTICO — escuta profunda é o maior ponto de alavancagem disponível agora."},
+        presenca_mercado:{high:"Marca pessoal forte — circula com objetivo claro. O mercado reconhece o que você entrega.",mid:"Visibilidade inconsistente — constância é o gap. A competência existe mas não é suficientemente visível.",low:"Invisível para quem deveria conhecê-la. O mercado não pode valorizar o que não enxerga."},
+        reciprocidade_ativa:{high:"Valor nos relacionamentos presente e genuíno. Gera antes de pedir — isso cria redes que retribuem.",mid:"Proatividade a ampliar. Pequenos gestos frequentes constroem dívidas de gratidão.",low:"Reciprocidade passiva. A iniciativa de dar primeiro, sem agenda, ainda precisa ser instalada."},
+        ritual_consistencia:{high:"Follow-up ativo e disciplinado — comportamento de alto impacto instalado. Rede não esfria.",mid:"GAP CRÍTICO — follow-up passivo limita a conversão dos contatos em aliados.",low:"GAP CRÍTICO — ausência de sistema torna o networking reativo e episódico."},
+        confianca_autentica:{high:"Alinhamento entre valores e comportamento — base sólida. Coerência gera confiança naturalmente.",mid:"Autenticidade em desenvolvimento. Há espaço para aprofundar o alinhamento.",low:"Gap entre intenção e expressão. Essa distância cria barreiras para vínculos genuínos."},
       };
 
-      // ── tensão central inteligente ────────────────────────────
-      const hiLabel = (d) => `${d.label} ${s10(d.key)}/10`;
-      const tensao = bot2.length>=2
-        ? `${hiLabel(top3[0])} e ${hiLabel(top3[1])} — mas ${hiLabel(bot2[1])} e ${hiLabel(bot2[0])}. ${dimContent[bot2[0].key]?.sintese?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}. A rede existe em potencial; o capital relacional profundo ainda está sendo construído.`
-        : `Score geral ${overallTen}/10. ${pf?.desc?.split('.')[0]||''}.`;
-
-      // ── SÍNTESE gerada a partir dos scores ───────────────────
-      const sintese12 = [
-        {q:"O que mais te impressiona?", a: pct('intencao_estrategica')>=70?`A clareza sobre quem você quer ter na sua rede e por quê — você vê o networking como investimento, não como evento.`:`A intenção existe, mas a estratégia de rede ainda está em construção — há espaço para tornar os objetivos mais explícitos.`},
-        {q:"Como gostaria de ser descrito?", a: pct('presenca_mercado')>=70?`Uma referência — sabe muito sobre o que faz e tem visão de mercado que o torna reconhecível.`:`Um profissional sólido, mas ainda construindo visibilidade consistente no mercado.`},
-        {q:"Sua relação com networking?", a: pct('intencao_estrategica')>=70?`Como investimento estratégico que precisa ser gerenciado com clareza de propósito e retorno.`:`Como algo importante mas que ainda compete com a rotina — a intenção supera a execução.`},
-        {q:"Como se comporta em eventos?", a: pct('presenca_mercado')>=70?`Circulando ativamente — o objetivo é conectar com pessoas relevantes com clareza de propósito.`:`Presente, mas sem sempre ter clareza do que quer gerar em cada conversa.`},
-        {q:"Alguém pede ajuda. Sua reação?", a: pct('reciprocidade_ativa')>=70?`Responde com generosidade — conecta, indica, compartilha. A reciprocidade é um valor genuíno.`:`Ajuda quando solicitado, mas raramente toma a iniciativa de oferecer antes de ser chamado.`},
-        {q:"Qual situação te representa?", a: pct('ritual_consistencia')>=70?`Contatos que se tornam aliados — porque você cultiva com consistência, não apenas em momentos de necessidade.`:`Muitos contatos, mas poucos que eu chamaria de aliados reais — a profundidade é o gap.`},
-        {q:"Maior bloqueio?", a: pct('ritual_consistencia')>=70?`A escala — manter qualidade quando o volume de relações cresce é o desafio.`:`O tempo — tenho a intenção, mas a rotina engole a execução. O sistema ainda não está instalado.`},
-        {q:"O que faz nas 48h após conversa?", a: pct('reciprocidade_ativa')>=70?`Envio mensagem personalizada com algo de valor — um artigo, uma indicação, um reconhecimento.`:`Depende da conversa — nas mais relevantes, faço follow-up; nas demais, aguardo que a relação evolua.`},
-        {q:"Onde sua energia vai em conversas?", a: pct('escuta_relacional')>=70?`Para entender o outro genuinamente — o que está construindo, enfrentando, precisando.`:`Para me posicionar bem — como estou sendo percebido e que impressão estou gerando.`},
-        {q:"Papel dos relacionamentos?", a: pct('confianca_autentica')>=70?`É o que define meu legado — o impacto que gerei nas pessoas e no mercado.`:`É essencial para o meu crescimento, mas ainda não é gerenciado com a atenção que merece.`},
-        {q:"Uma coisa que mudaria?", a: pct('ritual_consistencia')>=70?`Aprofundar as conexões que já tenho — transformar mais contatos em aliados reais.`:`Ser mais consistente no follow-up — manter o contato vivo entre os momentos de encontro.`},
-        {q:"O que rede representa?", a: pct('confianca_autentica')>=70?`Segurança — pessoas que estarão lá quando eu precisar, porque cultivei com genuinidade.`:`Oportunidade — mas ainda não operacionalizada com a consistência que o potencial merece.`},
+      const sintese = [
+        {q:"O que mais te impressiona?", a: pct('intencao_estrategica')>=70?`A clareza sobre quem quer ter na rede e por quê — vê o networking como investimento, não evento.`:`A intenção existe, mas a estratégia de rede ainda está em construção.`},
+        {q:"Como gostaria de ser descrito?", a: pct('presenca_mercado')>=70?`Uma referência — domínio técnico e visão que geram reconhecimento de mercado.`:`Um profissional sólido, construindo visibilidade consistente.`},
+        {q:"Sua relação com networking?", a: pct('intencao_estrategica')>=70?`Como investimento estratégico a ser gerenciado com propósito e disciplina.`:`Importante, mas ainda compete com a rotina na priorização.`},
+        {q:"Como se comporta em eventos?", a: pct('presenca_mercado')>=70?`Circulando ativamente — objetivo é conectar com pessoas relevantes com clareza de propósito.`:`Presente, mas sem sempre ter clareza do que quer gerar em cada conversa.`},
+        {q:"Alguém pede ajuda. Sua reação?", a: pct('reciprocidade_ativa')>=70?`Responde com generosidade — conecta, indica, compartilha. Reciprocidade é valor genuíno.`:`Ajuda quando solicitado, mas raramente oferece antes de ser chamado.`},
+        {q:"Qual situação te representa?", a: pct('ritual_consistencia')>=70?`Contatos que evoluem para aliados — porque cultiva com consistência, não só por necessidade.`:`Muitos contatos, mas poucos que chamaria de aliados reais.`},
+        {q:"Maior bloqueio?", a: pct('ritual_consistencia')>=70?`A escala — manter qualidade quando o volume de relações cresce.`:`O tempo — a intenção existe, mas a rotina engole a execução.`},
+        {q:"O que faz nas 48h após conversa?", a: pct('reciprocidade_ativa')>=70?`Envia mensagem personalizada com algo de valor — artigo, indicação, reconhecimento.`:`Depende da conversa — nas mais relevantes faz follow-up; nas demais, aguarda.`},
+        {q:"Onde sua energia vai em conversas?", a: pct('escuta_relacional')>=70?`Para entender o outro genuinamente — o que está construindo, enfrentando, precisando.`:`Para se posicionar bem — como está sendo percebido e que impressão gera.`},
+        {q:"Papel dos relacionamentos?", a: pct('confianca_autentica')>=70?`É o que define o legado — impacto gerado nas pessoas e no mercado.`:`Essencial para o crescimento, mas ainda não gerenciado com atenção suficiente.`},
+        {q:"Uma coisa que mudaria?", a: pct('ritual_consistencia')>=70?`Aprofundar as conexões que já tem — transformar mais contatos em aliados reais.`:`Ser mais consistente no follow-up — manter o contato vivo entre os encontros.`},
+        {q:"O que rede representa?", a: pct('confianca_autentica')>=70?`Segurança — pessoas que estarão lá quando precisar, porque cultivou com autenticidade.`:`Oportunidade — mas ainda não operacionalizada com a consistência que o potencial merece.`},
       ];
 
-      // ── radar SVG ─────────────────────────────────────────────
-      const cx=220,cy=220,r=160;
-      const rPt=(i,v)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d=r*(v/100);return[cx+d*Math.cos(a),cy+d*Math.sin(a)];};
-      const dVals=DIMS.map(d=>pct(d.key));
-      const rPoly=dVals.map((v,i)=>rPt(i,v).join(',')).join(' ');
-      const rRings=[20,40,60,80,100].map(v=>`<polygon points="${Array.from({length:6},(_,i)=>rPt(i,v).join(',')).join(' ')}" fill="none" stroke="#2a2825" stroke-width="${v===60?1.2:.6}"/>`).join('');
-      const rAxes=DIMS.map((_,i)=>{const[x,y]=rPt(i,100);return`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2825" stroke-width=".5"/>`;}).join('');
-      const rDots=dVals.map((v,i)=>{const[x,y]=rPt(i,v);return`<circle cx="${x}" cy="${y}" r="5" fill="${DIMS[i].color}"/>`;}).join('');
-      const rLbls=DIMS.map((_,i)=>{const[x,y]=rPt(i,120);const v=dVals[i];return`<text x="${x}" y="${y-4}" text-anchor="middle" fill="${DIMS[i].color}" font-size="9.5" font-weight="700" font-family="Arial">${DIMS[i].short}</text><text x="${x}" y="${y+9}" text-anchor="middle" fill="${DIMS[i].color}" font-size="11" font-weight="700" font-family="monospace">${v}%</text>`;}).join('');
-      const radarSVG=`<svg viewBox="0 0 440 440" width="340" height="340">${rRings}${rAxes}<polygon points="${rPoly}" fill="#c9a22718" stroke="#c9a227" stroke-width="2"/>${rDots}${rLbls}</svg>`;
+      const tensao = top2.length>=2&&bot2.length>=2
+        ? `${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1].label} ${s10(top2[1].key)}/10 — mas ${bot2[1].label} ${s10(bot2[1].key)}/10 e ${bot2[0].label} ${s10(bot2[0].key)}/10. Os pontos mais fortes coexistem com gaps que limitam a conversão do potencial em resultado relacional real.`
+        : `Score geral ${overallTen}/10. ${pf?.desc?.split('.')[0]||''}.`;
 
-      // ── mapa mental SVG ───────────────────────────────────────
-      const W=1000,H=780,MMcx=W/2,MMcy=H/2+20;
-      const mmSubtopics={
-        intencao_estrategica:["Visão de longo prazo","Mapa de contatos","Propósito claro","Retorno de rede","Priorização"],
-        escuta_relacional:["Presença plena","Perguntas abertas","Empatia ativa","Conexão genuína","Escuta 70/30"],
-        presenca_mercado:["Marca pessoal","Conteúdo","Eventos","Referência","Visibilidade"],
-        reciprocidade_ativa:["Dar primeiro","Indicações","Compartilhar","Valor sem agenda","Follow-up"],
-        ritual_consistencia:["Rotina semanal","CRM pessoal","Segunda-feira","Hábito","Sistema"],
-        confianca_autentica:["Coerência","Vulnerabilidade","Valores","Identidade","Autenticidade"]
-      };
-      let mmSVG='';
-      const mmRings=[60,130,200,270].map(rr=>`<circle cx="${MMcx}" cy="${MMcy}" r="${rr}" fill="none" stroke="#1e1c18" stroke-width=".8" stroke-dasharray="3,8"/>`).join('');
-      mmSVG+=mmRings;
-      DIMS.forEach((d,i)=>{
-        const angle=-Math.PI/2+(2*Math.PI/6)*i;
-        const v=pct(d.key);
-        const mainDist=195+30*(v/100);
-        const mx=MMcx+mainDist*Math.cos(angle);
-        const my=MMcy+mainDist*Math.sin(angle);
-        mmSVG+=`<line x1="${MMcx}" y1="${MMcy}" x2="${mx}" y2="${my}" stroke="${d.color}" stroke-width="2" opacity=".35"/>`;
-        // main node
-        const nr=36+Math.round(v/20);
-        mmSVG+=`<circle cx="${mx}" cy="${my}" r="${nr+6}" fill="${d.color}" opacity=".07"/>`;
-        mmSVG+=`<circle cx="${mx}" cy="${my}" r="${nr}" fill="#0d0d0f" stroke="${d.color}" stroke-width="2"/>`;
-        mmSVG+=`<text x="${mx}" y="${my-8}" text-anchor="middle" fill="${d.color}" font-size="10" font-weight="700" font-family="Arial">${d.short}</text>`;
-        mmSVG+=`<text x="${mx}" y="${my+7}" text-anchor="middle" fill="${getLvlClr(v)}" font-size="13" font-weight="700" font-family="monospace">${s10(d.key)}/10</text>`;
-        // sub-branches
-        const topics=(mmSubtopics[d.key]||[]).slice(0,5);
-        topics.forEach((t,ti)=>{
-          const spread=0.55;
-          const sa=angle+(ti-(topics.length-1)/2)*spread;
-          const sd=85+20*(v/100);
-          const sx=mx+sd*Math.cos(sa);
-          const sy=my+sd*Math.sin(sa);
-          const isActive=v>=60;
-          mmSVG+=`<line x1="${mx}" y1="${my}" x2="${sx}" y2="${sy}" stroke="${d.color}" stroke-width="${isActive?1.2:.7}" opacity=".4"/>`;
-          mmSVG+=`<ellipse cx="${sx}" cy="${sy}" rx="30" ry="13" fill="${d.color}${isActive?'16':'0a'}" stroke="${d.color}" stroke-width="${isActive?.9:.4}" opacity="${isActive?.9:.5}"/>`;
-          mmSVG+=`<text x="${sx}" y="${sy+1}" text-anchor="middle" dominant-baseline="middle" fill="${d.color}" font-size="8" font-weight="${isActive?'600':'400'}" font-family="Arial" opacity="${isActive?.9:.6}">${t}</text>`;
-        });
-      });
-      // center
-      mmSVG+=`<circle cx="${MMcx}" cy="${MMcy}" r="54" fill="#c9a22710" stroke="#c9a227" stroke-width="2"/>`;
-      mmSVG+=`<circle cx="${MMcx}" cy="${MMcy}" r="44" fill="#0a0a0c" stroke="#c9a22740" stroke-width="1"/>`;
-      mmSVG+=`<text x="${MMcx}" y="${MMcy-14}" text-anchor="middle" fill="#c9a227" font-size="26">${pf?.emoji||'🎯'}</text>`;
-      mmSVG+=`<text x="${MMcx}" y="${MMcy+8}" text-anchor="middle" fill="#c9a227" font-size="12" font-weight="700" font-family="Arial">${assessment.overall}%</text>`;
-      mmSVG+=`<text x="${MMcx}" y="${MMcy+22}" text-anchor="middle" fill="#c9a22760" font-size="8" font-family="Arial">score geral</text>`;
-      // connecting hex
-      const hexPts=DIMS.map((_,i)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d2=195+30*(pct(DIMS[i].key)/100);return`${MMcx+d2*Math.cos(a)},${MMcy+d2*Math.sin(a)}`;}).join(' ');
-      mmSVG=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:600px" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#090908"/>${mmSVG}<polygon points="${hexPts}" fill="#c9a22705" stroke="#c9a22725" stroke-width="1" stroke-dasharray="4,6"/></svg>`;
+      const termometro = DIMS.map(d => ({
+        label: d.label, hoje: `${s10(d.key)}/10`, d90: `${Math.round(proj(pct(d.key))/10)}/10`,
+        muda: dimInterp[d.key]?.high?.split('—')[1]?.trim() || dimInterp[d.key]?.high?.split('.')[0] || ''
+      }));
 
-      const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+      const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Diagnóstico Relacional — ${profile?.name||""}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:13px}
-@page{size:A4;margin:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-size:10pt;line-height:1.5}
+@page{size:A4;margin:18mm 20mm 16mm 20mm}
 @media print{.no-print{display:none!important}.pb{page-break-before:always}}
-.print-btn{position:fixed;bottom:20px;right:20px;background:#c9a227;color:#000;border:none;border-radius:8px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:999;box-shadow:0 4px 20px #c9a22760}
+.print-btn{position:fixed;top:16px;right:16px;background:#c9a227;color:#000;border:none;border-radius:6px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:12px;z-index:99}
 
-/* ── COVER ─────────────────────────────────────── */
-.cover{display:grid;grid-template-columns:195px 1fr 185px;min-height:100vh;background:#0d0d0f}
-.col-l{background:#111010;border-right:1px solid #222;padding:28px 16px;overflow:hidden}
-.col-c{padding:36px 24px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(135deg,#0d0d0f 0%,#100e0c 100%)}
-.col-r{background:#111010;border-left:1px solid #222;padding:24px 14px;overflow:hidden}
+/* ── CABEÇALHO DE PÁGINA ── */
+.pg-hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid #ddd;margin-bottom:14px}
+.pg-hdr-title{font-size:8pt;color:#888;letter-spacing:.05em}
+.pg-hdr-right{font-size:8pt;color:#888}
 
-/* dim card */
-.dc{margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid #1c1a18}
-.dc-lbl{font-size:11px;font-weight:700;color:#c9a227;margin-bottom:3px}
-.dc-score{font-family:'Courier New',monospace;font-size:20px;font-weight:700;float:right;line-height:1.1}
-.dc-badge{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:1px 6px;border-radius:2px;display:inline-block;margin-bottom:3px}
-.dc-bar-wrap{height:5px;border-radius:3px;background:#1e1c18;clear:both}
-.dc-bar{height:5px;border-radius:3px}
-.dc-note{font-size:9px;color:#3a3835;margin-top:3px;line-height:1.35}
-
-/* center elements */
-.profile-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid #c9a22730;background:#c9a22710;border-radius:6px;padding:7px 14px;margin-bottom:10px}
-.tag{display:inline-block;background:#ffffff08;border:1px solid #2a2825;color:#666;padding:3px 10px;border-radius:20px;font-size:9.5px;margin-right:5px;margin-bottom:5px}
-.score-grid{display:flex;border:1px solid #222;border-radius:8px;overflow:hidden;margin-bottom:20px}
-.score-cell{padding:14px 16px;border-right:1px solid #222;text-align:center;flex:1}
+/* ── CAPA ── */
+.cover{min-height:90vh;display:flex;flex-direction:column;justify-content:space-between;padding:24px 0}
+.lbl{font-size:7.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#888;margin-bottom:6px}
+.name-big{font-size:36pt;font-weight:800;color:#1a1a1a;line-height:1;margin-bottom:6px}
+.profile-tag{display:inline-flex;align-items:center;gap:8px;border:1px solid #c9a22750;background:#c9a22710;border-radius:4px;padding:5px 12px;margin-bottom:8px}
+.profile-tag-name{font-size:12pt;font-weight:700;color:#c9a227}
+.profile-tagline{font-size:9pt;color:#666;font-style:italic}
+.ctx-tags{font-size:8pt;color:#666;margin-bottom:16px}
+.score-row{display:flex;align-items:stretch;border:1px solid #ddd;border-radius:4px;overflow:hidden;margin-bottom:16px;width:fit-content}
+.score-cell{padding:10px 18px;border-right:1px solid #ddd;text-align:center}
 .score-cell:last-child{border-right:none}
-.tensao-box{background:#c9a22706;border:1px solid #c9a22720;border-radius:7px;padding:14px;margin-bottom:14px}
-.quote{border-left:2px solid #c9a22740;padding-left:14px;margin-bottom:12px}
+.score-val{font-family:'Courier New',monospace;font-size:22pt;font-weight:800;color:#c9a227;line-height:1}
+.score-lbl{font-size:7pt;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.score-dim{font-family:'Courier New',monospace;font-size:14pt;font-weight:700;line-height:1}
+.tensao-box{background:#f9f7f3;border:1px solid #e0ddd8;border-radius:4px;padding:12px;margin-bottom:14px}
+.tensao-lbl{font-size:7.5pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:5px}
+.tensao-txt{font-size:9pt;color:#444;line-height:1.65}
+.quote{border-left:2px solid #c9a22750;padding-left:12px;font-style:italic;color:#555;font-size:10pt}
+.footer-bar{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1.5px solid #c9a22760;margin-top:auto}
+.footer-bar-l{font-size:12pt;font-weight:700;color:#c9a227}
+.footer-bar-r{font-size:7.5pt;color:#888;text-align:right}
 
-/* right sidebar cards */
-.sc{background:#161614;border:1px solid #242220;border-radius:8px;padding:13px;margin-bottom:9px}
-.sc-lbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px}
+/* ── DIM TABLE ── */
+.dim-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+.dim-table td{padding:5px 4px;vertical-align:middle}
+.dim-key{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;text-align:center;width:28px}
+.dim-info{font-size:8.5pt}
+.dim-name{font-weight:700}
+.dim-note{color:#666;font-size:7.5pt}
+.dim-badge{font-size:6.5pt;font-weight:700;text-transform:uppercase;padding:1px 5px;border-radius:2px;display:inline-block}
+.dim-score{font-family:'Courier New',monospace;font-size:14pt;font-weight:800;text-align:right;white-space:nowrap;width:44px}
+.dim-bar-cell{width:80px}
+.dim-bar-bg{height:4px;border-radius:2px;background:#e5e2dc}
+.dim-bar-fg{height:4px;border-radius:2px}
+.dim-sep{border-bottom:1px solid #f0ede8}
 
-/* ── SECTIONS ───────────────────────────────────── */
-.sec{padding:36px 40px;border-top:1px solid #eee;background:#fff;color:#111}
-.sec-dark{padding:36px 40px;border-top:1px solid #1a1816;background:#0d0d0f;color:#e8e4da}
-.sec-lbl{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#c9a227;margin-bottom:12px}
-h2{font-size:22px;font-weight:700;margin-bottom:12px;color:inherit}
-h3{font-size:13px;font-weight:600;color:#c9a227;margin-bottom:6px;margin-top:16px}
-p{font-size:13px;line-height:1.75;margin-bottom:10px;color:#555}
-p.light{color:#8a8480}
-.card{border:1px solid #e0ddd8;border-radius:10px;padding:18px;margin-bottom:12px}
-.card-dark{background:#161618;border:1px solid #2a2825;border-radius:10px;padding:18px;margin-bottom:12px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.bar-w{height:6px;border-radius:3px;background:#e5e2dc;margin-top:5px}
-.bar-w-dark{height:6px;border-radius:3px;background:#2a2825;margin-top:5px}
-.bar-f{height:6px;border-radius:3px}
-.act-num{width:30px;height:30px;border-radius:8px;background:#c9a22715;border:1px solid #c9a22730;display:flex;align-items:center;justify-content:center;font-weight:700;color:#c9a227;font-size:13px;flex-shrink:0;font-family:'Courier New',monospace}
-.week-box{display:grid;grid-template-columns:54px 1fr;margin-bottom:14px;border:1px solid #e0ddd8;border-radius:10px;overflow:hidden}
-.week-num{background:#f7f5f0;border-right:1px solid #e0ddd8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:5px}
-.week-body{padding:14px}
-.thermo-row{display:grid;grid-template-columns:130px 55px 65px 1fr;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #eee;font-size:12px}
-.footer{background:#0d0d0f;border-top:1px solid #1a1816;padding:18px 40px;display:flex;justify-content:space-between;align-items:center}
+/* ── SINTESE ── */
+.sq{display:flex;gap:8px;margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #f0ede8}
+.sq:last-child{border-bottom:none;margin-bottom:0}
+.sq-num{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#c9a227;background:#c9a22712;border:1px solid #c9a22730;min-width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sq-q{font-weight:600;font-size:8.5pt;color:#1a1a1a;margin-bottom:1px}
+.sq-a{font-size:8pt;color:#555;line-height:1.5}
 
-/* sintese */
-.sq{display:flex;gap:10px;margin-bottom:9px;font-size:11.5px}
-.sq-num{font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:#c9a227;background:#c9a22712;border:1px solid #c9a22730;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.sq-q{font-weight:600;color:#333;margin-bottom:2px}
-.sq-a{color:#666;line-height:1.5}
+/* ── SECTIONS ── */
+.section{margin-bottom:20px}
+.h1{font-size:16pt;font-weight:800;color:#1a1a1a;margin-bottom:8px}
+.h2{font-size:11pt;font-weight:700;color:#1a1a1a;margin-bottom:5px;margin-top:14px}
+.h3{font-size:9pt;font-weight:700;color:#c9a227;margin-bottom:4px;margin-top:10px}
+.body-p{font-size:9pt;color:#333;line-height:1.75;margin-bottom:8px;text-align:justify}
+.box{border-radius:3px;padding:10px 12px;margin-bottom:10px}
+.box-warn{background:#fff5f5;border-left:3px solid #c62828}
+.box-gold{background:#fdf9ec;border-left:3px solid #c9a227}
+.box-grey{background:#f9f7f3;border:1px solid #e0ddd8}
+.box-lbl{font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
 
-/* gatilhos */
-.gtcard{border-radius:8px;padding:14px;margin-bottom:10px}
-.gt-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+/* ── GATILHOS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gt-block{border-radius:3px;padding:9px 11px;margin-bottom:8px}
+.gt-at{background:#f0faf0;border-left:2.5px solid #2e7d32}
+.gt-bl{background:#fff5f5;border-left:2.5px solid #c62828}
+.gt-title{font-size:8.5pt;font-weight:700;margin-bottom:3px}
+.gt-desc{font-size:8pt;color:#444;line-height:1.5;margin-bottom:3px}
+.gt-action{font-size:7.5pt;font-style:italic;color:#c9a227}
 
-/* mm */
-.mm-legend-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1a1816}
+/* ── PLANO ── */
+.week-box{display:grid;grid-template-columns:48px 1fr;border:1px solid #e0ddd8;border-radius:3px;overflow:hidden;margin-bottom:10px}
+.week-num{background:#f9f7f3;border-right:1px solid #e0ddd8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;gap:3px;font-size:18pt}
+.week-num-txt{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#c9a227}
+.week-body{padding:10px}
+.week-sem{font-size:7pt;color:#888;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.week-title{font-size:11pt;font-weight:700;color:#1a1a1a;margin-bottom:2px}
+.week-goal{font-size:8pt;color:#666;font-style:italic;margin-bottom:6px}
+.week-task{font-size:8pt;color:#333;margin-bottom:2px;display:flex;gap:6px}
+.week-meta{margin-top:6px;background:#fdf9ec;border:1px solid #c9a22720;border-radius:2px;padding:4px 8px;font-family:'Courier New',monospace;font-size:7.5pt;color:#c9a227}
+
+/* ── TERMÔMETRO ── */
+.thermo{width:100%;border-collapse:collapse}
+.thermo th{background:#f3f0ea;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px;border:1px solid #ddd;color:#666}
+.thermo td{padding:6px 8px;border:1px solid #ddd;font-size:8.5pt;vertical-align:middle}
+.thermo tr:nth-child(even) td{background:#faf8f4}
+
+/* ── VANTAGEM ── */
+.vant-box{background:#fdf9ec;border-left:3px solid #c9a227;border-radius:0 3px 3px 0;padding:12px;margin-bottom:10px}
+.frase-box{text-align:center;padding:20px;background:#f9f7f3;border:1px solid #e0ddd8;border-radius:3px}
+.frase-big{font-size:14pt;color:#c9a227;font-weight:700;margin-bottom:8px;line-height:1.4}
+.frase-sub{font-size:8.5pt;color:#666;font-style:italic}
 </style></head><body>
 
 <button class="print-btn no-print" onclick="window.print()">⬇ Salvar como PDF</button>
 
-<!-- ════ CAPA ════════════════════════════════════════════════ -->
+<!-- ════ CAPA ══════════════════════════════════════════════════════ -->
 <div class="cover">
+  <div>
+    <div class="lbl">Diagnóstico Relacional Profissional · CONÉXIA</div>
+    <div class="name-big">${profile?.name||profile?.first_name||""}</div>
+    <div class="profile-tag">
+      <span class="profile-tag-name">${pf?.name||""}</span>
+    </div>
+    <div class="profile-tagline">${pf?.tagline||""}</div>
+    <div class="ctx-tags" style="margin-top:8px">
+      ${[profile?.role,profile?.segment,profile?.state].filter(Boolean).join("  ·  ")}
+    </div>
 
-  <!-- LEFT: MAPA DIMENSIONAL -->
-  <div class="col-l">
-    <div style="font-size:8.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22760;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid #222">Mapa Dimensional</div>
-    ${DIMS.map(d=>{const v=pct(d.key);const t=s10(d.key);const clr=getLvlClr(v);const isCrit=v<40;const isStr=v>=80;return`
-    <div class="dc">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div class="dc-lbl" style="color:${d.color}">${d.label}</div>
-        <div class="dc-score" style="color:${clr}">${t}/10</div>
+    <div class="score-row">
+      <div class="score-cell" style="background:#fdf9ec">
+        <div class="score-val">${assessment.overall}%</div>
+        <div class="score-lbl">Score Geral</div>
       </div>
-      ${isCrit?`<div class="dc-badge" style="color:#ef5350;background:#ef535012;border:1px solid #ef535025">⚠ GAP CRÍTICO</div>`:isStr?`<div class="dc-badge" style="color:#4caf50;background:#4caf5012;border:1px solid #4caf5025">■ ${getLvlLbl(v)}</div>`:''}
-      <div class="dc-bar-wrap"><div class="dc-bar" style="width:${v}%;background:${d.color}"></div></div>
-      <div class="dc-note">${dimContent[d.key]?.interp?.[getLvl(v)]||''}</div>
-    </div>`;}).join('')}
+      <div class="score-cell" style="background:#fdf9ec">
+        <div style="font-family:'Courier New',monospace;font-size:14pt;font-weight:700;color:#c9a227">${overallTen}/10</div>
+        <div class="score-lbl">${percLabel}</div>
+      </div>
+      ${DIMS.slice(0,3).map(d=>{const v=pct(d.key);return`<div class="score-cell"><div class="score-dim" style="color:${d.color}">${v}%</div><div class="score-lbl">${d.short}</div></div>`;}).join('')}
+    </div>
+
+    <div class="tensao-box">
+      <div class="tensao-lbl">Tensão Central</div>
+      <div class="tensao-txt">${tensao}</div>
+    </div>
+
+    <div class="quote">"${pf?.tagline||""}"</div>
   </div>
 
-  <!-- CENTER: PROFILE -->
-  <div class="col-c">
-    <div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:14px;border-bottom:1px solid #2a2825">
-        <div style="font-size:8px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#c9a22760">Diagnóstico Relacional Profissional</div>
-        <div style="font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#c9a22740">CONÉXIA</div>
-      </div>
-
-      <div style="font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px" class="col-c">
-        <span style="color:${percColor};background:${percColor}18;border:1px solid ${percColor}30;padding:3px 10px;border-radius:4px">${percLabel}</span>
-        <span style="color:#c9a22760;margin-left:10px">· SCORE MÉDIO ${overallTen}/10</span>
-      </div>
-
-      <div style="font-size:60px;font-weight:800;color:#e8e4da;line-height:.95;margin:14px 0 18px;letter-spacing:-2px">${profile?.name||profile?.first_name||""}</div>
-
-      <div class="profile-badge">
-        <span style="font-size:24px">${pf?.emoji||"🎯"}</span>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#c9a227;letter-spacing:.04em">${pf?.name||""}</div>
-          <div style="font-size:10px;color:#6a6460;font-style:italic">${pf?.tagline||""}</div>
-        </div>
-      </div>
-
-      <div style="margin-bottom:16px">
-        ${profile?.role?`<span class="tag">${profile.role}</span>`:''}
-        ${profile?.segment?`<span class="tag">${profile.segment}</span>`:''}
-        ${profile?.state?`<span class="tag">${profile.state}</span>`:''}
-      </div>
-
-      <div class="score-grid">
-        <div class="score-cell" style="background:#c9a22710">
-          <div style="font-family:'Courier New',monospace;font-size:34px;font-weight:700;color:#c9a227;line-height:1">${assessment.overall}%</div>
-          <div style="font-size:8px;color:#6a6460;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Score Geral</div>
-        </div>
-        ${DIMS.slice(0,3).map(d=>{const v=pct(d.key);return`<div class="score-cell"><div style="font-family:'Courier New',monospace;font-size:20px;font-weight:700;color:${d.color}">${v}%</div><div style="font-size:8px;color:#3a3830;margin-top:2px">${d.short}</div></div>`;}).join('')}
-      </div>
-
-      <div class="tensao-box">
-        <div style="font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22790;margin-bottom:7px">Tensão Central</div>
-        <div style="font-size:12px;color:#9a8870;line-height:1.7">${tensao}</div>
-      </div>
-
-      <div class="quote">
-        <div style="font-size:13px;color:#b8b0a0;font-style:italic;line-height:1.6">"${pf?.tagline||""}"</div>
-      </div>
-    </div>
-    <div style="font-size:9px;color:#2a2820">Gerado em ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
-  </div>
-
-  <!-- RIGHT: HIGHLIGHTS -->
-  <div class="col-r">
-    <div style="font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9a22760;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #222">Destaques</div>
-
-    <div class="sc" style="border-color:#4caf5030">
-      <div class="sc-lbl" style="color:#4caf50">■ Maior Força</div>
-      <div style="font-family:'Courier New',monospace;font-size:30px;font-weight:700;color:#4caf50;line-height:1">${s10(maxD.key)}/10</div>
-      <div style="font-size:10px;font-weight:700;color:#e8e4da;margin-top:3px">${maxD.label}</div>
-      ${top3.length>1?`<div style="font-size:9px;color:#3a5830;margin-top:4px">${top3.slice(1,3).map(d=>`${d.label.split(' ')[0]} ${s10(d.key)}/10`).join(' + ')}</div>`:''}
-      <div style="font-size:9px;color:#2a3820;margin-top:4px;line-height:1.35">Três dimensões no pico — capital relacional diferenciado</div>
-    </div>
-
-    ${bot2[0]&&pct(bot2[0].key)<65?`<div class="sc" style="border-color:#ef535030">
-      <div class="sc-lbl" style="color:#ef5350">⚠ Gap Crítico</div>
-      <div style="font-family:'Courier New',monospace;font-size:30px;font-weight:700;color:#ef5350;line-height:1">${s10(bot2[0].key)}/10</div>
-      <div style="font-size:10px;font-weight:700;color:#e8e4da;margin-top:3px">${bot2[0].label}</div>
-      <div style="font-size:9px;color:#5a2820;margin-top:4px;line-height:1.35">${bot2[0]&&pct(bot2[0].key)<40?'Extremamente baixo apesar de potencial declarado':'Maior ponto de alavancagem disponível'}</div>
-    </div>`:''}
-
-    <div class="sc" style="border-color:#8a6fb030">
-      <div class="sc-lbl" style="color:#8a6fb0">👁 Sombra do Perfil</div>
-      ${pf?.risks?.slice(0,2).map(r=>`<div style="font-size:10px;color:#e8e4da;margin-bottom:4px">${r}</div>`).join('')||''}
-      <div style="font-size:9px;color:#3a2850;margin-top:4px;line-height:1.35">Rede ${pct('presenca_mercado')<60?'pequena':'relevante'} em volume para o potencial que tem</div>
-    </div>
-
-    <div class="sc" style="border-color:#c9a22725">
-      <div class="sc-lbl" style="color:#c9a227">🚀 Potencial Futuro</div>
-      ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:6px;margin-bottom:6px"><span style="font-family:'Courier New',monospace;font-size:9px;font-weight:700;color:#c9a22760;flex-shrink:0">${i+1}</span><span style="font-size:9px;color:#5a5040;line-height:1.4">${a.split('.')[0]}</span></div>`).join('')}
-    </div>
-
-    <div style="background:#0a0a0c;border:1px solid #1a1816;border-radius:8px;padding:10px;text-align:center">
-      <div style="font-size:8px;font-weight:700;color:#c9a22760;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Radar</div>
-      ${(()=>{const r2=52,cx2=67,cy2=67;const p2=(i,v)=>{const a=-Math.PI/2+(2*Math.PI/6)*i;const d=r2*(v/100);return[cx2+d*Math.cos(a),cy2+d*Math.sin(a)];};const dv2=DIMS.map(d=>pct(d.key));const poly2=dv2.map((v,i)=>p2(i,v).join(',')).join(' ');const rngs=[20,40,60,80,100].map(v=>`<polygon points="${Array.from({length:6},(_,i)=>p2(i,v).join(',')).join(' ')}" fill="none" stroke="#2a2825" stroke-width=".6"/>`).join('');const axs=dv2.map((_,i)=>{const[x,y]=p2(i,100);return`<line x1="${cx2}" y1="${cy2}" x2="${x}" y2="${y}" stroke="#2a2825" stroke-width=".4"/>`;}).join('');const dts=dv2.map((v,i)=>{const[x,y]=p2(i,v);return`<circle cx="${x}" cy="${y}" r="3.5" fill="${DIMS[i].color}"/>`;}).join('');return`<svg viewBox="0 0 134 134" width="130" height="130">${rngs}${axs}<polygon points="${poly2}" fill="#c9a22715" stroke="#c9a227" stroke-width="1.5"/>${dts}</svg>`;})()}
-    </div>
+  <div class="footer-bar">
+    <div class="footer-bar-l">CONÉXIA</div>
+    <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
   </div>
 </div>
 
-<!-- ════ SÍNTESE + ANÁLISE ═════════════════════════════════ -->
-<div class="sec pb" style="background:#0d0d0f;color:#e8e4da;border-top:none">
-  <div style="display:grid;grid-template-columns:1fr 260px;gap:28px">
-    <div>
-      <div class="sec-lbl">Síntese das Respostas</div>
-      <h2 style="color:#e8e4da;margin-bottom:16px">O que suas respostas revelam sobre você</h2>
-      ${sintese12.map((item,i)=>`<div class="sq">
-        <div class="sq-num">${String(i+1).padStart(2,'0')}</div>
-        <div><div class="sq-q">${item.q}</div><div class="sq-a">${item.a}</div></div>
-      </div>`).join('')}
-    </div>
-    <div>
-      <div class="sec-lbl">Potencial Futuro</div>
-      <div class="card-dark" style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:#4caf50;margin-bottom:6px">Referência de Mercado</div>
-        <div style="font-size:11px;color:#6a6460;line-height:1.5">${dimContent['presenca_mercado'].sintese[getLvl(pct('presenca_mercado'))]?.split('.')[0]||''}</div>
-      </div>
-      <div class="card-dark" style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:#4caf50;margin-bottom:6px">Rede Estratégica Ampla</div>
-        <div style="font-size:11px;color:#6a6460;line-height:1.5">${dimContent['reciprocidade_ativa'].sintese[getLvl(pct('reciprocidade_ativa'))]?.split('.')[0]||''}</div>
-      </div>
-      <div class="card-dark">
-        <div style="font-size:11px;font-weight:600;color:#c9a227;margin-bottom:6px">Vantagem Única</div>
-        <div style="font-size:11px;color:#6a6460;line-height:1.5">${pf?.desc?.split('.')[0]||''}</div>
-      </div>
-    </div>
-  </div>
+<!-- ════ P2: MAPA DIMENSIONAL + SÍNTESE ═════════════════════════════ -->
+<div class="pg-hdr pb">
+  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
 </div>
 
-<!-- ════ ANÁLISE PROFUNDA ═══════════════════════════════════ -->
-<div class="sec" style="background:#0d0d0f;color:#e8e4da">
-  <div class="sec-lbl">Análise Profunda do Perfil</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-    <div>
-      <h2 style="color:#e8e4da">O que seu diagnóstico revela sobre você</h2>
-      <p class="light" style="font-size:14px;line-height:1.8">${pf?.desc||""}</p>
-
-      <h3>Sua arquitetura relacional — como você está sendo percebido</h3>
-      <p class="light">${top3[0]?`${top3[0].label} ${s10(top3[0].key)}/10 ${top3[1]?`e ${top3[1].label} ${s10(top3[1].key)}/10`:''} criam a percepção de ${dimContent[top3[0].key]?.sintese?.high?.split('.')[0]?.toLowerCase()||'profissional de alto impacto'}. ${bot2[0]?`O desafio central é ${bot2[0].label} ${s10(bot2[0].key)}/10 — ${dimContent[bot2[0].key]?.sintese?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}.`:''}`:''}</p>
-
-      <div style="background:#ef535008;border:1px solid #ef535020;border-left:3px solid #ef5350;border-radius:0 8px 8px 0;padding:14px;margin:14px 0">
-        <div style="font-size:8px;font-weight:700;color:#ef5350;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">A sombra do seu perfil — o ponto cego que mais te custa</div>
-        <p class="light" style="margin:0;font-size:12px">${bot2[0]?`A sombra mais profunda é o gap entre a intenção declarada e a execução. ${bot2[0].label} ${s10(bot2[0].key)}/10 é o padrão que mais custa — não pela ausência de vontade, mas pela ausência de sistema. ${dimContent[bot2[0].key]?.sintese?.[getLvl(pct(bot2[0].key))]||''}`:''}</p>
-      </div>
-
-      <div style="background:#c9a22706;border:1px solid #c9a22720;border-left:3px solid #c9a227;border-radius:0 8px 8px 0;padding:14px">
-        <div style="font-size:8px;font-weight:700;color:#c9a227;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">⚑ Não ignore isso</div>
-        <p class="light" style="margin:0;font-size:12px">${bot2[0]?`${bot2[0].label} baixo é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[0]||''}</p>
-      </div>
-    </div>
-
-    <div>
-      <div style="display:flex;justify-content:center;margin-bottom:16px">${radarSVG}</div>
-      ${DIMS.map(d=>{const v=pct(d.key);return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:600;color:${d.color};min-width:90px">${d.label}</div>
-        <div style="flex:1"><div class="bar-w-dark"><div class="bar-f" style="width:${v}%;background:${d.color}"></div></div></div>
-        <div style="font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:${getLvlClr(v)};min-width:35px">${s10(d.key)}/10</div>
-      </div>`;}).join('')}
-    </div>
+<div style="display:grid;grid-template-columns:47% 53%;gap:16px">
+  <div>
+    <div class="lbl">Mapa Dimensional</div>
+    <table class="dim-table">
+      ${DIMS.map(d=>{const v=pct(d.key);const isCrit=v<40;const isStr=v>=80;const clr=getLvlClr(v);return`
+      <tr class="dim-sep">
+        <td class="dim-key" style="color:${d.color}">${d.key}</td>
+        <td class="dim-info">
+          <div class="dim-name" style="color:${d.color}">${d.label}</div>
+          ${isCrit?`<span class="dim-badge" style="color:#c62828;background:#fff0f0;border:1px solid #ffcccc">⚠ GAP CRÍTICO</span>`:isStr?`<span class="dim-badge" style="color:#2e7d32;background:#f0faf0;border:1px solid #c8e6c9">■ Excelente</span>`:''}
+          <div class="dim-note">${dimInterp[d.key]?.[getLvl(v)]?.split('.')[0]||''}</div>
+        </td>
+        <td class="dim-bar-cell"><div class="dim-bar-bg"><div class="dim-bar-fg" style="width:${v}%;background:${d.color}"></div></div></td>
+        <td class="dim-score" style="color:${clr}">${s10(d.key)}/10</td>
+      </tr>`;}).join('')}
+    </table>
   </div>
-</div>
-
-<!-- ════ FORÇAS + AÇÕES ════════════════════════════════════ -->
-<div class="sec pb">
-  <div class="sec-lbl">Perfil e Potencial</div>
-  <h2>Forças, Riscos e Ações Prioritárias</h2>
-  <div class="g2">
-    <div class="card" style="border-color:#4caf5040">
-      <div style="font-size:9px;font-weight:700;color:#4caf50;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">✓ Suas Forças</div>
-      ${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:8px;margin-bottom:8px"><span style="background:#4caf5015;border:1px solid #4caf5030;color:#4caf50;font-size:9px;font-weight:700;padding:1px 7px;border-radius:3px;flex-shrink:0">✓</span><span style="font-size:12px;color:#444;line-height:1.5">${s}</span></div>`).join('')}
-    </div>
-    <div class="card" style="border-color:#ef535040">
-      <div style="font-size:9px;font-weight:700;color:#ef5350;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">⚠ Pontos de Atenção</div>
-      ${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:8px;margin-bottom:8px"><span style="background:#ef535015;border:1px solid #ef535030;color:#ef5350;font-size:9px;font-weight:700;padding:1px 7px;border-radius:3px;flex-shrink:0">!</span><span style="font-size:12px;color:#444;line-height:1.5">${r}</span></div>`).join('')}
-    </div>
-  </div>
-
-  <h2 style="margin-top:20px">Suas 3 Ações Prioritárias</h2>
-  <p style="color:#555">Com base no seu perfil relacional, estas são as ações de maior retorno agora:</p>
-  <div class="card" style="border-color:#c9a22730">
-    ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:14px;margin-bottom:${i<(pf?.actions?.length-1)?'14':'0'}px;padding-bottom:${i<(pf?.actions?.length-1)?'14':'0'}px;border-bottom:${i<(pf?.actions?.length-1)?'1px solid #f0ece4':'none'}">
-      <div class="act-num">${i+1}</div>
-      <div style="font-size:13px;color:#222;line-height:1.55">${a}</div>
+  <div>
+    <div class="lbl">Síntese das Respostas</div>
+    ${sintese.map((item,i)=>`<div class="sq">
+      <div class="sq-num">${String(i+1).padStart(2,'0')}</div>
+      <div><div class="sq-q">${item.q}</div><div class="sq-a">${item.a}</div></div>
     </div>`).join('')}
   </div>
 </div>
 
-<!-- ════ GATILHOS RELACIONAIS ══════════════════════════════ -->
-<div class="sec" style="background:#0d0d0f;color:#e8e4da">
-  <div class="sec-lbl">Comportamento Relacional</div>
-  <h2 style="color:#e8e4da">Gatilhos — Os padrões que ativam e travam seu comportamento relacional</h2>
-  <div class="g2">
-    <div>
-      <h3 style="color:#4caf50;margin-bottom:10px;margin-top:0">⚡ Gatilhos de Ativação</h3>
-      ${DIMS.filter(d=>pct(d.key)>=60).slice(0,3).map(d=>{const v=pct(d.key);const ct=dimContent[d.key];return`<div class="gtcard" style="background:#4caf5008;border:1px solid #4caf5020">
-        <div class="gt-lbl" style="color:#4caf50">${ct?.gatilho_at?.label||d.label}</div>
-        <div style="font-size:12px;color:#6a6460;margin-bottom:6px;line-height:1.5">${ct?.gatilho_at?.desc||''}</div>
-        <div style="font-size:9px;color:#4caf5070">Ação: ${ct?.gatilho_at?.acao||''}</div>
-      </div>`;}).join('')}
+<!-- ════ P3: ANÁLISE PROFUNDA ════════════════════════════════════════ -->
+<div class="pg-hdr pb">
+  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
+</div>
+
+<div class="lbl">Análise Profunda do Perfil</div>
+<div class="h1">O que suas respostas revelam sobre você</div>
+
+<p class="body-p">${pf?.desc||""} ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 criam a percepção de profissional com propósito e coerência. ${bot2[0]?`O desafio central é ${bot2[0].label} ${s10(bot2[0].key)}/10 — ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}.`:''}`:''}.</p>
+
+<div class="h3">Sua arquitetura relacional — como você está sendo percebido</div>
+<p class="body-p">${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 ${top2[1]?`combinado com ${top2[1].label} ${s10(top2[1].key)}/10`:''} cria a impressão de alguém que sabe o que está fazendo e para onde vai. Isso é um ativo real — as pessoas confiam em quem demonstra clareza de propósito. O problema é que essa percepção ainda não é suficientemente nutrida ${bot2[0]?`pela ausência de ${bot2[0].label.toLowerCase()} ativa`:''}.`:''}</p>
+
+<div class="box box-warn" style="margin-top:12px">
+  <div class="box-lbl" style="color:#c62828">A sombra do seu perfil — o ponto cego que mais te custa</div>
+  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`A sombra mais profunda é o gap entre a intenção declarada e a execução. ${bot2[0].label} ${s10(bot2[0].key)}/10 é o padrão que mais custa — não pela ausência de vontade, mas pela ausência de sistema. ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]||''}`:pf?.risks?.[0]||''}</p>
+</div>
+
+<div class="box box-gold">
+  <div class="box-lbl" style="color:#c9a227">⚑ Não ignore isso</div>
+  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`${bot2[0].label} baixo é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[1]||''}</p>
+</div>
+
+<div style="margin-top:14px">
+  <div class="lbl">Forças e Riscos</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="box box-grey">
+      <div class="box-lbl" style="color:#2e7d32">✓ Suas Forças</div>
+      ${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:6px;margin-bottom:5px;font-size:8.5pt"><span style="color:#2e7d32;flex-shrink:0">✓</span><span style="color:#333">${s}</span></div>`).join('')}
     </div>
-    <div>
-      <h3 style="color:#ef5350;margin-bottom:10px;margin-top:0">🔴 Gatilhos de Bloqueio</h3>
-      ${DIMS.filter(d=>pct(d.key)<70).slice(-3).map(d=>{const v=pct(d.key);const ct=dimContent[d.key];return`<div class="gtcard" style="background:#ef535008;border:1px solid #ef535020">
-        <div class="gt-lbl" style="color:#ef5350">${ct?.gatilho_bl?.label||d.label}</div>
-        <div style="font-size:12px;color:#6a6460;margin-bottom:6px;line-height:1.5">${ct?.gatilho_bl?.desc||''}</div>
-        <div style="font-size:9px;color:#ef535070">Antídoto: ${ct?.gatilho_bl?.antidoto||''}</div>
-      </div>`;}).join('')}
+    <div class="box box-grey">
+      <div class="box-lbl" style="color:#c62828">⚠ Pontos de Atenção</div>
+      ${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:6px;margin-bottom:5px;font-size:8.5pt"><span style="color:#c62828;flex-shrink:0">!</span><span style="color:#333">${r}</span></div>`).join('')}
     </div>
   </div>
 </div>
 
-<!-- ════ PLANO DE ATIVAÇÃO ═════════════════════════════════ -->
-<div class="sec pb">
-  <div class="sec-lbl">Plano de Ativação — 4 Semanas</div>
-  <h2>Quatro semanas para transformar intenção em hábito sistemático</h2>
-  <p style="color:#555">Cada semana tem um comportamento, reflexão e ação concreta.</p>
-  ${PLAN.map((w,i)=>`<div class="week-box">
-    <div class="week-num">
-      <div style="font-size:22px">${w.icon}</div>
-      <div style="font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:#c9a227">${w.week}</div>
-    </div>
-    <div class="week-body">
-      <div style="font-size:9px;font-weight:700;color:#c9a22790;text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Semana ${w.week}</div>
-      <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:3px">${w.title}</div>
-      <div style="font-size:11px;color:#888;font-style:italic;margin-bottom:8px">${w.goal}</div>
-      ${w.tasks.map(t=>`<div style="font-size:12px;color:#555;margin-bottom:3px;display:flex;gap:7px"><span style="color:#c9a22770">→</span>${t}</div>`).join('')}
-      <div style="margin-top:8px;background:#c9a22710;border:1px solid #c9a22725;border-radius:5px;padding:6px 10px;font-family:'Courier New',monospace;font-size:10px;color:#c9a227">Meta: ${w.metric}</div>
-    </div>
-  </div>`).join('')}
+<div class="box box-gold" style="margin-top:10px">
+  <div class="box-lbl" style="color:#c9a227">Suas 3 Ações Prioritárias</div>
+  ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<(pf?.actions?.length-1)?'1px solid #e5d89a':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
 </div>
 
-<!-- ════ TERMÔMETRO + VANTAGEM ════════════════════════════ -->
-<div class="sec" style="background:#0d0d0f;color:#e8e4da">
-  <div class="sec-lbl">Termômetro Relacional — 90 Dias</div>
-  <h2 style="color:#e8e4da">O que é possível construir se você aplicar o plano com consistência</h2>
-  <div class="card-dark" style="margin:16px 0">
-    <div class="thermo-row" style="border-bottom:2px solid #2a2825;padding-bottom:10px">
-      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">Dimensão</div>
-      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">Hoje</div>
-      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">90 dias</div>
-      <div style="font-size:9px;font-weight:700;color:#4a4840;text-transform:uppercase">O que muda</div>
-    </div>
-    ${DIMS.map(d=>{const v=pct(d.key);const p2=proj(v);const delta=p2-v;return`<div class="thermo-row">
-      <div style="font-size:12px;font-weight:600;color:${d.color}">${d.label}</div>
-      <div style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:${getLvlClr(v)}">${s10(d.key)}/10</div>
-      <div style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:#4caf50">${Math.round(p2/10)}/10</div>
-      <div style="font-size:11px;color:#6a6460;line-height:1.4">${delta>0?`+${delta}pts — `:''}${dimContent[d.key]?.sintese?.high?.split('.')[0]||''}</div>
-    </div>`;}).join('')}
-  </div>
-
-  <div style="background:#c9a22708;border:1px solid #c9a22720;border-radius:10px;padding:18px;margin-top:14px">
-    <div style="font-size:9px;font-weight:700;color:#c9a227;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">A Vantagem Única do Seu Perfil</div>
-    <p class="light" style="font-size:13px;line-height:1.8;margin-bottom:12px">${pf?.desc?.split('.').slice(0,2).join('.')||''}.</p>
-    <div style="border-top:1px solid #2a2825;padding-top:12px;font-size:12px;color:#8a7870;font-style:italic">"Toda semana: em quantas conversas você genuinamente aprendeu algo sobre o outro que não sabia antes — e o que isso diz sobre a qualidade da sua presença?"</div>
-  </div>
-
-  <div style="margin-top:24px">
-    <div class="sec-lbl" style="margin-top:0">Pergunta Provocativa</div>
-    <div style="font-size:18px;color:#c9a227;font-style:italic;line-height:1.6">"Se você fosse ${pct('presenca_mercado')>=70?'20%':'100%'} mais presente e ${pct('escuta_relacional')>=70?'20%':'100%'} mais profundo nas conexões, quais portas se abririam?"</div>
-  </div>
+<!-- ════ P4: GATILHOS + PLANO ════════════════════════════════════════ -->
+<div class="pg-hdr pb">
+  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
 </div>
 
-<!-- ════ MAPA MENTAL ═══════════════════════════════════════ -->
-<div class="pb" style="background:#090908;padding:32px;min-height:100vh;display:flex;flex-direction:column">
-  <div style="margin-bottom:16px">
-    <div style="font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#c9a227;margin-bottom:8px">Mapa Mental</div>
-    <div style="font-size:26px;font-weight:700;color:#e8e4da">Arquitetura Relacional — <span style="color:#c9a227;font-style:italic">${pf?.name||""}</span></div>
-    <div style="font-size:12px;color:#4a4840;margin-top:4px">Mapa das 6 dimensões relacionais com sub-temas, padrões comportamentais e capital relacional atual. Dimensões mais fortes aparecem mais distantes do centro.</div>
-  </div>
+<div class="lbl">Gatilhos Relacionais</div>
+<div class="h1" style="margin-bottom:12px">Os padrões automáticos que ativam e travam o comportamento relacional</div>
 
-  <div style="flex:1;display:flex;justify-content:center;align-items:center">${mmSVG}</div>
-
-  <div class="g3" style="margin-top:16px">
-    ${DIMS.map(d=>{const v=pct(d.key);return`<div style="background:#111010;border:1px solid ${d.color}25;border-radius:8px;padding:11px;border-top:2px solid ${d.color}">
-      <div style="font-size:10px;font-weight:700;color:${d.color};margin-bottom:3px">${d.label}</div>
-      <div style="font-family:'Courier New',monospace;font-size:20px;font-weight:700;color:${getLvlClr(v)}">${s10(d.key)}/10</div>
-      <div style="height:4px;border-radius:2px;background:#1a1816;margin:5px 0"><div style="height:4px;border-radius:2px;background:${d.color};width:${v}%"></div></div>
-      <div style="font-size:9px;color:#3a3830">${getLvlLbl(v)}</div>
-    </div>`;}).join('')}
-  </div>
-</div>
-
-<!-- ════ FRASE FINAL ═══════════════════════════════════════ -->
-<div style="background:linear-gradient(135deg,#0d0d0f 0%,#141210 100%);padding:48px 40px;text-align:center;border-top:1px solid #1a1816">
-  <div style="font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#c9a22760;margin-bottom:16px">Essência do Perfil</div>
-  <div style="font-size:20px;color:#e8e4da;line-height:1.65;max-width:640px;margin:0 auto 20px">
-    <span style="color:#c9a227">Você já sabe chegar.</span> O próximo nível é fazer as pessoas quererem que você fique — e isso se constrói na qualidade das relações, não no volume das conexões.
-  </div>
-  <div style="font-size:11px;color:#4a4840;font-style:italic">"Relacionamento não é sobre ter muitos contatos. É sobre ser indispensável para os que importam."</div>
-</div>
-
-<!-- FOOTER -->
-<div class="footer">
+<div class="g2" style="margin-bottom:18px">
   <div>
-    <div style="font-size:20px;font-weight:700;color:#c9a227;letter-spacing:.04em">CONÉXIA</div>
-    <div style="font-size:10px;color:#3a3830">"Networking, além do cafezinho" · Rafael Milléo</div>
+    <div style="font-size:8pt;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">⚡ Gatilhos de Ativação</div>
+    ${DIMS.filter(d=>pct(d.key)>=65).slice(0,3).map(d=>`<div class="gt-block gt-at">
+      <div class="gt-title" style="color:#2e7d32">${d.label} ${s10(d.key)}/10</div>
+      <div class="gt-desc">${dimInterp[d.key]?.high?.split('.')[0]||''}</div>
+      <div class="gt-action">→ Capitalize este ponto forte como vantagem competitiva relacional.</div>
+    </div>`).join('')}
   </div>
-  <div style="text-align:right">
-    <div style="font-size:12px;color:#e8e4da;font-weight:600">${profile?.name||""}</div>
-    <div style="font-size:10px;color:#3a3830">Diagnóstico Relacional Profissional · ${new Date().toLocaleDateString('pt-BR')}</div>
+  <div>
+    <div style="font-size:8pt;font-weight:700;color:#c62828;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">🔴 Gatilhos de Bloqueio</div>
+    ${DIMS.filter(d=>pct(d.key)<70).slice(-3).map(d=>`<div class="gt-block gt-bl">
+      <div class="gt-title" style="color:#c62828">${d.label} ${s10(d.key)}/10</div>
+      <div class="gt-desc">${dimInterp[d.key]?.[getLvl(pct(d.key))]?.split('.')[0]||''}</div>
+      <div class="gt-action">Antídoto: Implemente um sistema mínimo — intenção sem estrutura não vira hábito.</div>
+    </div>`).join('')}
   </div>
+</div>
+
+<div class="lbl">Plano de Ativação — 4 Semanas</div>
+${PLAN.map((w,i)=>`<div class="week-box">
+  <div class="week-num"><span>${w.icon}</span><span class="week-num-txt">${w.week}</span></div>
+  <div class="week-body">
+    <div class="week-sem">Semana ${w.week}</div>
+    <div class="week-title">${w.title}</div>
+    <div class="week-goal">${w.goal}</div>
+    ${w.tasks.map(t=>`<div class="week-task"><span style="color:#c9a22760">→</span>${t}</div>`).join('')}
+    <div class="week-meta">Meta: ${w.metric}</div>
+  </div>
+</div>`).join('')}
+
+<!-- ════ P5: TERMÔMETRO + VANTAGEM ══════════════════════════════════ -->
+<div class="pg-hdr pb">
+  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
+</div>
+
+<div class="lbl">Termômetro Relacional — 90 Dias</div>
+<div class="h1" style="margin-bottom:10px">O que é possível construir com consistência de aplicação</div>
+
+<table class="thermo" style="margin-bottom:16px">
+  <tr><th>Dimensão</th><th>Hoje</th><th>90 dias</th><th>O que muda</th></tr>
+  ${termometro.map(t=>`<tr><td style="font-weight:600">${t.label}</td><td style="font-family:'Courier New',monospace;font-weight:700;text-align:center">${t.hoje}</td><td style="font-family:'Courier New',monospace;font-weight:700;color:#2e7d32;text-align:center">${t.d90}</td><td style="font-size:8pt;color:#555">${t.muda}</td></tr>`).join('')}
+</table>
+
+<div class="lbl">A Vantagem Única do Seu Perfil</div>
+<div class="vant-box">
+  <p style="font-size:9pt;color:#333;line-height:1.75;margin:0">${pf?.desc?.split('.').slice(0,2).join('.')||''}. ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 é uma combinação que já posiciona como referência. O próximo nível não exige mudar o que você faz — exige ampliar como o mercado enxerga o que você entrega.`:''}</p>
+</div>
+
+<p style="text-align:center;font-style:italic;color:#666;font-size:9pt;margin-bottom:20px">"Toda semana: em quantas conversas você genuinamente aprendeu algo sobre o outro que não sabia antes — e o que isso diz sobre a qualidade da sua presença?"</p>
+
+<div class="frase-box">
+  <div class="frase-big">${profile?.name?.split(' ')[0]||"Você"}, você já sabe chegar.<br>O próximo nível é fazer as pessoas quererem que você fique.</div>
+  <div class="frase-sub">"Relacionamento não é sobre ter muitos contatos. É sobre ser indispensável para os que importam."</div>
+</div>
+
+<div class="footer-bar" style="margin-top:20px">
+  <div class="footer-bar-l">CONÉXIA</div>
+  <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>Diagnóstico Relacional Profissional · ${new Date().toLocaleDateString('pt-BR')}</div>
 </div>
 
 </body></html>`;
@@ -1393,7 +1205,8 @@ p.light{color:#8a8480}
       if(!win){alert("Permita pop-ups para abrir o relatório.");return;}
       win.document.write(html);
       win.document.close();
-    }
+    };
+
     return (
       <div style={{ overflowY: "auto", paddingBottom: 40 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
@@ -1680,7 +1493,6 @@ export default function App() {
     try {
       const p = profile || {};
       const payload = {
-        event: "novo_assessment",
         timestamp: new Date().toISOString(),
         userId: user?.id || "",
         nome: p.first_name || p.name || "",
@@ -1704,8 +1516,8 @@ export default function App() {
         p07: result.answers?.p07 || "", p08: result.answers?.p08 || "",
         p09: result.answers?.p09 || "", p10: result.answers?.p10 || "",
         p11: result.answers?.p11 || "", p12: result.answers?.p12 || "",
-        onboardingOk: true, assessmentOk: true,
-        planilhaId: "1sWerL2CEbsAOofq0xy2aAC5npH8HliE25cgwCmeF9AY",
+        onboardingOk: true,
+        assessmentOk: true,
       };
       await fetch(MAKE_WEBHOOK, {
         method: "POST",
