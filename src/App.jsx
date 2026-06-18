@@ -461,6 +461,7 @@ function CRM({ profile, assessment, onReset, user }) {
   const [cts, setCts] = useState([]);
   const [its, setIts] = useState([]);
   const [selId, setSelId] = useState(null);
+  const [editId, setEditId] = useState(null);
   const [modal, setModal] = useState(null);
   const [intCid, setIntCid] = useState(null);
   const [dbgMsg, setDbgMsg] = useState("");
@@ -580,6 +581,53 @@ function CRM({ profile, assessment, onReset, user }) {
     await supabase.from("contacts").delete().eq("id", id);
     setSelId(null);
     await load();
+  };
+
+  const openEditC = (c) => {
+    setCf({
+      name: c.name || "", company: c.company || "", role: c.role || "",
+      category: c.category || "potencial", proximity: String(c.proximity || 3),
+      idealFreq: String(c.idealFreq || c.ideal_frequency_days || 30),
+      notes: c.notes || c.personal_notes || "",
+      howMet: c.howMet || c.how_met || "",
+      whatsapp: c.whatsapp || "", contactEmail: c.contactEmail || c.contact_email || "",
+      linkedin: c.linkedin || "", birthday: c.birthday || "",
+      hobbies: c.hobbies || "", mainCulture: c.mainCulture || c.main_culture || "",
+      city: c.city || "", stateCode: c.stateCode || c.state_code || "",
+      nextAction: c.nextAction || c.next_action || "",
+      nextActionDate: c.nextActionDate || c.next_action_date || "",
+      influenciaPessoas: c.influenciaPessoas !== null && c.influenciaPessoas !== undefined ? String(c.influenciaPessoas) : "",
+      geraOportunidade:  c.geraOportunidade  !== null && c.geraOportunidade  !== undefined ? String(c.geraOportunidade)  : "",
+      abrePortas:        c.abrePortas        !== null && c.abrePortas        !== undefined ? String(c.abrePortas)        : "",
+      momentoAtual:      c.momentoAtual      !== null && c.momentoAtual      !== undefined ? String(c.momentoAtual)      : "",
+    });
+    setEditId(c.id);
+    setModal("editC");
+  };
+
+  const saveEditC = async () => {
+    if (!editId || !cf.name.trim()) return;
+    const { error } = await supabase.from("contacts").update({
+      name: cf.name.trim(), company: cf.company.trim(), role: cf.role.trim(),
+      category: cf.category, proximity: parseInt(cf.proximity),
+      ideal_frequency_days: parseInt(cf.idealFreq) || 30,
+      how_met: cf.howMet.trim(), personal_notes: cf.notes.trim(),
+      whatsapp: cf.whatsapp.trim() || null,
+      contact_email: cf.contactEmail.trim() || null,
+      linkedin: cf.linkedin.trim() || null,
+      birthday: cf.birthday || null,
+      hobbies: cf.hobbies.trim() || null,
+      main_culture: cf.mainCulture || null,
+      city: cf.city.trim() || null,
+      state_code: cf.stateCode || null,
+      next_action: cf.nextAction.trim() || null,
+      next_action_date: cf.nextActionDate || null,
+      influencia_pessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null,
+      gera_oportunidade:  cf.geraOportunidade  !== "" ? parseInt(cf.geraOportunidade)  : null,
+      abre_portas:        cf.abrePortas        !== "" ? parseInt(cf.abrePortas)        : null,
+      momento_atual:      cf.momentoAtual      !== "" ? parseInt(cf.momentoAtual)      : null,
+    }).eq("id", editId).eq("user_id", user.id);
+    if (!error) { setModal(null); setEditId(null); await load(); }
   };
 
   const sel = cts.find(c => c.id === selId);
@@ -992,7 +1040,10 @@ function CRM({ profile, assessment, onReset, user }) {
                 </div>);
               })()}
             </div>
-            <Btn variant="danger" small onClick={() => { if (confirm("Remover contato?")) delC(sel.id); }}>Remover</Btn>
+            <div style={{ display:"flex", gap:8 }}>
+              <Btn small onClick={() => openEditC(sel)}>✏️ Editar</Btn>
+              <Btn variant="danger" small onClick={() => { if (confirm("Remover contato?")) delC(sel.id); }}>Remover</Btn>
+            </div>
           </div>
           {sel.notes && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 14, marginBottom: 10, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{sel.notes}</div>}
           {/* Info grid */}
@@ -1691,6 +1742,80 @@ ${PLAN.map((w,i)=>`<div class="week-box">
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn small onClick={addC} disabled={!cf.name.trim()}>Salvar</Btn></div>
       </Modal>}
+      {modal === "editC" && <Modal title="Editar contato" onClose={() => { setModal(null); setEditId(null); }}>
+        <Inp label="Nome *" value={cf.name} onChange={v => setCf({ ...cf, name: v })} placeholder="Nome completo" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="Empresa" value={cf.company} onChange={v => setCf({ ...cf, company: v })} placeholder="Empresa" />
+          <Inp label="Cargo" value={cf.role} onChange={v => setCf({ ...cf, role: v })} placeholder="Cargo" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="📱 WhatsApp" value={cf.whatsapp} onChange={v => setCf({ ...cf, whatsapp: v })} placeholder="(00) 00000-0000" />
+          <Inp label="✉️ Email" value={cf.contactEmail} onChange={v => setCf({ ...cf, contactEmail: v })} placeholder="email@empresa.com" type="email" />
+        </div>
+        <Inp label="🔗 LinkedIn" value={cf.linkedin} onChange={v => setCf({ ...cf, linkedin: v })} placeholder="linkedin.com/in/nome" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="🎂 Aniversário" value={cf.birthday} onChange={v => setCf({ ...cf, birthday: v })} type="date" />
+          <Sel label="🌱 Cultura principal" value={cf.mainCulture} onChange={v => setCf({ ...cf, mainCulture: v })} options={MAIN_CULTURES} placeholder="Selecione..." />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="📍 Cidade" value={cf.city} onChange={v => setCf({ ...cf, city: v })} placeholder="Cidade" />
+          <Sel label="Estado" value={cf.stateCode} onChange={v => setCf({ ...cf, stateCode: v })} options={UFS} placeholder="UF" />
+        </div>
+        <Inp label="🎯 Hobbies / Interesses" value={cf.hobbies} onChange={v => setCf({ ...cf, hobbies: v })} placeholder="Pesca, futebol, leitura..." />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          <Sel label="Categoria" value={cf.category} onChange={v => setCf({ ...cf, category: v })} options={CATS.map(c => ({ value: c.value, label: `${c.icon} ${c.label}` }))} />
+          <Sel label="Proximidade" value={cf.proximity} onChange={v => setCf({ ...cf, proximity: v })} options={[1,2,3,4,5].map(n => ({ value: String(n), label: `${n}/5` }))} />
+          <Inp label="Freq. (dias)" value={cf.idealFreq} onChange={v => setCf({ ...cf, idealFreq: v })} type="number" />
+        </div>
+        <Inp label="Como conheceu?" value={cf.howMet} onChange={v => setCf({ ...cf, howMet: v })} placeholder="Evento, indicação, campo..." />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Inp label="📋 Próxima ação" value={cf.nextAction} onChange={v => setCf({ ...cf, nextAction: v })} placeholder="Ligar, enviar artigo..." />
+          <Inp label="📅 Data da ação" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
+        </div>
+        <Inp label="📝 Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
+        <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular o Relevance Score.</div>
+          {[
+            { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
+            { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
+            { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar você a pessoas, ambientes ou conversas importantes?" },
+            { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relação tem conexão com seus objetivos dos próximos meses?" },
+          ].map(({ field, label, micro }) => (
+            <div key={field} style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                <div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM }}>{label}</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{micro}</div>
+                </div>
+                <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: C.gold, minWidth: 28, textAlign: "right" }}>
+                  {cf[field] !== "" ? cf[field] : "—"}
+                </div>
+              </div>
+              <input type="range" min="0" max="10" step="1"
+                value={cf[field] !== "" ? cf[field] : 5}
+                onChange={e => setCf({ ...cf, [field]: e.target.value })}
+                style={{ width: "100%", accentColor: C.gold, height: 4, cursor: "pointer" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, marginTop: 2 }}>
+                <span>0</span><span>5</span><span>10</span>
+              </div>
+            </div>
+          ))}
+          {(() => {
+            const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null });
+            return rs !== null ? (
+              <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Relevance Score</span>
+                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span>
+              </div>
+            ) : (
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, fontStyle: "italic" }}>Preencha os 4 campos para calcular.</div>
+            );
+          })()}
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => { setModal(null); setEditId(null); }}>Cancelar</Btn><Btn small onClick={saveEditC} disabled={!cf.name.trim()}>Salvar alterações</Btn></div>
+      </Modal>}
       {modal === "addI" && <Modal title="Registrar interação" onClose={() => setModal(null)}>
         <div style={{ marginBottom: 16 }}><label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 6 }}>Tipo</label><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{ITYPES.map(t => <button key={t.value} onClick={() => setInf({ ...inf, type: t.value })} style={{ background: inf.type === t.value ? C.gD : C.sf, border: `1px solid ${inf.type === t.value ? C.gL : C.brd}`, borderRadius: 6, padding: "8px 14px", cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 12, color: inf.type === t.value ? C.gold : C.txM }}>{t.icon} {t.label}</button>)}</div></div>
         <Inp label="O que aconteceu? *" value={inf.desc} onChange={v => setInf({ ...inf, desc: v })} placeholder="Descreva a interação..." textarea />
@@ -1833,6 +1958,7 @@ export default function App() {
     try {
       const p = profile || {};
       const payload = {
+        event: "novo_assessment",
         timestamp: new Date().toISOString(),
         userId: user?.id || "",
         nome: p.first_name || p.name || "",
