@@ -1680,6 +1680,7 @@ export default function App() {
     try {
       const p = profile || {};
       const payload = {
+        event: "novo_assessment",
         timestamp: new Date().toISOString(),
         userId: user?.id || "",
         nome: p.first_name || p.name || "",
@@ -1703,8 +1704,8 @@ export default function App() {
         p07: result.answers?.p07 || "", p08: result.answers?.p08 || "",
         p09: result.answers?.p09 || "", p10: result.answers?.p10 || "",
         p11: result.answers?.p11 || "", p12: result.answers?.p12 || "",
-        onboardingOk: true,
-        assessmentOk: true,
+        onboardingOk: true, assessmentOk: true,
+        planilhaId: "1sWerL2CEbsAOofq0xy2aAC5npH8HliE25cgwCmeF9AY",
       };
       await fetch(MAKE_WEBHOOK, {
         method: "POST",
