@@ -2499,7 +2499,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
 }
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
-export default function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o CONÉXIA completo para transformar diagnóstico em ação prática.", cta = "Assinar PRO — R$ 49,90/mês", onKey }) {
+function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o CONÉXIA completo para transformar diagnóstico em ação prática.", cta = "Assinar PRO — R$ 49,90/mês", onKey }) {
   return (
     <div style={{ background:"#161618", border:"1px solid #2a2825", borderRadius:12, padding:24, textAlign:"center", margin:"8px 0" }}>
       <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
@@ -2684,3 +2684,5 @@ function App() {
     </>
   );
 }
+
+export default App;
