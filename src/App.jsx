@@ -43,6 +43,153 @@ const MAIN_CULTURES = [
 const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999;
 const hScore = (last, freq) => { const d = dSince(last); if (!last || d > freq * 3) return 0; return Math.max(0, Math.round((1 - d / (freq * 1.5)) * 100)); };
 const fD = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—";
+
+// ── RELEVANCE SCORE utils ──────────────────────────────────
+const calculateRelevanceScore = (c) => {
+  const fields = [c.influenciaPessoas, c.geraOportunidade, c.abrePortas, c.momentoAtual];
+  const valid = fields.filter(v => v !== null && v !== undefined && v !== "");
+  if (valid.length < 4) return null;
+  const nums = valid.map(Number);
+  if (nums.some(isNaN)) return null;
+  return Math.round((nums.reduce((a,b)=>a+b,0) / 4) * 10);
+};
+
+const getRelevanceLabel = (rs) => {
+  if (rs === null || rs === undefined) return null;
+  if (rs >= 80) return "Estratégico";
+  if (rs >= 60) return "Relevante";
+  if (rs >= 40) return "Manter no radar";
+  return "Baixa prioridade";
+};
+
+const getRelevanceLabelColor = (rs) => {
+  if (rs === null || rs === undefined) return "#5a5650";
+  if (rs >= 80) return "#c9a227";
+  if (rs >= 60) return "#4caf50";
+  if (rs >= 40) return "#ff9800";
+  return "#6a6460";
+};
+
+const getContactPriorityStatus = (health, rs) => {
+  if (rs === null || rs === undefined) return {
+    status: "Completar relevância",
+    msg: "Preencha os 4 critérios para entender a prioridade real deste contato.",
+    color: "#5a5650"
+  };
+  if (health >= 70 && rs >= 70) return {
+    status: "Proteger e expandir",
+    msg: "Relacionamento quente e estratégico. Mantenha proximidade e gere valor recorrente.",
+    color: "#4caf50"
+  };
+  if (health < 70 && rs >= 70) return {
+    status: "Reativar urgente",
+    msg: "Contato estratégico esfriando. Prioridade máxima de reativação.",
+    color: "#ef5350"
+  };
+  if (health >= 70 && rs < 70) return {
+    status: "Manter leve",
+    msg: "Relação saudável, mas com menor prioridade estratégica.",
+    color: "#ff9800"
+  };
+  return {
+    status: "Baixa prioridade",
+    msg: "Não consumir energia agora, salvo contexto específico.",
+    color: "#6a6460"
+  };
+};
+
+const generateWeeklyMoves = (contacts, interactions) => {
+  const today = new Date(); const moves = []; const used = new Set();
+  const addMove = (c, priorityLevel, reason, suggestedAction, suggestedDeadline) => {
+    if (used.has(c.id) || moves.length >= 5) return;
+    used.add(c.id);
+    const ci = interactions ? interactions.filter(i => i.contactId === c.id) : [];
+    const cat = c.category || "";
+    moves.push({ contactId: c.id, contactName: c.name, companyOrCategory: c.company || cat, reason, suggestedAction, suggestedDeadline, priorityLevel, health: c.health });
+  };
+  // 1. Alta relevância + health baixo
+  contacts.filter(c => { const rs = calculateRelevanceScore(c); return rs !== null && rs >= 70 && c.health < 70; })
+    .sort((a,b) => (calculateRelevanceScore(b)||0) - (calculateRelevanceScore(a)||0))
+    .forEach(c => addMove(c, 1, "Contato estratégico esfriando.", "Reative com uma mensagem genuína e específica.", "Próximas 48h"));
+  // 2. Próxima ação vencida
+  contacts.filter(c => c.nextActionDate && new Date(c.nextActionDate) < today)
+    .sort((a,b) => new Date(a.nextActionDate) - new Date(b.nextActionDate))
+    .forEach(c => addMove(c, 2, "Próxima ação vencida.", "Retome o combinado ou atualize o próximo passo.", "Hoje"));
+  // 3. Aniversário 7 dias
+  contacts.filter(c => { const d = birthdayDaysAway(c.birthday); return d !== null && d >= 0 && d <= 7; })
+    .sort((a,b) => (birthdayDaysAway(a.birthday)||99) - (birthdayDaysAway(b.birthday)||99))
+    .forEach(c => { const d = birthdayDaysAway(c.birthday); addMove(c, 3, `Aniversário em ${d === 0 ? "hoje" : d + " dia(s)"}.`, "Envie uma mensagem pessoal, sem pedido comercial.", d === 0 ? "Hoje" : `Até ${fD(c.birthday)}`); });
+  // 4. Alta relevância sem próxima ação
+  contacts.filter(c => { const rs = calculateRelevanceScore(c); return rs !== null && rs >= 70 && !c.nextAction; })
+    .sort((a,b) => (calculateRelevanceScore(b)||0) - (calculateRelevanceScore(a)||0))
+    .forEach(c => addMove(c, 4, "Contato estratégico sem próximo passo.", "Defina uma próxima ação clara.", "Esta semana"));
+  // 5. Muito tempo sem interação
+  contacts.filter(c => c.health < 60 && c.health > 0)
+    .sort((a,b) => a.health - b.health)
+    .forEach(c => addMove(c, 5, "Relação sem interação recente.", "Faça um contato leve para manter presença.", "Esta semana"));
+  // 6. Sem valor gerado recente
+  contacts.filter(c => { const rs = calculateRelevanceScore(c); if (!rs || rs < 60) return false;
+    const recent = interactions ? interactions.filter(i => i.contactId === c.id && i.valueGen && dSince(i.createdAt) <= 30) : [];
+    return recent.length === 0; })
+    .forEach(c => addMove(c, 6, "Contato relevante sem valor gerado recente.", "Compartilhe algo útil, faça uma indicação ou ofereça ajuda.", "Esta semana"));
+  return moves;
+};
+
+const generateImmediateActionPlan = (sc) => {
+  if (!sc) return null;
+  const pct = (k) => sc[k] || 0;
+  const low = Object.entries(sc).filter(([k,v]) => DIMS.find(d=>d.key===k) && v <= 60).sort((a,b)=>a[1]-b[1]);
+  const dimActions = {
+    presenca_mercado: {
+      h48: "Escolha 3 pessoas estratégicas e retome o contato com mensagem personalizada ainda esta semana.",
+      d7: ["Faça uma publicação, comentário ou interação pública ligada ao seu tema de atuação.", "Marque uma conversa sem agenda comercial com alguém relevante para você agora."],
+      d30: ["Crie uma cadência semanal de presença: 1 conteúdo, 1 evento, 1 conversa por semana.", "Identifique 3 ambientes onde seu público está e apareça com regularidade.", "Revise sua bio e perfil: eles comunicam claramente o que você entrega?"]
+    },
+    reciprocidade_ativa: {
+      h48: "Envie algo útil para 3 contatos sem pedir nada em troca — um artigo, uma indicação, um reconhecimento.",
+      d7: ["Faça uma indicação entre duas pessoas da sua rede que deveriam se conhecer.", "Reconheça publicamente ou em privado alguém que te ajudou recentemente."],
+      d30: ["Crie o hábito de gerar valor antes de pedir: analise cada contato e defina o que pode oferecer.", "Faça 2 indicações por mês — elas constroem a reputação de quem conecta.", "Mantenha um registro simples de favores feitos e recebidos."]
+    },
+    escuta_relacional: {
+      h48: "Faça uma conversa com o objetivo exclusivo de entender o momento do outro. Zero agenda própria.",
+      d7: ["Use uma pergunta aberta antes de falar sobre você em conversas importantes.", "Registre no cadastro do contato algo pessoal ou profissional que você aprendeu."],
+      d30: ["Revise suas últimas 5 conversas: você ouviu mais do que falou?", "Adote a regra 70/30: 70% escutando, 30% falando em conversas estratégicas.", "Crie o hábito de anotar o contexto do outro após cada conversa relevante."]
+    },
+    intencao_estrategica: {
+      h48: "Liste os 10 contatos mais importantes para seus próximos 90 dias e defina por que cada um importa.",
+      d7: ["Defina o objetivo relacional de cada contato-chave: o que quer construir com essa pessoa?", "Remova da lista de prioridade relações que consomem energia sem conexão com seu momento."],
+      d30: ["Crie um mapa mental da sua rede: quem você quer adicionar, manter e reduzir nos próximos 90 dias.", "Revise sua estratégia relacional mensalmente — ela precisa acompanhar seus objetivos.", "Classifique seus contatos por relevância para o que você está construindo agora."]
+    },
+    ritual_consistencia: {
+      h48: "Defina uma próxima ação clara para seus 5 contatos mais importantes e cadastre no sistema.",
+      d7: ["Crie um ritual semanal de 30 minutos para revisar sua rede — coloque no calendário agora.", "Faça follow-up em até 48h após conversas relevantes: uma mensagem curta já basta."],
+      d30: ["Configure alertas para contatos estratégicos que você não pode deixar esfriar.", "Revise e atualize o CRM toda segunda-feira — 20 minutos mudam a qualidade da sua rede.", "Transforme intenção em sistema: sem ritual fixo, bons contatos somem da agenda."]
+    },
+    confianca_autentica: {
+      h48: "Faça uma conversa sem pedir, vender ou apresentar nada. Apareça pelo outro, não por você.",
+      d7: ["Revise se suas interações recentes estão muito transacionais — equilíbrio é chave.", "Compartilhe uma percepção honesta e útil com alguém da sua rede."],
+      d30: ["Analise a coerência entre o que você diz que faz e como você de fato se comporta nas relações.", "Busque aprofundar 3 relações: da superfície para conversa real.", "Seja o mesmo em reuniões formais e conversas informais — isso é o que gera confiança duradoura."]
+    }
+  };
+  const allHighPlan = {
+    h48: "Escolha um contato estratégico e faça uma interação de valor sem pedir nada em troca.",
+    d7: ["Reative 3 contatos com alta relevância e pouca presença recente.", "Defina próxima ação para os 5 contatos mais importantes."],
+    d30: ["Crie ritual semanal fixo de revisão da rede — 30 minutos toda segunda.", "Organize seus contatos por relevância e defina próximos passos claros.", "Transforme pelo menos 3 contatos em relações com continuidade clara."]
+  };
+  if (low.length === 0) return allHighPlan;
+  const worstKey = low[0][0];
+  const plan = dimActions[worstKey] || allHighPlan;
+  // Complement 7-day and 30-day with second-worst if exists
+  if (low.length > 1) {
+    const secondKey = low[1][0];
+    const secondPlan = dimActions[secondKey];
+    if (secondPlan) {
+      if (plan.d7.length < 2 && secondPlan.d7.length > 0) plan.d7.push(secondPlan.d7[0]);
+      if (plan.d30.length < 3 && secondPlan.d30.length > 0) plan.d30.push(secondPlan.d30[0]);
+    }
+  }
+  return plan;
+};
 const birthdayDaysAway = (birthday) => {
   if (!birthday) return null;
   const today = new Date(); const b = new Date(birthday);
@@ -317,7 +464,7 @@ function CRM({ profile, assessment, onReset, user }) {
   const [modal, setModal] = useState(null);
   const [intCid, setIntCid] = useState(null);
   const [dbgMsg, setDbgMsg] = useState("");
-  const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "" });
+  const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "", influenciaPessoas: "", geraOportunidade: "", abrePortas: "", momentoAtual: "" });
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
 
   const load = useCallback(async () => {
@@ -327,7 +474,7 @@ function CRM({ profile, assessment, onReset, user }) {
     if (ce) { setDbgMsg("❌ Erro ao buscar contatos: " + ce.message); return; }
     if (ie) { setDbgMsg("❌ Erro ao buscar interações: " + ie.message); return; }
     setDbgMsg("✅ user:" + user.id.slice(0,8) + " | contatos:" + (c?.length || 0));
-    setCts((c || []).map(ct => ({ ...ct, health: hScore(ct.last_interaction_at, ct.ideal_frequency_days || 30), notes: ct.personal_notes, howMet: ct.how_met, idealFreq: ct.ideal_frequency_days, lastInteraction: ct.last_interaction_at, nextAction: ct.next_action, nextActionDate: ct.next_action_date, whatsapp: ct.whatsapp, contactEmail: ct.contact_email, linkedin: ct.linkedin, birthday: ct.birthday, hobbies: ct.hobbies, mainCulture: ct.main_culture, city: ct.city, stateCode: ct.state_code })));
+    setCts((c || []).map(ct => ({ ...ct, health: hScore(ct.last_interaction_at, ct.ideal_frequency_days || 30), notes: ct.personal_notes, howMet: ct.how_met, idealFreq: ct.ideal_frequency_days, lastInteraction: ct.last_interaction_at, nextAction: ct.next_action, nextActionDate: ct.next_action_date, whatsapp: ct.whatsapp, contactEmail: ct.contact_email, linkedin: ct.linkedin, birthday: ct.birthday, hobbies: ct.hobbies, mainCulture: ct.main_culture, city: ct.city, stateCode: ct.state_code, influenciaPessoas: ct.influencia_pessoas ?? null, geraOportunidade: ct.gera_oportunidade ?? null, abrePortas: ct.abre_portas ?? null, momentoAtual: ct.momento_atual ?? null })));
     setIts((i || []).map(it => ({ ...it, desc: it.description, contactId: it.contact_id, createdAt: it.created_at, valueGen: it.value_generated })));
   }, [user?.id]);
 
@@ -351,6 +498,10 @@ function CRM({ profile, assessment, onReset, user }) {
       state_code: cf.stateCode || null,
       next_action: cf.nextAction.trim() || null,
       next_action_date: cf.nextActionDate || null,
+      influencia_pessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null,
+      gera_oportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null,
+      abre_portas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null,
+      momento_atual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null,
     }).select().single();
     if (error) { setDbgMsg("❌ " + error.message + " [" + error.code + "]"); return; }
     setDbgMsg("✅ Salvo: " + newContact?.name);
@@ -376,7 +527,7 @@ function CRM({ profile, assessment, onReset, user }) {
         });
       } catch (e) { console.warn("[Make push contato]", e); }
     }
-    setCf({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "" });
+    setCf({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "", influenciaPessoas: "", geraOportunidade: "", abrePortas: "", momentoAtual: "" });
     setModal(null);
     await load();
   };
@@ -769,6 +920,48 @@ function CRM({ profile, assessment, onReset, user }) {
             )}
           </>
         )}
+
+        {/* ── Top 5 Movimentos da Semana ── */}
+        {cts.length > 0 && (() => {
+          const moves = generateWeeklyMoves(cts, its);
+          const prioColor = (p) => p===1?C.cor:p===2?C.cor:p===3?C.vio:p===4?C.amb:C.blu;
+          const prioIcon = (p) => p===1?"🔥":p===2?"📋":p===3?"🎂":p===4?"⚡":"⏰";
+          return (
+            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 18, marginBottom: 14 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                <span style={{ fontSize:18 }}>🎯</span>
+                <div>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em" }}>Seus 5 movimentos da semana</div>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>Quem acionar, por quê e o que fazer</div>
+                </div>
+              </div>
+              {moves.length === 0 ? (
+                <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", padding:"16px 0", fontStyle:"italic" }}>
+                  Sua rede está organizada esta semana. Revise seus contatos estratégicos ou cadastre novas relações.
+                </div>
+              ) : moves.map((m, i) => (
+                <div key={m.contactId} style={{ borderBottom: i < moves.length-1 ? `1px solid ${C.brd}` : "none", paddingBottom: i < moves.length-1 ? 12 : 0, marginBottom: i < moves.length-1 ? 12 : 0 }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                    <div style={{ width:32, height:32, borderRadius:8, background:`${prioColor(m.priorityLevel)}14`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>{prioIcon(m.priorityLevel)}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:600, color:C.txt, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.contactName}</div>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:prioColor(m.priorityLevel), background:`${prioColor(m.priorityLevel)}12`, padding:"2px 7px", borderRadius:4, flexShrink:0, marginLeft:6 }}>{m.suggestedDeadline}</div>
+                      </div>
+                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>{m.companyOrCategory}</div>
+                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:prioColor(m.priorityLevel), marginBottom:3, fontWeight:500 }}>{m.reason}</div>
+                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>→ {m.suggestedAction}</div>
+                      <div style={{ marginTop:8, display:"flex", gap:8 }}>
+                        <button onClick={() => { setSelId(m.contactId); setIntCid(m.contactId); setModal("addI"); }} style={{ background:C.gD, border:`1px solid ${C.gL}`, borderRadius:6, padding:"5px 10px", fontFamily:"'DM Sans'", fontSize:11, fontWeight:600, color:C.gold, cursor:"pointer" }}>+ Registrar interação</button>
+                        <button onClick={() => { setSelId(m.contactId); setView("contacts"); }} style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:6, padding:"5px 10px", fontFamily:"'DM Sans'", fontSize:11, color:C.txM, cursor:"pointer" }}>Ver contato</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     );
   };
@@ -786,6 +979,18 @@ function CRM({ profile, assessment, onReset, user }) {
               <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{[sel.role, sel.company].filter(Boolean).join(" · ")}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 6 }}><Tag color={ci?.color}>{ci?.label}</Tag></div>
               <div style={{ marginTop: 10, maxWidth: 180 }}><HBar score={sel.health} /></div>
+              {(() => { const rs = calculateRelevanceScore(sel); const priority = getContactPriorityStatus(sel.health, rs);
+                return (<div style={{ marginTop: 8 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
+                    <span style={{ fontFamily:"'DM Sans'",fontSize:11,color:C.txL }}>Relevance Score</span>
+                    <span style={{ fontFamily:"'JetBrains Mono'",fontSize:12,fontWeight:700,color:rs!==null?getRelevanceLabelColor(rs):C.txL }}>{rs!==null?rs+"%":"Não avaliado"}</span>
+                  </div>
+                  <div style={{ background:`${priority.color}10`,border:`1px solid ${priority.color}30`,borderRadius:6,padding:"6px 10px" }}>
+                    <div style={{ fontFamily:"'DM Sans'",fontSize:10,fontWeight:700,color:priority.color,marginBottom:2 }}>{priority.status}</div>
+                    <div style={{ fontFamily:"'DM Sans'",fontSize:10,color:C.txL }}>{priority.msg}</div>
+                  </div>
+                </div>);
+              })()}
             </div>
             <Btn variant="danger" small onClick={() => { if (confirm("Remover contato?")) delC(sel.id); }}>Remover</Btn>
           </div>
@@ -830,6 +1035,9 @@ function CRM({ profile, assessment, onReset, user }) {
             <div style={{ width: 38, height: 38, borderRadius: 10, background: `${ci?.color || C.gold}14`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: ci?.color }}>{c.name[0]}</div>
             <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 500, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div><div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{c.company || "—"}</div></div>
             <div style={{ width: 70 }}><HBar score={c.health} small /></div>
+            {(() => { const rs = calculateRelevanceScore(c); return rs !== null
+              ? <div style={{ fontFamily:"'JetBrains Mono'",fontSize:10,fontWeight:700,color:getRelevanceLabelColor(rs),minWidth:36,textAlign:"center" }}>{rs}%</div>
+              : <div style={{ fontFamily:"'DM Sans'",fontSize:9,color:C.txL,minWidth:36,textAlign:"center" }}>—</div>; })()}
             <Tag small color={ci?.color}>{ci?.label}</Tag>
           </div>
         ); })}
@@ -920,12 +1128,36 @@ function CRM({ profile, assessment, onReset, user }) {
       const overallTen = Math.round(assessment.overall/10);
 
       const dimInterp = {
-        intencao_estrategica:{high:"Visão de mercado e clareza de intenção — alto nível. Age com propósito e pensa no longo prazo.",mid:"Direção estratégica presente. Há espaço para tornar os objetivos relacionais mais explícitos e deliberados.",low:"Oportunidade de desenvolver visão sistêmica de quem precisa ter na rede e por quê."},
-        escuta_relacional:{high:"Escuta ativa presente — base sólida para conexões genuínas. Pessoas se sentem vistas nas conversas.",mid:"Escuta razoável, mas a agenda própria às vezes interfere. Presença plena é o diferencial.",low:"GAP CRÍTICO — escuta profunda é o maior ponto de alavancagem disponível agora."},
-        presenca_mercado:{high:"Marca pessoal forte — circula com objetivo claro. O mercado reconhece o que você entrega.",mid:"Visibilidade inconsistente — constância é o gap. A competência existe mas não é suficientemente visível.",low:"Invisível para quem deveria conhecê-la. O mercado não pode valorizar o que não enxerga."},
-        reciprocidade_ativa:{high:"Valor nos relacionamentos presente e genuíno. Gera antes de pedir — isso cria redes que retribuem.",mid:"Proatividade a ampliar. Pequenos gestos frequentes constroem dívidas de gratidão.",low:"Reciprocidade passiva. A iniciativa de dar primeiro, sem agenda, ainda precisa ser instalada."},
-        ritual_consistencia:{high:"Follow-up ativo e disciplinado — comportamento de alto impacto instalado. Rede não esfria.",mid:"GAP CRÍTICO — follow-up passivo limita a conversão dos contatos em aliados.",low:"GAP CRÍTICO — ausência de sistema torna o networking reativo e episódico."},
-        confianca_autentica:{high:"Alinhamento entre valores e comportamento — base sólida. Coerência gera confiança naturalmente.",mid:"Autenticidade em desenvolvimento. Há espaço para aprofundar o alinhamento.",low:"Gap entre intenção e expressão. Essa distância cria barreiras para vínculos genuínos."},
+        intencao_estrategica:{
+          high:"Use sua clareza estratégica para escolher melhor onde investir energia. Nem toda conexão merece o mesmo esforço — seu ganho está em priorizar quem amplia confiança, reputação e oportunidade.",
+          mid:"Você tem direção, mas nem sempre age com intenção deliberada. Defina os 10 contatos mais importantes para seus próximos 90 dias e estabeleça o que quer construir com cada um.",
+          low:"Antes de ampliar sua rede, defina quem realmente importa para os próximos 90 dias. Sem clareza de propósito, networking vira ruído."
+        },
+        escuta_relacional:{
+          high:"Sua escuta cria abertura. Use isso para aprofundar conversas e captar necessidades antes de propor qualquer movimento — quem escuta bem é lembrado como parceiro, não apenas como contato.",
+          mid:"Você escuta bem em momentos importantes, mas a agenda própria às vezes interfere. Antes de cada conversa relevante, defina 2 perguntas que você genuinamente não sabe a resposta.",
+          low:"Você pode estar ouvindo pouco antes de conduzir a conversa. Faça mais perguntas, registre o contexto do outro e resista ao impulso de posicionar antes de entender."
+        },
+        presenca_mercado:{
+          high:"Sua presença mantém você lembrado. Use essa força para ocupar espaços certos com constância e intenção — aparecendo antes de precisar pedir.",
+          mid:"Sua competência pode estar maior que sua visibilidade. Crie uma cadência mínima: 1 conteúdo, 1 evento, 1 conversa por semana — sem consistência, presença vira episódio.",
+          low:"O mercado não reconhece o que não vê com frequência. Sua competência está invisível para quem deveria conhecê-la. Aparecer com regularidade é o primeiro passo."
+        },
+        reciprocidade_ativa:{
+          high:"Você gera valor antes de pedir. Esse comportamento cria confiança e aumenta a chance de retorno espontâneo — continue antecipando, indicando e conectando.",
+          mid:"Você se importa em contribuir, mas nem sempre toma a iniciativa. Antecipe valor: antes de cada contato estratégico, defina o que pode oferecer sem pedir nada.",
+          low:"Você pode estar esperando ser acionado para ajudar. Inverta: indique, compartilhe, reconheça e facilite antes de receber qualquer demanda."
+        },
+        ritual_consistencia:{
+          high:"Sua disciplina evita que relações importantes esfriem. Use isso para transformar contato em continuidade — e continue aparecendo mesmo quando não há agenda comercial.",
+          mid:"Sem ritual, boas intenções somem da agenda. Crie uma cadência mínima semanal: 30 minutos, 3 contatos, toda segunda. O sistema faz o que a motivação não consegue.",
+          low:"Sem ritual fixo, networking vira reativo. Você só age quando precisa — e quando precisa já é tarde. Crie um sistema mínimo e coloque no calendário agora."
+        },
+        confianca_autentica:{
+          high:"Sua coerência gera confiança. As pessoas confiam mais quando percebem alinhamento entre fala, intenção e atitude — continue sendo o mesmo em reuniões formais e conversas informais.",
+          mid:"Cuidado para parecer estratégico demais e humano de menos. Relações fortes precisam de intenção, mas também de verdade — compartilhe mais do que está construindo e enfrentando.",
+          low:"Você pode estar mantendo um personagem profissional que impede conexões genuínas. Seja vulnerável em pelo menos 2 conversas esta semana — isso transforma contato em aliado."
+        },
       };
 
       const sintese = [
@@ -1170,6 +1402,30 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
   ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<(pf?.actions?.length-1)?'1px solid #e5d89a':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
 </div>
 
+<!-- ════ PLANO DE AÇÃO IMEDIATO ═══════════════════════════════════════ -->
+${(() => {
+  const plan = generateImmediateActionPlan(sc);
+  if (!plan) return '';
+  return `<div class="pg-hdr pb">
+  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+</div>
+<div class="lbl">Plano de Ação Imediato</div>
+<h2 style="margin-bottom:14px">De diagnóstico para execução</h2>
+<div class="box box-gold" style="margin-bottom:12px">
+  <div class="box-lbl" style="color:#c9a227">⚡ Próximas 48 horas</div>
+  <p style="font-size:9pt;color:#333;line-height:1.7;margin:0">${plan.h48}</p>
+</div>
+<div class="card" style="margin-bottom:12px;border-color:#c9a22730">
+  <div class="box-lbl" style="color:#c9a227;margin-bottom:10px">📅 Próximos 7 dias</div>
+  ${plan.d7.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:8px;padding-bottom:8px;border-bottom:${i<plan.d7.length-1?'1px solid #f0ede4':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
+</div>
+<div class="card" style="border-color:#c9a22730">
+  <div class="box-lbl" style="color:#c9a227;margin-bottom:10px">📆 Próximos 30 dias</div>
+  ${plan.d30.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:8px;padding-bottom:8px;border-bottom:${i<plan.d30.length-1?'1px solid #f0ede4':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
+</div>`;
+})()}
+
 <!-- ════ P4: GATILHOS + PLANO ════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
@@ -1185,7 +1441,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
     ${DIMS.filter(d=>pct(d.key)>=65).slice(0,3).map(d=>`<div class="gt-block gt-at">
       <div class="gt-title" style="color:#2e7d32">${d.label} ${s10(d.key)}/10</div>
       <div class="gt-desc">${dimInterp[d.key]?.high?.split('.')[0]||''}</div>
-      <div class="gt-action">→ Capitalize este ponto forte como vantagem competitiva relacional.</div>
+      <div class="gt-action">→ Use este ponto forte para priorizar onde e com quem investir energia relacional.</div>
     </div>`).join('')}
   </div>
   <div>
@@ -1392,6 +1648,47 @@ ${PLAN.map((w,i)=>`<div class="week-box">
           <Inp label="📅 Data da ação" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
         </div>
         <Inp label="📝 Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
+        <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular o Relevance Score.</div>
+          {[
+            { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
+            { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
+            { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar você a pessoas, ambientes ou conversas importantes?" },
+            { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relação tem conexão com seus objetivos dos próximos meses?" },
+          ].map(({ field, label, micro }) => (
+            <div key={field} style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                <div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM }}>{label}</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{micro}</div>
+                </div>
+                <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: C.gold, minWidth: 28, textAlign: "right" }}>
+                  {cf[field] !== "" ? cf[field] : "—"}
+                </div>
+              </div>
+              <input type="range" min="0" max="10" step="1"
+                value={cf[field] !== "" ? cf[field] : 5}
+                onChange={e => setCf({ ...cf, [field]: e.target.value })}
+                style={{ width: "100%", accentColor: C.gold, height: 4, cursor: "pointer" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, marginTop: 2 }}>
+                <span>0 — Nenhuma</span><span>5 — Moderada</span><span>10 — Alta</span>
+              </div>
+            </div>
+          ))}
+          {(() => {
+            const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null });
+            return rs !== null ? (
+              <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Relevance Score</span>
+                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span>
+              </div>
+            ) : (
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, fontStyle: "italic" }}>Preencha os 4 campos para calcular.</div>
+            );
+          })()}
+        </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn small onClick={addC} disabled={!cf.name.trim()}>Salvar</Btn></div>
       </Modal>}
       {modal === "addI" && <Modal title="Registrar interação" onClose={() => setModal(null)}>
