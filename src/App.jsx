@@ -1271,9 +1271,21 @@ function CRM({ profile, assessment, onReset, user }) {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
     const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
     const downloadReport = () => {
-      const nomePessoa = profile?.name || profile?.first_name ||
-        (user?.email ? user.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase()) : '') ||
-        "Profissional";
+      const formatarNome = (raw) => {
+        if (!raw) return '';
+        // Se tem espaço, assumir que foi digitado pelo usuário — respeitar exatamente
+        if (raw.includes(' ')) return raw.trim();
+        // Sem espaço: tentar capitalizar corretamente (ex: "rafaelmilleo" → "Rafaelmilleo" como fallback legível)
+        return raw.charAt(0).toUpperCase() + raw.slice(1);
+      };
+      const nomeRaw = profile?.name || profile?.first_name || '';
+      const nomePessoa = nomeRaw.includes(' ')
+        ? nomeRaw.trim()  // nome completo digitado pelo usuário — usar como está
+        : nomeRaw
+          ? formatarNome(nomeRaw)  // nome sem espaço — capitalizar
+          : user?.email
+            ? user.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase())
+            : 'Profissional';
       const s10 = (k) => Math.round((sc[k]||0)/10);
       const pct = (k) => sc[k]||0;
       const sortedD = [...DIMS].sort((a,b)=>(sc[b.key]||0)-(sc[a.key]||0));
@@ -1394,11 +1406,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .dim-sep{border-bottom:1px solid #f0ede8}
 
 /* ── SINTESE ── */
-.sq{display:flex;gap:8px;margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #f0ede8}
+.sq{display:flex;gap:8px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #f0ede8;break-inside:avoid}
 .sq:last-child{border-bottom:none;margin-bottom:0}
 .sq-num{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#c9a227;background:#c9a22712;border:1px solid #c9a22730;min-width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.sq-q{font-weight:600;font-size:8.5pt;color:#1a1a1a;margin-bottom:1px}
-.sq-a{font-size:8pt;color:#555;line-height:1.5}
+.sq-q{font-weight:600;font-size:8.5pt;color:#1a1a1a;margin-bottom:2px}
+.sq-a{font-size:8pt;color:#555;line-height:1.6;word-break:break-word;overflow-wrap:anywhere}
 
 /* ── SECTIONS ── */
 .section{margin-bottom:20px}
@@ -1414,16 +1426,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 
 /* ── GATILHOS ── */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.gt-block{border-radius:3px;padding:9px 11px;margin-bottom:8px}
+.gt-block{border-radius:6px;padding:11px 13px;margin-bottom:10px;break-inside:avoid}
 .gt-at{background:#f0faf0;border-left:2.5px solid #2e7d32}
 .gt-bl{background:#fff5f5;border-left:2.5px solid #c62828}
-.gt-title{font-size:8.5pt;font-weight:700;margin-bottom:3px}
-.gt-desc{font-size:8pt;color:#444;line-height:1.5;margin-bottom:3px}
+.gt-title{font-size:8.5pt;font-weight:700;margin-bottom:4px}
+.gt-desc{font-size:8pt;color:#444;line-height:1.55;margin-bottom:4px}
 .gt-action{font-size:7.5pt;font-style:italic;color:#c9a227}
 
 /* ── PLANO ── */
-.week-box{display:grid;grid-template-columns:48px 1fr;border:1px solid #e0ddd8;border-radius:3px;overflow:hidden;margin-bottom:10px}
-.week-num{background:#f9f7f3;border-right:1px solid #e0ddd8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;gap:3px;font-size:18pt}
+.week-box{display:grid;grid-template-columns:56px 1fr;border:1px solid #e0ddd8;border-radius:6px;overflow:hidden;margin-bottom:12px;break-inside:avoid}
+.week-num{background:#f9f7f3;border-right:1px solid #e0ddd8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:3px;font-size:18pt}
 .week-num-txt{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#c9a227}
 .week-body{padding:10px}
 .week-sem{font-size:7pt;color:#888;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
@@ -1539,7 +1551,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 
 <div class="box box-gold">
   <div class="box-lbl" style="color:#c9a227">⚑ Não ignore isso</div>
-  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`${bot2[0].label} baixo é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[1]||''}</p>
+  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`${(['presenca_mercado','escuta_relacional','reciprocidade_ativa','confianca_autentica'].includes(bot2[0].key)?bot2[0].label+' baixa':bot2[0].label+' baixo')} é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[1]||''}</p>
 </div>
 
 <div style="margin-top:14px">
@@ -1612,35 +1624,64 @@ ${(() => {
 </div>`;
 })()}
 
-<!-- ════ P4: GATILHOS + PLANO ════════════════════════════════════════ -->
+<!-- ════ P4: GATILHOS ══════════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
   <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
 </div>
 
 <div class="lbl">Gatilhos Relacionais</div>
-<div class="h1" style="margin-bottom:12px">Os padrões automáticos que ativam e travam o comportamento relacional</div>
+<div class="h1" style="margin-bottom:6px">Os padrões automáticos que ativam e travam o comportamento relacional</div>
+<p style="font-size:8.5pt;color:#666;margin-bottom:14px">O que faz você aparecer com energia total — e o que te impede de avançar.</p>
 
 <div class="g2" style="margin-bottom:18px">
   <div>
     <div style="font-size:8pt;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">⚡ Gatilhos de Ativação</div>
-    ${DIMS.filter(d=>pct(d.key)>=65).slice(0,3).map(d=>`<div class="gt-block gt-at">
-      <div class="gt-title" style="color:#2e7d32">${d.label} ${s10(d.key)}/10</div>
-      <div class="gt-desc">${dimInterp[d.key]?.high?.split('.')[0]||''}</div>
-      <div class="gt-action">→ Use este ponto forte para priorizar onde e com quem investir energia relacional.</div>
-    </div>`).join('')}
+    ${(()=>{
+      const acoes = {
+        intencao_estrategica: "Escolha melhor onde colocar energia. Seu ganho está em priorizar relações que ampliam reputação, oportunidade e confiança.",
+        escuta_relacional: "Use sua escuta para entender o momento do outro antes de propor qualquer próximo passo.",
+        presenca_mercado: "Use sua visibilidade para ocupar os ambientes certos com constância e intenção.",
+        reciprocidade_ativa: "Continue gerando valor antes de pedir. Indicações, reconhecimento e ajuda prática fortalecem retorno espontâneo.",
+        ritual_consistencia: "Mantenha cadência. Relações importantes não esfriam quando existe ritual.",
+        confianca_autentica: "Sua coerência gera confiança. Preserve o mesmo tom em conversas formais e informais."
+      };
+      return DIMS.filter(d=>pct(d.key)>=65).slice(0,3).map(d=>`<div class="gt-block gt-at">
+        <div class="gt-title" style="color:#2e7d32">${d.label} ${s10(d.key)}/10</div>
+        <div class="gt-desc">${dimInterp[d.key]?.high?.split('.')[0]||''}</div>
+        <div class="gt-action">→ ${acoes[d.key]||'Use este ponto como vantagem relacional.'}</div>
+      </div>`).join('');
+    })()}
   </div>
   <div>
     <div style="font-size:8pt;font-weight:700;color:#c62828;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">🔴 Gatilhos de Bloqueio</div>
-    ${DIMS.filter(d=>pct(d.key)<70).slice(-3).map(d=>`<div class="gt-block gt-bl">
-      <div class="gt-title" style="color:#c62828">${d.label} ${s10(d.key)}/10</div>
-      <div class="gt-desc">${dimInterp[d.key]?.[getLvl(pct(d.key))]?.split('.')[0]||''}</div>
-      <div class="gt-action">Antídoto: Implemente um sistema mínimo — intenção sem estrutura não vira hábito.</div>
-    </div>`).join('')}
+    ${(()=>{
+      const antidotos = {
+        intencao_estrategica: "Defina seus 10 contatos prioritários e o motivo de cada um importar nos próximos 90 dias.",
+        escuta_relacional: "Entre em conversas importantes com uma pergunta aberta e a intenção real de entender.",
+        presenca_mercado: "Crie uma cadência mínima: 1 conteúdo, 1 conversa e 1 aparição relevante por semana.",
+        reciprocidade_ativa: "Antecipe valor: faça uma indicação, compartilhe algo útil ou reconheça alguém antes de precisar pedir.",
+        ritual_consistencia: "Coloque um ritual fixo de 30 minutos por semana para revisar contatos e próximos passos.",
+        confianca_autentica: "Reduza interações transacionais. Faça uma conversa sem vender, pedir ou apresentar nada."
+      };
+      return DIMS.filter(d=>pct(d.key)<70).slice(-3).map(d=>`<div class="gt-block gt-bl">
+        <div class="gt-title" style="color:#c62828">${d.label} ${s10(d.key)}/10</div>
+        <div class="gt-desc">${dimInterp[d.key]?.[getLvl(pct(d.key))]?.split('.')[0]||''}</div>
+        <div class="gt-action">Antídoto: ${antidotos[d.key]||'Crie um sistema mínimo para esta dimensão.'}</div>
+      </div>`).join('');
+    })()}
   </div>
 </div>
 
+<!-- ════ P5: PLANO ═════════════════════════════════════════════════ -->
+<div class="pg-hdr pb">
+  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+</div>
+
 <div class="lbl">Plano de Ativação — 4 Semanas</div>
+<div class="h1" style="margin-bottom:6px">Quatro semanas para transformar o gap mais custoso em hábito</div>
+<p style="font-size:8.5pt;color:#666;margin-bottom:14px">Cada semana tem um foco, um comportamento concreto e uma meta mensurável.</p>
 ${PLAN.map((w,i)=>`<div class="week-box">
   <div class="week-num"><span>${w.icon}</span><span class="week-num-txt">${w.week}</span></div>
   <div class="week-body">
