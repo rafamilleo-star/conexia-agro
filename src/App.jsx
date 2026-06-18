@@ -909,6 +909,39 @@ function CRM({ profile, assessment, onReset, user }) {
               </div>
             )}
 
+            {/* ── Movimento da Semana ── */}
+            {(() => {
+              const moves = generateWeeklyMoves(cts, its);
+              const top = moves[0];
+              if (!top) return null;
+              const prioColor = top.priorityLevel===1?C.cor:top.priorityLevel===2?C.cor:top.priorityLevel===3?C.vio:top.priorityLevel===4?C.amb:C.blu;
+              const prioIcon = top.priorityLevel===1?"🔥":top.priorityLevel===2?"📋":top.priorityLevel===3?"🎂":top.priorityLevel===4?"⚡":"⏰";
+              return (
+                <div style={{ background:`linear-gradient(135deg,${C.card} 0%,${C.gD} 100%)`, border:`1.5px solid ${C.gL}`, borderRadius:14, padding:18, marginBottom:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:16 }}>{prioIcon}</span>
+                      <div style={{ fontFamily:"'DM Sans'", fontSize:10, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".12em" }}>Movimento da Semana</div>
+                    </div>
+                    <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:prioColor, background:`${prioColor}14`, border:`1px solid ${prioColor}30`, padding:"2px 8px", borderRadius:4, fontWeight:600 }}>{top.suggestedDeadline}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+                    <div style={{ width:40, height:40, borderRadius:10, background:`${prioColor}14`, border:`1px solid ${prioColor}30`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:prioColor, flexShrink:0 }}>{top.contactName[0]}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:700, color:C.txt, marginBottom:2 }}>{top.contactName}</div>
+                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:6 }}>{top.companyOrCategory}</div>
+                      <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:prioColor, fontWeight:500, marginBottom:4 }}>{top.reason}</div>
+                      <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM }}>→ {top.suggestedAction}</div>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:8, marginTop:14 }}>
+                    <button onClick={e=>{e.stopPropagation();setSelId(top.contactId);setIntCid(top.contactId);setModal("addI");}} style={{ flex:1, background:C.gold, border:"none", borderRadius:8, padding:"9px 0", fontFamily:"'DM Sans'", fontSize:12, fontWeight:700, color:C.bg, cursor:"pointer" }}>+ Registrar interação</button>
+                    <button onClick={e=>{e.stopPropagation();setSelId(top.contactId);setView("contacts");}} style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"9px 14px", fontFamily:"'DM Sans'", fontSize:12, color:C.txM, cursor:"pointer" }}>Ver contato</button>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── Ritual Semanal ── */}
             {cts.length >= 3 && (
               <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 20, marginBottom: 16 }}>
@@ -1026,18 +1059,37 @@ function CRM({ profile, assessment, onReset, user }) {
               <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>{sel.name}</h3>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{[sel.role, sel.company].filter(Boolean).join(" · ")}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 6 }}><Tag color={ci?.color}>{ci?.label}</Tag></div>
-              <div style={{ marginTop: 10, maxWidth: 180 }}><HBar score={sel.health} /></div>
-              {(() => { const rs = calculateRelevanceScore(sel); const priority = getContactPriorityStatus(sel.health, rs);
-                return (<div style={{ marginTop: 8 }}>
-                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
-                    <span style={{ fontFamily:"'DM Sans'",fontSize:11,color:C.txL }}>Relevance Score</span>
-                    <span style={{ fontFamily:"'JetBrains Mono'",fontSize:12,fontWeight:700,color:rs!==null?getRelevanceLabelColor(rs):C.txL }}>{rs!==null?rs+"%":"Não avaliado"}</span>
+              {(() => {
+                const rs = calculateRelevanceScore(sel);
+                const priority = getContactPriorityStatus(sel.health, rs);
+                const badgeColors = {"Reativar urgente":"#ef5350","Proteger e expandir":"#4caf50","Manter leve":"#ff9800","Baixa prioridade":"#5a5650","Completar relevância":"#9B59B6"};
+                const bc = badgeColors[priority.status] || C.txL;
+                return (
+                  <div style={{ marginTop:10 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                      <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px" }}>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Health Score</div>
+                        <div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:sel.health>=70?C.grn:sel.health>=40?C.amb:C.cor, marginBottom:5 }}>{sel.health}%</div>
+                        <HBar score={sel.health} />
+                      </div>
+                      <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px" }}>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Relevance Score</div>
+                        {rs !== null
+                          ? (<><div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:getRelevanceLabelColor(rs), marginBottom:5 }}>{rs}%</div>
+                             <div style={{ height:6, borderRadius:3, background:C.w06 }}><div style={{ height:6, borderRadius:3, background:getRelevanceLabelColor(rs), width:`${rs}%` }}/></div></>)
+                          : (<><div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic", marginTop:4 }}>Não avaliado</div>
+                             <button onClick={()=>openEditC(sel)} style={{ marginTop:6, background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.gold, cursor:"pointer", padding:0, textAlign:"left" }}>→ Completar relevância</button></>)}
+                      </div>
+                    </div>
+                    <div style={{ background:`${bc}10`, border:`1px solid ${bc}25`, borderRadius:8, padding:"8px 12px", display:"flex", alignItems:"flex-start", gap:8 }}>
+                      <div style={{ width:6, height:6, borderRadius:3, background:bc, flexShrink:0, marginTop:4 }}/>
+                      <div>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:bc, marginBottom:2 }}>{priority.status}</div>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, lineHeight:1.4 }}>{priority.msg}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ background:`${priority.color}10`,border:`1px solid ${priority.color}30`,borderRadius:6,padding:"6px 10px" }}>
-                    <div style={{ fontFamily:"'DM Sans'",fontSize:10,fontWeight:700,color:priority.color,marginBottom:2 }}>{priority.status}</div>
-                    <div style={{ fontFamily:"'DM Sans'",fontSize:10,color:C.txL }}>{priority.msg}</div>
-                  </div>
-                </div>);
+                );
               })()}
             </div>
             <div style={{ display:"flex", gap:8 }}>
@@ -1080,15 +1132,71 @@ function CRM({ profile, assessment, onReset, user }) {
           <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: 0 }}>Contatos</h2>
           <Btn small onClick={() => setModal("addC")}>+ Novo</Btn>
         </div>
+        {/* ── Matriz Health × Relevance ── */}
+        {cts.length >= 2 && (() => {
+          const q = { protect:[], reactivate:[], maintain:[], low:[], incomplete:[] };
+          cts.forEach(c => {
+            const rs = calculateRelevanceScore(c);
+            if (rs === null) { q.incomplete.push(c); return; }
+            if (c.health >= 70 && rs >= 70) q.protect.push(c);
+            else if (c.health < 70 && rs >= 70) q.reactivate.push(c);
+            else if (c.health >= 70 && rs < 70) q.maintain.push(c);
+            else q.low.push(c);
+          });
+          const QCell = ({ label, color, contacts, icon }) => (
+            <div style={{ background:`${color}08`, border:`1px solid ${color}20`, borderRadius:8, padding:"10px 12px", minHeight:80 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:7 }}>
+                <span style={{ fontSize:12 }}>{icon}</span>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color, textTransform:"uppercase", letterSpacing:".08em" }}>{label}</div>
+                <div style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono'", fontSize:12, fontWeight:700, color }}>{contacts.length}</div>
+              </div>
+              {contacts.slice(0,3).map((c,i) => (
+                <div key={c.id} onClick={()=>setSelId(c.id)} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, cursor:"pointer", marginBottom:3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>· {c.name}</div>
+              ))}
+              {contacts.length > 3 && <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:`${color}80`, marginTop:2 }}>+{contacts.length-3} mais</div>}
+              {contacts.length === 0 && <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, fontStyle:"italic" }}>Nenhum contato</div>}
+            </div>
+          );
+          return (
+            <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:12, padding:14, marginBottom:14 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em" }}>Matriz de Prioridade</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>Health × Relevância</div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom: q.incomplete.length ? 8 : 0 }}>
+                <QCell label="Reativar urgente" color="#ef5350" icon="🔥" contacts={q.reactivate} />
+                <QCell label="Proteger e expandir" color="#4caf50" icon="⭐" contacts={q.protect} />
+                <QCell label="Baixa prioridade" color="#5a5650" icon="○" contacts={q.low} />
+                <QCell label="Manter leve" color="#ff9800" icon="→" contacts={q.maintain} />
+              </div>
+              {q.incomplete.length > 0 && (
+                <div style={{ background:`${"#9B59B6"}08`, border:`1px solid ${"#9B59B6"}20`, borderRadius:8, padding:"8px 12px", display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:12 }}>◎</span>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:"#9B59B6", textTransform:"uppercase", letterSpacing:".08em", flex:1 }}>Sem relevância avaliada — {q.incomplete.length} contato{q.incomplete.length>1?"s":""}</div>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:"#9B59B6", cursor:"pointer" }} onClick={()=>q.incomplete[0]&&setSelId(q.incomplete[0].id)}>Avaliar →</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {cts.length === 0 ? <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 40, textAlign: "center" }}><Btn small onClick={() => setModal("addC")}>+ Primeiro contato</Btn></div>
         : cts.map(c => { const ci = CATS.find(x => x.value === c.category); return (
           <div key={c.id} onClick={() => setSelId(c.id)} style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "12px 14px", marginBottom: 6, cursor: "pointer" }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: `${ci?.color || C.gold}14`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: ci?.color }}>{c.name[0]}</div>
-            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 500, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div><div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{c.company || "—"}</div></div>
-            <div style={{ width: 70 }}><HBar score={c.health} small /></div>
-            {(() => { const rs = calculateRelevanceScore(c); return rs !== null
-              ? <div style={{ fontFamily:"'JetBrains Mono'",fontSize:10,fontWeight:700,color:getRelevanceLabelColor(rs),minWidth:36,textAlign:"center" }}>{rs}%</div>
-              : <div style={{ fontFamily:"'DM Sans'",fontSize:9,color:C.txL,minWidth:36,textAlign:"center" }}>—</div>; })()}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 500, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{c.company || "—"}</span>
+                {(() => { const rs = calculateRelevanceScore(c); const p = getContactPriorityStatus(c.health, rs);
+                  const badgeColors = { "Reativar urgente":"#ef5350","Proteger e expandir":"#4caf50","Manter leve":"#ff9800","Baixa prioridade":"#5a5650","Completar relevância":"#9B59B6" };
+                  const bc = badgeColors[p.status] || C.txL;
+                  return p.status !== "Completar relevância" ? (
+                    <span style={{ fontFamily:"'DM Sans'",fontSize:8,fontWeight:700,color:bc,background:`${bc}14`,border:`1px solid ${bc}25`,padding:"1px 5px",borderRadius:3,textTransform:"uppercase",letterSpacing:".04em",flexShrink:0 }}>{p.status}</span>
+                  ) : null; })()}
+              </div>
+            </div>
+            <div style={{ width: 60 }}><HBar score={c.health} small /></div>
             <Tag small color={ci?.color}>{ci?.label}</Tag>
           </div>
         ); })}
@@ -1462,18 +1570,45 @@ ${(() => {
   <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
 </div>
 <div class="lbl">Plano de Ação Imediato</div>
-<h2 style="margin-bottom:14px">De diagnóstico para execução</h2>
-<div class="box box-gold" style="margin-bottom:12px">
-  <div class="box-lbl" style="color:#c9a227">⚡ Próximas 48 horas</div>
-  <p style="font-size:9pt;color:#333;line-height:1.7;margin:0">${plan.h48}</p>
-</div>
-<div class="card" style="margin-bottom:12px;border-color:#c9a22730">
-  <div class="box-lbl" style="color:#c9a227;margin-bottom:10px">📅 Próximos 7 dias</div>
-  ${plan.d7.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:8px;padding-bottom:8px;border-bottom:${i<plan.d7.length-1?'1px solid #f0ede4':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
-</div>
-<div class="card" style="border-color:#c9a22730">
-  <div class="box-lbl" style="color:#c9a227;margin-bottom:10px">📆 Próximos 30 dias</div>
-  ${plan.d30.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:8px;padding-bottom:8px;border-bottom:${i<plan.d30.length-1?'1px solid #f0ede4':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
+<h2 style="margin-bottom:6px">De diagnóstico para execução</h2>
+<p style="font-size:8.5pt;color:#666;margin-bottom:16px">Ações concretas baseadas nos seus menores scores. Sem teoria — só o próximo passo.</p>
+<div style="display:grid;grid-template-columns:1fr;gap:12px">
+  <div style="display:grid;grid-template-columns:56px 1fr;border:1px solid #e8d89a;border-radius:8px;overflow:hidden">
+    <div style="background:#fdf6d8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:4px;border-right:1px solid #e8d89a">
+      <div style="font-size:18px">⚡</div>
+      <div style="font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#a07814;text-align:center;line-height:1.2">48h</div>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="font-size:8pt;font-weight:700;color:#a07814;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Próximas 48 horas</div>
+      <p style="font-size:9pt;color:#333;line-height:1.65;margin:0">${plan.h48}</p>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:56px 1fr;border:1px solid #ddd;border-radius:8px;overflow:hidden">
+    <div style="background:#f9f7f3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:4px;border-right:1px solid #ddd">
+      <div style="font-size:18px">📅</div>
+      <div style="font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#888;text-align:center;line-height:1.2">7d</div>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="font-size:8pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Próximos 7 dias</div>
+      ${plan.d7.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<plan.d7.length-1?'1px solid #f0ede4':'none'}">
+        <div style="width:20px;height:20px;border-radius:5px;background:#f0ede4;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#888;flex-shrink:0">${i+1}</div>
+        <span style="font-size:8.5pt;color:#333;line-height:1.55">${a}</span>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:56px 1fr;border:1px solid #ddd;border-radius:8px;overflow:hidden">
+    <div style="background:#f9f7f3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:4px;border-right:1px solid #ddd">
+      <div style="font-size:18px">📆</div>
+      <div style="font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#888;text-align:center;line-height:1.2">30d</div>
+    </div>
+    <div style="padding:12px 14px">
+      <div style="font-size:8pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Próximos 30 dias</div>
+      ${plan.d30.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<plan.d30.length-1?'1px solid #f0ede4':'none'}">
+        <div style="width:20px;height:20px;border-radius:5px;background:#f0ede4;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#888;flex-shrink:0">${i+1}</div>
+        <span style="font-size:8.5pt;color:#333;line-height:1.55">${a}</span>
+      </div>`).join('')}
+    </div>
+  </div>
 </div>`;
 })()}
 
