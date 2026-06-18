@@ -453,10 +453,40 @@ function Assess({ profile, onDone }) {
 const MAKE_WEBHOOK = "https://hook.us2.make.com/ao22pba9b6y41uuxnj50hev7m1oq790r";
 const STRIPE_MENSAL = "https://buy.stripe.com/test_7sY6oz7eW0u2dUu7HQ7g401";
 const STRIPE_ANUAL  = "https://buy.stripe.com/test_eVq3cnar8gt06s29PY7g400";
+const MENTORIA_LINK = ""; // Preencher com link WhatsApp/Calendly
+
+const ADMIN_EMAILS      = ["rafaelmilleo@yahoo.com.br", "rafamilleo@gmail.com"];
+const FREE_CT_LIMIT     = 10;
+const FREE_IT_LIMIT     = 20;
+
+const isProUser = (prof, email) => {
+  if (!prof && !email) return false;
+  if (ADMIN_EMAILS.includes(email)) return true;
+  if (prof?.is_pro) return true;
+  if (prof?.plan === "pro") {
+    if (!prof.pro_expires_at) return true;
+    return new Date(prof.pro_expires_at) > new Date();
+  }
+  return false;
+};
+
+const isAdminEmail = (email) => ADMIN_EMAILS.includes(email);
+
+const getPlanLabel = (prof, email) => {
+  if (isAdminEmail(email)) return "Admin";
+  if (!isProUser(prof, email)) return "Free";
+  if (prof?.pro_access_source === "access_key") return "PRO Beta";
+  return "PRO";
+};
 
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user }) {
   const [view, setView] = useState("dash");
+  const [showAccessKey, setShowAccessKey] = useState(false);
+  const [akCode, setAkCode]   = useState("");
+  const [akMsg, setAkMsg]     = useState("");
+  const [akBusy, setAkBusy]   = useState(false);
+  const [proToast, setProToast] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [cts, setCts] = useState([]);
   const [its, setIts] = useState([]);
@@ -469,6 +499,31 @@ function CRM({ profile, assessment, onReset, user }) {
   const [dbgMsg, setDbgMsg] = useState("");
   const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "", influenciaPessoas: "", geraOportunidade: "", abrePortas: "", momentoAtual: "" });
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
+
+  // ── Computed plan ─────────────────────────────────────────
+  const isPro         = isProUser(profile, user?.email);
+  const planLabel     = getPlanLabel(profile, user?.email);
+  const canAddContact = isPro || cts.length < FREE_CT_LIMIT;
+
+  const redeemKey = async () => {
+    if (!akCode.trim()) return;
+    setAkBusy(true); setAkMsg("");
+    try {
+      const { data, error } = await supabase.rpc("redeem_access_key", {
+        p_code: akCode.trim().toUpperCase(),
+        p_user_id: user?.id,
+        p_user_email: user?.email || "",
+      });
+      if (error) throw error;
+      const msgs = { invalid:"Chave de acesso inválida.", inactive:"Essa chave não está mais ativa.", expired:"Essa chave expirou.", limit_reached:"Essa chave já atingiu o limite de ativações.", already_used:"Essa chave já foi utilizada por este usuário." };
+      if (!data?.ok) { setAkMsg(msgs[data?.error] || "Erro ao ativar chave."); setAkBusy(false); return; }
+      await loadUserData(user.id);
+      setShowAccessKey(false); setAkCode(""); setAkMsg("");
+      setProToast(true); setTimeout(() => setProToast(false), 4000);
+    } catch (e) { setAkMsg("Erro ao conectar. Tente novamente."); }
+    setAkBusy(false);
+  };
+  const openAccessKey = () => { setAkCode(""); setAkMsg(""); setShowAccessKey(true); };
 
   const load = useCallback(async () => {
     if (!user?.id) { setDbgMsg("⚠️ user.id ausente — não autenticado"); return; }
@@ -485,6 +540,7 @@ function CRM({ profile, assessment, onReset, user }) {
 
   const addC = async () => {
     if (!cf.name.trim() || !user?.id) { setDbgMsg("⚠️ Bloqueado: " + (!user?.id ? "sem user.id" : "nome vazio")); return; }
+    if (!isPro && cts.length >= FREE_CT_LIMIT) { setModal("limiteCt"); return; }
     setDbgMsg("⏳ Salvando...");
     const { data: newContact, error } = await supabase.from("contacts").insert({
       user_id: user.id, name: cf.name.trim(), company: cf.company.trim(),
@@ -703,13 +759,13 @@ function CRM({ profile, assessment, onReset, user }) {
             <div style={{ fontSize: 28, marginBottom: 10 }}>📋</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, marginBottom: 6 }}>Contatos CSV</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 12 }}>{cts.length} contatos</div>
-            <Btn small onClick={exportCSV}>Baixar CSV</Btn>
+            {isPro ? <Btn small onClick={exportCSV}>Baixar CSV</Btn> : <button onClick={openAccessKey} style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"6px 12px", fontFamily:"'DM Sans'", fontSize:11, color:C.gold, cursor:"pointer" }}>🔒 CSV — PRO</button>}
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>💾</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, marginBottom: 6 }}>Backup completo</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 12 }}>Perfil + assessment + CRM</div>
-            <Btn small onClick={exportJSON}>Baixar JSON</Btn>
+            {isPro ? <Btn small onClick={exportJSON}>Baixar JSON</Btn> : null}
           </div>
         </div>
 
@@ -742,6 +798,17 @@ function CRM({ profile, assessment, onReset, user }) {
         {PLAN.map((w, i) => {
           const isCurrent = w.week === week;
           const isDone = w.week < week;
+          const isLocked = !isPro && w.week > 1;
+          if (isLocked) return (
+            <div key={i} style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:12, padding:20, marginBottom:10, opacity:0.6, position:"relative", overflow:"hidden" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:C.w06, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🔒</div>
+                <div><Tag color={C.txL} small>Semana {w.week}</Tag><div style={{ fontFamily:"'DM Sans'", fontSize:14, fontWeight:600, color:C.txL, marginTop:3 }}>{w.title}</div></div>
+              </div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>Continue seu plano no PRO — desbloqueie reativação, geração de valor e consistência.</div>
+              {i === 1 && <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.txL, cursor:"pointer", textDecoration:"underline", marginTop:6, display:"block" }}>Tenho uma chave de acesso</button>}
+            </div>
+          );
           return (
             <div key={i} style={{ background: isCurrent ? `${C.gold}06` : C.card, border: `1px solid ${isCurrent ? C.gL : C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -1005,7 +1072,14 @@ function CRM({ profile, assessment, onReset, user }) {
         )}
 
         {/* ── Top 5 Movimentos da Semana ── */}
-        {cts.length > 0 && (() => {
+        {cts.length > 0 && !isPro && (
+          <ProLock
+            title="Desbloqueie seus 5 movimentos da semana"
+            desc="Saiba exatamente quem acionar, por que acionar e qual ação fazer para manter sua rede viva."
+            onKey={openAccessKey}
+          />
+        )}
+        {cts.length > 0 && isPro && (() => {
           const moves = generateWeeklyMoves(cts, its);
           const prioColor = (p) => p===1?C.cor:p===2?C.cor:p===3?C.vio:p===4?C.amb:C.blu;
           const prioIcon = (p) => p===1?"🔥":p===2?"📋":p===3?"🎂":p===4?"⚡":"⏰";
@@ -1207,6 +1281,31 @@ function CRM({ profile, assessment, onReset, user }) {
   };
 
   const renderTeia = () => {
+    if (!isPro) return (
+      <div>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:700, color:C.txt, margin:"0 0 14px" }}>Teia da Rede</h2>
+        {cts.length < 2 ? (
+          <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:50, textAlign:"center" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>⊛</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:14, fontWeight:600, color:C.txt, marginBottom:8 }}>Cadastre mais contatos para visualizar sua Teia</div>
+            <Btn small onClick={() => { setView("contacts"); setModal("addC"); }}>+ Adicionar contato</Btn>
+          </div>
+        ) : (() => {
+          const CX=280,CY=240,R=180; const step=(2*Math.PI)/cts.length;
+          const nodes=cts.map((c,i)=>{const a=-Math.PI/2+i*step;const d=R*Math.max(0.15,c.health/100);const ci=CATS.find(x=>x.value===c.category);return{c,x:CX+d*Math.cos(a),y:CY+d*Math.sin(a),col:ci?.color||C.gold,r:Math.max(7,Math.min(18,7+its.filter(x=>x.contactId===c.id).length*2))};});
+          return (<div>
+            <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16, marginBottom:12 }}>
+              <svg viewBox="0 0 560 480" style={{ width:"100%", height:"auto" }}>
+                {[0.2,0.4,0.6,0.8,1].map((p,i)=><circle key={i} cx={CX} cy={CY} r={R*p} fill="none" stroke={C.brd} strokeWidth={0.5} strokeDasharray={p<1?"3,7":"none"} opacity={0.4}/>)}
+                <circle cx={CX} cy={CY} r={7} fill={C.gold} opacity={0.9}/>
+                {nodes.map((n,i)=>{const lx=CX+(R+28)*Math.cos(-Math.PI/2+i*step);const ly=CY+(R+28)*Math.sin(-Math.PI/2+i*step);const ta=-Math.PI/2+i*step;return(<g key={i} onClick={()=>{setSelId(n.c.id);setView("contacts");}} style={{cursor:"pointer"}}><circle cx={n.x} cy={n.y} r={n.r} fill={`${n.col}25`} stroke={n.col} strokeWidth={1.5}/><text x={lx} y={ly} textAnchor={ta>Math.PI/2||ta<-Math.PI/2?"end":"start"} dominantBaseline="middle" fill={C.txM} fontSize={10} fontFamily="'DM Sans'">{n.c.name.length>13?n.c.name.slice(0,12)+"…":n.c.name}</text></g>);})}
+              </svg>
+            </div>
+            <ProLock title="Teia avançada disponível no PRO" desc="Veja quem é estratégico, quem está esfriando e onde sua rede precisa de ação — com filtros, cores de prioridade e painel estratégico." onKey={openAccessKey} />
+          </div>);
+        })()}
+      </div>
+    );
     const PRIO_COLORS = {
       "Proteger e expandir": "#4caf50",
       "Reativar urgente":    "#ef5350",
@@ -1473,10 +1572,19 @@ function CRM({ profile, assessment, onReset, user }) {
 
   const UpgradeModal = () => (
     <Modal title="" onClose={() => setShowUpgrade(false)}>
-      <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.gold, marginBottom: 4 }}>CONÉXIA PRO</div>
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Relatório completo, mapa mental e acesso ilimitado</div>
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.gold, marginBottom: 4 }}>CONÉXIA PRO</div>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Transforme diagnóstico em execução</div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+        <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:10, padding:14 }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>Free — R$ 0</div>
+          {["1 diagnóstico","Até 10 contatos","Health Score","Teia simples","Semana 1 do plano"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>✓ {f}</div>)}
+        </div>
+        <div style={{ background:`${C.gold}08`, border:`1.5px solid ${C.gold}`, borderRadius:10, padding:14 }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>PRO — R$ 49,90/mês</div>
+          {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Relatório completo","Plano 4 semanas","Teia avançada","Exportação"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>⭐ {f}</div>)}
+        </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
@@ -1485,6 +1593,7 @@ function CRM({ profile, assessment, onReset, user }) {
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 16 }}>/mês</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 16, lineHeight: 1.5 }}>Cancele quando quiser</div>
           <button onClick={() => window.open(STRIPE_MENSAL, "_blank")} style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, color: C.txt, borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Assinar mensal</button>
+          <button onClick={() => { setShowUpgrade(false); openAccessKey(); }} style={{ width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline", marginTop:4 }}>Tenho uma chave de acesso</button>
         </div>
         <div style={{ background: `${C.gold}10`, border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: 20, textAlign: "center", position: "relative" }}>
           <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.gold, color: "#0d0d0f", fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: ".08em", whiteSpace: "nowrap" }}>2 meses grátis</div>
@@ -1509,7 +1618,6 @@ function CRM({ profile, assessment, onReset, user }) {
 
   const renderReport = () => {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
-    const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
     const downloadReport = () => {
       const formatarNome = (raw) => {
         if (!raw) return '';
@@ -1959,6 +2067,14 @@ ${PLAN.map((w,i)=>`<div class="week-box">
   <div class="frase-sub">"Relacionamento não é sobre ter muitos contatos. É sobre ser indispensável para os que importam."</div>
 </div>
 
+${MENTORIA_LINK || true ? `
+<div class="pb" style="background:#f9f7f3;border-top:1px solid #e0ddd8;padding:28px 40px;text-align:center">
+  <div style="font-size:8pt;font-weight:700;color:#a07814;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Mentoria Individual</div>
+  <div style="font-size:14pt;font-weight:700;color:#1a1a1a;margin-bottom:8px">Quer desenvolver esse plano com mais profundidade?</div>
+  <p style="font-size:9pt;color:#555;line-height:1.7;margin:0 auto 14px;max-width:500px">Se fizer sentido para você, posso te ajudar em uma mentoria individual para transformar esse diagnóstico em um plano prático de relacionamento, posicionamento e geração de oportunidades.</p>
+  ${MENTORIA_LINK ? `<a href="${MENTORIA_LINK}" target="_blank" style="display:inline-block;background:#c9a227;color:#0d0d0f;border-radius:6px;padding:10px 24px;font-size:10pt;font-weight:700;text-decoration:none">Quero desenvolver meu plano</a>` : `<div style="font-size:9pt;color:#888;font-style:italic">Em breve você poderá solicitar sua mentoria por aqui.</div>`}
+</div>` : ''}
+
 <div class="footer-bar" style="margin-top:20px">
   <div class="footer-bar-l">CONÉXIA</div>
   <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>Diagnóstico Relacional Profissional · ${new Date().toLocaleDateString('pt-BR')}</div>
@@ -2032,6 +2148,8 @@ ${PLAN.map((w,i)=>`<div class="week-box">
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
+      {/* PRO Activation Toast */}
+      {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
       {!isMobile && (
         <nav style={{ width: 190, flexShrink: 0, background: C.sf, borderRight: `1px solid ${C.brd}`, padding: "20px 12px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px 18px", borderBottom: `1px solid ${C.brd}`, marginBottom: 14 }}>
@@ -2047,6 +2165,10 @@ ${PLAN.map((w,i)=>`<div class="week-box">
           <div style={{ flex: 1 }} />
           <div style={{ padding: "6px 12px" }}>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{profile?.name}</div>
+            <div style={{ marginTop:4, display:"flex", alignItems:"center", gap:6 }}>
+              <span style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", padding:"2px 7px", borderRadius:3, background: isPro?`${C.gold}20`:C.w06, color: isPro?C.gold:C.txL, border:`1px solid ${isPro?C.gL:C.brd}` }}>{planLabel}</span>
+              {!isPro && <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:9, color:C.txL, cursor:"pointer", padding:0 }}>Chave</button>}
+            </div>
             {admin && <Tag color={C.vio} small>Admin</Tag>}
           </div>
           <Btn variant="ghost" small onClick={onReset}>Sair</Btn>
@@ -2115,47 +2237,37 @@ ${PLAN.map((w,i)=>`<div class="week-box">
           <Inp label="📅 Data da ação" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
         </div>
         <Inp label="📝 Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
-        <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular o Relevance Score.</div>
-          {[
-            { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
-            { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
-            { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar você a pessoas, ambientes ou conversas importantes?" },
-            { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relação tem conexão com seus objetivos dos próximos meses?" },
-          ].map(({ field, label, micro }) => (
-            <div key={field} style={{ marginBottom: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                <div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM }}>{label}</div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{micro}</div>
+        {isPro ? (
+          <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular o Relevance Score.</div>
+            {[
+              { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
+              { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
+              { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar você a pessoas, ambientes ou conversas importantes?" },
+              { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relação tem conexão com seus objetivos dos próximos meses?" },
+            ].map(({ field, label, micro }) => (
+              <div key={field} style={{ marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                  <div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM }}>{label}</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{micro}</div>
+                  </div>
+                  <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: C.gold, minWidth: 28, textAlign: "right" }}>{cf[field] !== "" ? cf[field] : "—"}</div>
                 </div>
-                <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: C.gold, minWidth: 28, textAlign: "right" }}>
-                  {cf[field] !== "" ? cf[field] : "—"}
-                </div>
+                <input type="range" min="0" max="10" step="1" value={cf[field] !== "" ? cf[field] : 5} onChange={e => setCf({ ...cf, [field]: e.target.value })} style={{ width: "100%", accentColor: C.gold, height: 4, cursor: "pointer" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, marginTop: 2 }}><span>0</span><span>5</span><span>10</span></div>
               </div>
-              <input type="range" min="0" max="10" step="1"
-                value={cf[field] !== "" ? cf[field] : 5}
-                onChange={e => setCf({ ...cf, [field]: e.target.value })}
-                style={{ width: "100%", accentColor: C.gold, height: 4, cursor: "pointer" }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, marginTop: 2 }}>
-                <span>0 — Nenhuma</span><span>5 — Moderada</span><span>10 — Alta</span>
-              </div>
-            </div>
-          ))}
-          {(() => {
-            const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null });
-            return rs !== null ? (
-              <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Relevance Score</span>
-                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span>
-              </div>
-            ) : (
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, fontStyle: "italic" }}>Preencha os 4 campos para calcular.</div>
-            );
-          })()}
-        </div>
+            ))}
+            {(() => { const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null }); return rs !== null ? (<div style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}><span style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM }}>Relevance Score</span><span style={{ fontFamily:"'JetBrains Mono'", fontSize:14, fontWeight:700, color:getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span></div>) : (<div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic" }}>Preencha os 4 campos para calcular.</div>); })()}
+          </div>
+        ) : (
+          <div style={{ borderTop:`1px solid ${C.brd}`, marginTop:16, paddingTop:16, background:`${C.gold}06`, borderRadius:8, padding:14 }}>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:600, color:C.gold, marginBottom:4 }}>🔒 Relevância estratégica — PRO</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:8 }}>Quer saber quem realmente importa na sua rede? O Relevance Score está disponível no PRO.</div>
+            <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>Tenho uma chave de acesso</button>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn small onClick={addC} disabled={!cf.name.trim()}>Salvar</Btn></div>
       </Modal>}
       {modal === "editC" && <Modal title="Editar contato" onClose={() => { setModal(null); setEditId(null); }}>
@@ -2232,6 +2344,45 @@ ${PLAN.map((w,i)=>`<div class="week-box">
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => { setModal(null); setEditId(null); }}>Cancelar</Btn><Btn small onClick={saveEditC} disabled={!cf.name.trim()}>Salvar alterações</Btn></div>
       </Modal>}
+      {/* Access Key Modal */}
+      {showAccessKey && <Modal title="Ativar chave de acesso" onClose={() => setShowAccessKey(false)}>
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, marginBottom:12, lineHeight:1.6 }}>
+            Digite sua chave de acesso PRO para liberar todos os recursos por 90 dias.
+          </div>
+          <input
+            value={akCode}
+            onChange={e => setAkCode(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === "Enter" && redeemKey()}
+            placeholder="Ex: MILLEO-PRO-15"
+            style={{ width:"100%", background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"12px 14px", fontFamily:"'JetBrains Mono'", fontSize:15, fontWeight:700, color:C.gold, outline:"none", letterSpacing:".1em", boxSizing:"border-box" }}
+          />
+          {akMsg && <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.cor, marginTop:8 }}>{akMsg}</div>}
+        </div>
+        <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+          <Btn variant="ghost" small onClick={() => setShowAccessKey(false)}>Cancelar</Btn>
+          <Btn small onClick={redeemKey} disabled={akBusy || !akCode.trim()}>{akBusy ? "Ativando..." : "Ativar PRO"}</Btn>
+        </div>
+      </Modal>}
+
+      {/* Limite contatos Free */}
+      {modal === "limiteCt" && <Modal title="Limite do plano gratuito" onClose={() => setModal(null)}>
+        <div style={{ textAlign:"center", marginBottom:20 }}>
+          <div style={{ fontSize:32, marginBottom:10 }}>🔒</div>
+          <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.7 }}>
+            No plano Free você pode gerenciar até <strong style={{ color:C.txt }}>10 contatos</strong>. Assine o PRO para contatos ilimitados, Relevance Score e ações inteligentes.
+          </p>
+        </div>
+        <a href={STRIPE_MENSAL} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
+          style={{ display:"block", background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center", marginBottom:10 }}>
+          Assinar PRO — R$ 49,90/mês
+        </a>
+        <button onClick={() => { setModal(null); openAccessKey(); }}
+          style={{ display:"block", width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>
+          Tenho uma chave de acesso
+        </button>
+      </Modal>}
+
       {modal === "addI" && <Modal title="Registrar interação" onClose={() => setModal(null)}>
         <div style={{ marginBottom: 16 }}><label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 6 }}>Tipo</label><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{ITYPES.map(t => <button key={t.value} onClick={() => setInf({ ...inf, type: t.value })} style={{ background: inf.type === t.value ? C.gD : C.sf, border: `1px solid ${inf.type === t.value ? C.gL : C.brd}`, borderRadius: 6, padding: "8px 14px", cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 12, color: inf.type === t.value ? C.gold : C.txM }}>{t.icon} {t.label}</button>)}</div></div>
         <Inp label="O que aconteceu? *" value={inf.desc} onChange={v => setInf({ ...inf, desc: v })} placeholder="Descreva a interação..." textarea />
@@ -2297,7 +2448,25 @@ function Auth({ onAuth }) {
 }
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
-export default function App() {
+export default function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o CONÉXIA completo para transformar diagnóstico em ação prática.", cta = "Assinar PRO — R$ 49,90/mês", onKey }) {
+  return (
+    <div style={{ background:"#161618", border:"1px solid #2a2825", borderRadius:12, padding:24, textAlign:"center", margin:"8px 0" }}>
+      <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
+      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:17, fontWeight:700, color:"#e8e4da", marginBottom:6 }}>{title}</div>
+      <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:"#6a6460", lineHeight:1.6, marginBottom:16, maxWidth:340, margin:"0 auto 16px" }}>{desc}</div>
+      <a href={STRIPE_MENSAL} target="_blank" rel="noreferrer"
+        style={{ display:"block", background:"#c9a227", color:"#0d0d0f", borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", marginBottom:10 }}>
+        {cta}
+      </a>
+      {onKey && <button onClick={onKey}
+        style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:"#5a5650", cursor:"pointer", textDecoration:"underline" }}>
+        Tenho uma chave de acesso
+      </button>}
+    </div>
+  );
+}
+
+function App() {
   const [state, setState] = useState("loading");
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -2448,4 +2617,3 @@ export default function App() {
     </>
   );
 }
-
