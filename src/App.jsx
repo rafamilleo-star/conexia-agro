@@ -865,6 +865,9 @@ function CRM({ profile, assessment, onReset, user }) {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
     const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
     const downloadReport = () => {
+      const nomePessoa = profile?.name || profile?.first_name ||
+        (user?.email ? user.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase()) : '') ||
+        "Profissional";
       const s10 = (k) => Math.round((sc[k]||0)/10);
       const pct = (k) => sc[k]||0;
       const sortedD = [...DIMS].sort((a,b)=>(sc[b.key]||0)-(sc[a.key]||0));
@@ -911,7 +914,7 @@ function CRM({ profile, assessment, onReset, user }) {
       }));
 
       const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Diagnóstico Relacional — ${profile?.name||""}</title>
+<title>Diagnóstico Relacional — ${nomePessoa}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-size:10pt;line-height:1.5}
@@ -1018,7 +1021,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 <div class="cover">
   <div>
     <div class="lbl">Diagnóstico Relacional Profissional · CONÉXIA</div>
-    <div class="name-big">${profile?.name||profile?.first_name||""}</div>
+    <div class="name-big">${nomePessoa}</div>
     <div class="profile-tag">
       <span class="profile-tag-name">${pf?.name||""}</span>
     </div>
@@ -1056,7 +1059,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 <!-- ════ P2: MAPA DIMENSIONAL + SÍNTESE ═════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
 </div>
 
 <div style="display:grid;grid-template-columns:47% 53%;gap:16px">
@@ -1088,7 +1091,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 <!-- ════ P3: ANÁLISE PROFUNDA ════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
 </div>
 
 <div class="lbl">Análise Profunda do Perfil</div>
@@ -1131,7 +1134,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 <!-- ════ P4: GATILHOS + PLANO ════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
 </div>
 
 <div class="lbl">Gatilhos Relacionais</div>
@@ -1171,7 +1174,7 @@ ${PLAN.map((w,i)=>`<div class="week-box">
 <!-- ════ P5: TERMÔMETRO + VANTAGEM ══════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${profile?.name||""} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
 </div>
 
 <div class="lbl">Termômetro Relacional — 90 Dias</div>
@@ -1190,7 +1193,7 @@ ${PLAN.map((w,i)=>`<div class="week-box">
 <p style="text-align:center;font-style:italic;color:#666;font-size:9pt;margin-bottom:20px">"Toda semana: em quantas conversas você genuinamente aprendeu algo sobre o outro que não sabia antes — e o que isso diz sobre a qualidade da sua presença?"</p>
 
 <div class="frase-box">
-  <div class="frase-big">${profile?.name?.split(' ')[0]||"Você"}, você já sabe chegar.<br>O próximo nível é fazer as pessoas quererem que você fique.</div>
+  <div class="frase-big">${nomePessoa.split(" ")[0]||"Você"}, você já sabe chegar.<br>O próximo nível é fazer as pessoas quererem que você fique.</div>
   <div class="frase-sub">"Relacionamento não é sobre ter muitos contatos. É sobre ser indispensável para os que importam."</div>
 </div>
 
@@ -1566,3 +1569,4 @@ export default function App() {
     </>
   );
 }
+
