@@ -299,9 +299,10 @@ function RadarChart({ scores, size = 260 }) {
 
 /* ═══ WELCOME ═════════════════════════════════════════════ */
 /* ═══ ONBOARDING ══════════════════════════════════════════ */
-function Onboard({ onDone }) {
+function Onboard({ onDone, initialKey = "" }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({ name: "", email: "", role: "", segment: "", state: "", objectives: [] });
+  const [voucher, setVoucher] = useState(initialKey || "");
   const tog = (v) => setForm(p => ({ ...p, objectives: p.objectives.includes(v) ? p.objectives.filter(x => x !== v) : [...p.objectives, v] }));
 
   if (step === 1) return (
@@ -337,7 +338,20 @@ function Onboard({ onDone }) {
             );
           })}
         </div>
-        <Btn onClick={() => onDone(form)} disabled={form.objectives.length === 0} full>Iniciar assessment →</Btn>
+        {/* Chave de acesso opcional */}
+        <div style={{ borderTop:`1px solid ${C.brd}`, paddingTop:16, marginTop:4, marginBottom:16 }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:6 }}>
+            Tem uma chave de acesso PRO? (opcional)
+          </div>
+          <input
+            value={voucher}
+            onChange={e => setVoucher(e.target.value.toUpperCase())}
+            placeholder="Ex: MILLEO-PRO-15"
+            style={{ width:"100%", background:C.sf, border:`1px solid ${voucher?C.gL:C.brd}`, borderRadius:8, padding:"10px 14px", fontFamily:"'JetBrains Mono'", fontSize:13, fontWeight:voucher?700:400, color:voucher?C.gold:C.txM, outline:"none", letterSpacing:".08em", boxSizing:"border-box" }}
+          />
+          {voucher && <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.gold, marginTop:4 }}>✓ Chave será ativada após o diagnóstico</div>}
+        </div>
+        <Btn onClick={() => onDone(form, voucher.trim())} disabled={form.objectives.length === 0} full>Iniciar assessment →</Btn>
       </div>
     </div>
   );
@@ -2397,7 +2411,7 @@ ${MENTORIA_LINK || true ? `
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
 /* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
-function PublicLanding({ onSignup, onLogin }) {
+function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
   return (
     <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
       {/* Logo */}
@@ -2439,7 +2453,13 @@ function PublicLanding({ onSignup, onLogin }) {
         ))}
       </div>
 
-      <div style={{ marginTop:32, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
+      {urlKey && (
+        <div style={{ marginTop:20, background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 20px", textAlign:"center" }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.gold, fontWeight:600 }}>🎁 Chave de acesso detectada: <span style={{ fontFamily:"'JetBrains Mono'", letterSpacing:".06em" }}>{urlKey}</span></div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, marginTop:3 }}>Crie sua conta para ativar o acesso PRO automaticamente</div>
+        </div>
+      )}
+      <div style={{ marginTop:20, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
         O diagnóstico é gratuito · Sem cartão de crédito
       </div>
     </div>
@@ -2522,6 +2542,8 @@ function App() {
   const [user, setUser]         = useState(null);
   const [profile, setProfile]   = useState(null);
   const [assessment, setAssessment] = useState(null);
+  const urlKey = new URLSearchParams(window.location.search).get("key") || "";
+  const [pendingKey, setPendingKey] = useState(urlKey ? urlKey.toUpperCase() : "");
 
   useEffect(() => {
     // Verificar sessão atual ao iniciar
@@ -2589,7 +2611,8 @@ function App() {
     await loadUserData(authUser.id);
   };
 
-  const handleOnboard = async (form) => {
+  const handleOnboard = async (form, voucherCode) => {
+    if (voucherCode) setPendingKey(voucherCode);
     try {
       await supabase.from("profiles").upsert({
         id: user.id, first_name: form.name, name: form.name, email: form.email,
@@ -2656,6 +2679,19 @@ function App() {
     sendToMake(result);
     setAssessment(result);
     setState("app");
+    // Auto-aplicar chave pendente (de URL param ou onboarding)
+    if (pendingKey && user?.id) {
+      supabase.rpc("redeem_access_key", {
+        p_code: pendingKey.toUpperCase().trim(),
+        p_user_id: user.id,
+        p_user_email: user?.email || "",
+      }).then(({ data }) => {
+        if (data?.ok) {
+          loadUserData(user.id);
+        }
+      }).catch(() => {});
+      setPendingKey("");
+    }
   };
 
   const handleLogout = async () => {
@@ -2675,10 +2711,10 @@ function App() {
 
   return (
     <>
-      {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} />}
+      {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
       {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
-      {state === "onboard"      && user && <Onboard onDone={handleOnboard} />}
+      {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} />}
       {state === "assess"       && user && <Assess profile={profile} onDone={handleAssess} />}
       {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} />}
     </>
