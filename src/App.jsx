@@ -464,6 +464,8 @@ function CRM({ profile, assessment, onReset, user }) {
   const [editId, setEditId] = useState(null);
   const [modal, setModal] = useState(null);
   const [intCid, setIntCid] = useState(null);
+  const [teiaFilter, setTeiaFilter] = useState("todos");
+  const [teiaSel, setTeiaSel] = useState(null);
   const [dbgMsg, setDbgMsg] = useState("");
   const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "", influenciaPessoas: "", geraOportunidade: "", abrePortas: "", momentoAtual: "" });
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
@@ -1205,27 +1207,265 @@ function CRM({ profile, assessment, onReset, user }) {
   };
 
   const renderTeia = () => {
-    if (cts.length < 2) return <div><h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 12px" }}>Teia</h2><div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 50, textAlign: "center" }}><div style={{ fontSize: 32, marginBottom: 12 }}>⊛</div><div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, marginBottom: 8 }}>Você tem {cts.length} contato cadastrado</div><div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txL, marginBottom: 16 }}>Cadastre mais {2 - cts.length} contato{2 - cts.length > 1 ? "s" : ""} para visualizar sua Teia</div><Btn small onClick={() => { setView("contacts"); setModal("addC"); }}>+ Adicionar contato</Btn></div></div>;
-    const CX = 300, CY = 260, R = 195;
-    const sorted = [...cts].sort((a, b) => { const o = { mentor: 0, aliado: 1, ponte: 2, potencial: 3, dormindo: 4 }; return (o[a.category] || 4) - (o[b.category] || 4); });
-    const step = (2 * Math.PI) / sorted.length;
-    const nodes = sorted.map((c, i) => { const a = -Math.PI / 2 + i * step; const d = R * Math.max(0.15, c.health / 100); const ci = CATS.find(x => x.value === c.category); return { c, x: CX + d * Math.cos(a), y: CY + d * Math.sin(a), lx: CX + (R + 28) * Math.cos(a), ly: CY + (R + 28) * Math.sin(a), a, col: ci?.color || C.gold, r: Math.max(7, Math.min(20, 7 + its.filter(x => x.contactId === c.id).length * 2)) }; });
-    const wp = nodes.length >= 3 ? nodes.map((n, i) => `${i === 0 ? "M" : "L"} ${n.x} ${n.y}`).join(" ") + " Z" : "";
+    const PRIO_COLORS = {
+      "Proteger e expandir": "#4caf50",
+      "Reativar urgente":    "#ef5350",
+      "Manter leve":         "#ff9800",
+      "Baixa prioridade":    "#6a6460",
+      "Completar relevância":"#5B9BD5",
+    };
+
+    // Apply filter
+    const filtered = cts.filter(c => {
+      const rs = calculateRelevanceScore(c);
+      const p  = getContactPriorityStatus(c.health, rs);
+      if (teiaFilter === "todos")          return true;
+      if (teiaFilter === "estrategicos")   return p.status === "Proteger e expandir";
+      if (teiaFilter === "reativar")       return p.status === "Reativar urgente";
+      if (teiaFilter === "sem_acao")       return !c.nextAction;
+      if (teiaFilter === "frios")          return c.health < 40;
+      if (CATS.find(ct => ct.value === teiaFilter)) return c.category === teiaFilter;
+      return true;
+    });
+
+    if (cts.length < 2) return (
+      <div>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:700, color:C.txt, margin:"0 0 12px" }}>Teia da Rede</h2>
+        <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:50, textAlign:"center" }}>
+          <div style={{ fontSize:32, marginBottom:12 }}>⊛</div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:14, fontWeight:600, color:C.txt, marginBottom:8 }}>Você tem {cts.length} contato cadastrado</div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, marginBottom:16 }}>Cadastre mais contatos para visualizar sua rede com mais clareza.</div>
+          <Btn small onClick={() => { setView("contacts"); setModal("addC"); }}>+ Adicionar contato</Btn>
+        </div>
+      </div>
+    );
+
+    const CX = 280, CY = 255, R = 190;
+    const step = filtered.length > 0 ? (2 * Math.PI) / filtered.length : 0;
+    const nodes = filtered.map((c, i) => {
+      const a   = -Math.PI / 2 + i * step;
+      const d   = R * Math.max(0.15, c.health / 100);
+      const rs  = calculateRelevanceScore(c);
+      const p   = getContactPriorityStatus(c.health, rs);
+      const col = PRIO_COLORS[p.status] || C.txL;
+      const nInt = its.filter(x => x.contactId === c.id).length;
+      const nr  = Math.max(8, Math.min(22, 8 + nInt * 2.5));
+      return { c, x: CX + d * Math.cos(a), y: CY + d * Math.sin(a),
+               lx: CX + (R + 32) * Math.cos(a), ly: CY + (R + 32) * Math.sin(a),
+               a, col, nr, p, rs, nInt };
+    });
+    const wp = nodes.length >= 3 ? nodes.map((n,i) => `${i===0?"M":"L"} ${n.x} ${n.y}`).join(" ") + " Z" : "";
+
+    const FILTERS = [
+      { key:"todos",        label:"Todos" },
+      { key:"estrategicos", label:"Estratégicos" },
+      { key:"reativar",     label:"Reativar urgente" },
+      { key:"sem_acao",     label:"Sem próxima ação" },
+      { key:"frios",        label:"Frios" },
+      ...CATS.map(ct => ({ key: ct.value, label: ct.label })),
+    ];
+
+    const selContact = teiaSel ? cts.find(c => c.id === teiaSel) : null;
+    const selRS  = selContact ? calculateRelevanceScore(selContact) : null;
+    const selP   = selContact ? getContactPriorityStatus(selContact.health, selRS) : null;
+    const selCat = selContact ? CATS.find(x => x.value === selContact.category) : null;
+    const selInt = selContact ? its.filter(i => i.contactId === selContact.id) : [];
+
     return (
-      <div><h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 12px" }}>Teia da Rede</h2>
-        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 16 }}>
-          <svg viewBox="0 0 600 520" style={{ width: "100%", height: "auto" }}>
-            {[1, 2, 3, 4, 5].map(i => <circle key={i} cx={CX} cy={CY} r={R * (i / 5)} fill="none" stroke={C.brd} strokeWidth={0.5} strokeDasharray={i < 5 ? "3,6" : "none"} opacity={0.5} />)}
-            {wp && <path d={wp} fill={`${C.gold}08`} stroke={C.gL} strokeWidth={1.5} />}
-            <circle cx={CX} cy={CY} r={5} fill={C.gold} opacity={0.8} />
-            {nodes.map((n, i) => (
-              <g key={i} onClick={() => { setSelId(n.c.id); setView("contacts"); }} style={{ cursor: "pointer" }}>
-                <circle cx={n.x} cy={n.y} r={n.r} fill={`${n.col}30`} stroke={n.col} strokeWidth={1.5} />
-                <circle cx={n.x} cy={n.y} r={3} fill={n.c.health >= 70 ? C.grn : n.c.health >= 40 ? C.amb : C.cor} />
-                <text x={n.lx} y={n.ly} textAnchor={n.a > Math.PI / 2 || n.a < -Math.PI / 2 ? "end" : "start"} dominantBaseline="middle" fill={C.txM} fontSize={10} fontFamily="'DM Sans'">{n.c.name.length > 13 ? n.c.name.slice(0, 12) + "…" : n.c.name}</text>
-              </g>
-            ))}
-          </svg>
+      <div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:700, color:C.txt, margin:0 }}>Teia da Rede</h2>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>{filtered.length} de {cts.length} contatos</div>
+        </div>
+
+        {/* Filtros */}
+        <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+          {FILTERS.map(f => (
+            <button key={f.key} onClick={() => setTeiaFilter(f.key)}
+              style={{ background: teiaFilter===f.key ? C.gold : C.sf,
+                       border:`1px solid ${teiaFilter===f.key ? C.gold : C.brd}`,
+                       color: teiaFilter===f.key ? C.bg : C.txM,
+                       borderRadius:20, padding:"5px 12px", fontFamily:"'DM Sans'",
+                       fontSize:11, fontWeight: teiaFilter===f.key?700:400, cursor:"pointer" }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns: teiaSel ? "1fr 280px" : "1fr", gap:12 }}>
+          {/* SVG Teia */}
+          <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16 }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding:"40px 20px", textAlign:"center", fontFamily:"'DM Sans'", fontSize:13, color:C.txL }}>
+                Nenhum contato neste filtro.
+              </div>
+            ) : (
+              <svg viewBox="0 0 560 510" style={{ width:"100%", height:"auto" }}>
+                {/* Rings */}
+                {[0.2,0.4,0.6,0.8,1].map((pct,i) => (
+                  <circle key={i} cx={CX} cy={CY} r={R*pct} fill="none"
+                    stroke={C.brd} strokeWidth={0.5} strokeDasharray={pct<1?"3,7":"none"} opacity={0.4} />
+                ))}
+                {/* Ring labels */}
+                {[{p:0.2,l:"20%"},{p:0.6,l:"60%"},{p:1,l:"100%"}].map((t,i) => (
+                  <text key={i} x={CX+4} y={CY-R*t.p+3} fill={C.txL} fontSize={7} fontFamily="'DM Sans'" opacity={0.5}>{t.l}</text>
+                ))}
+                {/* Web polygon */}
+                {wp && <path d={wp} fill={`${C.gold}06`} stroke={`${C.gold}20`} strokeWidth={1} />}
+                {/* Connections to center */}
+                {nodes.map((n,i) => (
+                  <line key={i} x1={CX} y1={CY} x2={n.x} y2={n.y}
+                    stroke={n.col} strokeWidth={Math.max(0.5, n.nInt * 0.4)} opacity={0.2} />
+                ))}
+                {/* Center node */}
+                <circle cx={CX} cy={CY} r={8} fill={C.gold} opacity={0.9} />
+                <circle cx={CX} cy={CY} r={4} fill={C.bg} />
+                {/* Contact nodes */}
+                {nodes.map((n,i) => {
+                  const isSel = teiaSel === n.c.id;
+                  return (
+                    <g key={i} onClick={() => setTeiaSel(teiaSel===n.c.id ? null : n.c.id)} style={{ cursor:"pointer" }}>
+                      {/* Glow when selected */}
+                      {isSel && <circle cx={n.x} cy={n.y} r={n.nr+6} fill={n.col} opacity={0.15} />}
+                      {/* Outer ring */}
+                      <circle cx={n.x} cy={n.y} r={n.nr} fill={`${n.col}20`}
+                        stroke={n.col} strokeWidth={isSel?2.5:1.5} />
+                      {/* Inner dot */}
+                      <circle cx={n.x} cy={n.y} r={3} fill={n.col} opacity={0.8} />
+                      {/* Label */}
+                      <text x={n.lx} y={n.ly} textAnchor={n.a>Math.PI/2||n.a<-Math.PI/2?"end":"start"}
+                        dominantBaseline="middle" fill={isSel?n.col:C.txM} fontSize={isSel?10.5:10}
+                        fontWeight={isSel?700:400} fontFamily="'DM Sans'">
+                        {n.c.name.length>14?n.c.name.slice(0,13)+"…":n.c.name}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            )}
+          </div>
+
+          {/* Side panel */}
+          {teiaSel && selContact && (
+            <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16, position:"relative" }}>
+              <button onClick={() => setTeiaSel(null)}
+                style={{ position:"absolute", top:12, right:12, background:"none", border:"none", color:C.txL, fontSize:18, cursor:"pointer", lineHeight:1 }}>×</button>
+
+              {/* Avatar + Name */}
+              <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:14, paddingRight:20 }}>
+                <div style={{ width:38, height:38, borderRadius:10, background:`${selCat?.color||C.gold}18`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:selCat?.color||C.gold, flexShrink:0 }}>
+                  {selContact.name[0]}
+                </div>
+                <div>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:14, fontWeight:600, color:C.txt }}>{selContact.name}</div>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>{[selContact.role, selContact.company].filter(Boolean).join(" · ") || "—"}</div>
+                  {selCat && <div style={{ marginTop:4 }}><Tag small color={selCat.color}>{selCat.label}</Tag></div>}
+                </div>
+              </div>
+
+              {/* Scores side by side */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"8px 10px" }}>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:8, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>Health</div>
+                  <div style={{ fontFamily:"'JetBrains Mono'", fontSize:18, fontWeight:700,
+                    color:selContact.health>=70?C.grn:selContact.health>=40?C.amb:C.cor }}>{selContact.health}%</div>
+                </div>
+                <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"8px 10px" }}>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:8, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>Relevância</div>
+                  {selRS !== null
+                    ? <div style={{ fontFamily:"'JetBrains Mono'", fontSize:18, fontWeight:700, color:getRelevanceLabelColor(selRS) }}>{selRS}%</div>
+                    : <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, fontStyle:"italic", marginTop:4 }}>Não avaliado</div>}
+                </div>
+              </div>
+
+              {/* Priority status */}
+              <div style={{ background:`${PRIO_COLORS[selP?.status]||C.txL}12`,
+                border:`1px solid ${PRIO_COLORS[selP?.status]||C.txL}25`,
+                borderRadius:8, padding:"8px 10px", marginBottom:12 }}>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:10, fontWeight:700,
+                  color:PRIO_COLORS[selP?.status]||C.txL, marginBottom:3 }}>{selP?.status}</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, lineHeight:1.4 }}>{selP?.msg}</div>
+              </div>
+
+              {/* Last interaction + next action */}
+              {selContact.lastInteraction && (
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:5 }}>
+                  <span style={{ color:C.txM, fontWeight:500 }}>Última interação: </span>
+                  {fD(selContact.lastInteraction)}
+                  {selInt.length > 0 && <span style={{ color:C.txL }}> · {selInt.length} registros</span>}
+                </div>
+              )}
+              {selContact.nextAction && (
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:12 }}>
+                  <span style={{ color:C.txM, fontWeight:500 }}>Próxima ação: </span>
+                  {selContact.nextAction}
+                  {selContact.nextActionDate && <span style={{ color:C.amb }}> · {fD(selContact.nextActionDate)}</span>}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                <button onClick={() => { setIntCid(selContact.id); setModal("addI"); }}
+                  style={{ background:C.gold, border:"none", color:C.bg, borderRadius:8, padding:"9px 0",
+                  fontFamily:"'DM Sans'", fontSize:12, fontWeight:700, cursor:"pointer", width:"100%" }}>
+                  + Registrar interação
+                </button>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7 }}>
+                  <button onClick={() => { openEditC(selContact); }}
+                    style={{ background:C.sf, border:`1px solid ${C.brd}`, color:C.txM, borderRadius:8,
+                    padding:"8px 0", fontFamily:"'DM Sans'", fontSize:11, cursor:"pointer" }}>
+                    ✏️ Editar
+                  </button>
+                  <button onClick={() => { setSelId(selContact.id); setView("contacts"); }}
+                    style={{ background:C.sf, border:`1px solid ${C.brd}`, color:C.txM, borderRadius:8,
+                    padding:"8px 0", fontFamily:"'DM Sans'", fontSize:11, cursor:"pointer" }}>
+                    📋 Histórico
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Legenda */}
+        <div style={{ marginTop:14, background:C.card, border:`1px solid ${C.brd}`, borderRadius:10, padding:"12px 16px" }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:10, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:10 }}>Legenda</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:8 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #4caf50", flexShrink:0 }}/>
+              Proteger e expandir
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #ef5350", flexShrink:0 }}/>
+              Reativar urgente
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #ff9800", flexShrink:0 }}/>
+              Manter leve
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #6a6460", flexShrink:0 }}/>
+              Baixa prioridade
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #5B9BD5", flexShrink:0 }}/>
+              Completar relevância
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <div style={{ width:28, height:8, background:`linear-gradient(to right,${C.brd},${C.txM})`, borderRadius:4, flexShrink:0 }}/>
+              Espessura = interações
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <svg width="28" height="16"><circle cx="6" cy="8" r="5" fill="none" stroke={C.txL} strokeWidth="1.5"/><circle cx="22" cy="8" r="8" fill="none" stroke={C.txL} strokeWidth="1.5"/></svg>
+              Tamanho = interações
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
+              <svg width="28" height="16"><circle cx="14" cy="8" r="6" fill="none" stroke={C.txL} strokeWidth="1.5" strokeDasharray="2,2"/></svg>
+              Distância = Health Score
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -2208,3 +2448,4 @@ export default function App() {
     </>
   );
 }
+
