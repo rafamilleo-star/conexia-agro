@@ -304,6 +304,8 @@ function Assess({ profile, onDone }) {
 
 /* ═══ MAKE WEBHOOK ════════════════════════════════════════ */
 const MAKE_WEBHOOK = "https://hook.us2.make.com/ao22pba9b6y41uuxnj50hev7m1oq790r";
+const STRIPE_MENSAL = "https://buy.stripe.com/test_7sY6oz7eW0u2dUu7HQ7g401";
+const STRIPE_ANUAL  = "https://buy.stripe.com/test_eVq3cnar8gt06s29PY7g400";
 
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user }) {
@@ -864,6 +866,45 @@ function CRM({ profile, assessment, onReset, user }) {
   const renderReport = () => {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
     const isPro = profile?.is_pro || user?.email === "rafaelmilleo@yahoo.com.br" || user?.email === "rafamilleo@gmail.com";
+    const [showUpgrade, setShowUpgrade] = useState(false);
+
+    const UpgradeModal = () => (
+      <Modal title="" onClose={() => setShowUpgrade(false)}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.gold, marginBottom: 4 }}>CONÉXIA PRO</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Relatório completo, mapa mental e acesso ilimitado</div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {/* MENSAL */}
+          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.txL, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Mensal</div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, lineHeight: 1 }}>R$50</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 16 }}>/mês</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 16, lineHeight: 1.5 }}>Cancele quando quiser</div>
+            <button onClick={() => window.open(STRIPE_MENSAL, "_blank")} style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, color: C.txt, borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Assinar mensal</button>
+          </div>
+          {/* ANUAL */}
+          <div style={{ background: `${C.gold}10`, border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: 20, textAlign: "center", position: "relative" }}>
+            <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.gold, color: "#0d0d0f", fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: ".08em", whiteSpace: "nowrap" }}>2 meses grátis</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Anual</div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.gold, lineHeight: 1 }}>R$500</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 4 }}>/ano · R$41,67/mês</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginBottom: 16, lineHeight: 1.5 }}>Economia de R$100 vs mensal</div>
+            <button onClick={() => window.open(STRIPE_ANUAL, "_blank")} style={{ width: "100%", background: C.gold, border: "none", color: "#0d0d0f", borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Assinar anual ⚡</button>
+          </div>
+        </div>
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: 14 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txt, marginBottom: 8 }}>O que está incluído no PRO:</div>
+          {["📄 Relatório PDF completo personalizado", "🗺️ Mapa mental da sua arquitetura relacional", "📊 Termômetro de evolução 90 dias", "🎯 Gatilhos relacionais do seu perfil", "⚡ Acesso a todas as futuras funcionalidades"].map((f,i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 5, fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{f}</div>
+          ))}
+        </div>
+        <div style={{ textAlign: "center", marginTop: 12, fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>
+          Após o pagamento, seu acesso PRO é liberado automaticamente. ✓
+        </div>
+      </Modal>
+    );
     const downloadReport = () => {
       const nomePessoa = profile?.name || profile?.first_name ||
         (user?.email ? user.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase()) : '') ||
@@ -1222,11 +1263,12 @@ ${PLAN.map((w,i)=>`<div class="week-box">
           {isPro ? (
             <Btn small onClick={downloadReport}>⬇ Baixar relatório</Btn>
           ) : (
-            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 4 }}>🔒 PRO</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>Download completo</div>
-            </div>
+            <button onClick={() => setShowUpgrade(true)} style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}50`, borderRadius: 10, padding: "10px 16px", cursor: "pointer", textAlign: "center" }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.gold, marginBottom: 2 }}>🔒 PRO</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>Fazer upgrade</div>
+            </button>
           )}
+          {showUpgrade && <UpgradeModal />}
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}><RadarChart scores={sc} /></div>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
@@ -1569,4 +1611,5 @@ export default function App() {
     </>
   );
 }
+
 
