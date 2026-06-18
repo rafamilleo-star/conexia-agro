@@ -2396,9 +2396,59 @@ ${MENTORIA_LINK || true ? `
 }
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
+/* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
+function PublicLanding({ onSignup, onLogin }) {
+  return (
+    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+      {/* Logo */}
+      <div style={{ textAlign:"center", marginBottom:40 }}>
+        <div style={{ width:56, height:56, borderRadius:14, background:`linear-gradient(135deg,${C.gold},${C.gB})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.bg, margin:"0 auto 16px" }}>C</div>
+        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, letterSpacing:".04em", marginBottom:8 }}>CONÉXIA</div>
+        <div style={{ fontFamily:"'DM Sans'", fontSize:14, color:C.txL, letterSpacing:".06em", textTransform:"uppercase" }}>Diagnóstico Relacional Profissional</div>
+      </div>
+
+      {/* Headline */}
+      <div style={{ maxWidth:480, textAlign:"center", marginBottom:40 }}>
+        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, lineHeight:1.3, margin:"0 0 12px" }}>
+          Transforme contatos em<br/>relações estratégicas.
+        </h1>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:14, color:C.txL, lineHeight:1.7, margin:0 }}>
+          Descubra seu perfil relacional, identifique quem priorizar e saiba exatamente o que fazer para cultivar a rede que impulsiona sua carreira.
+        </p>
+      </div>
+
+      {/* CTAs */}
+      <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:360 }}>
+        <button onClick={onSignup}
+          style={{ background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:12, padding:"16px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:C.bg, cursor:"pointer", width:"100%" }}>
+          Fazer diagnóstico gratuito
+        </button>
+        <button onClick={onLogin}
+          style={{ background:"transparent", border:`1.5px solid ${C.brd}`, borderRadius:12, padding:"14px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:500, color:C.txM, cursor:"pointer", width:"100%" }}>
+          Já tenho conta — Entrar
+        </button>
+      </div>
+
+      {/* Proof */}
+      <div style={{ display:"flex", gap:28, marginTop:40, flexWrap:"wrap", justifyContent:"center" }}>
+        {[["6","Dimensões Relacionais"],["8","Perfis Identificados"],["13","Diagnósticos na Beta"]].map(([n,l])=>(
+          <div key={l} style={{ textAlign:"center" }}>
+            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.gold }}>{n}</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, textTransform:"uppercase", letterSpacing:".08em" }}>{l}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop:32, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
+        O diagnóstico é gratuito · Sem cartão de crédito
+      </div>
+    </div>
+  );
+}
+
 /* ═══ AUTH ═════════════════════════════════════════════════ */
-function Auth({ onAuth }) {
-  const [mode, setMode] = useState("login");
+function Auth({ onAuth, initialMode = "signup" }) {
+  const [mode, setMode] = useState(initialMode || "signup");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [name, setName] = useState("");
@@ -2441,7 +2491,8 @@ function Auth({ onAuth }) {
           <Inp label="Senha" value={pass} onChange={setPass} placeholder="Mínimo 6 caracteres" type="password" />
           <Btn onClick={submit} disabled={busy || !email || pass.length < 6} full>{busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}</Btn>
         </div>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 18 }}>"Networking, além do cafezinho" · Rafael Milléo</p>
+        <button onClick={() => window.history.back()} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>← Voltar para a página inicial</button>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 8 }}>"Networking, além do cafezinho" · Rafael Milléo</p>
       </div>
     </div>
   );
@@ -2467,22 +2518,33 @@ export default function ProLock({ title = "Recurso disponível no PRO", desc = "
 }
 
 function App() {
-  const [state, setState] = useState("loading");
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [state, setState]       = useState("loading"); // loading | landing | auth_signup | auth_login | onboard | assess | app
+  const [user, setUser]         = useState(null);
+  const [profile, setProfile]   = useState(null);
   const [assessment, setAssessment] = useState(null);
 
   useEffect(() => {
+    // Verificar sessão atual ao iniciar
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
         loadUserData(session.user.id);
       } else {
-        setState("auth");
+        setState("landing");   // Sem sessão → landing pública
       }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) { setState("auth"); setUser(null); setProfile(null); setAssessment(null); }
+
+    // Escutar mudanças de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        setUser(null); setProfile(null); setAssessment(null);
+        localStorage.clear();
+        setState("landing");
+      }
+      if (event === "SIGNED_IN" && session?.user) {
+        setUser(session.user);
+        loadUserData(session.user.id);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -2523,7 +2585,7 @@ function App() {
 
   const handleAuth = async (session, authUser) => {
     setUser(authUser);
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 300));
     await loadUserData(authUser.id);
   };
 
@@ -2598,22 +2660,27 @@ function App() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setUser(null); setProfile(null); setAssessment(null); setState("auth");
+    setUser(null); setProfile(null); setAssessment(null);
+    // onAuthStateChange disparará SIGNED_OUT e irá para landing
   };
 
   if (state === "loading") return (
-    <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
-      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, color: C.gold }}>CONÉXIA</div>
-      <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Carregando...</div>
+    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
+      <div style={{ width:44, height:44, borderRadius:11, background:`linear-gradient(135deg,${C.gold},${C.gB})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.bg }}>C</div>
+      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, color:C.gold, letterSpacing:".06em" }}>CONÉXIA</div>
+      <div style={{ width:32, height:2, borderRadius:1, background:C.gD, animation:"none", marginTop:4 }}/>
+      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".08em" }}>Verificando acesso...</div>
     </div>
   );
 
   return (
     <>
-      {state === "auth" && <Auth onAuth={handleAuth} />}
-      {state === "onboard" && <Onboard onDone={handleOnboard} />}
-      {state === "assess" && <Assess profile={profile} onDone={handleAssess} />}
-      {state === "app" && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} />}
+      {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} />}
+      {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
+      {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
+      {state === "onboard"      && user && <Onboard onDone={handleOnboard} />}
+      {state === "assess"       && user && <Assess profile={profile} onDone={handleAssess} />}
+      {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} />}
     </>
   );
 }
