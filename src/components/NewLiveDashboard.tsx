@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { AlertCircle, CheckCircle2, TrendingUp } from 'lucide-react';
+import { AlertCircle, CheckCircle2, TrendingUp, X } from 'lucide-react';
 
 interface UserPlan {
   id: string;
@@ -71,6 +71,9 @@ export function NewLiveDashboard() {
   const [pattern, setPattern] = useState<ContactPattern[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [interactionText, setInteractionText] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -87,7 +90,6 @@ export function NewLiveDashboard() {
       try {
         setLoading(true);
 
-        // Fetch plano do usuário
         const { data: planData } = await supabase
           .from('user_plans')
           .select('*')
@@ -96,7 +98,6 @@ export function NewLiveDashboard() {
 
         if (planData) setPlan(planData);
 
-        // Fetch fases do plano
         const { data: phasesData } = await supabase
           .from('plan_phases')
           .select('*')
@@ -105,7 +106,6 @@ export function NewLiveDashboard() {
 
         setPhases(phasesData || []);
 
-        // Fetch progresso
         const { data: progressData } = await supabase
           .from('user_progress_vs_goal')
           .select('*')
@@ -113,7 +113,6 @@ export function NewLiveDashboard() {
 
         setProgress(progressData || []);
 
-        // Fetch contatos com histórico
         const { data: contactsData } = await supabase
           .from('contact_interaction_history')
           .select('*')
@@ -123,7 +122,6 @@ export function NewLiveDashboard() {
 
         setContacts(contactsData || []);
 
-        // Fetch stats dessa semana
         const { data: statsData } = await supabase
           .from('user_weekly_stats')
           .select('*')
@@ -132,7 +130,6 @@ export function NewLiveDashboard() {
 
         setStats(statsData || { total_interactions: 0, contacts_engaged: 0, frequency_days: 0 });
 
-        // Fetch padrão de contato
         const { data: patternData } = await supabase
           .from('contact_pattern_by_day')
           .select('*')
@@ -141,7 +138,6 @@ export function NewLiveDashboard() {
 
         setPattern(patternData || []);
 
-        // Fetch insights
         const { data: insightsData } = await supabase
           .from('plan_insights')
           .select('*')
@@ -161,6 +157,32 @@ export function NewLiveDashboard() {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [userId]);
+
+  const handleSaveInteraction = async () => {
+    if (!selectedContact || !interactionText.trim() || !userId) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('interactions')
+        .insert({
+          user_id: userId,
+          contact_id: selectedContact.id,
+          description: interactionText,
+        });
+
+      if (!error) {
+        setInteractionText('');
+        setSelectedContact(null);
+        // Refresh data
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error saving interaction:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -202,7 +224,6 @@ export function NewLiveDashboard() {
             </span>
           </div>
 
-          {/* Barra de progresso */}
           <div className="mb-4">
             <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
               <div
@@ -212,7 +233,6 @@ export function NewLiveDashboard() {
             </div>
           </div>
 
-          {/* Fase info */}
           {phases[plan.phase - 1] && (
             <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
               <p className="font-bold text-gold text-sm mb-1">
@@ -279,7 +299,7 @@ export function NewLiveDashboard() {
         </div>
       </div>
 
-      {/* CONTATOS COM PROGRESSO */}
+      {/* CONTATOS COM PROGRESSO - AGORA CLICÁVEIS */}
       <div className="mb-6">
         <h3 className="text-sm font-bold text-gold mb-3">👥 Contatos com Progresso</h3>
         <div className="space-y-3">
@@ -289,10 +309,16 @@ export function NewLiveDashboard() {
             </div>
           ) : (
             contacts.map(contact => (
-              <div key={contact.id} className="bg-gray-900 border border-gray-700 rounded-lg p-3">
+              <div 
+                key={contact.id} 
+                className="bg-gray-900 border border-gray-700 rounded-lg p-3 cursor-pointer hover:border-gold transition-colors"
+                onClick={() => setSelectedContact(contact)}
+              >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="font-bold text-sm">{contact.name}</p>
+                    <p className="font-bold text-sm text-gold hover:text-white transition-colors">
+                      {contact.name}
+                    </p>
                     <p className="text-xs text-gray-400">{contact.company}</p>
                   </div>
                   <span
@@ -316,13 +342,16 @@ export function NewLiveDashboard() {
                 <p className="text-xs text-gray-500 mt-1">
                   {contact.interaction_count} interações
                 </p>
+                <button className="mt-2 w-full bg-gold text-black text-xs font-bold py-1 rounded hover:bg-yellow-500 transition-colors">
+                  + Registrar ação
+                </button>
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* INSIGHTS */}
+      {/* INSIGHTS COM CTAs */}
       <div className="mb-6">
         <h3 className="text-sm font-bold text-gold mb-3">💡 Insights desta Semana</h3>
         <div className="space-y-3">
@@ -359,6 +388,9 @@ export function NewLiveDashboard() {
                     {insight.metric && (
                       <p className="text-xs text-gold font-bold mt-1">{insight.metric}</p>
                     )}
+                    <button className="mt-2 text-xs bg-gold text-black px-3 py-1 rounded font-bold hover:bg-yellow-500 transition-colors">
+                      Tomar ação
+                    </button>
                   </div>
                 </div>
               </div>
@@ -379,6 +411,53 @@ export function NewLiveDashboard() {
             </div>
           ))}
       </div>
+
+      {/* MODAL - REGISTRAR INTERAÇÃO */}
+      {selectedContact && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 border border-gold rounded-xl p-6 max-w-sm w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gold">Registrar ação com {selectedContact.name}</h3>
+              <button
+                onClick={() => {
+                  setSelectedContact(null);
+                  setInteractionText('');
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <textarea
+              value={interactionText}
+              onChange={(e) => setInteractionText(e.target.value)}
+              placeholder="O que você fez? (ex: ligação, reunião, envio de documento...)"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white text-sm mb-4 focus:border-gold focus:outline-none"
+              rows={4}
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setSelectedContact(null);
+                  setInteractionText('');
+                }}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveInteraction}
+                disabled={saving || !interactionText.trim()}
+                className="flex-1 bg-gold hover:bg-yellow-500 disabled:opacity-50 text-black py-2 rounded font-bold transition-colors"
+              >
+                {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
