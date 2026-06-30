@@ -709,6 +709,7 @@ function CRM({ profile, assessment, onReset, user }) {
   const sc = assessment?.scores || {};
   const admin = isAdmin(profile?.email);
   const NAVS = [
+    { id: "dashboard", icon: "📈", label: "Analytics" },
     { id: "dash", icon: "◎", label: "Dashboard" },
     { id: "contacts", icon: "◈", label: "Contatos" },
     { id: "teia", icon: "⊛", label: "Teia" },
@@ -2201,6 +2202,7 @@ ${MENTORIA_LINK || true ? `
       )}
 
       <main style={{ flex: 1, padding: isMobile ? "16px" : "24px 28px", overflowY: "auto", maxHeight: isMobile ? "calc(100vh - 110px)" : "100vh", paddingBottom: isMobile ? 70 : 24 }}>
+        {view === "dashboard" && <ConexiaDashboard userId={user?.id} />}
         {view === "dash" && renderDash()}
         {view === "contacts" && renderContacts()}
         {view === "teia" && renderTeia()}
