@@ -171,20 +171,8 @@ function AIInsights({ userId }: { userId: string }) {
         const lowestDimension = Object.entries(scores).sort(([,a], [,b]) => a - b)[0];
         const highestDimension = Object.entries(scores).sort(([,a], [,b]) => b - a)[0];
 
-        // Chamar Claude API para gerar insights
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': import.meta.env.VITE_CLAUDE_API_KEY || ''
-          },
-          body: JSON.stringify({
-            model: 'claude-opus-4-6',
-            max_tokens: 500,
-            messages: [
-              {
-                role: 'user',
-                content: `Você é um assessor estratégico de networking. Analise esses dados reais do usuário e gere 2-3 insights ESPECÍFICOS e ACIONÁVEIS (máx 2 linhas cada):
+        // Chamar Claude via serverless function (proxy)
+        const userPrompt = `Você é um assessor estratégico de networking. Analise esses dados reais do usuário e gere 2-3 insights ESPECÍFICOS e ACIONÁVEIS (máx 2 linhas cada):
 
 CONTATOS: ${contacts?.length || 0} cadastrados
 - Por tipo: ${JSON.stringify(contactsByType)}
@@ -202,7 +190,19 @@ GERE insights que:
 3. Conectem aos dados e às dimensões
 
 Formato: [emoji] Insight · Ação (máx 2 linhas por insight)
-Máximo 3 insights. Direto ao ponto.`
+Máximo 3 insights. Direto ao ponto.`;
+
+        const response = await fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            max_tokens: 500,
+            messages: [
+              {
+                role: 'user',
+                content: userPrompt
               }
             ]
           })
