@@ -523,78 +523,157 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
     const generateInsights = async () => {
     setLoading(true);
     try {
-      // Dados detalhados de cada contato
+      // ── Dados ricos de cada contato correlacionados com interações ──
       const contactsDetail = contacts.map(c => {
-        const cIts = interactions.filter(i => i.contactId === c.id);
+        const cIts = interactions.filter(i => i.contactId === c.id)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const negIts = cIts.filter(i => i.sentiment === 'negativo');
-        const lastIt = cIts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-        const diasSemContato = lastIt ? Math.floor((Date.now() - new Date(lastIt.createdAt).getTime()) / 86400000) : null;
+        const posIts = cIts.filter(i => i.sentiment === 'positivo');
+        const lastIt = cIts[0];
+        const diasSemContato = lastIt
+          ? Math.floor((Date.now() - new Date(lastIt.createdAt).getTime()) / 86400000)
+          : null;
+        // Frequência real vs ideal
+        const freqIdeal = c.idealFreq || 30;
+        const atrasado = diasSemContato !== null && diasSemContato > freqIdeal;
+        const diasAtraso = atrasado ? diasSemContato - freqIdeal : 0;
+        // Valor gerado nas interações
+        const valorGerado = cIts.filter(i => i.valueGen).length;
         return {
           nome: c.name,
           empresa: c.company || '',
           cargo: c.role || '',
-          categoria: c.category || '',
+          categoria: c.category || '',         // aliado, ponte, mentor, potencial, dormindo
+          proximidade: c.proximity || 3,       // 1=muito próximo, 5=distante
+          frequenciaIdealDias: freqIdeal,
+          saudeRelacional: c.health || 0,      // 0-100
           status: c.status,
           proximaAcao: c.nextAction || null,
+          proximaAcaoData: c.nextActionDate || null,
+          comoConheceu: c.howMet || null,
+          notas: c.notes || null,
+          cidade: c.city || null,
+          aniversario: c.birthday || null,
+          // Campos de potencial estratégico
+          influenciaPessoas: c.influenciaPessoas,   // boolean
+          geraOportunidade: c.geraOportunidade,     // boolean
+          abrePortas: c.abrePortas,                 // boolean
+          momentoAtual: c.momentoAtual || null,     // contexto atual do contato
+          // Histórico de interações
           totalInteracoes: cIts.length,
+          interacoesPositivas: posIts.length,
           interacoesNegativas: negIts.length,
+          vezesMandouValor: valorGerado,
           diasSemContato,
+          atrasadoNaFrequencia: atrasado,
+          diasDeAtraso: diasAtraso,
           ultimaInteracaoTipo: lastIt?.type || null,
+          ultimaInteracaoSentimento: lastIt?.sentiment || null,
+          tiposDeInteracao: [...new Set(cIts.map(i => i.type))],
         };
       });
 
-      // Scores do assessment
+      // ── Assessment completo do usuário ──
       const sc = assessment?.scores || {};
       const assessmentScores = {
+        perfil: assessment?.profileName || assessment?.profileKey || '',
+        scoreGeral: assessment?.overall || 0,
         intencaoEstrategica: sc.intencao_estrategica || 0,
         escutaRelacional: sc.escuta_relacional || 0,
         presencaMercado: sc.presenca_mercado || 0,
         reciprocidadeAtiva: sc.reciprocidade_ativa || 0,
         ritualConsistencia: sc.ritual_consistencia || 0,
         confiancaAutentica: sc.confianca_autentica || 0,
-        scoreGeral: assessment?.overall || 0,
-        perfil: assessment?.profileName || assessment?.profileKey || '',
       };
 
-      // Distribuição por empresa
+      // ── Análises agregadas ──
       const empCount = {};
       contacts.forEach(c => { if (c.company) empCount[c.company] = (empCount[c.company] || 0) + 1; });
-
-      // Distribuição por categoria
       const catCount = {};
       contacts.forEach(c => { catCount[c.category || 'outro'] = (catCount[c.category || 'outro'] || 0) + 1; });
 
-      // Contatos com interações negativas
-      const comNegativo = contactsDetail.filter(c => c.interacoesNegativas > 0);
+      // Contatos estratégicos de alto potencial sem interação recente
+      const altoPotencialSemContato = contactsDetail.filter(c =>
+        (c.influenciaPessoas || c.geraOportunidade || c.abrePortas) &&
+        (c.diasSemContato === null || c.diasSemContato > 14)
+      );
+
+      // Contatos com relacionamento deteriorando (negativos recentes)
+      const relacionamentoDeterirorando = contactsDetail.filter(c =>
+        c.interacoesNegativas > 0 && c.interacoesNegativas >= c.interacoesPositivas
+      );
+
+      // Contatos atrasados na frequência ideal
+      const atrasadosNaFrequencia = contactsDetail
+        .filter(c => c.atrasadoNaFrequencia)
+        .sort((a, b) => b.diasDeAtraso - a.diasDeAtraso)
+        .slice(0, 5);
 
       // Contatos sem nenhuma interação
       const semInteracao = contactsDetail.filter(c => c.totalInteracoes === 0);
 
-      // Contatos com ação vencida (têm próxima ação mas faz mais de 7 dias sem contato)
-      const acaoVencida = contactsDetail.filter(c => c.proximaAcao && c.diasSemContato !== null && c.diasSemContato > 7);
+      // Contatos ponte/mentor sem interação recente (crítico)
+      const ponteMentorSemContato = contactsDetail.filter(c =>
+        (c.categoria === 'ponte' || c.categoria === 'mentor') &&
+        (c.diasSemContato === null || c.diasSemContato > 21)
+      );
+
+      // Reciprocidade: contatos com muitas interações mas sem valor gerado
+      const semReciprocidade = contactsDetail.filter(c =>
+        c.totalInteracoes >= 3 && c.vezesMandouValor === 0
+      );
 
       const ctx = {
         assessment: assessmentScores,
+        objetivo: profile?.objective || '',
         totalContatos: contacts.length,
         distribuicaoEmpresas: empCount,
         distribuicaoCategorias: catCount,
-        contatosComInteracaoNegativa: comNegativo.map(c => ({ nome: c.nome, empresa: c.empresa, cargo: c.cargo, qtdNegativas: c.interacoesNegativas })),
-        contatosSemInteracao: semInteracao.map(c => ({ nome: c.nome, empresa: c.empresa, categoria: c.categoria, proximaAcao: c.proximaAcao })),
-        contatosComAcaoVencida: acaoVencida.map(c => ({ nome: c.nome, empresa: c.empresa, diasSemContato: c.diasSemContato, acaoPendente: c.proximaAcao })),
+        // Situações críticas
+        altoPotencialSemContato: altoPotencialSemContato.map(c => ({
+          nome: c.nome, empresa: c.empresa, cargo: c.cargo, categoria: c.categoria,
+          influencia: c.influenciaPessoas, geraOportunidade: c.geraOportunidade,
+          abrePortas: c.abrePortas, diasSemContato: c.diasSemContato,
+          momentoAtual: c.momentoAtual, proximaAcao: c.proximaAcao
+        })),
+        relacionamentoDeterirorando: relacionamentoDeterirorando.map(c => ({
+          nome: c.nome, empresa: c.empresa, cargo: c.cargo, categoria: c.categoria,
+          positivas: c.interacoesPositivas, negativas: c.interacoesNegativas,
+          ultimaSentimento: c.ultimaInteracaoSentimento, proximidade: c.proximidade
+        })),
+        atrasadosNaFrequencia: atrasadosNaFrequencia.map(c => ({
+          nome: c.nome, empresa: c.empresa, categoria: c.categoria,
+          frequenciaIdeal: c.frequenciaIdealDias, diasSemContato: c.diasSemContato,
+          diasDeAtraso: c.diasDeAtraso, proximaAcao: c.proximaAcao, saudeRelacional: c.saudeRelacional
+        })),
+        ponteMentorSemContato: ponteMentorSemContato.map(c => ({
+          nome: c.nome, empresa: c.empresa, cargo: c.cargo,
+          diasSemContato: c.diasSemContato, proximaAcao: c.proximaAcao
+        })),
+        semInteracao: semInteracao.map(c => ({
+          nome: c.nome, empresa: c.empresa, categoria: c.categoria,
+          proximaAcao: c.proximaAcao, abrePortas: c.abrePortas
+        })),
+        semReciprocidade: semReciprocidade.map(c => ({
+          nome: c.nome, empresa: c.empresa, totalInteracoes: c.totalInteracoes
+        })),
         todosContatos: contactsDetail,
-        objetivo: profile?.objective || '',
       };
 
-      const prompt = `Você é um coach de networking estratégico de alto nível. Analise os dados REAIS da rede do usuário e gere exatamente 3 insights PODEROSOS e ESPECÍFICOS.
+      const prompt = `Você é um coach de networking estratégico de alto nível. Analise os dados REAIS da rede do usuário e gere exatamente 3 insights PODEROSOS, ESPECÍFICOS e CORRELACIONADOS.
 
 Regras obrigatórias:
-- Use NOMES REAIS dos contatos quando relevante
-- Cruze os dados do assessment com os dados da rede (ex: se reciprocidade está baixa mas tem muitos aliados, aponte a contradição)
-- Se houver interações negativas com alguém específico, gere um plano de reversão para aquela pessoa
-- Se houver contatos com ação vencida, cite o nome e o que fazer hoje
-- Se houver contatos sem nenhuma interação, cite quem são e qual o próximo passo
-- Cada insight deve ter uma observação que o usuário não conseguiria ver sozinho e uma ação concreta e imediata
-- NÃO seja genérico. NÃO diga "considere diversificar". Diga O QUE fazer, COM QUEM e QUANDO.
+- Use NOMES REAIS dos contatos — nunca seja genérico
+- Cruze os dados do assessment com os dados da rede:
+  * Se reciprocidadeAtiva está baixa mas tem contatos com muitas interações sem valor gerado, aponte isso
+  * Se ritualConsistencia está alto mas tem contatos atrasados na frequência, aponte a contradição
+  * Se presencaMercado está baixo e não há contatos "ponte" ativos, conecte os pontos
+- Priorize situações críticas: relacionamentos deteriorando, alto potencial sem contato, pontes/mentores esquecidos
+- Para cada insight, a "acao" deve ser IMEDIATA e ESPECÍFICA: diga O QUE fazer, COM QUEM e COMO (ex: "Ligue para Katty Corrente hoje — pergunte sobre o projeto X que ela mencionou")
+- Se houver relacionamento deteriorando, gere um plano de reversão em 3 passos
+- Se houver contato de alto potencial (abrePortas/geraOportunidade/influenciaPessoas) sem contato recente, trate como urgência máxima
+- Considere a categoria do contato: pontes e mentores têm peso estratégico maior que dormindo
+- Considere a proximidade (1=muito próximo, 5=distante) para calibrar a urgência
 
 Dados reais: ${JSON.stringify(ctx)}
 
