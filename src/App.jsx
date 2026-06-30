@@ -2426,11 +2426,11 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
       {/* Headline */}
       <div style={{ maxWidth:480, textAlign:"center", marginBottom:40 }}>
-        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, lineHeight:1.3, margin:"0 0 12px" }}>
-          Transforme contatos em<br/>relações estratégicas.
+        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 8px" }}>
+          Rede que funciona.
         </h1>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:14, color:C.txL, lineHeight:1.7, margin:0 }}>
-          Descubra seu perfil relacional, identifique quem priorizar e saiba exatamente o que fazer para cultivar a rede que impulsiona sua carreira.
+        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.5, margin:0 }}>
+          Diagnóstico seu perfil relacional em 5 minutos.
         </p>
       </div>
 
@@ -2463,7 +2463,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       )}
       <div style={{ marginTop:20, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
-        O diagnóstico é gratuito · Sem cartão de crédito
+        Gratuito · Sem cadastro
       </div>
     </div>
   );
