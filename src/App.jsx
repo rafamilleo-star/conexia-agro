@@ -520,34 +520,86 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
     if (contacts.length >= 3) generateInsights();
   }, [userId]);
 
-  const generateInsights = async () => {
+    const generateInsights = async () => {
     setLoading(true);
     try {
-      const cooling = contacts.filter(c => (c.health || 0) < 40 && c.lastInteraction).slice(0, 3);
-      const noAction = contacts.filter(c => !c.nextAction && c.status === 'active').slice(0, 3);
-      const recent = interactions.slice(0, 10);
-      const avgHealth = contacts.length > 0 ? Math.round(contacts.reduce((s, c) => s + (c.health || 0), 0) / contacts.length) : 0;
+      // Dados detalhados de cada contato
+      const contactsDetail = contacts.map(c => {
+        const cIts = interactions.filter(i => i.contactId === c.id);
+        const negIts = cIts.filter(i => i.sentiment === 'negativo');
+        const lastIt = cIts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        const diasSemContato = lastIt ? Math.floor((Date.now() - new Date(lastIt.createdAt).getTime()) / 86400000) : null;
+        return {
+          nome: c.name,
+          empresa: c.company || '',
+          cargo: c.role || '',
+          categoria: c.category || '',
+          status: c.status,
+          proximaAcao: c.nextAction || null,
+          totalInteracoes: cIts.length,
+          interacoesNegativas: negIts.length,
+          diasSemContato,
+          ultimaInteracaoTipo: lastIt?.type || null,
+        };
+      });
+
+      // Scores do assessment
+      const sc = assessment?.scores || {};
+      const assessmentScores = {
+        intencaoEstrategica: sc.intencao_estrategica || 0,
+        escutaRelacional: sc.escuta_relacional || 0,
+        presencaMercado: sc.presenca_mercado || 0,
+        reciprocidadeAtiva: sc.reciprocidade_ativa || 0,
+        ritualConsistencia: sc.ritual_consistencia || 0,
+        confiancaAutentica: sc.confianca_autentica || 0,
+        scoreGeral: assessment?.overall || 0,
+        perfil: assessment?.profileName || assessment?.profileKey || '',
+      };
+
+      // Distribuição por empresa
+      const empCount = {};
+      contacts.forEach(c => { if (c.company) empCount[c.company] = (empCount[c.company] || 0) + 1; });
+
+      // Distribuição por categoria
       const catCount = {};
       contacts.forEach(c => { catCount[c.category || 'outro'] = (catCount[c.category || 'outro'] || 0) + 1; });
 
+      // Contatos com interações negativas
+      const comNegativo = contactsDetail.filter(c => c.interacoesNegativas > 0);
+
+      // Contatos sem nenhuma interação
+      const semInteracao = contactsDetail.filter(c => c.totalInteracoes === 0);
+
+      // Contatos com ação vencida (têm próxima ação mas faz mais de 7 dias sem contato)
+      const acaoVencida = contactsDetail.filter(c => c.proximaAcao && c.diasSemContato !== null && c.diasSemContato > 7);
+
       const ctx = {
-        perfil: assessment?.profileKey || 'desconhecido',
+        assessment: assessmentScores,
         totalContatos: contacts.length,
-        saudeMedia: avgHealth,
-        esfriando: cooling.map(c => ({ nome: c.name, diasSemContato: Math.floor((Date.now() - new Date(c.lastInteraction).getTime()) / 86400000) })),
-        semProximaAcao: noAction.map(c => c.name),
+        distribuicaoEmpresas: empCount,
         distribuicaoCategorias: catCount,
-        interacoesRecentes: recent.map(i => ({ tipo: i.type, sentimento: i.sentiment })),
+        contatosComInteracaoNegativa: comNegativo.map(c => ({ nome: c.nome, empresa: c.empresa, cargo: c.cargo, qtdNegativas: c.interacoesNegativas })),
+        contatosSemInteracao: semInteracao.map(c => ({ nome: c.nome, empresa: c.empresa, categoria: c.categoria, proximaAcao: c.proximaAcao })),
+        contatosComAcaoVencida: acaoVencida.map(c => ({ nome: c.nome, empresa: c.empresa, diasSemContato: c.diasSemContato, acaoPendente: c.proximaAcao })),
+        todosContatos: contactsDetail,
         objetivo: profile?.objective || '',
       };
 
-      const prompt = `Você é um coach de networking estratégico. Analise os dados reais de rede do usuário e gere 3 insights ACIONÁVEIS e ESPECÍFICOS. Não seja genérico. Use os dados reais.
+      const prompt = `Você é um coach de networking estratégico de alto nível. Analise os dados REAIS da rede do usuário e gere exatamente 3 insights PODEROSOS e ESPECÍFICOS.
 
-Dados: ${JSON.stringify(ctx)}
+Regras obrigatórias:
+- Use NOMES REAIS dos contatos quando relevante
+- Cruze os dados do assessment com os dados da rede (ex: se reciprocidade está baixa mas tem muitos aliados, aponte a contradição)
+- Se houver interações negativas com alguém específico, gere um plano de reversão para aquela pessoa
+- Se houver contatos com ação vencida, cite o nome e o que fazer hoje
+- Se houver contatos sem nenhuma interação, cite quem são e qual o próximo passo
+- Cada insight deve ter uma observação que o usuário não conseguiria ver sozinho e uma ação concreta e imediata
+- NÃO seja genérico. NÃO diga "considere diversificar". Diga O QUE fazer, COM QUEM e QUANDO.
+
+Dados reais: ${JSON.stringify(ctx)}
 
 Responda APENAS com JSON no formato:
 {"insights": [{"titulo": "...", "observacao": "...", "acao": "...", "urgencia": "alta|media|baixa"}]}
-
 Sem texto extra.`;
 
       const res = await fetch('/api/claude', {
