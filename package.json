@@ -1,18 +1,19 @@
 {
   "name": "conexia-app",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
-  "recharts": "^2.10.0",
-    "lucide-react": "^0.263.0",},
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "recharts": "^2.10.0",
+    "lucide-react": "^0.263.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
