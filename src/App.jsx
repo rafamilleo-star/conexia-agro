@@ -2406,6 +2406,145 @@ ${MENTORIA_LINK || true ? `
             </div>
           ))}
         </div>
+
+        {/* ══ Análise da Rede ══ */}
+        {cts.length > 0 && (() => {
+          // Distribuição por categoria
+          const catCount = {};
+          cts.forEach(c => { catCount[c.category] = (catCount[c.category] || 0) + 1; });
+          const catEntries = Object.entries(catCount).sort((a, b) => b[1] - a[1]);
+          const dominantCat = catEntries[0];
+          const dominantPct = Math.round((dominantCat?.[1] || 0) / cts.length * 100);
+          const catLabel = (v) => CATS.find(c => c.value === v)?.label || v;
+          const catColor = (v) => CATS.find(c => c.value === v)?.color || C.gold;
+
+          // Distribuição por empresa
+          const empCount = {};
+          cts.forEach(c => { if (c.company) { empCount[c.company] = (empCount[c.company] || 0) + 1; } });
+          const empEntries = Object.entries(empCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+          const topEmp = empEntries[0];
+          const topEmpPct = topEmp ? Math.round(topEmp[1] / cts.length * 100) : 0;
+
+          // Contatos sem próxima ação
+          const semAcao = cts.filter(c => !c.nextAction && c.status === 'active').length;
+          const semInteracao = cts.filter(c => !c.lastInteraction).length;
+
+          // Interações recentes
+          const recentIts = its.slice(0, 8);
+          const sentPos = its.filter(i => i.sentiment === 'positivo').length;
+          const sentNeg = its.filter(i => i.sentiment === 'negativo').length;
+          const sentPct = its.length > 0 ? Math.round(sentPos / its.length * 100) : 0;
+
+          return (
+            <>
+              {/* Painel: Sua Rede em Números */}
+              <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 14 }}>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>📊 Sua rede em números</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                  {[{ l: 'Total de contatos', v: cts.length, c: C.gold }, { l: 'Sem próxima ação', v: semAcao, c: semAcao > 0 ? C.amb : C.grn }, { l: 'Sem interação registrada', v: semInteracao, c: semInteracao > 0 ? C.cor : C.grn }, { l: 'Interações positivas', v: `${sentPct}%`, c: sentPct >= 70 ? C.grn : C.amb }].map((m, i) => (
+                    <div key={i} style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginBottom: 4 }}>{m.l}</div>
+                      <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 20, fontWeight: 700, color: m.c }}>{m.v}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Distribuição por categoria */}
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Distribuição por categoria</div>
+                {catEntries.map(([cat, count], i) => {
+                  const pct = Math.round(count / cts.length * 100);
+                  const cc = catColor(cat);
+                  return (
+                    <div key={i} style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{catLabel(cat)}</span>
+                        <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, color: cc }}>{count} ({pct}%)</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 3, background: C.w06 }}>
+                        <div style={{ height: 6, borderRadius: 3, background: cc, width: `${pct}%`, transition: 'width .4s' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Alerta de concentração */}
+              {(dominantPct > 60 || topEmpPct > 60) && (
+                <div style={{ background: `${C.amb}08`, border: `1px solid ${C.amb}30`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>⚠ Alerta de concentração</div>
+                  {dominantPct > 60 && (
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, marginBottom: 6 }}>
+                      <strong style={{ color: C.txt }}>{dominantPct}% dos seus contatos são "{catLabel(dominantCat[0])}".</strong> Redes diversas geram mais oportunidades. Busque contatos nas categorias menos representadas.
+                    </div>
+                  )}
+                  {topEmpPct > 60 && (
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6 }}>
+                      <strong style={{ color: C.txt }}>{topEmpPct}% dos seus contatos são da {topEmp[0]}.</strong> Diversifique para reduzir dependência e ampliar oportunidades externas.
+                    </div>
+                  )}
+                  <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 6, padding: '8px 12px', marginTop: 10 }}>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase' }}>→ Ação: </span>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>Cadastre 2 contatos de empresas ou categorias diferentes nos próximos 7 dias.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Distribuição por empresa */}
+              {empEntries.length > 0 && (
+                <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 14 }}>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>🏢 Empresas na sua rede</div>
+                  {empEntries.map(([emp, count], i) => {
+                    const pct = Math.round(count / cts.length * 100);
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: C.gD, border: `1px solid ${C.gL}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.gold, flexShrink: 0 }}>{emp[0]}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{emp}</span>
+                            <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, color: C.txL }}>{count} ({pct}%)</span>
+                          </div>
+                          <div style={{ height: 4, borderRadius: 2, background: C.w06 }}>
+                            <div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Interações recentes */}
+              {recentIts.length > 0 && (
+                <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em' }}>💬 Interações recentes</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.grn, background: `${C.grn}12`, border: `1px solid ${C.grn}30`, borderRadius: 4, padding: '2px 8px' }}>↑ {sentPos} positivas</span>
+                      {sentNeg > 0 && <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.cor, background: `${C.cor}12`, border: `1px solid ${C.cor}30`, borderRadius: 4, padding: '2px 8px' }}>↓ {sentNeg} negativas</span>}
+                    </div>
+                  </div>
+                  {recentIts.map((it, i) => {
+                    const contact = cts.find(c => c.id === it.contactId);
+                    const typeLabel = { ligacao: 'Ligança', mensagem: 'Mensagem', reuniao: 'Reunião', email: 'E-mail', outro: 'Outro' }[it.type] || it.type;
+                    const sentColor = it.sentiment === 'positivo' ? C.grn : it.sentiment === 'negativo' ? C.cor : C.txL;
+                    const sentIcon = it.sentiment === 'positivo' ? '↑' : it.sentiment === 'negativo' ? '↓' : '→';
+                    const daysAgo = Math.floor((Date.now() - new Date(it.createdAt).getTime()) / 86400000);
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 8, marginBottom: 8, borderBottom: i < recentIts.length - 1 ? `1px solid ${C.brd}` : 'none' }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: `${sentColor}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{sentIcon}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, fontWeight: 500 }}>{contact?.name || 'Contato'}</div>
+                          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{typeLabel} · {daysAgo === 0 ? 'hoje' : `${daysAgo}d atrás`}</div>
+                        </div>
+                        <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: sentColor, background: `${sentColor}12`, border: `1px solid ${sentColor}30`, borderRadius: 4, padding: '2px 8px', flexShrink: 0 }}>{it.sentiment || 'neutro'}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     );
   };
