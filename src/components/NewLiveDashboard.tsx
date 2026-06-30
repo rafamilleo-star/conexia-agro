@@ -1,470 +1,397 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { AlertCircle, CheckCircle2, TrendingUp, X } from 'lucide-react';
+import { supabase } from '../utils/supabase';
+import { Plus, Lightbulb, Loader } from 'lucide-react';
 import { ActivationPlan } from './ActivationPlan';
-
-interface UserPlan {
-  id: string;
-  target_dimension: string;
-  target_dimension_score: number;
-  phase: number;
-  week: number;
-}
-
-interface PlanPhase {
-  phase: number;
-  week_start: number;
-  week_end: number;
-  title: string;
-  description: string;
-  objective: string;
-  target_interactions: number;
-}
-
-interface PlanProgress {
-  phase: number;
-  week: number;
-  interactions_count: number;
-  contacts_engaged: number;
-  target_interactions: number;
-  progress_percentage: number;
-  status: 'completed' | 'on_track' | 'partial' | 'behind';
-}
 
 interface Contact {
   id: string;
   name: string;
-  company: string;
-  interaction_count: number;
+  relationship_type: string;
   last_interaction: string;
-  engagement_status: 'active' | 'recent' | 'inactive';
-  days_since_last_contact: number;
-}
-
-interface WeeklyStats {
-  total_interactions: number;
-  contacts_engaged: number;
-  frequency_days: number;
-}
-
-interface ContactPattern {
-  day_name: string;
-  day_of_week: number;
   interaction_count: number;
 }
 
-interface Insight {
-  id: string;
-  insight_type: 'positive' | 'warning' | 'action';
-  title: string;
-  description: string;
-  metric?: string;
-  recommendation: string;
+interface AssessmentScore {
+  intencao_estrategica: number;
+  escuta_relacional: number;
+  presenca_mercado: number;
+  reciprocidade_ativa: number;
+  ritual_consistencia: number;
+  confianca_autentica: number;
 }
 
-export function NewLiveDashboard() {
-  const [userId, setUserId] = useState<string>('');
-  const [plan, setPlan] = useState<UserPlan | null>(null);
-  const [phases, setPhases] = useState<PlanPhase[]>([]);
-  const [progress, setProgress] = useState<PlanProgress[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [stats, setStats] = useState<WeeklyStats | null>(null);
-  const [pattern, setPattern] = useState<ContactPattern[]>([]);
-  const [insights, setInsights] = useState<Insight[]>([]);
+interface InteractionModalProps {
+  contact: Contact;
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (type: string, notes: string) => void;
+}
+
+const INTERACTION_TYPES = [
+  { id: 'call', label: '📞 Ligação' },
+  { id: 'message', label: '💬 Mensagem' },
+  { id: 'meeting', label: '🤝 Reunião' },
+  { id: 'email', label: '📧 Email' },
+  { id: 'share', label: '📤 Compartilhei valor' }
+];
+
+const DIMENSION_LABELS: Record<keyof AssessmentScore, string> = {
+  intencao_estrategica: 'Estratégia',
+  escuta_relacional: 'Empatia',
+  presenca_mercado: 'Presença',
+  reciprocidade_ativa: 'Reciprocidade',
+  ritual_consistencia: 'Consistência',
+  confianca_autentica: 'Autenticidade'
+};
+
+function InteractionModal({ contact, isOpen, onClose, onSubmit }: InteractionModalProps) {
+  const [selectedType, setSelectedType] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!selectedType) return;
+    setLoading(true);
+    await onSubmit(selectedType, notes);
+    setSelectedType('');
+    setNotes('');
+    setLoading(false);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full">
+        <h3 className="text-lg font-bold text-white mb-4">Registrar interação com {contact.name}</h3>
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Tipo de interação:</p>
+            <div className="grid grid-cols-2 gap-2">
+              {INTERACTION_TYPES.map(type => (
+                <button
+                  key={type.id}
+                  onClick={() => setSelectedType(type.id)}
+                  className={`p-3 rounded-lg border-2 transition text-sm ${
+                    selectedType === type.id
+                      ? 'bg-yellow-600 bg-opacity-20 border-yellow-600 text-white'
+                      : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-yellow-600'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Notas (opcional):</p>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="O que vocês conversaram? Qual foi o contexto?"
+              className="w-full bg-gray-800 border border-gray-700 rounded p-3 text-white text-sm placeholder-gray-600"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded transition"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!selectedType || loading}
+              className="flex-1 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-black font-bold py-2 rounded transition"
+            >
+              {loading ? 'Salvando...' : 'Registrar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AIInsights({ userId }: { userId: string }) {
+  const [insights, setInsights] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [interactionText, setInteractionText] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUserId(user.id);
-    };
-    getUser();
-  }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchData = async () => {
+    const generateInsights = async () => {
       try {
         setLoading(true);
+        setError('');
 
-        const { data: planData } = await supabase
-          .from('user_plans')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-
-        if (planData) setPlan(planData);
-
-        const { data: phasesData } = await supabase
-          .from('plan_phases')
-          .select('*')
-          .eq('user_id', userId)
-          .order('phase');
-
-        setPhases(phasesData || []);
-
-        const { data: progressData } = await supabase
-          .from('user_progress_vs_goal')
+        // Buscar dados reais do usuário
+        const { data: contacts } = await supabase
+          .from('contacts')
           .select('*')
           .eq('user_id', userId);
 
-        setProgress(progressData || []);
-
-        const { data: contactsData } = await supabase
-          .from('contact_interaction_history')
-          .select('*')
-          .eq('user_id', userId)
-          .order('interaction_count', { ascending: false })
-          .limit(5);
-
-        setContacts(contactsData || []);
-
-        const { data: statsData } = await supabase
-          .from('user_weekly_stats')
-          .select('*')
-          .eq('user_id', userId)
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('assessment_scores')
+          .eq('id', userId)
           .single();
 
-        setStats(statsData || { total_interactions: 0, contacts_engaged: 0, frequency_days: 0 });
-
-        const { data: patternData } = await supabase
-          .from('contact_pattern_by_day')
+        const { data: interactions } = await supabase
+          .from('interactions')
           .select('*')
           .eq('user_id', userId)
-          .order('day_of_week');
+          .order('interaction_date', { ascending: false })
+          .limit(10);
 
-        setPattern(patternData || []);
+        // Preparar dados para enviar à IA
+        const contactsByType = contacts?.reduce((acc: Record<string, number>, c: any) => {
+          acc[c.relationship_type] = (acc[c.relationship_type] || 0) + 1;
+          return acc;
+        }, {});
 
-        const { data: insightsData } = await supabase
-          .from('plan_insights')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(3);
+        const recentInteractionTypes = interactions?.reduce((acc: Record<string, number>, i: any) => {
+          acc[i.interaction_type] = (acc[i.interaction_type] || 0) + 1;
+          return acc;
+        }, {});
 
-        setInsights(insightsData || []);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        const scores: AssessmentScore = profileData?.assessment_scores || {
+          intencao_estrategica: 0,
+          escuta_relacional: 0,
+          presenca_mercado: 0,
+          reciprocidade_ativa: 0,
+          ritual_consistencia: 0,
+          confianca_autentica: 0
+        };
+
+        const lowestDimension = Object.entries(scores).sort(([,a], [,b]) => a - b)[0];
+        const highestDimension = Object.entries(scores).sort(([,a], [,b]) => b - a)[0];
+
+        // Chamar Claude API para gerar insights
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': import.meta.env.VITE_CLAUDE_API_KEY || ''
+          },
+          body: JSON.stringify({
+            model: 'claude-opus-4-6',
+            max_tokens: 500,
+            messages: [
+              {
+                role: 'user',
+                content: `Você é um assessor estratégico de networking. Analise esses dados reais do usuário e gere 2-3 insights ESPECÍFICOS e ACIONÁVEIS (máx 2 linhas cada):
+
+CONTATOS: ${contacts?.length || 0} cadastrados
+- Por tipo: ${JSON.stringify(contactsByType)}
+
+INTERAÇÕES RECENTES (últimas 10): 
+- Por tipo: ${JSON.stringify(recentInteractionTypes)}
+
+DIMENSÕES RELACIONAIS (escala 0-10):
+- ${DIMENSION_LABELS[lowestDimension[0] as keyof AssessmentScore]}: ${lowestDimension[1]}/10 (MAIS BAIXA)
+- ${DIMENSION_LABELS[highestDimension[0] as keyof AssessmentScore]}: ${highestDimension[1]}/10 (mais forte)
+
+GERE insights que:
+1. Identifiquem um gap real nos dados
+2. Sugiram UMA ação concreta (não genérica)
+3. Conectem aos dados e às dimensões
+
+Formato: [emoji] Insight · Ação (máx 2 linhas por insight)
+Máximo 3 insights. Direto ao ponto.`
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao gerar insights com IA');
+        }
+
+        const data = await response.json();
+        const insightText = data.content[0]?.text || 'Não foi possível gerar insights no momento.';
+        setInsights(insightText);
+      } catch (err) {
+        console.error('Error generating insights:', err);
+        setError('Erro ao gerar insights');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    generateInsights();
   }, [userId]);
 
-  const handleSaveInteraction = async () => {
-    if (!selectedContact || !interactionText.trim() || !userId) return;
+  return (
+    <div className="bg-gradient-to-br from-yellow-600/5 to-yellow-500/5 border border-yellow-600/30 rounded-lg p-6">
+      <div className="flex items-start gap-3">
+        <Lightbulb className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-1" />
+        <div className="flex-1">
+          <h3 className="font-bold text-yellow-500 mb-3">💡 Insights Inteligentes</h3>
+          
+          {loading ? (
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <Loader className="w-4 h-4 animate-spin" />
+              Analisando seus dados...
+            </div>
+          ) : error ? (
+            <p className="text-red-400 text-sm">{error}</p>
+          ) : (
+            <div className="space-y-2 text-sm text-gray-300 whitespace-pre-line">
+              {insights}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('interactions')
-        .insert({
-          user_id: userId,
-          contact_id: selectedContact.id,
-          description: interactionText,
-        });
+export function NewLiveDashboard({ userId }: { userId: string }) {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
-      if (!error) {
-        setInteractionText('');
-        setSelectedContact(null);
-        // Refresh data
-        window.location.reload();
+  useEffect(() => {
+    const loadContacts = async () => {
+      try {
+        const { data } = await supabase
+          .from('contacts')
+          .select('*')
+          .eq('user_id', userId)
+          .order('last_interaction', { ascending: false });
+
+        setContacts(data || []);
+      } catch (error) {
+        console.error('Error loading contacts:', error);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    loadContacts();
+
+    const subscription = supabase
+      .channel(`contacts-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contacts',
+          filter: `user_id=eq.${userId}`
+        },
+        () => loadContacts()
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [userId]);
+
+  const handleInteractionSubmit = async (type: string, notes: string) => {
+    if (!selectedContact) return;
+
+    try {
+      await supabase.from('interactions').insert({
+        user_id: userId,
+        contact_id: selectedContact.id,
+        interaction_type: type,
+        notes: notes || null,
+        interaction_date: new Date().toISOString()
+      });
+
+      setShowModal(false);
+      setSelectedContact(null);
     } catch (error) {
-      console.error('Error saving interaction:', error);
-    } finally {
-      setSaving(false);
+      console.error('Error registering interaction:', error);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-black">
-        <div className="text-gold">Carregando seu dashboard...</div>
-      </div>
-    );
+    return <div className="text-gray-400 text-center py-20">Carregando dashboard...</div>;
   }
 
-  const currentPhase = progress.find(p => p.phase === plan?.phase && p.week === plan?.week);
-
   return (
-    <div className="min-h-screen bg-black text-white p-4 pb-24">
-      {/* HEADER */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-lg bg-gold flex items-center justify-center">
-            <span className="text-black font-bold text-lg">C</span>
-          </div>
+    <div className="min-h-screen bg-black text-white p-6">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-800 pb-6">
           <div>
-            <h1 className="text-xl font-bold">CONÉXIA</h1>
-            <p className="text-sm text-gray-400">Dashboard Pessoal</p>
+            <h1 className="text-4xl font-bold">Dashboard de Ativação</h1>
+            <p className="text-gray-400 mt-2">Seus contatos e progresso em tempo real</p>
           </div>
         </div>
-      </div>
 
-      {/* PLANO ATUAL */}
-      {plan && (
-        <div className="mb-6 border border-gold rounded-xl p-4 bg-opacity-5 bg-gold">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <h2 className="text-sm font-bold text-gold mb-1">📋 SEU PLANO</h2>
-              <p className="text-sm text-gray-300">
-                Semanas {plan.week}-{plan.week + 1} • Fase {plan.phase} de 3
-              </p>
-            </div>
-            <span className="text-2xl font-bold text-gold">
-              {currentPhase?.progress_percentage || 0}%
-            </span>
-          </div>
-
-          <div className="mb-4">
-            <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
-              <div
-                className="h-full bg-gold transition-all duration-300"
-                style={{ width: `${currentPhase?.progress_percentage || 0}%` }}
-              />
-            </div>
-          </div>
-
-          {phases[plan.phase - 1] && (
-            <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
-              <p className="font-bold text-gold text-sm mb-1">
-                {phases[plan.phase - 1].title}
-              </p>
-              <p className="text-xs text-gray-400">
-                {phases[plan.phase - 1].objective}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Meta: {phases[plan.phase - 1].target_interactions} interações
-              </p>
-            </div>
-          )}
+        {/* Plano de Ativação - VIVO */}
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">📋 Plano de Ativação</h2>
+          <ActivationPlan userId={userId} phase={1} week={1} />
         </div>
-      )}
 
-      {/* STATS GRID */}
-      {stats && (
-        <div className="grid grid-cols-4 gap-2 mb-6">
-          <div className="bg-gray-900 border border-gold rounded-lg p-3 text-center">
-            <p className="text-xl font-bold text-gold">{stats.total_interactions}</p>
-            <p className="text-xs text-gray-400">Interações</p>
-            <p className="text-xs text-gray-500">semana</p>
-          </div>
-          <div className="bg-gray-900 border border-gold rounded-lg p-3 text-center">
-            <p className="text-xl font-bold text-gold">{stats.contacts_engaged}</p>
-            <p className="text-xs text-gray-400">Contatos</p>
-            <p className="text-xs text-gray-500">engajados</p>
-          </div>
-          <div className="bg-gray-900 border border-gold rounded-lg p-3 text-center">
-            <p className="text-xl font-bold text-gold">
-              {Math.round(stats.frequency_days || 0)}d
-            </p>
-            <p className="text-xs text-gray-400">Frequência</p>
-            <p className="text-xs text-gray-500">média</p>
-          </div>
-          <div className="bg-gray-900 border border-gold rounded-lg p-3 text-center">
-            <p className="text-xl font-bold text-gold">
-              {stats.total_interactions > 0 ? '↑' : '→'}
-            </p>
-            <p className="text-xs text-gray-400">Tendência</p>
-            <p className="text-xs text-green-400">+20%</p>
-          </div>
-        </div>
-      )}
+        {/* Insights com IA - VIVO */}
+        <AIInsights userId={userId} />
 
-      {/* PADRÃO DE CONTATO */}
-      <div className="mb-6 border border-gray-700 rounded-xl p-4">
-        <h3 className="text-sm font-bold text-gold mb-3">📊 Padrão (últimas 2 semanas)</h3>
-        <div className="flex items-end justify-between h-20 gap-1">
-          {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((day, idx) => {
-            const dayData = pattern.find(p => p.day_of_week === idx);
-            const count = dayData?.interaction_count || 0;
-            const maxCount = Math.max(...pattern.map(p => p.interaction_count || 0), 5);
-            const height = (count / maxCount) * 100;
+        {/* Contatos - REAIS */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">👥 Seus Contatos</h2>
+            <span className="text-sm text-gray-400">{contacts.length} contatos</span>
+          </div>
 
-            return (
-              <div key={day} className="flex-1 flex flex-col items-center">
-                <div className="w-full bg-gold rounded-sm" style={{ height: `${Math.max(height, 2)}px` }} />
-                <p className="text-xs text-gray-400 mt-1">{day}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* CONTATOS COM PROGRESSO - AGORA CLICÁVEIS */}
-      <div className="mb-6">
-        <h3 className="text-sm font-bold text-gold mb-3">👥 Contatos com Progresso</h3>
-        <div className="space-y-3">
           {contacts.length === 0 ? (
-            <div className="text-gray-500 text-sm p-4 text-center">
-              Adicione contatos para começar a rastrear progresso
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-12 text-center">
+              <p className="text-gray-400 mb-4">Nenhum contato ainda. Comece a cadastrar contatos no seu plano.</p>
             </div>
           ) : (
-            contacts.map(contact => (
-              <div 
-                key={contact.id} 
-                className="bg-gray-900 border border-gray-700 rounded-lg p-3 cursor-pointer hover:border-gold transition-colors"
-                onClick={() => setSelectedContact(contact)}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-bold text-sm text-gold hover:text-white transition-colors">
-                      {contact.name}
-                    </p>
-                    <p className="text-xs text-gray-400">{contact.company}</p>
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded ${
-                      contact.engagement_status === 'active'
-                        ? 'bg-green-900 text-green-400'
-                        : contact.engagement_status === 'recent'
-                        ? 'bg-yellow-900 text-yellow-400'
-                        : 'bg-gray-700 text-gray-400'
-                    }`}
-                  >
-                    {contact.days_since_last_contact}d
-                  </span>
-                </div>
-                <div className="bg-gray-800 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="h-full bg-gold"
-                    style={{ width: `${(contact.interaction_count / 5) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {contact.interaction_count} interações
-                </p>
-                <button className="mt-2 w-full bg-gold text-black text-xs font-bold py-1 rounded hover:bg-yellow-500 transition-colors">
-                  + Registrar ação
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* INSIGHTS COM CTAs */}
-      <div className="mb-6">
-        <h3 className="text-sm font-bold text-gold mb-3">💡 Insights desta Semana</h3>
-        <div className="space-y-3">
-          {insights.length === 0 ? (
-            <div className="text-gray-500 text-sm p-4 text-center">
-              Continue registrando para gerar insights
-            </div>
-          ) : (
-            insights.map(insight => (
-              <div
-                key={insight.id}
-                className={`rounded-lg p-3 border ${
-                  insight.insight_type === 'positive'
-                    ? 'bg-green-900 bg-opacity-20 border-green-700'
-                    : insight.insight_type === 'warning'
-                    ? 'bg-yellow-900 bg-opacity-20 border-yellow-700'
-                    : 'bg-gold bg-opacity-10 border-gold'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  {insight.insight_type === 'positive' && (
-                    <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                  )}
-                  {insight.insight_type === 'warning' && (
-                    <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
-                  )}
-                  {insight.insight_type === 'action' && (
-                    <TrendingUp className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-bold text-sm mb-1">{insight.title}</p>
-                    <p className="text-xs text-gray-300 mb-2">{insight.description}</p>
-                    <p className="text-xs text-gray-400">→ {insight.recommendation}</p>
-                    {insight.metric && (
-                      <p className="text-xs text-gold font-bold mt-1">{insight.metric}</p>
-                    )}
-                    <button className="mt-2 text-xs bg-gold text-black px-3 py-1 rounded font-bold hover:bg-yellow-500 transition-colors">
-                      Tomar ação
+            <div className="grid grid-cols-1 gap-3">
+              {contacts.map(contact => (
+                <div
+                  key={contact.id}
+                  className="bg-gray-900 border border-gray-700 hover:border-yellow-600 rounded-lg p-4 transition cursor-pointer"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white">{contact.name}</h3>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Tipo: <span className="text-gray-300">{contact.relationship_type}</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {contact.interaction_count} interações
+                        {contact.last_interaction && ` • Última: ${new Date(contact.last_interaction).toLocaleDateString('pt-BR')}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedContact(contact);
+                        setShowModal(true);
+                      }}
+                      className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded transition text-sm flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Ação
                     </button>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
+
+        {/* Modal */}
+        <InteractionModal
+          contact={selectedContact || { id: '', name: '', relationship_type: '', last_interaction: '', interaction_count: 0 }}
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onSubmit={handleInteractionSubmit}
+        />
       </div>
-
-      {/* PLANO DE ATIVAÇÃO */}
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-bold text-white mb-4">Plano de Ativação</h2>
-        <ActivationPlan userId={userId} phase={1} week={1} />
-      </div>
-
-      {/* PRÓXIMAS FASES */}
-      <div className="border border-gray-700 rounded-xl p-4">
-        <h3 className="text-sm font-bold text-gray-400 mb-2">📋 Próximas Semanas</h3>
-        {phases
-          .slice(plan?.phase || 0)
-          .map(phase => (
-            <div key={phase.phase} className="text-xs text-gray-500">
-              <p className="font-bold mb-1">Semanas {phase.week_start}-{phase.week_end}: {phase.title}</p>
-              <p className="text-gray-600">{phase.objective}</p>
-            </div>
-          ))}
-      </div>
-
-      {/* MODAL - REGISTRAR INTERAÇÃO */}
-      {selectedContact && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-900 border border-gold rounded-xl p-6 max-w-sm w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gold">Registrar ação com {selectedContact.name}</h3>
-              <button
-                onClick={() => {
-                  setSelectedContact(null);
-                  setInteractionText('');
-                }}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <textarea
-              value={interactionText}
-              onChange={(e) => setInteractionText(e.target.value)}
-              placeholder="O que você fez? (ex: ligação, reunião, envio de documento...)"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white text-sm mb-4 focus:border-gold focus:outline-none"
-              rows={4}
-            />
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setSelectedContact(null);
-                  setInteractionText('');
-                }}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded font-bold transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveInteraction}
-                disabled={saving || !interactionText.trim()}
-                className="flex-1 bg-gold hover:bg-yellow-500 disabled:opacity-50 text-black py-2 rounded font-bold transition-colors"
-              >
-                {saving ? 'Salvando...' : 'Salvar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
