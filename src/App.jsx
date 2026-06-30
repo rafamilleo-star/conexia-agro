@@ -2426,9 +2426,14 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
       {/* Headline */}
       <div style={{ maxWidth:480, textAlign:"center", marginBottom:40 }}>
-        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 8px" }}>
+        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 16px" }}>
           Rede que funciona.
         </h1>
+        <div style={{ background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"14px 20px", marginBottom:16 }}>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color:C.gold, lineHeight:1.4, margin:0 }}>
+            "Para ser intencional precisa ser estratégico."
+          </p>
+        </div>
         <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.5, margin:0 }}>
           Diagnóstico seu perfil relacional em 5 minutos.
         </p>
@@ -2448,7 +2453,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
       {/* Proof */}
       <div style={{ display:"flex", gap:28, marginTop:40, flexWrap:"wrap", justifyContent:"center" }}>
-        {[["6","Dimensões Relacionais"],["8","Perfis Identificados"],["13","Diagnósticos na Beta"]].map(([n,l])=>(
+        {[["6","Dimensões Relacionais"],["8","Perfis Identificados"]].map(([n,l])=>(
           <div key={l} style={{ textAlign:"center" }}>
             <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.gold }}>{n}</div>
             <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, textTransform:"uppercase", letterSpacing:".08em" }}>{l}</div>
