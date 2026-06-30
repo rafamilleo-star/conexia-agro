@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AlertCircle, CheckCircle2, TrendingUp, X } from 'lucide-react';
+import { ActivationPlan } from './ActivationPlan';
 
 interface UserPlan {
   id: string;
@@ -397,6 +398,12 @@ export function NewLiveDashboard() {
             ))
           )}
         </div>
+      </div>
+
+      {/* PLANO DE ATIVAÇÃO */}
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-bold text-white mb-4">Plano de Ativação</h2>
+        <ActivationPlan userId={userId} phase={1} week={1} />
       </div>
 
       {/* PRÓXIMAS FASES */}
