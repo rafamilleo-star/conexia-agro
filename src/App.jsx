@@ -1,3 +1,4 @@
+import ConexiaDashboard from './components/ConexiaDashboard';
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./utils/supabase";
 import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
