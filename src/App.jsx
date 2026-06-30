@@ -1334,6 +1334,8 @@ function CRM({ profile, assessment, onReset, user }) {
           </div>
         ) : (
           <>
+            {/* ── IA Proativa no topo ── */}
+            {cts.length >= 3 && <PainelIAProativa userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} />}
             {/* ── Health Score + Metrics ── */}
             <div style={{ display: "flex", gap: 14, marginBottom: 16, flexWrap: "wrap" }}>
               <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 16, display: "flex", alignItems: "center", gap: 16, flex: isMobile ? "1 1 100%" : "0 0 auto" }}>
@@ -1520,8 +1522,6 @@ function CRM({ profile, assessment, onReset, user }) {
           );
                 })()}
 
-        {/* ══ IA Proativa ══ */}
-        {cts.length >= 3 && <PainelIAProativa userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} />}
       </div>
     );
   };
