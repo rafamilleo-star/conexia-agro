@@ -494,6 +494,315 @@ const getPlanLabel = (prof, email) => {
   return "PRO";
 };
 
+/* ═══ IA PROATIVA ════════════════════════════════════════ */
+function PainelIAProativa({ userId, contacts, interactions, assessment, profile }) {
+  const [insights, setInsights] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(null);
+
+  const cacheKey = `conexia_ai_insights_${userId}`;
+
+  useEffect(() => {
+    if (!userId) return;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { data, ts } = JSON.parse(cached);
+        // Cache de 4 horas
+        if (Date.now() - ts < 4 * 60 * 60 * 1000) {
+          setInsights(data);
+          setLastRefresh(new Date(ts));
+          return;
+        }
+      } catch (e) {}
+    }
+    // Auto-gera na primeira vez
+    if (contacts.length >= 3) generateInsights();
+  }, [userId]);
+
+  const generateInsights = async () => {
+    setLoading(true);
+    try {
+      const cooling = contacts.filter(c => (c.health || 0) < 40 && c.lastInteraction).slice(0, 3);
+      const noAction = contacts.filter(c => !c.nextAction && c.status === 'active').slice(0, 3);
+      const recent = interactions.slice(0, 10);
+      const avgHealth = contacts.length > 0 ? Math.round(contacts.reduce((s, c) => s + (c.health || 0), 0) / contacts.length) : 0;
+      const catCount = {};
+      contacts.forEach(c => { catCount[c.category || 'outro'] = (catCount[c.category || 'outro'] || 0) + 1; });
+
+      const ctx = {
+        perfil: assessment?.profileKey || 'desconhecido',
+        totalContatos: contacts.length,
+        saudeMedia: avgHealth,
+        esfriando: cooling.map(c => ({ nome: c.name, diasSemContato: Math.floor((Date.now() - new Date(c.lastInteraction).getTime()) / 86400000) })),
+        semProximaAcao: noAction.map(c => c.name),
+        distribuicaoCategorias: catCount,
+        interacoesRecentes: recent.map(i => ({ tipo: i.type, sentimento: i.sentiment })),
+        objetivo: profile?.objective || '',
+      };
+
+      const prompt = `Você é um coach de networking estratégico. Analise os dados reais de rede do usuário e gere 3 insights ACIONÁVEIS e ESPECÍFICOS. Não seja genérico. Use os dados reais.
+
+Dados: ${JSON.stringify(ctx)}
+
+Responda APENAS com JSON no formato:
+{"insights": [{"titulo": "...", "observacao": "...", "acao": "...", "urgencia": "alta|media|baixa"}]}
+
+Sem texto extra.`;
+
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, maxTokens: 600 })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      if (parsed.insights?.length) {
+        setInsights(parsed.insights);
+        setLastRefresh(new Date());
+        localStorage.setItem(cacheKey, JSON.stringify({ data: parsed.insights, ts: Date.now() }));
+      }
+    } catch (e) {
+      console.error('AI insights error:', e);
+    }
+    setLoading(false);
+  };
+
+  const urgColor = { alta: C.cor, media: C.amb, baixa: C.grn };
+
+  return (
+    <div style={{ background: `${C.gold}04`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>🧠 Inteligência da sua rede</div>
+          {lastRefresh && <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 2 }}>Atualizado {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>}
+        </div>
+        <button onClick={generateInsights} disabled={loading}
+          style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '5px 12px', fontFamily: "'DM Sans'", fontSize: 11, color: C.gold, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+          {loading ? 'Analisando...' : '🔄 Atualizar'}
+        </button>
+      </div>
+
+      {loading && (
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, textAlign: 'center', padding: '16px 0' }}>
+          A IA está analisando sua rede...
+        </div>
+      )}
+
+      {!loading && !insights && (
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
+          Clique em Atualizar para gerar insights personalizados da sua rede.
+        </div>
+      )}
+
+      {insights && insights.map((ins, i) => {
+        const uc = urgColor[ins.urgencia] || C.txL;
+        return (
+          <div key={i} style={{ background: `${uc}06`, border: `1px solid ${uc}20`, borderRadius: 10, padding: 14, marginBottom: i < insights.length - 1 ? 10 : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: 3, background: uc, flexShrink: 0 }} />
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt }}>{ins.titulo}</div>
+              <div style={{ marginLeft: 'auto', fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: uc, textTransform: 'uppercase', letterSpacing: '.06em' }}>{ins.urgencia}</div>
+            </div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>{ins.observacao}</div>
+            <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 6, padding: '7px 10px' }}>
+              <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.06em' }}>→ Ação: </span>
+              <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{ins.acao}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══ PLANO INTERATIVO ══════════════════════════════════ */
+function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
+  const [done, setDone] = useState({});
+  const [metaDone, setMetaDone] = useState({});
+  const [aiGoals, setAiGoals] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // Carregar estado salvo do localStorage (persistência simples e rápida)
+  useEffect(() => {
+    if (!userId) return;
+    const saved = localStorage.getItem(`conexia_plan_${userId}`);
+    if (saved) {
+      try {
+        const { tasks, metas, goals } = JSON.parse(saved);
+        if (tasks) setDone(tasks);
+        if (metas) setMetaDone(metas);
+        if (goals) setAiGoals(goals);
+      } catch (e) {}
+    }
+  }, [userId]);
+
+  const save = (newDone, newMeta, newGoals) => {
+    localStorage.setItem(`conexia_plan_${userId}`, JSON.stringify({
+      tasks: newDone ?? done,
+      metas: newMeta ?? metaDone,
+      goals: newGoals ?? aiGoals,
+    }));
+  };
+
+  const toggleTask = (weekNum, taskIdx) => {
+    const key = `${weekNum}_${taskIdx}`;
+    const newDone = { ...done, [key]: !done[key] };
+    setDone(newDone);
+    save(newDone, null, null);
+  };
+
+  const toggleMeta = (weekNum) => {
+    const newMeta = { ...metaDone, [weekNum]: !metaDone[weekNum] };
+    setMetaDone(newMeta);
+    save(null, newMeta, null);
+  };
+
+  const generateAiGoals = async () => {
+    if (!pf) return;
+    setAiLoading(true);
+    try {
+      const prompt = `Você é um coach de networking estratégico. O usuário tem o perfil relacional "${pf.name}" (${pf.tagline}). Pontos fortes: ${pf.strengths?.join(', ')}. Riscos: ${pf.risks?.join(', ')}. Gere exatamente 3 metas personalizadas para os próximos 90 dias, específicas e mensuráveis para esse perfil. Responda APENAS com JSON no formato: {"goals": ["meta 1", "meta 2", "meta 3"]}. Sem texto extra.`;
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, maxTokens: 300 })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      if (parsed.goals?.length) {
+        setAiGoals(parsed.goals);
+        save(null, null, parsed.goals);
+      }
+    } catch (e) {
+      console.error('AI goals error:', e);
+    }
+    setAiLoading(false);
+  };
+
+  return (
+    <div>
+      {/* Metas de IA */}
+      <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>🎯 Suas metas para 90 dias</div>
+          {!aiGoals && (
+            <button onClick={generateAiGoals} disabled={aiLoading || !pf}
+              style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '6px 14px', fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, cursor: aiLoading || !pf ? 'default' : 'pointer', opacity: aiLoading || !pf ? 0.6 : 1 }}>
+              {aiLoading ? 'Gerando...' : 'Gerar com IA'}
+            </button>
+          )}
+          {aiGoals && (
+            <button onClick={generateAiGoals} disabled={aiLoading}
+              style={{ background: 'transparent', border: 'none', fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, cursor: 'pointer', textDecoration: 'underline' }}>
+              {aiLoading ? '...' : 'Regenerar'}
+            </button>
+          )}
+        </div>
+        {!aiGoals && !aiLoading && (
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
+            {pf ? 'Clique em "Gerar com IA" para receber metas personalizadas para o seu perfil.' : 'Complete o diagnóstico para gerar metas personalizadas.'}
+          </div>
+        )}
+        {aiLoading && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>A IA está analisando seu perfil...</div>}
+        {aiGoals && aiGoals.map((g, i) => (
+          <div key={i} onClick={() => toggleMeta(`goal_${i}`)}
+            style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10, cursor: 'pointer', padding: '8px 10px', borderRadius: 8, background: metaDone[`goal_${i}`] ? C.grnD : 'transparent', border: `1px solid ${metaDone[`goal_${i}`] ? C.grn + '40' : 'transparent'}`, transition: 'all .2s' }}>
+            <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${metaDone[`goal_${i}`] ? C.grn : C.gL}`, background: metaDone[`goal_${i}`] ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+              {metaDone[`goal_${i}`] && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+            </div>
+            <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: metaDone[`goal_${i}`] ? C.txL : C.txM, lineHeight: 1.5, textDecoration: metaDone[`goal_${i}`] ? 'line-through' : 'none' }}>{g}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Semanas do plano */}
+      {PLAN.map((w, i) => {
+        const isCurrent = w.week === week;
+        const isDone = w.week < week;
+        const isLocked = !isPro && w.week > 1;
+        const weekTasksDone = w.tasks.filter((_, j) => done[`${w.week}_${j}`]).length;
+        const allTasksDone = weekTasksDone === w.tasks.length;
+
+        if (isLocked) return (
+          <div key={i} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10, opacity: 0.6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.w06, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🔒</div>
+              <div><Tag color={C.txL} small>Semana {w.week}</Tag><div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txL, marginTop: 3 }}>{w.title}</div></div>
+            </div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>Continue seu plano no PRO.</div>
+            {i === 1 && <button onClick={openAccessKey} style={{ background: 'none', border: 'none', fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, cursor: 'pointer', textDecoration: 'underline', marginTop: 6, display: 'block' }}>Tenho uma chave de acesso</button>}
+          </div>
+        );
+
+        return (
+          <div key={i} style={{ background: isCurrent ? `${C.gold}06` : C.card, border: `1px solid ${isCurrent ? C.gL : C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: allTasksDone ? C.grnD : isCurrent ? C.gD : C.w06, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                {allTasksDone ? '✅' : w.icon}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Tag color={isCurrent ? C.gold : allTasksDone ? C.grn : C.txL} small>Semana {w.week}</Tag>
+                  {isCurrent && <Tag color={C.gold} small>↑ Agora</Tag>}
+                  {weekTasksDone > 0 && <Tag color={C.grn} small>{weekTasksDone}/{w.tasks.length}</Tag>}
+                </div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 600, color: C.txt, marginTop: 3 }}>{w.title}</div>
+              </div>
+            </div>
+            <p style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, margin: '0 0 10px', fontStyle: 'italic' }}>{w.goal}</p>
+
+            {/* Tarefas com checkbox */}
+            {w.tasks.map((t, j) => {
+              const key = `${w.week}_${j}`;
+              const checked = !!done[key];
+              return (
+                <div key={j} onClick={() => toggleTask(w.week, j)}
+                  style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: 'all .2s' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? C.grn : isCurrent ? C.gL : C.brd}`, background: checked ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                    {checked && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                  </div>
+                  <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: checked ? C.txL : isCurrent ? C.txt : C.txM, lineHeight: 1.5, textDecoration: checked ? 'line-through' : 'none' }}>{t}</span>
+                </div>
+              );
+            })}
+
+            {/* Meta da semana com flag */}
+            <div onClick={() => toggleMeta(w.week)}
+              style={{ marginTop: 12, background: metaDone[w.week] ? C.grnD : C.w06, border: `1px solid ${metaDone[w.week] ? C.grn + '40' : 'transparent'}`, borderRadius: 6, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all .2s' }}>
+              <div style={{ width: 16, height: 16, borderRadius: 3, border: `1.5px solid ${metaDone[w.week] ? C.grn : C.txL}`, background: metaDone[w.week] ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {metaDone[w.week] && <span style={{ color: '#fff', fontSize: 10 }}>✓</span>}
+              </div>
+              <div>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: 'uppercase' }}>Meta: </span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: metaDone[w.week] ? C.txL : isCurrent ? C.gold : C.txM, fontWeight: isCurrent ? 600 : 400, textDecoration: metaDone[w.week] ? 'line-through' : 'none' }}>{w.metric}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Dicas */}
+      <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginTop: 8 }}>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>Dicas de uso do CONÉXIA</div>
+        {[
+          { icon: '📅', title: 'Ritual semanal', desc: 'Toda segunda-feira, 15 minutos: veja os alertas do Dashboard e escolha 2 contatos para contatar.' },
+          { icon: '📋', title: 'Registre interações', desc: 'Sempre que falar com alguém relevante, registre na aba Contatos. Quanto mais você registra, mais preciso o Health Score fica.' },
+          { icon: '🎯', title: 'Próxima ação', desc: 'Todo contato deve ter sempre uma próxima ação definida. Relacionamento sem direção esfria.' },
+          { icon: '🌱', title: 'Diversifique categorias', desc: 'Equilibre sua rede entre Mentores, Aliados, Pontes e Potenciais. Redes diversas geram mais oportunidades.' },
+        ].map((tip, i) => (
+          <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: i < 3 ? `1px solid ${C.brd}` : 'none' }}>
+            <span style={{ fontSize: 20 }}>{tip.icon}</span>
+            <div><div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, marginBottom: 3 }}>{tip.title}</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>{tip.desc}</div></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user }) {
   const [view, setView] = useState("dash");
@@ -793,14 +1102,13 @@ function CRM({ profile, assessment, onReset, user }) {
     );
   };
 
-  const renderPlan = () => {
+    const renderPlan = () => {
     const week = Math.min(4, Math.max(1, Math.ceil(dSince(assessment?.createdAt) / 7) || 1));
     const profileActions = pf?.actions || [];
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Plano de Ativação</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Seu guia de 4 semanas para transformar networking em hábito.</p>
-
         {pf && <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 ações como {pf.name}</div>
           {profileActions.map((a, i) => (
@@ -810,62 +1118,7 @@ function CRM({ profile, assessment, onReset, user }) {
             </div>
           ))}
         </div>}
-
-        {PLAN.map((w, i) => {
-          const isCurrent = w.week === week;
-          const isDone = w.week < week;
-          const isLocked = !isPro && w.week > 1;
-          if (isLocked) return (
-            <div key={i} style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:12, padding:20, marginBottom:10, opacity:0.6, position:"relative", overflow:"hidden" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
-                <div style={{ width:36, height:36, borderRadius:10, background:C.w06, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🔒</div>
-                <div><Tag color={C.txL} small>Semana {w.week}</Tag><div style={{ fontFamily:"'DM Sans'", fontSize:14, fontWeight:600, color:C.txL, marginTop:3 }}>{w.title}</div></div>
-              </div>
-              <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>Continue seu plano no PRO — desbloqueie reativação, geração de valor e consistência.</div>
-              {i === 1 && <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.txL, cursor:"pointer", textDecoration:"underline", marginTop:6, display:"block" }}>Tenho uma chave de acesso</button>}
-            </div>
-          );
-          return (
-            <div key={i} style={{ background: isCurrent ? `${C.gold}06` : C.card, border: `1px solid ${isCurrent ? C.gL : C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: isDone ? C.grnD : isCurrent ? C.gD : C.w06, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{isDone ? "✅" : w.icon}</div>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Tag color={isCurrent ? C.gold : isDone ? C.grn : C.txL} small>Semana {w.week}</Tag>
-                    {isCurrent && <Tag color={C.gold} small>↑ Agora</Tag>}
-                  </div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 600, color: C.txt, marginTop: 3 }}>{w.title}</div>
-                </div>
-              </div>
-              <p style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, margin: "0 0 10px", fontStyle: "italic" }}>{w.goal}</p>
-              {w.tasks.map((t, j) => (
-                <div key={j} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
-                  <span style={{ color: isCurrent ? C.gold : C.txL, fontSize: 12, marginTop: 1 }}>→</span>
-                  <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: isCurrent ? C.txt : C.txM, lineHeight: 1.5 }}>{t}</span>
-                </div>
-              ))}
-              <div style={{ marginTop: 12, background: C.w06, borderRadius: 6, padding: "8px 12px" }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: "uppercase" }}>Meta: </span>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: isCurrent ? C.gold : C.txM, fontWeight: isCurrent ? 600 : 400 }}>{w.metric}</span>
-              </div>
-            </div>
-          );
-        })}
-
-        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginTop: 8 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Dicas de uso do CONÉXIA</div>
-          {[
-            { icon: "📅", title: "Ritual semanal", desc: "Toda segunda-feira, 15 minutos: veja os alertas do Dashboard e escolha 2 contatos para contatar." },
-            { icon: "📋", title: "Registre interações", desc: "Sempre que falar com alguém relevante, registre na aba Contatos. Quanto mais você registra, mais preciso o Health Score fica." },
-            { icon: "🎯", title: "Próxima ação", desc: "Todo contato deve ter sempre uma próxima ação definida. Relacionamento sem direção esfria." },
-            { icon: "🌱", title: "Diversifique categorias", desc: "Equilibre sua rede entre Mentores, Aliados, Pontes e Potenciais. Redes diversas geram mais oportunidades." },
-          ].map((tip, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: i < 3 ? `1px solid ${C.brd}` : "none" }}>
-              <span style={{ fontSize: 20 }}>{tip.icon}</span>
-              <div><div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, marginBottom: 3 }}>{tip.title}</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>{tip.desc}</div></div>
-            </div>
-          ))}
-        </div>
+        <PlanInterativo userId={user?.id} week={week} isPro={isPro} openAccessKey={openAccessKey} pf={pf} />
       </div>
     );
   };
@@ -1134,11 +1387,13 @@ function CRM({ profile, assessment, onReset, user }) {
               ))}
             </div>
           );
-        })()}
+                })()}
+
+        {/* ══ IA Proativa ══ */}
+        {cts.length >= 3 && <PainelIAProativa userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} />}
       </div>
     );
   };
-
   const renderContacts = () => {
     if (sel) {
       const ci = CATS.find(c => c.value === sel.category);
