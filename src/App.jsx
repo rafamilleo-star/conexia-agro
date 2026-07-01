@@ -302,33 +302,60 @@ function RadarChart({ scores, size = 260 }) {
 /* ═══ ONBOARDING ══════════════════════════════════════════ */
 function Onboard({ onDone, initialKey = "" }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name: "", email: "", role: "", segment: "", state: "", objectives: [] });
+  const [form, setForm] = useState({
+    name: "", email: "", role: "", company: "", segment: "", state: "", city: "",
+    whatsapp: "", instagram: "", linkedin: "",
+    hobbies: "", birthday: "",
+    objectives: [], challenge: "", networkSize: "",
+  });
   const [voucher, setVoucher] = useState(initialKey || "");
   const tog = (v) => setForm(p => ({ ...p, objectives: p.objectives.includes(v) ? p.objectives.filter(x => x !== v) : [...p.objectives, v] }));
+  const s = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+
+  const NETWORK_SIZES = [
+    { value: "1-20", label: "1-20 contatos" },
+    { value: "21-50", label: "21-50 contatos" },
+    { value: "51-100", label: "51-100 contatos" },
+    { value: "100+", label: "Mais de 100 contatos" },
+  ];
+
+  const CHALLENGES = [
+    { value: "consistencia", label: "Manter consistência" },
+    { value: "expansao", label: "Expandir a rede" },
+    { value: "reativacao", label: "Reativar relações" },
+    { value: "valor", label: "Gerar valor genuíno" },
+    { value: "visibilidade", label: "Aumentar visibilidade" },
+    { value: "estrategia", label: "Ter estratégia clara" },
+  ];
 
   if (step === 1) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
       <div style={{ maxWidth: 440, width: "100%" }}>
-        <Tag>Passo 1 de 2 · Perfil</Tag>
+        <Tag>Passo 1 de 3 · Quem você é</Tag>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Conte sobre você</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 24px" }}>Personaliza seu diagnóstico.</p>
-        <Inp label="Seu nome" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Como podemos te chamar?" />
-        <Inp label="Email" value={form.email} onChange={v => setForm({ ...form, email: v })} placeholder="seu@email.com" type="email" />
-        <Inp label="Função/cargo" value={form.role} onChange={v => setForm({ ...form, role: v })} placeholder="Ex: Gerente Comercial, RTV..." />
-        <Sel label="Segmento" value={form.segment} onChange={v => setForm({ ...form, segment: v })} options={SEGMENTS} placeholder="Selecione..." />
-        <Sel label="Estado" value={form.state} onChange={v => setForm({ ...form, state: v })} options={UFS} placeholder="UF" />
-        <Btn onClick={() => setStep(2)} disabled={!form.name.trim() || !form.email.trim() || !form.role.trim() || !form.segment} full>Continuar</Btn>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 24px" }}>Personaliza seu diagnóstico e os insights da IA.</p>
+        <Inp label="Seu nome" value={form.name} onChange={s('name')} placeholder="Como podemos te chamar?" />
+        <Inp label="Email" value={form.email} onChange={s('email')} placeholder="seu@email.com" type="email" />
+        <Inp label="Empresa" value={form.company} onChange={s('company')} placeholder="Ex: BASF, Syngenta, Bayer..." />
+        <Inp label="Função/cargo" value={form.role} onChange={s('role')} placeholder="Ex: Gerente Comercial, RTV..." />
+        <Sel label="Segmento" value={form.segment} onChange={s('segment')} options={SEGMENTS} placeholder="Selecione..." />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Sel label="Estado" value={form.state} onChange={s('state')} options={UFS} placeholder="UF" />
+          <Inp label="Cidade" value={form.city} onChange={s('city')} placeholder="Ex: São Paulo" />
+        </div>
+        <Inp label="WhatsApp" value={form.whatsapp} onChange={s('whatsapp')} placeholder="(11) 99999-9999" type="tel" />
+        <Btn onClick={() => setStep(2)} disabled={!form.name.trim() || !form.email.trim() || !form.role.trim() || !form.segment} full>Continuar →</Btn>
       </div>
     </div>
   );
 
-  return (
+  if (step === 2) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
       <div style={{ maxWidth: 480, width: "100%" }}>
-        <Tag>Passo 2 de 2 · Objetivos</Tag>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>O que você busca com networking?</h2>
+        <Tag>Passo 2 de 3 · O que você busca</Tag>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Seus objetivos de networking</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Selecione tudo que faz sentido.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
           {OBJECTIVES.map(o => {
             const sel = form.objectives.includes(o.value);
             return (
@@ -339,11 +366,53 @@ function Onboard({ onDone, initialKey = "" }) {
             );
           })}
         </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txM, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Maior desafio no networking hoje</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {CHALLENGES.map(c => {
+              const sel = form.challenge === c.value;
+              return (
+                <button key={c.value} onClick={() => setForm(p => ({ ...p, challenge: c.value }))} style={{ background: sel ? C.gD : C.sf, border: `1px solid ${sel ? C.gL : C.brd}`, borderRadius: 8, padding: '10px 12px', cursor: 'pointer', fontFamily: "'DM Sans'", fontSize: 12, fontWeight: sel ? 600 : 400, color: sel ? C.gold : C.txM, textAlign: 'left' }}>
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txM, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Tamanho atual da sua rede profissional</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {NETWORK_SIZES.map(ns => {
+              const sel = form.networkSize === ns.value;
+              return (
+                <button key={ns.value} onClick={() => setForm(p => ({ ...p, networkSize: ns.value }))} style={{ background: sel ? C.gD : C.sf, border: `1px solid ${sel ? C.gL : C.brd}`, borderRadius: 8, padding: '10px 12px', cursor: 'pointer', fontFamily: "'DM Sans'", fontSize: 12, fontWeight: sel ? 600 : 400, color: sel ? C.gold : C.txM, textAlign: 'left' }}>
+                  {ns.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Btn onClick={() => setStep(1)} style={{ flex: 1, background: C.sf, color: C.txM }}>← Voltar</Btn>
+          <Btn onClick={() => setStep(3)} disabled={form.objectives.length === 0} style={{ flex: 2 }}>Continuar →</Btn>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
+      <div style={{ maxWidth: 440, width: "100%" }}>
+        <Tag>Passo 3 de 3 · O lado humano</Tag>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Detalhes que fazem diferença</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Opcional — mas a IA usa isso para insights mais precisos.</p>
+        <Inp label="Hobbies e interesses" value={form.hobbies} onChange={s('hobbies')} placeholder="Ex: futebol, leitura, viagens..." />
+        <Inp label="Aniversário" value={form.birthday} onChange={s('birthday')} placeholder="DD/MM/AAAA" type="date" />
+        <Inp label="LinkedIn (usuário ou URL)" value={form.linkedin} onChange={s('linkedin')} placeholder="linkedin.com/in/..." />
+        <Inp label="Instagram (@)" value={form.instagram} onChange={s('instagram')} placeholder="@seuperfil" />
         {/* Chave de acesso opcional */}
         <div style={{ borderTop:`1px solid ${C.brd}`, paddingTop:16, marginTop:4, marginBottom:16 }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:6 }}>
-            Tem uma chave de acesso PRO? (opcional)
-          </div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:6 }}>Tem uma chave de acesso PRO? (opcional)</div>
           <input
             value={voucher}
             onChange={e => setVoucher(e.target.value.toUpperCase())}
@@ -352,7 +421,10 @@ function Onboard({ onDone, initialKey = "" }) {
           />
           {voucher && <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.gold, marginTop:4 }}>✓ Chave será ativada após o diagnóstico</div>}
         </div>
-        <Btn onClick={() => onDone(form, voucher.trim())} disabled={form.objectives.length === 0} full>Iniciar assessment →</Btn>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Btn onClick={() => setStep(2)} style={{ flex: 1, background: C.sf, color: C.txM }}>← Voltar</Btn>
+          <Btn onClick={() => onDone(form, voucher.trim())} style={{ flex: 2 }}>Iniciar assessment →</Btn>
+        </div>
       </div>
     </div>
   );
@@ -499,29 +571,13 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [errMsg, setErrMsg] = useState(null);
 
   const cacheKey = `conexia_ai_insights_${userId}`;
 
-  useEffect(() => {
-    if (!userId) return;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const { data, ts } = JSON.parse(cached);
-        // Cache de 4 horas
-        if (Date.now() - ts < 4 * 60 * 60 * 1000) {
-          setInsights(data);
-          setLastRefresh(new Date(ts));
-          return;
-        }
-      } catch (e) {}
-    }
-    // Auto-gera na primeira vez
-    if (contacts.length >= 3) generateInsights();
-  }, [userId]);
-
-    const generateInsights = async () => {
+  const generateInsights = async () => {
     setLoading(true);
+    setErrMsg(null);
     try {
       // ── Dados ricos de cada contato correlacionados com interações ──
       const contactsDetail = contacts.map(c => {
@@ -696,9 +752,26 @@ Sem texto extra.`;
       }
     } catch (e) {
       console.error('AI insights error:', e);
+      setErrMsg('Erro ao gerar insights: ' + e.message);
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (!userId) return;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { data, ts } = JSON.parse(cached);
+        if (Date.now() - ts < 4 * 60 * 60 * 1000) {
+          setInsights(data);
+          setLastRefresh(new Date(ts));
+          return;
+        }
+      } catch (e) {}
+    }
+    if (contacts.length >= 3) generateInsights();
+  }, [userId]);
 
   const urgColor = { alta: C.cor, media: C.amb, baixa: C.grn };
 
@@ -721,6 +794,11 @@ Sem texto extra.`;
         </div>
       )}
 
+      {errMsg && (
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.cor, marginBottom: 8, padding: '8px 10px', background: `${C.cor}10`, borderRadius: 6 }}>
+          ⚠️ {errMsg}
+        </div>
+      )}
       {!loading && !insights && (
         <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
           Clique em Atualizar para gerar insights personalizados da sua rede.
@@ -3149,7 +3227,15 @@ function App() {
     try {
       await supabase.from("profiles").upsert({
         id: user.id, first_name: form.name, name: form.name, email: form.email,
-        role: form.role, segment: form.segment, state: form.state,
+        role: form.role, company: form.company || null, segment: form.segment,
+        state: form.state, city: form.city || null,
+        whatsapp: form.whatsapp || null,
+        instagram: form.instagram || null,
+        linkedin: form.linkedin || null,
+        hobbies: form.hobbies || null,
+        birthday: form.birthday || null,
+        challenge: form.challenge || null,
+        network_size: form.networkSize || null,
         objective: form.objectives.join(","), onboarding_completed: true,
       });
       setProfile({ ...profile, ...form, first_name: form.name, onboarding_completed: true });
