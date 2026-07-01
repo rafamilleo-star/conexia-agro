@@ -1,4 +1,5 @@
 import ConexiaDashboard from './components/ConexiaDashboard';
+import { AbaIA } from './components/AbaIA';
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./utils/supabase";
 import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
@@ -1232,6 +1233,7 @@ function CRM({ profile, assessment, onReset, user }) {
     { id: "contacts", icon: "◈", label: "Contatos" },
     { id: "teia", icon: "⊛", label: "Teia" },
     { id: "plano", icon: "🗺️", label: "Plano" },
+    { id: "ia", icon: "🧠", label: "IA" },
     { id: "report", icon: "📊", label: "Relatório" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }, { id: "export", icon: "⬇", label: "Exportar" }] : []),
   ];
@@ -2810,6 +2812,7 @@ ${MENTORIA_LINK || true ? `
         {view === "contacts" && renderContacts()}
         {view === "teia" && renderTeia()}
         {view === "plano" && renderPlan()}
+        {view === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} />}
         {view === "report" && renderReport()}
         {view === "mentor" && admin && renderMentor()}
         {view === "export" && admin && renderExport()}
