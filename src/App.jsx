@@ -3023,9 +3023,9 @@ function SplashScreen({ onDone }) {
   const [phase, setPhase] = useState('in'); // 'in' | 'hold' | 'out'
   const done = useCallback(() => { setPhase('out'); setTimeout(onDone, 1000); }, [onDone]);
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('hold'), 1200);
-    const t2 = setTimeout(() => setPhase('out'), 6200);
-    const t3 = setTimeout(onDone, 7200);
+    const t1 = setTimeout(() => setPhase('hold'), 1500);
+    const t2 = setTimeout(() => setPhase('out'), 10500);
+    const t3 = setTimeout(onDone, 12000);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [onDone]);
   const opacity = phase === 'in' ? 0 : phase === 'hold' ? 1 : 0;
