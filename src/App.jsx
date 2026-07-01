@@ -3018,6 +3018,33 @@ ${MENTORIA_LINK || true ? `
   );
 }
 
+/* ═══ SPLASH SCREEN ════════════════════════════════════════ */
+function SplashScreen({ onDone }) {
+  const [phase, setPhase] = useState('in'); // 'in' | 'hold' | 'out'
+  const done = useCallback(() => { setPhase('out'); setTimeout(onDone, 1000); }, [onDone]);
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase('hold'), 1200);
+    const t2 = setTimeout(() => setPhase('out'), 6200);
+    const t3 = setTimeout(onDone, 7200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [onDone]);
+  const opacity = phase === 'in' ? 0 : phase === 'hold' ? 1 : 0;
+  const transition = phase === 'in' ? 'opacity 1.2s ease-in' : phase === 'out' ? 'opacity 1s ease-out' : 'none';
+  return (
+    <div onClick={done} style={{ background: C.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, cursor: 'pointer', userSelect: 'none' }}>
+      <div style={{ opacity, transition, textAlign: 'center', maxWidth: 360 }}>
+        <div style={{ width: 64, height: 64, borderRadius: 16, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, color: C.bg, margin: '0 auto 32px' }}>C</div>
+        <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 600, color: C.gold, lineHeight: 1.5, margin: '0 0 28px', letterSpacing: '.02em' }}>
+          "Para ser intencional<br/>precisa ser estratégico."
+        </p>
+        <div style={{ width: 40, height: 1, background: C.gD, margin: '0 auto 20px' }} />
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, letterSpacing: '.12em', textTransform: 'uppercase' }}>CONÉXIA</div>
+      </div>
+      <div style={{ position: 'absolute', bottom: 32, fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, opacity: 0.35, letterSpacing: '.06em' }}>toque para continuar</div>
+    </div>
+  );
+}
+
 /* ═══ ROOT ════════════════════════════════════════════════ */
 /* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
 function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
@@ -3153,6 +3180,7 @@ function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o C
 
 function App() {
   const [state, setState]       = useState("loading"); // loading | landing | auth_signup | auth_login | onboard | assess | app
+  const [splashDone, setSplashDone] = useState(false);
   const [user, setUser]         = useState(null);
   const [profile, setProfile]   = useState(null);
   const [assessment, setAssessment] = useState(null);
@@ -3333,7 +3361,8 @@ function App() {
 
   return (
     <>
-      {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
+      {state === "landing"      && !splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+      {state === "landing"      && splashDone && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
       {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
       {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} />}
