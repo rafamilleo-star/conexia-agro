@@ -4,6 +4,27 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./utils/supabase";
 import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
+import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
+import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
+import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transparente.webp";
+
+/* ─── Logo Components ─────────────────────────────────── */
+// Ícone isolado (para splash, headers, favicons)
+const ConexiaIcon = ({ size = 64, dark = true, style = {} }) => (
+  <img
+    src={dark ? iconeDark : iconeTransp}
+    alt="CONÉXIA"
+    style={{ width: size, height: size, objectFit: 'contain', ...style }}
+  />
+);
+// Logo completo com texto dourado (para landing, onboarding)
+const ConexiaLogo = ({ height = 48, style = {} }) => (
+  <img
+    src={logoTexto}
+    alt="CONÉXIA — Diagnóstico Relacional"
+    style={{ height, objectFit: 'contain', ...style }}
+  />
+);
 
 /* ─── Profiles ────────────────────────────────────────── */
 const PROFILES = {
@@ -2792,7 +2813,7 @@ ${MENTORIA_LINK || true ? `
       {!isMobile && (
         <nav style={{ width: 190, flexShrink: 0, background: C.sf, borderRight: `1px solid ${C.brd}`, padding: "20px 12px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px 18px", borderBottom: `1px solid ${C.brd}`, marginBottom: 14 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond',serif", fontSize: 14, fontWeight: 700, color: C.bg }}>C</div>
+            <ConexiaIcon size={30} dark={true} />
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15, fontWeight: 700, color: C.txt }}>CONÉXIA</div>
           </div>
           {NAVS.map(n => (
@@ -2817,7 +2838,7 @@ ${MENTORIA_LINK || true ? `
       {isMobile && (
         <div style={{ background: C.sf, borderBottom: `1px solid ${C.brd}`, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 6, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond',serif", fontSize: 12, fontWeight: 700, color: C.bg }}>C</div>
+            <ConexiaIcon size={26} dark={true} />
             <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 14, fontWeight: 700, color: C.txt }}>CONÉXIA</span>
           </div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{profile?.name}</div>
@@ -3051,7 +3072,7 @@ function SplashScreen({ onDone }) {
   return (
     <div onClick={done} style={{ background: C.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, cursor: 'pointer', userSelect: 'none' }}>
       <div style={{ opacity, transition, textAlign: 'center', maxWidth: 360 }}>
-        <div style={{ width: 64, height: 64, borderRadius: 16, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontSize: 30, fontWeight: 700, color: C.bg, margin: '0 auto 32px' }}>C</div>
+        <ConexiaIcon size={96} dark={true} style={{ margin: '0 auto 32px', display: 'block' }} />
         <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 600, color: C.gold, lineHeight: 1.5, margin: '0 0 28px', letterSpacing: '.02em' }}>
           "Para ser intencional<br/>precisa ser estratégico."
         </p>
@@ -3070,9 +3091,8 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
     <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
       {/* Logo */}
       <div style={{ textAlign:"center", marginBottom:40 }}>
-        <div style={{ width:56, height:56, borderRadius:14, background:`linear-gradient(135deg,${C.gold},${C.gB})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.bg, margin:"0 auto 16px" }}>C</div>
-        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, letterSpacing:".04em", marginBottom:8 }}>CONÉXIA</div>
-        <div style={{ fontFamily:"'DM Sans'", fontSize:14, color:C.txL, letterSpacing:".06em", textTransform:"uppercase" }}>Diagnóstico Relacional Profissional</div>
+        <ConexiaLogo height={72} style={{ margin: "0 auto 12px", display: "block" }} />
+        <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>Plataforma IAGRO</div>
       </div>
 
       {/* Headline */}
