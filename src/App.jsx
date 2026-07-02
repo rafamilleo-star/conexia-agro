@@ -1099,9 +1099,7 @@ function PerfilForm({ profile, userId }) {
   const handleSave = async () => {
     setSaving(true); setErr(""); setSaved(false);
     try {
-      const { error } = await supabase.from("profiles").upsert(
-        {
-          id:           userId,
+      const { error } = await supabase.from("profiles").update({
           name:         pf.name || null,
           first_name:   pf.name || null,
           company:      pf.company || null,
@@ -1116,10 +1114,8 @@ function PerfilForm({ profile, userId }) {
           birthday:     pf.birthday || null,
           network_size: pf.network_size || null,
           challenge:    pf.challenges.length > 0 ? pf.challenges.join(",") : null,
-        },
-        { onConflict: "id" }
-      );
-      if (error) { console.error("[PerfilForm] upsert error:", error); throw error; }
+        }).eq("id", userId);
+      if (error) { console.error("[PerfilForm] update error:", error); throw error; }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
