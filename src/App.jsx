@@ -3181,6 +3181,7 @@ function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o C
 function App() {
   const [state, setState]       = useState("loading"); // loading | landing | auth_signup | auth_login | onboard | assess | app
   const [splashDone, setSplashDone] = useState(false);
+  const [splashShown, setSplashShown] = useState(false); // splash já foi exibida nesta sessão
   const [user, setUser]         = useState(null);
   const [profile, setProfile]   = useState(null);
   const [assessment, setAssessment] = useState(null);
@@ -3350,6 +3351,9 @@ function App() {
     // onAuthStateChange disparará SIGNED_OUT e irá para landing
   };
 
+  // Splash aparece imediatamente na primeira abertura, independente do estado de auth
+  if (!splashShown) return <SplashScreen onDone={() => setSplashShown(true)} />;
+
   if (state === "loading") return (
     <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
       <div style={{ width:44, height:44, borderRadius:11, background:`linear-gradient(135deg,${C.gold},${C.gB})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.bg }}>C</div>
@@ -3361,8 +3365,7 @@ function App() {
 
   return (
     <>
-      {state === "landing"      && !splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
-      {state === "landing"      && splashDone && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
+      {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
       {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
       {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} />}
