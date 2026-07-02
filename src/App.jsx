@@ -3115,12 +3115,15 @@ function Auth({ onAuth, initialMode = "signup" }) {
   const [name, setName] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lgpd, setLgpd] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const submit = async () => {
     setErr(""); setBusy(true);
     try {
       if (mode === "signup") {
         if (!name.trim()) { setErr("Informe seu nome."); setBusy(false); return; }
+        if (!lgpd) { setErr("Você precisa aceitar a Política de Privacidade para continuar."); setBusy(false); return; }
         const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { data: { name: name.trim() } } });
         if (error) throw error;
         if (data?.session) { onAuth(data.session, data.user); return; }
@@ -3150,7 +3153,55 @@ function Auth({ onAuth, initialMode = "signup" }) {
           {mode === "signup" && <Inp label="Seu nome" value={name} onChange={setName} placeholder="Como podemos te chamar?" />}
           <Inp label="Email" value={email} onChange={setEmail} placeholder="seu@email.com" type="email" />
           <Inp label="Senha" value={pass} onChange={setPass} placeholder="Mínimo 6 caracteres" type="password" />
-          <Btn onClick={submit} disabled={busy || !email || pass.length < 6} full>{busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}</Btn>
+          {mode === "signup" && (
+            <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:16, marginTop:4 }}>
+              <div
+                onClick={() => setLgpd(!lgpd)}
+                style={{ width:18, height:18, minWidth:18, borderRadius:4, border:`2px solid ${lgpd ? C.gold : C.brd}`, background: lgpd ? C.gold : "transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", marginTop:1 }}
+              >
+                {lgpd && <span style={{ color:C.bg, fontSize:11, fontWeight:700, lineHeight:1 }}>✓</span>}
+              </div>
+              <span style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, lineHeight:1.5 }}>
+                Li e aceito a{" "}
+                <span
+                  onClick={() => setShowPrivacy(true)}
+                  style={{ color:C.gold, cursor:"pointer", textDecoration:"underline" }}
+                >
+                  Política de Privacidade
+                </span>
+                {" "}e os{" "}
+                <span
+                  onClick={() => setShowPrivacy(true)}
+                  style={{ color:C.gold, cursor:"pointer", textDecoration:"underline" }}
+                >
+                  Termos de Uso
+                </span>
+                , incluindo o tratamento dos meus dados conforme a LGPD (Lei 13.709/2018).
+              </span>
+            </div>
+          )}
+          {showPrivacy && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+              <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"80vh", overflowY:"auto" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                  <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:0 }}>Política de Privacidade e Termos de Uso</h2>
+                  <button onClick={() => setShowPrivacy(false)} style={{ background:"none", border:"none", color:C.txL, fontSize:20, cursor:"pointer", lineHeight:1 }}>×</button>
+                </div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7 }}>
+                  <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>CONÉXIA, plataforma de inteligência relacional para profissionais do agronegócio.</p>
+                  <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Coletamos nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
+                  <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Os dados são utilizados exclusivamente para personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
+                  <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>O tratamento é realizado com base no consentimento do titular (Art. 7º, I) e para execução do contrato de uso da plataforma (Art. 7º, V).</p>
+                  <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados não são vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
+                  <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Você pode solicitar acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento pelo e-mail: <strong>contato@conexia.app</strong>.</p>
+                  <p><strong style={{color:C.txt}}>7. Retenção</strong><br/>Os dados são mantidos enquanto a conta estiver ativa. Após exclusão, os dados são removidos em até 30 dias.</p>
+                  <p><strong style={{color:C.txt}}>8. Termos de Uso</strong><br/>O uso da plataforma é pessoal e intransferível. É vedado o uso para fins ilícitos, spam ou coleta de dados de terceiros sem consentimento.</p>
+                </div>
+                <button onClick={() => { setLgpd(true); setShowPrivacy(false); }} style={{ width:"100%", marginTop:16, background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer" }}>Li e aceito os termos</button>
+              </div>
+            </div>
+          )}
+          <Btn onClick={submit} disabled={busy || !email || pass.length < 6 || (mode === "signup" && !lgpd)} full>{busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}</Btn>
         </div>
         <button onClick={() => window.history.back()} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>← Voltar para a página inicial</button>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 8 }}>"Networking, além do cafezinho" · Rafael Milléo</p>
