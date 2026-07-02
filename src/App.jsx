@@ -1035,7 +1035,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
 }
 
 /* ═══ PERFIL FORM ════════════════════════════════════════ */
-function PerfilForm({ profile, userId }) {
+function PerfilForm({ profile, userId, onSaved }) {
   const NETWORK_SIZES = [
     { value: "1-20",   label: "1-20 contatos" },
     { value: "21-50",  label: "21-50 contatos" },
@@ -1098,26 +1098,30 @@ function PerfilForm({ profile, userId }) {
 
   const handleSave = async () => {
     setSaving(true); setErr(""); setSaved(false);
+    const payload = {
+      name:         pf.name || null,
+      first_name:   pf.name || null,
+      company:      pf.company || null,
+      role:         pf.role || null,
+      segment:      pf.segment || null,
+      state:        pf.state || null,
+      city:         pf.city || null,
+      whatsapp:     pf.whatsapp || null,
+      instagram:    pf.instagram || null,
+      linkedin:     pf.linkedin || null,
+      hobbies:      pf.hobbies || null,
+      birthday:     pf.birthday || null,
+      network_size: pf.network_size || null,
+      challenge:    pf.challenges.length > 0 ? pf.challenges.join(",") : null,
+    };
     try {
-      const { error } = await supabase.from("profiles").update({
-          name:         pf.name || null,
-          first_name:   pf.name || null,
-          company:      pf.company || null,
-          role:         pf.role || null,
-          segment:      pf.segment || null,
-          state:        pf.state || null,
-          city:         pf.city || null,
-          whatsapp:     pf.whatsapp || null,
-          instagram:    pf.instagram || null,
-          linkedin:     pf.linkedin || null,
-          hobbies:      pf.hobbies || null,
-          birthday:     pf.birthday || null,
-          network_size: pf.network_size || null,
-          challenge:    pf.challenges.length > 0 ? pf.challenges.join(",") : null,
-        }).eq("id", userId);
+      const { error } = await supabase.from("profiles").update(payload).eq("id", userId);
       if (error) { console.error("[PerfilForm] update error:", error); throw error; }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      // Atualiza o estado do profile no componente pai para que a aba
+      // Perfil não volte a mostrar dados antigos/vazios ao ser reaberta.
+      onSaved && onSaved(payload);
     } catch (e) {
       console.error("[PerfilForm] save error:", e);
       setErr("Erro ao salvar: " + (e?.message || "Tente novamente."));
@@ -2953,7 +2957,13 @@ ${MENTORIA_LINK || true ? `
   };
 
   // ── Aba Perfil ────────────────────────────────────────────
-  const renderPerfil = () => <PerfilForm profile={profile} userId={user?.id} />;
+  const renderPerfil = () => (
+    <PerfilForm
+      profile={profile}
+      userId={user?.id}
+      onSaved={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))}
+    />
+  );
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
