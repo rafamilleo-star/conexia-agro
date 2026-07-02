@@ -1063,8 +1063,14 @@ function PerfilForm({ profile, userId }) {
     hobbies:      profile?.hobbies || "",
     birthday:     profile?.birthday || "",
     network_size: profile?.network_size || "",
-    challenge:    profile?.challenge || "",
+    challenges:   profile?.challenge ? profile.challenge.split(",").map(s => s.trim()).filter(Boolean) : [],
   });
+  const toggleChallenge = (val) => setPf(p => ({
+    ...p,
+    challenges: p.challenges.includes(val)
+      ? p.challenges.filter(x => x !== val)
+      : [...p.challenges, val],
+  }));
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
   const [err,    setErr]    = useState("");
@@ -1073,28 +1079,32 @@ function PerfilForm({ profile, userId }) {
   const handleSave = async () => {
     setSaving(true); setErr(""); setSaved(false);
     try {
-      const { error } = await supabase.from("profiles").upsert({
-        id:           userId,
-        name:         pf.name || null,
-        first_name:   pf.name || null,
-        company:      pf.company || null,
-        role:         pf.role || null,
-        segment:      pf.segment || null,
-        state:        pf.state || null,
-        city:         pf.city || null,
-        whatsapp:     pf.whatsapp || null,
-        instagram:    pf.instagram || null,
-        linkedin:     pf.linkedin || null,
-        hobbies:      pf.hobbies || null,
-        birthday:     pf.birthday || null,
-        network_size: pf.network_size || null,
-        challenge:    pf.challenge || null,
-      });
-      if (error) throw error;
+      const { error } = await supabase.from("profiles").upsert(
+        {
+          id:           userId,
+          name:         pf.name || null,
+          first_name:   pf.name || null,
+          company:      pf.company || null,
+          role:         pf.role || null,
+          segment:      pf.segment || null,
+          state:        pf.state || null,
+          city:         pf.city || null,
+          whatsapp:     pf.whatsapp || null,
+          instagram:    pf.instagram || null,
+          linkedin:     pf.linkedin || null,
+          hobbies:      pf.hobbies || null,
+          birthday:     pf.birthday || null,
+          network_size: pf.network_size || null,
+          challenge:    pf.challenges.length > 0 ? pf.challenges.join(",") : null,
+        },
+        { onConflict: "id" }
+      );
+      if (error) { console.error("[PerfilForm] upsert error:", error); throw error; }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
-      setErr("Erro ao salvar. Tente novamente.");
+      console.error("[PerfilForm] save error:", e);
+      setErr("Erro ao salvar: " + (e?.message || "Tente novamente."));
     }
     setSaving(false);
   };
@@ -1140,7 +1150,14 @@ function PerfilForm({ profile, userId }) {
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Contexto Profissional</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Sel label="Tamanho da rede" value={pf.network_size} onChange={sp('network_size')} options={NETWORK_SIZES} placeholder="Selecione..." />
-          <Sel label="Principal desafio" value={pf.challenge} onChange={sp('challenge')} options={CHALLENGES} placeholder="Selecione..." />
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 8 }}>Principais desafios <span style={{ color: C.txL, fontWeight: 400 }}>(selecione quantos quiser)</span></label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {CHALLENGES.map(c => (
+                <button key={c.value} onClick={() => toggleChallenge(c.value)} style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 20, cursor: "pointer", border: pf.challenges.includes(c.value) ? `1px solid ${C.gold}` : `1px solid ${C.brd}`, background: pf.challenges.includes(c.value) ? `${C.gold}18` : "transparent", color: pf.challenges.includes(c.value) ? C.gold : C.txM, transition: "all .15s" }}>{c.label}</button>
+              ))}
+            </div>
+          </div>
           <div style={{ gridColumn: "1 / -1" }}><Inp label="Aniversário" value={pf.birthday} onChange={sp('birthday')} type="date" /></div>
           <div style={{ gridColumn: "1 / -1" }}><Inp label="Hobbies & Interesses" value={pf.hobbies} onChange={sp('hobbies')} placeholder="Ex: Pesca, Agro, Tecnologia..." textarea /></div>
         </div>
