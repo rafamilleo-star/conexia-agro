@@ -1065,6 +1065,26 @@ function PerfilForm({ profile, userId }) {
     network_size: profile?.network_size || "",
     challenges:   profile?.challenge ? profile.challenge.split(",").map(s => s.trim()).filter(Boolean) : [],
   });
+  // Ressincronizar quando o profile chega do Supabase (carregamento assíncrono)
+  useEffect(() => {
+    if (!profile) return;
+    setPf({
+      name:         profile.name || profile.first_name || "",
+      company:      profile.company || "",
+      role:         profile.role || "",
+      segment:      profile.segment || "",
+      state:        profile.state || "",
+      city:         profile.city || "",
+      whatsapp:     profile.whatsapp || "",
+      instagram:    profile.instagram || "",
+      linkedin:     profile.linkedin || "",
+      hobbies:      profile.hobbies || "",
+      birthday:     profile.birthday || "",
+      network_size: profile.network_size || "",
+      challenges:   profile.challenge ? profile.challenge.split(",").map(s => s.trim()).filter(Boolean) : [],
+    });
+  }, [profile]);
+
   const toggleChallenge = (val) => setPf(p => ({
     ...p,
     challenges: p.challenges.includes(val)
