@@ -1034,6 +1034,126 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   );
 }
 
+/* ═══ PERFIL FORM ════════════════════════════════════════ */
+function PerfilForm({ profile, userId }) {
+  const NETWORK_SIZES = [
+    { value: "1-20",   label: "1-20 contatos" },
+    { value: "21-50",  label: "21-50 contatos" },
+    { value: "51-100", label: "51-100 contatos" },
+    { value: "100+",   label: "Mais de 100 contatos" },
+  ];
+  const CHALLENGES = [
+    { value: "consistencia", label: "Manter consist\u00eancia" },
+    { value: "expansao",    label: "Expandir a rede" },
+    { value: "reativacao",  label: "Reativar rela\u00e7\u00f5es" },
+    { value: "valor",       label: "Gerar valor genu\u00edno" },
+    { value: "visibilidade",label: "Aumentar visibilidade" },
+    { value: "estrategia",  label: "Ter estrat\u00e9gia clara" },
+  ];
+  const [pf, setPf] = useState({
+    name:         profile?.name || profile?.first_name || "",
+    company:      profile?.company || "",
+    role:         profile?.role || "",
+    segment:      profile?.segment || "",
+    state:        profile?.state || "",
+    city:         profile?.city || "",
+    whatsapp:     profile?.whatsapp || "",
+    instagram:    profile?.instagram || "",
+    linkedin:     profile?.linkedin || "",
+    hobbies:      profile?.hobbies || "",
+    birthday:     profile?.birthday || "",
+    network_size: profile?.network_size || "",
+    challenge:    profile?.challenge || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  const [err,    setErr]    = useState("");
+  const sp = (k) => (v) => setPf(p => ({ ...p, [k]: v }));
+
+  const handleSave = async () => {
+    setSaving(true); setErr(""); setSaved(false);
+    try {
+      const { error } = await supabase.from("profiles").upsert({
+        id:           userId,
+        name:         pf.name || null,
+        first_name:   pf.name || null,
+        company:      pf.company || null,
+        role:         pf.role || null,
+        segment:      pf.segment || null,
+        state:        pf.state || null,
+        city:         pf.city || null,
+        whatsapp:     pf.whatsapp || null,
+        instagram:    pf.instagram || null,
+        linkedin:     pf.linkedin || null,
+        hobbies:      pf.hobbies || null,
+        birthday:     pf.birthday || null,
+        network_size: pf.network_size || null,
+        challenge:    pf.challenge || null,
+      });
+      if (error) throw error;
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      setErr("Erro ao salvar. Tente novamente.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 0 40px" }}>
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Meu Perfil</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: 0 }}>Mantenha suas informa\u00e7\u00f5es atualizadas para personalizar os insights da IA.</p>
+      </div>
+      <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>\ud83d\udcf1</span>
+        <div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Cadastre seu WhatsApp para usar o Assistente de IA</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu n\u00famero cadastrado, voc\u00ea pode conversar com o assistente CON\u00c9XIA diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
+        </div>
+      </div>
+      <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Dados Pessoais</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+          <div style={{ gridColumn: "1 / -1" }}><Inp label="Nome completo" value={pf.name} onChange={sp('name')} placeholder="Seu nome" /></div>
+          <Inp label="Empresa" value={pf.company} onChange={sp('company')} placeholder="Empresa onde atua" />
+          <Inp label="Cargo / Fun\u00e7\u00e3o" value={pf.role} onChange={sp('role')} placeholder="Ex: Gerente Comercial" />
+          <div><Sel label="Segmento" value={pf.segment} onChange={sp('segment')} options={SEGMENTS} placeholder="Selecione..." /></div>
+          <Inp label="Cidade" value={pf.city} onChange={sp('city')} placeholder="Sua cidade" />
+          <Sel label="Estado" value={pf.state} onChange={sp('state')} options={UFS} placeholder="UF" />
+        </div>
+      </div>
+      <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Contato & Redes Sociais</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>\ud83d\udcf1 WhatsApp <span style={{ color: C.txL, fontWeight: 400 }}>(para o Assistente de IA)</span></label>
+              <input type="tel" value={pf.whatsapp || ""} onChange={e => sp('whatsapp')(e.target.value)} placeholder="Ex: 11999999999 (somente n\u00fameros)" style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, outline: "none" }} />
+            </div>
+          </div>
+          <Inp label="Instagram" value={pf.instagram} onChange={sp('instagram')} placeholder="@seuinstagram" />
+          <Inp label="LinkedIn" value={pf.linkedin} onChange={sp('linkedin')} placeholder="linkedin.com/in/voce" />
+        </div>
+      </div>
+      <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Contexto Profissional</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+          <Sel label="Tamanho da rede" value={pf.network_size} onChange={sp('network_size')} options={NETWORK_SIZES} placeholder="Selecione..." />
+          <Sel label="Principal desafio" value={pf.challenge} onChange={sp('challenge')} options={CHALLENGES} placeholder="Selecione..." />
+          <div style={{ gridColumn: "1 / -1" }}><Inp label="Anivers\u00e1rio" value={pf.birthday} onChange={sp('birthday')} type="date" /></div>
+          <div style={{ gridColumn: "1 / -1" }}><Inp label="Hobbies & Interesses" value={pf.hobbies} onChange={sp('hobbies')} placeholder="Ex: Pesca, Agro, Tecnologia..." textarea /></div>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+        <Btn onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar altera\u00e7\u00f5es"}</Btn>
+        {saved && <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.grn }}>\u2713 Perfil atualizado com sucesso!</span>}
+        {err   && <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.cor }}>{err}</span>}
+      </div>
+    </div>
+  );
+}
+
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user }) {
   const [view, setView] = useState("dash");
@@ -2800,152 +2920,7 @@ ${MENTORIA_LINK || true ? `
   };
 
   // ── Aba Perfil ────────────────────────────────────────────
-  const renderPerfil = () => {
-    const NETWORK_SIZES = [
-      { value: "1-20",   label: "1-20 contatos" },
-      { value: "21-50",  label: "21-50 contatos" },
-      { value: "51-100", label: "51-100 contatos" },
-      { value: "100+",   label: "Mais de 100 contatos" },
-    ];
-    const CHALLENGES = [
-      { value: "consistencia", label: "Manter consistência" },
-      { value: "expansao",    label: "Expandir a rede" },
-      { value: "reativacao",  label: "Reativar relações" },
-      { value: "valor",       label: "Gerar valor genuíno" },
-      { value: "visibilidade",label: "Aumentar visibilidade" },
-      { value: "estrategia",  label: "Ter estratégia clara" },
-    ];
-    return (() => {
-      const [pf, setPf] = React.useState({
-        name:        profile?.name || profile?.first_name || "",
-        company:     profile?.company || "",
-        role:        profile?.role || "",
-        segment:     profile?.segment || "",
-        state:       profile?.state || "",
-        city:        profile?.city || "",
-        whatsapp:    profile?.whatsapp || "",
-        instagram:   profile?.instagram || "",
-        linkedin:    profile?.linkedin || "",
-        hobbies:     profile?.hobbies || "",
-        birthday:    profile?.birthday || "",
-        network_size:profile?.network_size || "",
-        challenge:   profile?.challenge || "",
-      });
-      const [saving, setSaving] = React.useState(false);
-      const [saved,  setSaved]  = React.useState(false);
-      const [err,    setErr]    = React.useState("");
-      const sp = (k) => (v) => setPf(p => ({ ...p, [k]: v }));
-
-      const handleSave = async () => {
-        setSaving(true); setErr(""); setSaved(false);
-        try {
-          const { error } = await supabase.from("profiles").upsert({
-            id:           user.id,
-            name:         pf.name || null,
-            first_name:   pf.name || null,
-            company:      pf.company || null,
-            role:         pf.role || null,
-            segment:      pf.segment || null,
-            state:        pf.state || null,
-            city:         pf.city || null,
-            whatsapp:     pf.whatsapp || null,
-            instagram:    pf.instagram || null,
-            linkedin:     pf.linkedin || null,
-            hobbies:      pf.hobbies || null,
-            birthday:     pf.birthday || null,
-            network_size: pf.network_size || null,
-            challenge:    pf.challenge || null,
-          });
-          if (error) throw error;
-          setSaved(true);
-          setTimeout(() => setSaved(false), 3000);
-        } catch (e) {
-          setErr("Erro ao salvar. Tente novamente.");
-        }
-        setSaving(false);
-      };
-
-      return (
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 0 40px" }}>
-          <div style={{ marginBottom: 28 }}>
-            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Meu Perfil</h2>
-            <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: 0 }}>Mantenha suas informações atualizadas para personalizar os insights da IA.</p>
-          </div>
-
-          {/* Destaque WhatsApp */}
-          <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
-            <div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Cadastre seu WhatsApp para usar o Assistente de IA</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu número cadastrado, você pode conversar com o assistente CONÉXIA diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
-            </div>
-          </div>
-
-          {/* Seção: Dados Pessoais */}
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Dados Pessoais</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <Inp label="Nome completo" value={pf.name} onChange={sp('name')} placeholder="Seu nome" />
-              </div>
-              <Inp label="Empresa" value={pf.company} onChange={sp('company')} placeholder="Empresa onde atua" />
-              <Inp label="Cargo / Função" value={pf.role} onChange={sp('role')} placeholder="Ex: Gerente Comercial" />
-              <div>
-                <Sel label="Segmento" value={pf.segment} onChange={sp('segment')} options={SEGMENTS} placeholder="Selecione..." />
-              </div>
-              <Inp label="Cidade" value={pf.city} onChange={sp('city')} placeholder="Sua cidade" />
-              <Sel label="Estado" value={pf.state} onChange={sp('state')} options={UFS} placeholder="UF" />
-            </div>
-          </div>
-
-          {/* Seção: Contato & Redes */}
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Contato & Redes Sociais</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>📱 WhatsApp <span style={{ color: C.txL, fontWeight: 400 }}>(para o Assistente de IA)</span></label>
-                  <input
-                    type="tel"
-                    value={pf.whatsapp || ""}
-                    onChange={e => sp('whatsapp')(e.target.value)}
-                    placeholder="Ex: 11999999999 (somente números)"
-                    style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, outline: "none" }}
-                  />
-                </div>
-              </div>
-              <Inp label="Instagram" value={pf.instagram} onChange={sp('instagram')} placeholder="@seuinstagram" />
-              <Inp label="LinkedIn" value={pf.linkedin} onChange={sp('linkedin')} placeholder="linkedin.com/in/voce" />
-            </div>
-          </div>
-
-          {/* Seção: Contexto Profissional */}
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Contexto Profissional</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-              <Sel label="Tamanho da rede" value={pf.network_size} onChange={sp('network_size')} options={NETWORK_SIZES} placeholder="Selecione..." />
-              <Sel label="Principal desafio" value={pf.challenge} onChange={sp('challenge')} options={CHALLENGES} placeholder="Selecione..." />
-              <div style={{ gridColumn: "1 / -1" }}>
-                <Inp label="Aniversário" value={pf.birthday} onChange={sp('birthday')} type="date" />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <Inp label="Hobbies & Interesses" value={pf.hobbies} onChange={sp('hobbies')} placeholder="Ex: Pesca, Agro, Tecnologia..." textarea />
-              </div>
-            </div>
-          </div>
-
-          {/* Ações */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-            <Btn onClick={handleSave} disabled={saving}>
-              {saving ? "Salvando..." : "Salvar alterações"}
-            </Btn>
-            {saved && <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.grn }}>✓ Perfil atualizado com sucesso!</span>}
-            {err   && <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.cor }}>{err}</span>}
-          </div>
-        </div>
-      );
-    })();
-  };
+  const renderPerfil = () => <PerfilForm profile={profile} userId={user?.id} />;
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
