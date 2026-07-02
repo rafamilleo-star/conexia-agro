@@ -66,6 +66,15 @@ const MAIN_CULTURES = [
 const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999;
 const hScore = (last, freq) => { const d = dSince(last); if (!last || d > freq * 3) return 0; return Math.max(0, Math.round((1 - d / (freq * 1.5)) * 100)); };
 const fD = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—";
+// Normaliza WhatsApp para sempre incluir o código do país 55 — formato que o bot do WhatsApp espera
+const normalizeWhatsapp = (raw) => {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) return digits;
+  if (digits.length === 10 || digits.length === 11) return "55" + digits;
+  return digits;
+};
 
 // ── RELEVANCE SCORE utils ──────────────────────────────────
 const calculateRelevanceScore = (c) => {
@@ -1106,7 +1115,7 @@ function PerfilForm({ profile, userId, onSaved }) {
       segment:      pf.segment || null,
       state:        pf.state || null,
       city:         pf.city || null,
-      whatsapp:     pf.whatsapp || null,
+      whatsapp:     normalizeWhatsapp(pf.whatsapp),
       instagram:    pf.instagram || null,
       linkedin:     pf.linkedin || null,
       hobbies:      pf.hobbies || null,
@@ -1159,7 +1168,7 @@ function PerfilForm({ profile, userId, onSaved }) {
           <div style={{ gridColumn: "1 / -1" }}>
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>📱 WhatsApp <span style={{ color: C.txL, fontWeight: 400 }}>(para o Assistente de IA)</span></label>
-              <input type="tel" value={pf.whatsapp || ""} onChange={e => sp('whatsapp')(e.target.value)} placeholder="Ex: 11999999999 (somente números)" style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, outline: "none" }} />
+              <input type="tel" value={pf.whatsapp || ""} onChange={e => sp('whatsapp')(e.target.value)} placeholder="Ex: 11999999999 (DDD + número, sem 55)" style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, outline: "none" }} />
             </div>
           </div>
           <Inp label="Instagram" value={pf.instagram} onChange={sp('instagram')} placeholder="@seuinstagram" />
@@ -3525,7 +3534,7 @@ function App() {
         id: user.id, first_name: form.name, name: form.name, email: form.email,
         role: form.role, company: form.company || null, segment: form.segment,
         state: form.state, city: form.city || null,
-        whatsapp: form.whatsapp || null,
+        whatsapp: normalizeWhatsapp(form.whatsapp),
         instagram: form.instagram || null,
         linkedin: form.linkedin || null,
         hobbies: form.hobbies || null,
