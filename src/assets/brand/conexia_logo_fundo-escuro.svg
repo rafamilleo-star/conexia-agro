@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 560" width="1700" height="560">
+    <defs>
+      <linearGradient id="goldTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#F0D48A"/>
+        <stop offset="100%" stop-color="#A87C3F"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="1700" height="560" fill="#0B0C0F"/>
+    <g transform="translate(60,50.0)">
+    
+    <defs>
+      <radialGradient id="goldRadial" cx="35%" cy="30%" r="75%">
+        <stop offset="0%" stop-color="#F0D48A"/>
+        <stop offset="55%" stop-color="#D4AF6A"/>
+        <stop offset="100%" stop-color="#A87C3F"/>
+      </radialGradient>
+      <linearGradient id="goldLine" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#F0D48A" stop-opacity="0.95"/>
+        <stop offset="100%" stop-color="#A87C3F" stop-opacity="0.55"/>
+      </linearGradient>
+      <radialGradient id="bgGlow" cx="50%" cy="42%" r="65%">
+        <stop offset="0%" stop-color="#15171C"/>
+        <stop offset="100%" stop-color="#0B0C0F"/>
+      </radialGradient>
+      <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="7" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    
+    
+    <circle cx="230.0" cy="225.4" r="182.16" fill="none" stroke="#A87C3F" stroke-opacity="0.35" stroke-width="1.5"/>
+    <path d="M 230.00,87.40 L 349.51,156.40 L 349.51,294.40 L 230.00,363.40 L 110.49,294.40 L 110.49,156.40 Z" fill="none" stroke="url(#goldLine)" stroke-width="2.2" stroke-linejoin="round" opacity="0.85"/>
+    <line x1="230.00" y1="225.40" x2="230.00" y2="87.40" stroke="url(#goldLine)" stroke-width="1.6" opacity="0.55"/><line x1="230.00" y1="225.40" x2="349.51" y2="156.40" stroke="url(#goldLine)" stroke-width="1.6" opacity="0.55"/><line x1="230.00" y1="225.40" x2="349.51" y2="294.40" stroke="url(#goldLine)" stroke-width="1.6" opacity="0.55"/><line x1="230.00" y1="225.40" x2="230.00" y2="363.40" stroke="url(#goldLine)" stroke-width="1.6" opacity="0.55"/><line x1="230.00" y1="225.40" x2="110.49" y2="294.40" stroke="url(#goldLine)" stroke-width="1.6" opacity="0.55"/><line x1="230.00" y1="225.40" x2="110.49" y2="156.40" stroke="url(#goldLine)" stroke-width="1.6" opacity="0.55"/>
+    <circle cx="230.00" cy="87.40" r="17.48" fill="none" stroke="#D4AF6A" stroke-opacity="0.4" stroke-width="1"/><circle cx="349.51" cy="156.40" r="14.86" fill="none" stroke="#D4AF6A" stroke-opacity="0.4" stroke-width="1"/><circle cx="349.51" cy="294.40" r="19.23" fill="none" stroke="#D4AF6A" stroke-opacity="0.4" stroke-width="1"/><circle cx="230.00" cy="363.40" r="14.86" fill="none" stroke="#D4AF6A" stroke-opacity="0.4" stroke-width="1"/><circle cx="110.49" cy="294.40" r="17.48" fill="none" stroke="#D4AF6A" stroke-opacity="0.4" stroke-width="1"/><circle cx="110.49" cy="156.40" r="14.86" fill="none" stroke="#D4AF6A" stroke-opacity="0.4" stroke-width="1"/>
+    <circle cx="230.00" cy="87.40" r="9.20" fill="url(#goldRadial)"/><circle cx="349.51" cy="156.40" r="7.82" fill="url(#goldRadial)"/><circle cx="349.51" cy="294.40" r="10.12" fill="url(#goldRadial)"/><circle cx="230.00" cy="363.40" r="7.82" fill="url(#goldRadial)"/><circle cx="110.49" cy="294.40" r="9.20" fill="url(#goldRadial)"/><circle cx="110.49" cy="156.40" r="7.82" fill="url(#goldRadial)"/>
+    <circle cx="230.00" cy="225.40" r="12.88" fill="url(#goldRadial)" filter="url(#softGlow)"/>
+    </g>
+    <text x="575" y="326.0" font-family="Poppins" font-weight="300"
+      font-size="128" letter-spacing="14" fill="url(#goldTextGrad)">CON<tspan fill="#F0D48A">É</tspan>XIA</text>
+    <text x="579" y="384.0" font-family="Poppins" font-weight="300"
+        font-size="30" letter-spacing="9" fill="#D4AF6A" fill-opacity="0.75">DIAGNÓSTICO RELACIONAL</text>
+    </svg>
