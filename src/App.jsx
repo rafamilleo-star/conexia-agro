@@ -1059,6 +1059,24 @@ function CRM({ profile, assessment, onReset, user }) {
   };
   const openAccessKey = () => { setAkCode(""); setAkMsg(""); setShowAccessKey(true); };
 
+  // ── Analytics: rastrear navegação de abas ───────────────
+  const trackEvent = useCallback(async (eventType, tabName, metadata = {}) => {
+    if (!user?.id) return;
+    try {
+      await supabase.from("page_events").insert({
+        user_id: user.id,
+        event_type: eventType,
+        tab_name: tabName,
+        metadata: Object.keys(metadata).length ? metadata : null,
+      });
+    } catch (_) { /* silencioso — não interrompe o fluxo */ }
+  }, [user?.id]);
+
+  // Rastrear toda vez que a aba muda
+  useEffect(() => {
+    trackEvent("tab_view", view);
+  }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const load = useCallback(async () => {
     if (!user?.id) { setDbgMsg("⚠️ user.id ausente — não autenticado"); return; }
     const { data: c, error: ce } = await supabase.from("contacts").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
