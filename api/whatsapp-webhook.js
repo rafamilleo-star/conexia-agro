@@ -73,11 +73,19 @@ Retorne APENAS um JSON, sem markdown, sem explicações:
 
 // ── Evolution API: enviar resposta ───────────────────────────
 async function sendWhatsapp(number, text) {
-  await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-    body: JSON.stringify({ number, text }),
-  }).catch(() => {}); // não derruba o webhook se o envio falhar
+  try {
+    const res = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+      body: JSON.stringify({ number, text }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('[whatsapp-webhook] falha ao enviar resposta:', res.status, body);
+    }
+  } catch (e) {
+    console.error('[whatsapp-webhook] erro ao enviar resposta:', e.message);
+  }
 }
 
 // ── Handler ────────────────────────────────────────────────────
@@ -107,8 +115,18 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 1. Localiza o perfil pelo WhatsApp
-    const profiles = await sb(`profiles?whatsapp=eq.${number}&select=id,name,first_name`);
+    // Gera as variações possíveis do número (com/sem o 9º dígito, comum no Brasil)
+    function waVariants(num) {
+      const cc = num.slice(0, 2), ddd = num.slice(2, 4), rest = num.slice(4);
+      const set = new Set([num]);
+      if (rest.length === 9 && rest[0] === '9') set.add(cc + ddd + rest.slice(1));
+      if (rest.length === 8) set.add(cc + ddd + '9' + rest);
+      return [...set];
+    }
+    const variants = waVariants(number);
+
+    // 1. Localiza o perfil pelo WhatsApp (tentando as variações do número)
+    const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name`);
     const profile = profiles?.[0];
     if (!profile) {
       await sendWhatsapp(number,
