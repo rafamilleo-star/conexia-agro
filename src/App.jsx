@@ -3126,6 +3126,16 @@ function Auth({ onAuth, initialMode = "signup" }) {
         if (!lgpd) { setErr("Você precisa aceitar a Política de Privacidade para continuar."); setBusy(false); return; }
         const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { data: { name: name.trim() } } });
         if (error) throw error;
+        // Registrar aceite LGPD no banco
+        if (data?.user) {
+          await supabase.from("consent_logs").insert({
+            user_id: data.user.id,
+            email: email.trim().toLowerCase(),
+            name: name.trim(),
+            user_agent: navigator.userAgent,
+            version: "v1.0"
+          });
+        }
         if (data?.session) { onAuth(data.session, data.user); return; }
         if (data?.user) { setErr("Conta criada! Faça login."); setMode("login"); }
       } else {
