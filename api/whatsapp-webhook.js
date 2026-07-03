@@ -90,29 +90,28 @@ async function sendWhatsapp(number, text) {
 
 // ── Handler ────────────────────────────────────────────────────
 export default async function handler(req, res) {
-  // Responde rápido pra Evolution API não ficar re-tentando
-  res.status(200).json({ ok: true });
-
+  // Processa tudo ANTES de responder — na Vercel, respostas antecipadas podem
+  // congelar a função antes do trabalho em segundo plano terminar.
   try {
-    if (req.method !== 'POST') return;
+    if (req.method !== 'POST') return res.status(200).json({ ok: true });
     const body = req.body || {};
-    if (body.event !== 'messages.upsert') return;
+    if (body.event !== 'messages.upsert') return res.status(200).json({ ok: true });
 
     const data = body.data || {};
-    if (data.key?.fromMe) return; // ignora mensagens enviadas pelo próprio bot
+    if (data.key?.fromMe) return res.status(200).json({ ok: true }); // ignora mensagens enviadas pelo próprio bot
 
     const text = data.message?.conversation || data.message?.extendedTextMessage?.text || '';
-    if (!text.trim()) return; // por enquanto só processa texto (áudio fica pra depois)
+    if (!text.trim()) return res.status(200).json({ ok: true }); // por enquanto só processa texto (áudio fica pra depois)
 
     const jid = (data.key?.remoteJidAlt && data.key.remoteJidAlt.endsWith('@s.whatsapp.net'))
       ? data.key.remoteJidAlt
       : data.key?.remoteJid || '';
     const number = jid.replace(/\D/g, '');
-    if (!number) return;
+    if (!number) return res.status(200).json({ ok: true });
 
     if (!SUPABASE_SERVICE_KEY) {
       await sendWhatsapp(number, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     // Gera as variações possíveis do número (com/sem o 9º dígito, comum no Brasil)
@@ -131,7 +130,7 @@ export default async function handler(req, res) {
     if (!profile) {
       await sendWhatsapp(number,
         '👋 Olá! Sou o assistente do Conéxia.\n\nNão encontrei sua conta vinculada a este número.\n\nAcesse conexia-agro-chi.vercel.app e cadastre seu WhatsApp no perfil para usar o assistente. 🚀');
-      return;
+      return res.status(200).json({ ok: true });
     }
     const userId = profile.id;
     const firstName = (profile.first_name || profile.name || '').split(' ')[0] || '';
@@ -149,7 +148,7 @@ export default async function handler(req, res) {
       );
       if (!match) {
         await sendWhatsapp(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
-        return;
+        return res.status(200).json({ ok: true });
       }
       await sb('interactions', {
         method: 'POST',
@@ -171,23 +170,23 @@ export default async function handler(req, res) {
         }),
       });
       await sendWhatsapp(number, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     if (intentData.intent === 'query_next_actions') {
       const pending = (contacts || []).filter(c => c.next_action).slice(0, 8);
-      if (!pending.length) { await sendWhatsapp(number, 'Você não tem próximas ações pendentes registradas. 🎉'); return; }
+      if (!pending.length) { await sendWhatsapp(number, 'Você não tem próximas ações pendentes registradas. 🎉'); return res.status(200).json({ ok: true }); }
       const list = pending.map(c => `• *${c.name}*: ${c.next_action}${c.next_action_date ? ` (${c.next_action_date})` : ''}`).join('\n');
       await sendWhatsapp(number, `📋 Suas próximas ações:\n\n${list}`);
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     if (intentData.intent === 'query_contacts') {
       const sorted = [...(contacts || [])].sort((a, b) => new Date(a.last_interaction_at || 0) - new Date(b.last_interaction_at || 0)).slice(0, 8);
-      if (!sorted.length) { await sendWhatsapp(number, 'Você ainda não tem contatos cadastrados.'); return; }
+      if (!sorted.length) { await sendWhatsapp(number, 'Você ainda não tem contatos cadastrados.'); return res.status(200).json({ ok: true }); }
       const list = sorted.map(c => `• *${c.name}* — ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'sem interação registrada'}`).join('\n');
       await sendWhatsapp(number, `👥 Contatos sem contato recente:\n\n${list}`);
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     if (intentData.intent === 'query_health') {
@@ -198,14 +197,14 @@ export default async function handler(req, res) {
         return days > 30;
       }).length;
       await sendWhatsapp(number, `💚 Saúde da sua rede:\n\n${total} contatos no total\n${cooling} esfriando (30+ dias sem contato)\n${total - cooling} saudáveis`);
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     if (intentData.intent === 'query_insights') {
       const summary = (contacts || []).map(c => `${c.name}: última interação ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'nunca'}`).join('; ');
       const insight = await geminiText(`Com base nesta rede de contatos: ${summary || 'sem contatos ainda'}. Dê 1 insight curto e acionável (máx. 3 frases) para ${firstName || 'o usuário'} sobre como cuidar da rede esta semana.`, 200);
       await sendWhatsapp(number, `🧠 ${insight || 'Cadastre mais contatos e interações para eu gerar insights.'}`);
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     if (intentData.intent === 'help') {
@@ -216,11 +215,13 @@ export default async function handler(req, res) {
         `📋 *Próximas ações*: "Minhas próximas ações"\n` +
         `💚 *Saúde da rede*: "Saúde da minha rede"\n` +
         `🧠 *Insights*: "Me dê insights"`);
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     await sendWhatsapp(number, 'Não entendi bem 🤔 Pode reformular? Ex: "Liguei para o André hoje, foi positivo" ou "Minhas próximas ações".');
+    return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('[whatsapp-webhook] erro:', err);
+    return res.status(200).json({ ok: true, error: true });
   }
 }
