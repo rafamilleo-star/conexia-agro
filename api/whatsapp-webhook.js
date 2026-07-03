@@ -45,19 +45,36 @@ async function geminiText(prompt, maxTokens = 400) {
 
 async function analyzeIntent(message, contacts) {
   const contactList = contacts.map(c => `- ${c.name}`).join('\n') || '(nenhum contato ainda)';
-  const prompt = `Você é o assistente do Conéxia, um app de inteligência relacional.
+  const prompt = `Você é o assistente do Conéxia, um app de inteligência relacional via WhatsApp.
 
 O usuário enviou: "${message}"
 
-Contatos cadastrados:
+Contatos já cadastrados na rede dele:
 ${contactList}
+
+Sua tarefa é entender a intenção, mesmo que a frase seja informal, incompleta ou não siga um padrão fixo.
+
+REGISTER_INTERACTION — use sempre que o usuário estiver contando, resumindo, comentando ou pedindo pra
+registrar/cadastrar/anotar/salvar algo que aconteceu ou que ele sabe sobre um contato específico.
+Isso vale tanto pra relatos ("liguei pro André, foi ótimo") quanto pra comandos diretos
+("cadastra que o André foi promovido", "anota que falei com a Bia sobre o projeto X", "registra a conversa com o Carlos sobre Y").
+Se o usuário mencionar um contato da lista + alguma informação/novidade/assunto sobre ele, é register_interaction —
+mesmo sem palavras como "liguei" ou "conversei". Extraia o "note" resumindo a informação central da mensagem.
+
+Outras intenções:
+- query_contacts: perguntas sobre quem ele não fala há tempo, lista de contatos, etc.
+- query_next_actions: perguntas sobre tarefas/próximos passos pendentes.
+- query_health: perguntas sobre a saúde geral da rede.
+- query_insights: pedidos de insight, dica, análise geral.
+- help: pede ajuda, não sabe o que o assistente faz.
+- unknown: só use se a mensagem realmente não tiver relação nenhuma com networking/contatos (ex: só "oi", saudação vazia sem contexto).
 
 Retorne APENAS um JSON, sem markdown, sem explicações:
 {
   "intent": "register_interaction" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
-  "contact_name": "nome do contato mencionado, o mais parecido com a lista acima, ou null",
+  "contact_name": "nome do contato mencionado, o mais parecido possível com algum da lista acima, ou null",
   "sentiment": "positivo" | "neutro" | "negativo" | null,
-  "note": "resumo objetivo do que aconteceu na interação, em 1 frase, ou null",
+  "note": "resumo objetivo da informação/assunto tratado, em 1 frase, ou null",
   "next_action": "próxima ação mencionada ou null",
   "next_action_date": "YYYY-MM-DD ou null",
   "interaction_type": "ligacao" | "mensagem" | "reuniao" | "email" | "evento" | "outro" | null
