@@ -3357,18 +3357,20 @@ function Auth({ onAuth, initialMode = "signup" }) {
       if (mode === "signup") {
         if (!name.trim()) { setErr("Informe seu nome."); setBusy(false); return; }
         if (!lgpd) { setErr("Você precisa aceitar a Política de Privacidade para continuar."); setBusy(false); return; }
-        const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { data: { name: name.trim() } } });
-        if (error) throw error;
-        // Registrar aceite LGPD no banco
-        if (data?.user) {
-          await supabase.from("consent_logs").insert({
-            user_id: data.user.id,
-            email: email.trim().toLowerCase(),
+        const { data, error } = await supabase.auth.signUp({
+          email, password: pass,
+          options: { data: {
             name: name.trim(),
+            lgpd_accepted: "true",
+            lgpd_version: "v1.0",
             user_agent: navigator.userAgent,
-            version: "v1.0"
-          });
-        }
+          } },
+        });
+        if (error) throw error;
+        // O aceite LGPD é gravado no servidor pelo gatilho handle_new_user,
+        // de forma confiável independente de haver sessão ativa neste momento
+        // (necessário pois signUp pode não retornar sessão se a confirmação
+        // de e-mail estiver habilitada no projeto).
         if (data?.session) { onAuth(data.session, data.user); return; }
         if (data?.user) { setErr("Conta criada! Faça login."); setMode("login"); }
       } else {
@@ -3481,6 +3483,8 @@ function App() {
   const [assessment, setAssessment] = useState(null);
   const urlKey = new URLSearchParams(window.location.search).get("key") || "";
   const [pendingKey, setPendingKey] = useState(urlKey ? urlKey.toUpperCase() : "");
+  const [needsConsent, setNeedsConsent] = useState(false);
+  const [consentBusy, setConsentBusy] = useState(false);
 
   useEffect(() => {
     // Verificar sessão atual ao iniciar
@@ -3514,6 +3518,14 @@ function App() {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       if (p) p.name = p.name || p.first_name || "";
       setProfile(p);
+
+      // Contas criadas antes da correção do registro de consentimento LGPD
+      // não têm esse aceite gravado. Verifica e pede pra confirmar agora.
+      try {
+        const { data: consent } = await supabase.from("consent_logs").select("id").eq("user_id", userId).maybeSingle();
+        if (!consent) setNeedsConsent(true);
+      } catch { setNeedsConsent(true); }
+
       const { data: a } = await supabase.from("assessments").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
       const assess = a?.[0] || null;
       if (assess) {
@@ -3645,6 +3657,25 @@ function App() {
     // onAuthStateChange disparará SIGNED_OUT e irá para landing
   };
 
+  const acceptConsentNow = async () => {
+    if (!user) return;
+    setConsentBusy(true);
+    try {
+      await supabase.from("consent_logs").insert({
+        user_id: user.id,
+        email: user.email,
+        name: profile?.name || "",
+        accepted_at: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        version: "v1.0",
+      });
+      setNeedsConsent(false);
+    } catch (e) {
+      console.error("[Consent]", e);
+    }
+    setConsentBusy(false);
+  };
+
   // Splash aparece imediatamente na primeira abertura, independente do estado de auth
   if (!splashShown) return <SplashScreen onDone={() => setSplashShown(true)} />;
 
@@ -3659,6 +3690,23 @@ function App() {
 
   return (
     <>
+      {needsConsent && user && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:99999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
+            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Atualizamos nossa Política de Privacidade</h2>
+            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Pra continuar usando o CONÉXIA, precisamos que você confirme sua ciência sobre o tratamento dos seus dados, conforme a LGPD.</p>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7, marginBottom:16 }}>
+              <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>CONÉXIA, plataforma de inteligência relacional para profissionais do agronegócio.</p>
+              <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
+              <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
+              <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>Consentimento do titular (Art. 7º, I) e execução do contrato de uso da plataforma (Art. 7º, V).</p>
+              <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados não são vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
+              <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento: <strong>contato@conexia.app</strong>.</p>
+            </div>
+            <button onClick={acceptConsentNow} disabled={consentBusy} style={{ width:"100%", background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer" }}>{consentBusy ? "Aguarde..." : "Li e aceito"}</button>
+          </div>
+        </div>
+      )}
       {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
       {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
