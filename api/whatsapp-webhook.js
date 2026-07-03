@@ -68,13 +68,23 @@ sabe sobre um contato (passado ou fato presente, não uma tarefa futura). Vale t
 novidade/assunto sobre ele, é register_interaction — mesmo sem palavras como "liguei" ou "conversei".
 Extraia o "note" resumindo a informação central.
 
-SCHEDULE_ACTION — use quando o usuário está pedindo pra ANOTAR/AGENDAR/LEMBRAR algo que ELE AINDA PRECISA
-FAZER no futuro em relação a um contato, com ou sem prazo (ex: "preciso mandar a proposta pro Carlos até
-sexta", "lembra de ligar pra Ana semana que vem", "tenho que enviar fotos pro Rafael Vicentini na segunda,
-me lembra?", "próxima ação com o Bruno: agendar reunião"). O sinal principal é o verbo no futuro/infinitivo
-("preciso", "tenho que", "vou", "me lembra") descrevendo uma ação que ainda não ocorreu. Nada aconteceu
-ainda — não é um relato. Extraia "next_action" (o que precisa ser feito, resumido) e "next_action_date"
-(calculada a partir da data de hoje acima, formato YYYY-MM-DD, ou null se não houver prazo claro).
+SCHEDULE_ACTION — use quando o usuário está pedindo pra ANOTAR/AGENDAR/MARCAR/LEMBRAR algo que ELE AINDA
+PRECISA FAZER no futuro em relação a um contato, com ou sem prazo. Isso vale tanto pra relatos em 1ª pessoa
+("preciso mandar a proposta pro Carlos até sexta", "tenho que ligar pra Ana semana que vem", "me lembra de
+enviar fotos pro Rafael Vicentini na segunda") quanto pra COMANDOS DIRETOS/IMPERATIVOS, que são o jeito mais
+comum das pessoas pedirem isso num CRM ("agenda uma ligação para o Caio Santilli na segunda-feira dia 06/07",
+"marca uma reunião com a Bia pra quinta", "agenda um follow-up com o Bruno semana que vem", "cria um lembrete
+pra ligar pro André amanhã"). Verbos como "agenda", "agende", "marca", "marque", "cria um lembrete", "cadastra
+uma ação/tarefa/ligação/reunião" indicando algo que vai acontecer no futuro SEMPRE são schedule_action, mesmo
+sem "eu preciso" — o sinal é a ação estar no futuro (ainda não aconteceu), não a pessoa gramatical do verbo.
+Nada aconteceu ainda — não é um relato do passado. Extraia "next_action" (o que precisa ser feito, resumido,
+incluindo o tipo se mencionado — ex: "Ligação agendada" ou "Reunião agendada") e "next_action_date" (formato
+YYYY-MM-DD). Datas explícitas no formato DD/MM ou DD/MM/AAAA são sempre dia/mês (padrão brasileiro, nunca
+mês/dia). Se vier só DD/MM sem ano, assuma o ano corrente ou o próximo se a data já passou este ano.
+
+Regra de desambiguação: se a mensagem descreve algo que JÁ ACONTECEU ou é um fato já conhecido → register_interaction.
+Se descreve algo que ainda VAI acontecer (tem data futura, ou é um compromisso/tarefa a fazer) → schedule_action,
+mesmo que a frase comece com um verbo de comando como "agenda", "cadastra" ou "marca".
 
 Outras intenções:
 - query_contacts: perguntas sobre quem ele não fala há tempo, lista de contatos, etc.
