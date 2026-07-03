@@ -30,17 +30,39 @@ async function sb(path, opts = {}) {
 }
 
 // ── Gemini ────────────────────────────────────────────────────
+async function geminiTextRaw(prompt, maxTokens = 400) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.5 },
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return { text, status: res.status, ok: res.ok, raw: data };
+  } catch (e) {
+    return { text: '', status: 0, ok: false, raw: { fetchError: e.message } };
+  }
+}
+
 async function geminiText(prompt, maxTokens = 400) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: maxTokens, temperature: 0.5 },
-    }),
-  });
-  const data = await res.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const r = await geminiTextRaw(prompt, maxTokens);
+  return r.text;
+}
+
+// ── Debug: grava um registro em whatsapp_webhook_raw pra diagnóstico ──
+async function logDebug(payload) {
+  try {
+    await sb('whatsapp_webhook_raw', {
+      method: 'POST',
+      body: JSON.stringify({ raw_payload: payload }),
+    });
+  } catch (e) {
+    console.error('[whatsapp-webhook] falha ao logar debug:', e.message);
+  }
 }
 
 async function analyzeIntent(message, contacts) {
@@ -104,11 +126,16 @@ Retorne APENAS um JSON, sem markdown, sem explicações:
   "next_action_date": "YYYY-MM-DD calculada a partir de hoje, ou null se não houver prazo",
   "interaction_type": "ligacao" | "mensagem" | "reuniao" | "email" | "evento" | "outro" | null
 }`;
-  const raw = await geminiText(prompt, 300);
+  const g = await geminiTextRaw(prompt, 300);
   try {
-    const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    return JSON.parse(cleaned);
-  } catch {
+    if (!g.ok) throw new Error(`Gemini HTTP ${g.status}: ${JSON.stringify(g.raw).slice(0, 500)}`);
+    const cleaned = g.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    if (!cleaned) throw new Error('Gemini retornou texto vazio');
+    const parsed = JSON.parse(cleaned);
+    await logDebug({ debug: 'analyzeIntent_ok', message, intent: parsed.intent, contact_name: parsed.contact_name, next_action: parsed.next_action, next_action_date: parsed.next_action_date });
+    return parsed;
+  } catch (e) {
+    await logDebug({ debug: 'analyzeIntent_fail', message, error: e.message, geminiStatus: g.status, geminiRawText: g.text?.slice(0, 800), geminiRawResponse: g.raw });
     return { intent: 'unknown' };
   }
 }
