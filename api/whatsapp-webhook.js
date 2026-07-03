@@ -37,7 +37,7 @@ async function geminiTextRaw(prompt, maxTokens = 400) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.5 },
+        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.5, thinkingConfig: { thinkingBudget: 0 } },
       }),
     });
     const data = await res.json().catch(() => null);
@@ -126,7 +126,7 @@ Retorne APENAS um JSON, sem markdown, sem explicações:
   "next_action_date": "YYYY-MM-DD calculada a partir de hoje, ou null se não houver prazo",
   "interaction_type": "ligacao" | "mensagem" | "reuniao" | "email" | "evento" | "outro" | null
 }`;
-  const g = await geminiTextRaw(prompt, 300);
+  const g = await geminiTextRaw(prompt, 500);
   try {
     if (!g.ok) throw new Error(`Gemini HTTP ${g.status}: ${JSON.stringify(g.raw).slice(0, 500)}`);
     const cleaned = g.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
