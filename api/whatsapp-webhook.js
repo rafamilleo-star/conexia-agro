@@ -53,6 +53,40 @@ async function geminiText(prompt, maxTokens = 400) {
   return r.text;
 }
 
+// ── Áudio: baixa o binário via Evolution API e transcreve com o Gemini ──
+async function getMediaBase64(messageData) {
+  const res = await fetch(`${EVO_URL}/chat/getBase64FromMediaMessage/${EVO_INSTANCE}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+    body: JSON.stringify({ message: { key: messageData.key, message: messageData.message }, convertToMp4: false }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data) throw new Error(`Evolution media ${res.status}: ${JSON.stringify(data).slice(0, 300)}`);
+  const base64 = data.base64 || data.data?.base64 || data.media || null;
+  if (!base64) throw new Error(`Resposta da Evolution sem base64: ${JSON.stringify(data).slice(0, 300)}`);
+  return base64;
+}
+
+async function transcribeAudio(base64Audio, mimeType) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: 'Transcreva este áudio em português do Brasil. Responda APENAS com o texto transcrito, literal, sem comentários, sem aspas, sem markdown.' },
+          { inline_data: { mime_type: mimeType || 'audio/ogg', data: base64Audio } },
+        ],
+      }],
+      generationConfig: { maxOutputTokens: 500, temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } },
+    }),
+  });
+  const data = await res.json().catch(() => null);
+  const transcript = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (!res.ok || !transcript.trim()) throw new Error(`Gemini transcribe ${res.status}: ${JSON.stringify(data).slice(0, 400)}`);
+  return transcript.trim();
+}
+
 // ── Debug: grava um registro em whatsapp_webhook_raw pra diagnóstico ──
 async function logDebug(payload) {
   try {
@@ -169,8 +203,26 @@ export default async function handler(req, res) {
     const data = body.data || {};
     if (data.key?.fromMe) return res.status(200).json({ ok: true }); // ignora mensagens enviadas pelo próprio bot
 
-    const text = data.message?.conversation || data.message?.extendedTextMessage?.text || '';
-    if (!text.trim()) return res.status(200).json({ ok: true }); // por enquanto só processa texto (áudio fica pra depois)
+    let text = data.message?.conversation || data.message?.extendedTextMessage?.text || '';
+    let viaAudio = false;
+
+    const audioMsg = data.message?.audioMessage;
+    if (!text.trim() && audioMsg) {
+      try {
+        const base64Audio = await getMediaBase64(data);
+        text = await transcribeAudio(base64Audio, audioMsg.mimetype);
+        viaAudio = true;
+        await logDebug({ debug: 'audio_transcribe_ok', transcript: text, mimetype: audioMsg.mimetype });
+      } catch (e) {
+        console.error('[whatsapp-webhook] erro ao transcrever áudio:', e.message);
+        await logDebug({ debug: 'audio_transcribe_fail', error: e.message });
+        const number = (data.key?.remoteJid || '').replace(/\D/g, '');
+        if (number) await sendWhatsapp(number, '🎙️ Não consegui entender esse áudio. Pode tentar de novo ou mandar por texto?');
+        return res.status(200).json({ ok: true });
+      }
+    }
+
+    if (!text.trim()) return res.status(200).json({ ok: true }); // nem texto, nem áudio reconhecível (ex: figurinha, imagem)
 
     const jid = (data.key?.remoteJidAlt && data.key.remoteJidAlt.endsWith('@s.whatsapp.net'))
       ? data.key.remoteJidAlt
@@ -238,7 +290,7 @@ export default async function handler(req, res) {
           ...(intentData.next_action_date ? { next_action_date: intentData.next_action_date } : {}),
         }),
       });
-      await sendWhatsapp(number, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
+      await sendWhatsapp(number, `${viaAudio ? `🎙️ Ouvi: "${text}"\n\n` : ''}✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
       return res.status(200).json({ ok: true });
     }
 
@@ -265,7 +317,7 @@ export default async function handler(req, res) {
       const prazo = intentData.next_action_date
         ? ` até *${new Date(intentData.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')}*`
         : '';
-      await sendWhatsapp(number, `🗓️ Anotado! Próxima ação com *${match.name}*: ${intentData.next_action}${prazo}.${intentData.next_action_date ? '\n\nTe aviso por aqui quando chegar o dia.' : ''}`);
+      await sendWhatsapp(number, `${viaAudio ? `🎙️ Ouvi: "${text}"\n\n` : ''}🗓️ Anotado! Próxima ação com *${match.name}*: ${intentData.next_action}${prazo}.${intentData.next_action_date ? '\n\nTe aviso por aqui quando chegar o dia.' : ''}`);
       return res.status(200).json({ ok: true });
     }
 
@@ -311,11 +363,12 @@ export default async function handler(req, res) {
         `👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n` +
         `📋 *Próximas ações*: "Minhas próximas ações"\n` +
         `💚 *Saúde da rede*: "Saúde da minha rede"\n` +
-        `🧠 *Insights*: "Me dê insights"`);
+        `🧠 *Insights*: "Me dê insights"\n\n` +
+        `🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
       return res.status(200).json({ ok: true });
     }
 
-    await sendWhatsapp(number, 'Não entendi bem 🤔 Pode reformular? Ex: "Liguei para o André hoje, foi positivo" ou "Minhas próximas ações".');
+    await sendWhatsapp(number, `${viaAudio ? `🎙️ Ouvi: "${text}"\n\n` : ''}Não entendi bem 🤔 Pode reformular? Ex: "Liguei para o André hoje, foi positivo" ou "Minhas próximas ações".`);
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('[whatsapp-webhook] erro:', err);
