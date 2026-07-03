@@ -1605,7 +1605,28 @@ function CRM({ profile, assessment, onReset, user }) {
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 4px", textAlign: "center" }}>Olá, {profile?.name || ""}</h2>
         {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 4px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 22px" }}>{cts.length === 0 ? "Cadastre seu primeiro contato para ativar sua rede." : `${cts.length} contatos · ${active} ativos · ${wk} interações esta semana`}</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 16px" }}>{cts.length === 0 ? "Cadastre seu primeiro contato para ativar sua rede." : `${cts.length} contatos · ${active} ativos · ${wk} interações esta semana`}</p>
+
+        {/* ── Descoberta do Assistente via WhatsApp ── */}
+        {profile?.whatsapp ? (
+          <div style={{ background: `${C.grn}08`, border: `1px solid ${C.grn}30`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.grn, marginBottom: 3 }}>Assistente por WhatsApp ativo</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>Manda mensagem pro CONÉXIA a qualquer hora: <em>"Liguei pro André hoje, foi positivo"</em>, <em>"Minhas próximas ações"</em> ou <em>"Saúde da minha rede"</em>.</div>
+              <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer" style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.grn, textDecoration: "none" }}>Abrir conversa →</a>
+            </div>
+          </div>
+        ) : (
+          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Ative o Assistente por WhatsApp</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Registre interações e consulte sua rede direto pelo WhatsApp. Toque aqui pra cadastrar seu número.</div>
+            </div>
+            <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
+          </div>
+        )}
 
         {cts.length === 0 ? (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 44, textAlign: "center" }}>
