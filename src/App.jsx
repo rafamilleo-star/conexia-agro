@@ -1201,7 +1201,7 @@ function PerfilForm({ profile, userId, onSaved }) {
 }
 
 /* ═══ CRM APP ═════════════════════════════════════════════ */
-function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
+function CRM({ profile, assessment, onReset, user }) {
   const [view, setView] = useState("dash");
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [akCode, setAkCode]   = useState("");
@@ -2289,14 +2289,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           {["1 diagnóstico","Até 10 contatos","Health Score","Teia simples","Semana 1 do plano"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>✓ {f}</div>)}
         </div>
         <div style={{ background:`${C.gold}08`, border:`1.5px solid ${C.gold}`, borderRadius:10, padding:14 }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>PRO — R$ 49,90/mês</div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>PRO — R$ 39,90/mês</div>
           {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Relatório completo","Plano 4 semanas","Teia avançada","Exportação"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>⭐ {f}</div>)}
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.txL, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Mensal</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, lineHeight: 1 }}>R$50</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, lineHeight: 1 }}>R$39,90</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 16 }}>/mês</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 16, lineHeight: 1.5 }}>Cancele quando quiser</div>
           <button onClick={() => window.open(STRIPE_MENSAL, "_blank")} style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, color: C.txt, borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Assinar mensal</button>
@@ -2305,9 +2305,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         <div style={{ background: `${C.gold}10`, border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: 20, textAlign: "center", position: "relative" }}>
           <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.gold, color: "#0d0d0f", fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: ".08em", whiteSpace: "nowrap" }}>2 meses grátis</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Anual</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.gold, lineHeight: 1 }}>R$500</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 4 }}>/ano · R$41,67/mês</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginBottom: 16, lineHeight: 1.5 }}>Economia de R$100 vs mensal</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.gold, lineHeight: 1 }}>R$399</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 4 }}>/ano · R$33,25/mês</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginBottom: 16, lineHeight: 1.5 }}>Economia de R$79,80 vs mensal</div>
           <button onClick={() => window.open(STRIPE_ANUAL, "_blank")} style={{ width: "100%", background: C.gold, border: "none", color: "#0d0d0f", borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Assinar anual ⚡</button>
         </div>
       </div>
@@ -2990,7 +2990,7 @@ ${MENTORIA_LINK || true ? `
     <PerfilForm
       profile={profile}
       userId={user?.id}
-      onSaved={onProfileUpdate}
+      onSaved={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))}
     />
   );
 
@@ -3240,7 +3240,7 @@ ${MENTORIA_LINK || true ? `
         </div>
         <a href={STRIPE_MENSAL} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
           style={{ display:"block", background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center", marginBottom:10 }}>
-          Assinar PRO — R$ 49,90/mês
+          Assinar PRO — R$ 39,90/mês
         </a>
         <button onClick={() => { setModal(null); openAccessKey(); }}
           style={{ display:"block", width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>
@@ -3456,7 +3456,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
 }
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
-function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o CONÉXIA completo para transformar diagnóstico em ação prática.", cta = "Assinar PRO — R$ 49,90/mês", onKey }) {
+function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o CONÉXIA completo para transformar diagnóstico em ação prática.", cta = "Assinar PRO — R$ 39,90/mês", onKey }) {
   return (
     <div style={{ background:"#161618", border:"1px solid #2a2825", borderRadius:12, padding:24, textAlign:"center", margin:"8px 0" }}>
       <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
@@ -3712,7 +3712,7 @@ function App() {
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
       {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} />}
       {state === "assess"       && user && <Assess profile={profile} onDone={handleAssess} />}
-      {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} onProfileUpdate={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))} />}
+      {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} />}
     </>
   );
 }
