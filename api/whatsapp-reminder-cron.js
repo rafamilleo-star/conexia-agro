@@ -46,6 +46,13 @@ async function sendWhatsapp(number, text) {
 
 export default async function handler(req, res) {
   try {
+    // PAUSADO TEMPORARIAMENTE em 2026-07-08: o número do bot está sendo aceito
+    // pela Evolution API mas as mensagens não chegam no destino (padrão de
+    // limitação silenciosa do WhatsApp em cima do número). Parando os envios
+    // automáticos em massa pra dar chance do número se recuperar. Reverter
+    // removendo este bloco assim que a entrega voltar ao normal.
+    return res.status(200).json({ ok: true, enviados: 0, pausado: true });
+
     // Se CRON_SECRET estiver configurado nas env vars da Vercel, exige o header.
     // Se não estiver configurado, roda sem exigir (mais simples, mas menos travado).
     if (CRON_SECRET) {
