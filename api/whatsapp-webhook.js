@@ -240,9 +240,7 @@ export default async function handler(req, res) {
 
     if (!text.trim()) return res.status(200).json({ ok: true }); // nem texto, nem áudio reconhecível (ex: figurinha, imagem)
 
-    const jid = (data.key?.remoteJidAlt && data.key.remoteJidAlt.endsWith('@s.whatsapp.net'))
-      ? data.key.remoteJidAlt
-      : data.key?.remoteJid || '';
+    const jid = (data.key?.remoteJidAlt || data.key?.remoteJid || '');
     const number = jid.replace(/\D/g, '');
     if (!number) return res.status(200).json({ ok: true });
 
