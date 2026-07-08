@@ -182,11 +182,27 @@ async function sendWhatsapp(number, text) {
       headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
       body: JSON.stringify({ number, text }),
     });
+    const bodyText = await res.text().catch(() => '');
+    let bodyJson = null;
+    try { bodyJson = bodyText ? JSON.parse(bodyText) : null; } catch { /* not json */ }
+    // Loga TODA tentativa de envio (sucesso ou falha), pra conseguirmos
+    // ver no Supabase se a Evolution está de fato aceitando/entregando,
+    // e qual remoteJid ela usou de fato (pode diferir do "number" enviado
+    // por causa do @lid / mapeamento de número oculto do WhatsApp).
+    await logDebug({
+      debug: res.ok ? 'send_whatsapp_ok' : 'send_whatsapp_fail',
+      number,
+      httpStatus: res.status,
+      responseKey: bodyJson?.key || null,
+      responseStatus: bodyJson?.status || null,
+      responseBody: bodyText?.slice(0, 500),
+      textPreview: text?.slice(0, 120),
+    });
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error('[whatsapp-webhook] falha ao enviar resposta:', res.status, body);
+      console.error('[whatsapp-webhook] falha ao enviar resposta:', res.status, bodyText);
     }
   } catch (e) {
+    await logDebug({ debug: 'send_whatsapp_error', number, error: e.message, textPreview: text?.slice(0, 120) });
     console.error('[whatsapp-webhook] erro ao enviar resposta:', e.message);
   }
 }
@@ -229,6 +245,14 @@ export default async function handler(req, res) {
       : data.key?.remoteJid || '';
     const number = jid.replace(/\D/g, '');
     if (!number) return res.status(200).json({ ok: true });
+
+    await logDebug({
+      debug: 'incoming_jid',
+      remoteJid: data.key?.remoteJid || null,
+      remoteJidAlt: data.key?.remoteJidAlt || null,
+      chosenJid: jid,
+      derivedNumber: number,
+    });
 
     if (!SUPABASE_SERVICE_KEY) {
       await sendWhatsapp(number, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
