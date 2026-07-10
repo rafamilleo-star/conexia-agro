@@ -1,4 +1,4 @@
-// api/whatsapp-webhook.js
+// // api/whatsapp-webhook.js
 // Recebe mensagens do WhatsApp via webhook da Evolution API, entende a intenção
 // com o Gemini, e grava/consulta dados no Supabase. Responde ao usuário de volta
 // pelo WhatsApp usando a própria Evolution API.
@@ -268,7 +268,7 @@ export default async function handler(req, res) {
     const variants = waVariants(number);
 
     // 1. Localiza o perfil pelo WhatsApp (tentando as variações do número)
-    const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name`);
+    const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at`);
     const profile = profiles?.[0];
     if (!profile) {
       await sendWhatsapp(number,
@@ -277,6 +277,24 @@ export default async function handler(req, res) {
     }
     const userId = profile.id;
     const firstName = (profile.first_name || profile.name || '').split(' ')[0] || '';
+
+    // 1.1 Checa se é PRO (mesma regra do App.jsx: is_pro, ou plan="pro" ainda não expirado)
+    const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
+
+    // 1.2 Usuário Free: assistente de WhatsApp liberado só nas primeiras 4 semanas após o cadastro.
+    // Depois disso, precisa virar PRO. Como isPro é checado a cada mensagem, o acesso volta
+    // automaticamente assim que o pagamento/chave PRO for confirmado no perfil.
+    if (!isPro) {
+      const diasDesdeCadastro = profile.created_at
+        ? (Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        : 0;
+      if (diasDesdeCadastro > 28) {
+        await sendWhatsapp(number,
+          `👋 Oi${firstName ? ' ' + firstName : ''}! Seu período gratuito do assistente de WhatsApp (4 semanas) terminou.\n\n` +
+          `Pra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO (R$39,90/mês): acesse conexia-agro-chi.vercel.app e ative seu plano. 🚀`);
+        return res.status(200).json({ ok: true });
+      }
+    }
 
     // 2. Busca os contatos do usuário (pra IA reconhecer nomes)
     const contacts = await sb(`contacts?user_id=eq.${userId}&select=id,name,last_interaction_at,next_action,next_action_date`);
