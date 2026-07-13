@@ -184,15 +184,53 @@ async function sendWhatsapp(number, text) {
 }
 
 // ── Handler ────────────────────────────────────────────────────
+async function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => { data += chunk; });
+    req.on('end', () => resolve(data));
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(200).json({ ok: true });
-    const body = req.body || {};
+    let body = req.body;
+    const contentType = req.headers?.['content-type'] || '';
+
+    // Fallback: se a Vercel não populou req.body (ex.: mismatch de content-type),
+    // lê e parseia o corpo bruto na mão em vez de falhar em silêncio.
+    if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+      try {
+        const raw = await readRawBody(req);
+        if (raw) {
+          body = contentType.includes('application/json')
+            ? JSON.parse(raw)
+            : Object.fromEntries(new URLSearchParams(raw));
+        } else {
+          body = {};
+        }
+      } catch (e) {
+        console.error('[whatsapp-webhook] fallback body parse falhou:', e.message);
+        body = body || {};
+      }
+    }
 
     // Suporte para Twilio
     const fromNumber = body.From?.replace('whatsapp:', '') || '';
     const messageText = body.Body || '';
     const userId = body.UserId || fromNumber;
+
+    // Log incondicional de todo request recebido — sem isso, um mismatch de
+    // parsing derruba a mensagem em silêncio (retorna 200 sem processar nada).
+    await logDebug({
+      debug: 'incoming_request',
+      contentType,
+      bodyKeys: Object.keys(body || {}),
+      fromPresent: !!fromNumber,
+      messagePresent: !!messageText,
+    });
 
     // Se for Twilio, processar diferente
     if (fromNumber && messageText) {
