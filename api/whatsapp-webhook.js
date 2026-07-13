@@ -11,6 +11,11 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
 
+// EVOLUTION API CREDENTIALS — canal antigo, mantido em paralelo ao Twilio
+const EVO_URL = (process.env.EVOLUTION_API_URL || 'https://evolution-api-production-0c6a.up.railway.app').replace(/\/$/, '');
+const EVO_KEY = process.env.EVOLUTION_API_KEY;
+const EVO_INSTANCE = process.env.EVOLUTION_INSTANCE || 'conexia';
+
 // ── Supabase (REST direto, sem SDK) ──────────────────────────
 async function sb(path, opts = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -142,11 +147,11 @@ Retorne APENAS um JSON, sem markdown, sem explicações:
 }
 
 // ── TWILIO: enviar resposta ───────────────────────────────────
-async function sendWhatsapp(number, text) {
+async function sendWhatsappTwilio(number, text) {
   try {
     if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
       console.error('[whatsapp-webhook] Twilio não configurado (faltam TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN).');
-      await logDebug({ debug: 'send_whatsapp_no_config', number, textPreview: text?.slice(0, 120) });
+      await logDebug({ debug: 'send_whatsapp_no_config', channel: 'twilio', number, textPreview: text?.slice(0, 120) });
       return;
     }
     const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
@@ -168,6 +173,7 @@ async function sendWhatsapp(number, text) {
     const data = await res.json();
     await logDebug({
       debug: res.ok ? 'send_whatsapp_ok' : 'send_whatsapp_fail',
+      channel: 'twilio',
       number,
       httpStatus: res.status,
       messageSid: data.sid || null,
@@ -178,9 +184,193 @@ async function sendWhatsapp(number, text) {
       console.error('[whatsapp-webhook] falha ao enviar resposta:', res.status, data.message);
     }
   } catch (e) {
-    await logDebug({ debug: 'send_whatsapp_error', number, error: e.message, textPreview: text?.slice(0, 120) });
+    await logDebug({ debug: 'send_whatsapp_error', channel: 'twilio', number, error: e.message, textPreview: text?.slice(0, 120) });
     console.error('[whatsapp-webhook] erro ao enviar resposta:', e.message);
   }
+}
+
+// ── EVOLUTION API: enviar resposta (canal antigo, mantido em paralelo) ──
+async function sendWhatsappEvolution(number, text) {
+  try {
+    if (!EVO_KEY) {
+      console.error('[whatsapp-webhook] Evolution API não configurada (falta EVOLUTION_API_KEY).');
+      await logDebug({ debug: 'send_whatsapp_no_config', channel: 'evolution', number, textPreview: text?.slice(0, 120) });
+      return;
+    }
+    const res = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+      body: JSON.stringify({ number, text }),
+    });
+    const bodyText = await res.text().catch(() => '');
+    await logDebug({
+      debug: res.ok ? 'send_whatsapp_ok' : 'send_whatsapp_fail',
+      channel: 'evolution',
+      number,
+      httpStatus: res.status,
+      error: res.ok ? null : bodyText?.slice(0, 300),
+      textPreview: text?.slice(0, 120),
+    });
+    if (!res.ok) {
+      console.error('[whatsapp-webhook] evolution: falha ao enviar resposta:', res.status, bodyText);
+    }
+  } catch (e) {
+    await logDebug({ debug: 'send_whatsapp_error', channel: 'evolution', number, error: e.message, textPreview: text?.slice(0, 120) });
+    console.error('[whatsapp-webhook] evolution: erro ao enviar resposta:', e.message);
+  }
+}
+
+// Gera as variações possíveis do número (com/sem o 9º dígito, comum no Brasil)
+function waVariants(num) {
+  const cc = num.slice(0, 2), ddd = num.slice(2, 4), rest = num.slice(4);
+  const set = new Set([num]);
+  if (rest.length === 9 && rest[0] === '9') set.add(cc + ddd + rest.slice(1));
+  if (rest.length === 8) set.add(cc + ddd + '9' + rest);
+  return [...set];
+}
+
+// ── Lógica de negócio compartilhada ───────────────────────────
+// Usada tanto pelo Twilio quanto pela Evolution API — só muda a função de envio.
+async function handleIncomingMessage(number, text, sendReply) {
+  if (!SUPABASE_SERVICE_KEY) {
+    await sendReply(number, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
+    return;
+  }
+
+  const variants = waVariants(number);
+
+  // 1. Localiza o perfil pelo WhatsApp
+  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at`);
+  const profile = profiles?.[0];
+  if (!profile) {
+    await sendReply(number,
+      '👋 Olá! Sou o assistente do Conéxia.\n\nNão encontrei sua conta vinculada a este número.\n\nAcesse conexia-agro-chi.vercel.app e cadastre seu WhatsApp no perfil para usar o assistente. 🚀');
+    return;
+  }
+  const userIdProfile = profile.id;
+  const firstName = (profile.first_name || profile.name || '').split(' ')[0] || '';
+
+  // 1.1 Checa se é PRO
+  const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
+
+  // 1.2 Usuário Free: assistente liberado só nas primeiras 4 semanas
+  if (!isPro) {
+    const diasDesdeCadastro = profile.created_at
+      ? (Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      : 0;
+    if (diasDesdeCadastro > 28) {
+      await sendReply(number,
+        `👋 Oi${firstName ? ' ' + firstName : ''}! Seu período gratuito do assistente de WhatsApp (4 semanas) terminou.\n\nPra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO (R$39,90/mês): acesse conexia-agro-chi.vercel.app e ative seu plano. 🚀`);
+      return;
+    }
+  }
+
+  // 2. Busca os contatos do usuário
+  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,last_interaction_at,next_action,next_action_date`);
+
+  // 3. Entende a intenção da mensagem
+  const intentData = await analyzeIntent(text, contacts || []);
+
+  // 4. Executa a ação
+  if (intentData.intent === 'register_interaction') {
+    const match = (contacts || []).find(c =>
+      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
+    );
+    if (!match) {
+      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
+      return;
+    }
+    await sb('interactions', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: userIdProfile,
+        contact_id: match.id,
+        type: intentData.interaction_type || 'mensagem',
+        description: intentData.note || text,
+        sentiment: intentData.sentiment || 'positivo',
+        value_generated: false,
+      }),
+    });
+    await sb(`contacts?id=eq.${match.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        last_interaction_at: new Date().toISOString(),
+        ...(intentData.next_action ? { next_action: intentData.next_action, next_action_reminded_at: null } : {}),
+        ...(intentData.next_action_date ? { next_action_date: intentData.next_action_date } : {}),
+      }),
+    });
+    await sendReply(number, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
+    return;
+  }
+
+  if (intentData.intent === 'schedule_action') {
+    const match = (contacts || []).find(c =>
+      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
+    );
+    if (!match) {
+      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
+      return;
+    }
+    if (!intentData.next_action) {
+      await sendReply(number, 'Entendi que é uma ação futura, mas não peguei o que precisa ser feito. Pode reformular? Ex: "Preciso enviar a proposta pro Carlos até sexta".');
+      return;
+    }
+    await sb(`contacts?id=eq.${match.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        next_action: intentData.next_action,
+        next_action_date: intentData.next_action_date || null,
+        next_action_reminded_at: null,
+      }),
+    });
+    const prazo = intentData.next_action_date
+      ? ` até *${new Date(intentData.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')}*`
+      : '';
+    await sendReply(number, `🗓️ Anotado! Próxima ação com *${match.name}*: ${intentData.next_action}${prazo}.${intentData.next_action_date ? '\n\nTe aviso por aqui quando chegar o dia.' : ''}`);
+    return;
+  }
+
+  if (intentData.intent === 'query_next_actions') {
+    const pending = (contacts || []).filter(c => c.next_action).slice(0, 8);
+    if (!pending.length) { await sendReply(number, 'Você não tem próximas ações pendentes registradas. 🎉'); return; }
+    const list = pending.map(c => `• *${c.name}*: ${c.next_action}${c.next_action_date ? ` (${c.next_action_date})` : ''}`).join('\n');
+    await sendReply(number, `📋 Suas próximas ações:\n\n${list}`);
+    return;
+  }
+
+  if (intentData.intent === 'query_contacts') {
+    const sorted = [...(contacts || [])].sort((a, b) => new Date(a.last_interaction_at || 0) - new Date(b.last_interaction_at || 0)).slice(0, 8);
+    if (!sorted.length) { await sendReply(number, 'Você ainda não tem contatos cadastrados.'); return; }
+    const list = sorted.map(c => `• *${c.name}* — ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'sem interação registrada'}`).join('\n');
+    await sendReply(number, `👥 Contatos sem contato recente:\n\n${list}`);
+    return;
+  }
+
+  if (intentData.intent === 'query_health') {
+    const total = (contacts || []).length;
+    const cooling = (contacts || []).filter(c => {
+      if (!c.last_interaction_at) return true;
+      const days = (Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000;
+      return days > 30;
+    }).length;
+    await sendReply(number, `💚 Saúde da sua rede:\n\n${total} contatos no total\n${cooling} esfriando (30+ dias sem contato)\n${total - cooling} saudáveis`);
+    return;
+  }
+
+  if (intentData.intent === 'query_insights') {
+    const summary = (contacts || []).map(c => `${c.name}: última interação ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'nunca'}`).join('; ');
+    const insight = await geminiText(`Com base nesta rede de contatos: ${summary || 'sem contatos ainda'}. Dê 1 insight curto e acionável (máx. 3 frases) para ${firstName || 'o usuário'} sobre como cuidar da rede esta semana.`, 200);
+    await sendReply(number, `🧠 ${insight || 'Cadastre mais contatos e interações para eu gerar insights.'}`);
+    return;
+  }
+
+  if (intentData.intent === 'help') {
+    await sendReply(number,
+      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n🧠 *Insights*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
+    return;
+  }
+
+  await sendReply(number, `Não entendi bem 🤔 Pode reformular? Ex: "Liguei para o André hoje, foi positivo" ou "Minhas próximas ações".`);
 }
 
 // ── Handler ────────────────────────────────────────────────────
@@ -220,7 +410,6 @@ export default async function handler(req, res) {
     // Suporte para Twilio
     const fromNumber = body.From?.replace('whatsapp:', '') || '';
     const messageText = body.Body || '';
-    const userId = body.UserId || fromNumber;
 
     // Log incondicional de todo request recebido — sem isso, um mismatch de
     // parsing derruba a mensagem em silêncio (retorna 200 sem processar nada).
@@ -232,161 +421,30 @@ export default async function handler(req, res) {
       messagePresent: !!messageText,
     });
 
-    // Se for Twilio, processar diferente
+    // Canal Twilio
     if (fromNumber && messageText) {
-      if (!SUPABASE_SERVICE_KEY) {
-        await sendWhatsapp(fromNumber, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
-        return res.status(200).json({ ok: true });
-      }
-
-      // Gera as variações possíveis do número
-      function waVariants(num) {
-        const cc = num.slice(0, 2), ddd = num.slice(2, 4), rest = num.slice(4);
-        const set = new Set([num]);
-        if (rest.length === 9 && rest[0] === '9') set.add(cc + ddd + rest.slice(1));
-        if (rest.length === 8) set.add(cc + ddd + '9' + rest);
-        return [...set];
-      }
-      const variants = waVariants(fromNumber);
-
-      // 1. Localiza o perfil pelo WhatsApp
-      const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at`);
-      const profile = profiles?.[0];
-      if (!profile) {
-        await sendWhatsapp(fromNumber,
-          '👋 Olá! Sou o assistente do Conéxia.\n\nNão encontrei sua conta vinculada a este número.\n\nAcesse conexia-agro-chi.vercel.app e cadastre seu WhatsApp no perfil para usar o assistente. 🚀');
-        return res.status(200).json({ ok: true });
-      }
-      const userIdProfile = profile.id;
-      const firstName = (profile.first_name || profile.name || '').split(' ')[0] || '';
-
-      // 1.1 Checa se é PRO
-      const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
-
-      // 1.2 Usuário Free: assistente liberado só nas primeiras 4 semanas
-      if (!isPro) {
-        const diasDesdeCadastro = profile.created_at
-          ? (Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)
-          : 0;
-        if (diasDesdeCadastro > 28) {
-          await sendWhatsapp(fromNumber,
-            `👋 Oi${firstName ? ' ' + firstName : ''}! Seu período gratuito do assistente de WhatsApp (4 semanas) terminou.\n\nPra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO (R$39,90/mês): acesse conexia-agro-chi.vercel.app e ative seu plano. 🚀`);
-          return res.status(200).json({ ok: true });
-        }
-      }
-
-      // 2. Busca os contatos do usuário
-      const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,last_interaction_at,next_action,next_action_date`);
-
-      // 3. Entende a intenção da mensagem
-      const intentData = await analyzeIntent(messageText, contacts || []);
-
-      // 4. Executa a ação
-      if (intentData.intent === 'register_interaction') {
-        const match = (contacts || []).find(c =>
-          intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
-        );
-        if (!match) {
-          await sendWhatsapp(fromNumber, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
-          return res.status(200).json({ ok: true });
-        }
-        await sb('interactions', {
-          method: 'POST',
-          body: JSON.stringify({
-            user_id: userIdProfile,
-            contact_id: match.id,
-            type: intentData.interaction_type || 'mensagem',
-            description: intentData.note || messageText,
-            sentiment: intentData.sentiment || 'positivo',
-            value_generated: false,
-          }),
-        });
-        await sb(`contacts?id=eq.${match.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            last_interaction_at: new Date().toISOString(),
-            ...(intentData.next_action ? { next_action: intentData.next_action, next_action_reminded_at: null } : {}),
-            ...(intentData.next_action_date ? { next_action_date: intentData.next_action_date } : {}),
-          }),
-        });
-        await sendWhatsapp(fromNumber, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
-        return res.status(200).json({ ok: true });
-      }
-
-      if (intentData.intent === 'schedule_action') {
-        const match = (contacts || []).find(c =>
-          intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
-        );
-        if (!match) {
-          await sendWhatsapp(fromNumber, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
-          return res.status(200).json({ ok: true });
-        }
-        if (!intentData.next_action) {
-          await sendWhatsapp(fromNumber, 'Entendi que é uma ação futura, mas não peguei o que precisa ser feito. Pode reformular? Ex: "Preciso enviar a proposta pro Carlos até sexta".');
-          return res.status(200).json({ ok: true });
-        }
-        await sb(`contacts?id=eq.${match.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            next_action: intentData.next_action,
-            next_action_date: intentData.next_action_date || null,
-            next_action_reminded_at: null,
-          }),
-        });
-        const prazo = intentData.next_action_date
-          ? ` até *${new Date(intentData.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')}*`
-          : '';
-        await sendWhatsapp(fromNumber, `🗓️ Anotado! Próxima ação com *${match.name}*: ${intentData.next_action}${prazo}.${intentData.next_action_date ? '\n\nTe aviso por aqui quando chegar o dia.' : ''}`);
-        return res.status(200).json({ ok: true });
-      }
-
-      if (intentData.intent === 'query_next_actions') {
-        const pending = (contacts || []).filter(c => c.next_action).slice(0, 8);
-        if (!pending.length) { await sendWhatsapp(fromNumber, 'Você não tem próximas ações pendentes registradas. 🎉'); return res.status(200).json({ ok: true }); }
-        const list = pending.map(c => `• *${c.name}*: ${c.next_action}${c.next_action_date ? ` (${c.next_action_date})` : ''}`).join('\n');
-        await sendWhatsapp(fromNumber, `📋 Suas próximas ações:\n\n${list}`);
-        return res.status(200).json({ ok: true });
-      }
-
-      if (intentData.intent === 'query_contacts') {
-        const sorted = [...(contacts || [])].sort((a, b) => new Date(a.last_interaction_at || 0) - new Date(b.last_interaction_at || 0)).slice(0, 8);
-        if (!sorted.length) { await sendWhatsapp(fromNumber, 'Você ainda não tem contatos cadastrados.'); return res.status(200).json({ ok: true }); }
-        const list = sorted.map(c => `• *${c.name}* — ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'sem interação registrada'}`).join('\n');
-        await sendWhatsapp(fromNumber, `👥 Contatos sem contato recente:\n\n${list}`);
-        return res.status(200).json({ ok: true });
-      }
-
-      if (intentData.intent === 'query_health') {
-        const total = (contacts || []).length;
-        const cooling = (contacts || []).filter(c => {
-          if (!c.last_interaction_at) return true;
-          const days = (Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000;
-          return days > 30;
-        }).length;
-        await sendWhatsapp(fromNumber, `💚 Saúde da sua rede:\n\n${total} contatos no total\n${cooling} esfriando (30+ dias sem contato)\n${total - cooling} saudáveis`);
-        return res.status(200).json({ ok: true });
-      }
-
-      if (intentData.intent === 'query_insights') {
-        const summary = (contacts || []).map(c => `${c.name}: última interação ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'nunca'}`).join('; ');
-        const insight = await geminiText(`Com base nesta rede de contatos: ${summary || 'sem contatos ainda'}. Dê 1 insight curto e acionável (máx. 3 frases) para ${firstName || 'o usuário'} sobre como cuidar da rede esta semana.`, 200);
-        await sendWhatsapp(fromNumber, `🧠 ${insight || 'Cadastre mais contatos e interações para eu gerar insights.'}`);
-        return res.status(200).json({ ok: true });
-      }
-
-      if (intentData.intent === 'help') {
-        await sendWhatsapp(fromNumber,
-          `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n🧠 *Insights*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
-        return res.status(200).json({ ok: true });
-      }
-
-      await sendWhatsapp(fromNumber, `Não entendi bem 🤔 Pode reformular? Ex: "Liguei para o André hoje, foi positivo" ou "Minhas próximas ações".`);
+      await handleIncomingMessage(fromNumber, messageText, sendWhatsappTwilio);
       return res.status(200).json({ ok: true });
     }
 
-    // Suporte para Evolution API (compatibilidade com versão anterior)
-    if (body.event !== 'messages.upsert') return res.status(200).json({ ok: true });
-    // ... resto do código original para Evolution API
+    // Canal Evolution API (compatibilidade com o número antigo, mantido em paralelo)
+    if (body.event === 'messages.upsert') {
+      const data = body.data || {};
+      if (data.key?.fromMe) return res.status(200).json({ ok: true }); // ignora mensagens enviadas pelo próprio bot
+
+      const text = data.message?.conversation || data.message?.extendedTextMessage?.text || '';
+      if (!text.trim()) return res.status(200).json({ ok: true }); // por enquanto só processa texto (áudio fica pra depois)
+
+      const jid = (data.key?.remoteJidAlt && data.key.remoteJidAlt.endsWith('@s.whatsapp.net'))
+        ? data.key.remoteJidAlt
+        : data.key?.remoteJid || '';
+      const number = jid.replace(/\D/g, '');
+      if (!number) return res.status(200).json({ ok: true });
+
+      await handleIncomingMessage(number, text, sendWhatsappEvolution);
+      return res.status(200).json({ ok: true });
+    }
+
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('[whatsapp-webhook] erro:', err);
