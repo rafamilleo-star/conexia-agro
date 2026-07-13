@@ -3623,16 +3623,30 @@ function App() {
   const handleAssess = async (result) => {
     try {
       const scores = result.scores;
-      await supabase.from("assessments").insert({
+      const fullScores = { ...scores, profileKey: result.profileKey, profileName: result.profileName, overall: result.overall };
+      const { error: insertError } = await supabase.from("assessments").insert({
         user_id: user.id,
-        scores: { ...scores, profileKey: result.profileKey, profileName: result.profileName, overall: result.overall },
+        scores: fullScores,
         overall: result.overall,
       });
-      await supabase.from("profiles").update({
+      if (insertError) console.error("[Assess] insert em assessments falhou:", insertError);
+
+      const profileUpdate = {
         assessment_completed: true,
         onboarding_completed: true,
-      }).eq("id", user.id);
-    } catch (e) { console.error(e); }
+        last_assessment_at: new Date().toISOString(),
+        overall_score: result.overall,
+        profile_key: result.profileKey,
+        profile_name: result.profileName,
+        assessment_scores: fullScores,
+      };
+      const { error: updateError } = await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
+      if (updateError) {
+        console.error("[Assess] update em profiles falhou, tentando novamente:", updateError);
+        const { error: retryError } = await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
+        if (retryError) console.error("[Assess] retry do update em profiles falhou:", retryError);
+      }
+    } catch (e) { console.error("[Assess] excecao:", e); }
     sendToMake(result);
     setAssessment(result);
     setState("app");
