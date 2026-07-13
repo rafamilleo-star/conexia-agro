@@ -3353,6 +3353,26 @@ function Auth({ onAuth, initialMode = "signup" }) {
   const [busy, setBusy] = useState(false);
   const [lgpd, setLgpd] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState("");
+
+  const sendResetEmail = async () => {
+    if (!forgotEmail) { setForgotMsg("Informe seu email."); return; }
+    setForgotBusy(true); setForgotMsg("");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw error;
+      setForgotMsg("✅ Se esse email tiver uma conta no CONÉXIA, enviamos um link pra redefinir a senha. Confere sua caixa de entrada (e o spam) — o link é válido por 1 hora.");
+    } catch (e) {
+      console.error("[ForgotPassword]", e);
+      setForgotMsg("Não consegui enviar agora. Tenta de novo em instantes.");
+    }
+    setForgotBusy(false);
+  };
 
   const submit = async () => {
     setErr(""); setBusy(true);
@@ -3449,10 +3469,62 @@ function Auth({ onAuth, initialMode = "signup" }) {
               </div>
             </div>
           )}
-          <Btn onClick={submit} disabled={busy || !email || pass.length < 6 || (mode === "signup" && !lgpd)} full>{busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}</Btn>
+          {!forgotOpen && <Btn onClick={submit} disabled={busy || !email || pass.length < 6 || (mode === "signup" && !lgpd)} full>{busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}</Btn>}
+          {mode === "login" && !forgotOpen && (
+            <button onClick={() => { setForgotOpen(true); setForgotEmail(email); setForgotMsg(""); }} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center", textDecoration:"underline" }}>Esqueci minha senha</button>
+          )}
+          {mode === "login" && forgotOpen && (
+            <div style={{ marginTop:4 }}>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:12 }}>Digite seu email pra receber o link de redefinição de senha:</div>
+              <Inp label="Email" value={forgotEmail} onChange={setForgotEmail} placeholder="seu@email.com" type="email" />
+              {forgotMsg && <div style={{ fontFamily:"'DM Sans'", fontSize:12, color: forgotMsg.startsWith("✅") ? C.grn : C.cor, background: forgotMsg.startsWith("✅") ? C.grnD : C.corD, borderRadius:8, padding:"10px 14px", marginBottom:14, lineHeight:1.5 }}>{forgotMsg}</div>}
+              <Btn onClick={sendResetEmail} disabled={forgotBusy || !forgotEmail} full>{forgotBusy ? "Enviando..." : "Enviar link de redefinição"}</Btn>
+              <button onClick={() => setForgotOpen(false)} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>← Voltar pro login</button>
+            </div>
+          )}
         </div>
         <button onClick={() => window.history.back()} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>← Voltar para a página inicial</button>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 8 }}>"Networking, além do cafezinho" · Rafael Milléo</p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ RESET DE SENHA ══════════════════════════════════════ */
+function ResetPassword({ onDone }) {
+  const [pass, setPass] = useState("");
+  const [pass2, setPass2] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    setErr("");
+    if (pass.length < 6) { setErr("A senha precisa ter no mínimo 6 caracteres."); return; }
+    if (pass !== pass2) { setErr("As senhas não conferem."); return; }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pass });
+      if (error) throw error;
+      onDone();
+    } catch (e) {
+      console.error("[ResetPassword]", e);
+      setErr(e.message || "Não consegui atualizar a senha. Tenta gerar um novo link.");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
+      <div style={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
+        <div style={{ width: 60, height: 60, borderRadius: 16, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.bg }}>C</div>
+        <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Nova senha</h1>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, margin: "0 0 24px" }}>Defina sua nova senha de acesso ao CONÉXIA.</p>
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 28, textAlign: "left" }}>
+          {err && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, background: C.corD, borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>{err}</div>}
+          <Inp label="Nova senha" value={pass} onChange={setPass} placeholder="Mínimo 6 caracteres" type="password" />
+          <Inp label="Confirme a nova senha" value={pass2} onChange={setPass2} placeholder="Repita a senha" type="password" />
+          <Btn onClick={submit} disabled={busy || pass.length < 6} full>{busy ? "Salvando..." : "Salvar nova senha"}</Btn>
+        </div>
       </div>
     </div>
   );
@@ -3478,7 +3550,7 @@ function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o C
 }
 
 function App() {
-  const [state, setState]       = useState("loading"); // loading | landing | auth_signup | auth_login | onboard | assess | app
+  const [state, setState]       = useState("loading"); // loading | landing | auth_signup | auth_login | onboard | assess | app | reset_password
   const [splashDone, setSplashDone] = useState(false);
   const [splashShown, setSplashShown] = useState(false); // splash já foi exibida nesta sessão
   const [user, setUser]         = useState(null);
@@ -3502,6 +3574,11 @@ function App() {
 
     // Escutar mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setUser(session?.user || null);
+        setState("reset_password");
+        return;
+      }
       if (event === "SIGNED_OUT" || !session) {
         setUser(null); setProfile(null); setAssessment(null);
         localStorage.clear();
@@ -3668,6 +3745,12 @@ function App() {
     }
   };
 
+  const handlePasswordUpdated = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) { setUser(session.user); await loadUserData(session.user.id); }
+    else setState("landing");
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null); setProfile(null); setAssessment(null);
@@ -3724,6 +3807,7 @@ function App() {
           </div>
         </div>
       )}
+      {state === "reset_password" && <ResetPassword onDone={handlePasswordUpdated} />}
       {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
       {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
