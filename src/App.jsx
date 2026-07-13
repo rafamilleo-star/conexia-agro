@@ -466,6 +466,7 @@ function Assess({ profile, onDone }) {
   const [qi, setQi] = useState(0);
   const [ans, setAns] = useState({});
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { scores, overall } = useMemo(() => calcScores(ans), [ans]);
   const pKey = useMemo(() => getProfile(scores), [scores]);
   const prof = PROFILES[pKey];
@@ -473,8 +474,10 @@ function Assess({ profile, onDone }) {
   const cur = ans[q?.id];
 
   const save = async () => {
+    if (saving) return; // evita duplo-clique criar registros duplicados
+    setSaving(true);
     const result = { scores, overall, profileKey: pKey, profileName: prof.name, createdAt: new Date().toISOString(), answers: ans };
-    onDone(result);
+    await onDone(result);
   };
 
   if (done) {
@@ -536,7 +539,7 @@ function Assess({ profile, onDone }) {
               </div>
             ))}
           </div>
-          <Btn onClick={save} full>Entrar no CONÉXIA →</Btn>
+          <Btn onClick={save} disabled={saving} full>{saving ? "Salvando..." : "Entrar no CONÉXIA →"}</Btn>
         </div>
       </div>
     );
