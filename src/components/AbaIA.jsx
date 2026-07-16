@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { C } from "../utils/theme.js";
 
-export function AbaIA({ userId, contacts, interactions, assessment, profile, pf }) {
+export function AbaIA({ userId, contacts, interactions, assessment, profile, pf, isPro, openAccessKey }) {
   const [secao, setSecao] = useState("insights");
   const [selContact, setSelContact] = useState(null);
 
@@ -261,6 +261,22 @@ Sem texto extra. Seja específico e use os dados reais.`;
 
   const urgColor = { alta: C.cor, media: C.amb, baixa: C.grn };
 
+  // Bloqueio visual pra recursos PRO desta aba — mesmo padrão do ProLock usado
+  // em outras partes do app (Teia, Plano de 4 semanas), só que local aqui porque
+  // o ProLock original vive em App.jsx e não é exportado.
+  const AiProLock = ({ title, desc }) => (
+    <div style={{ background: "#161618", border: "1px solid #2a2825", borderRadius: 12, padding: 24, textAlign: "center", margin: "8px 0" }}>
+      <div style={{ fontSize: 28, marginBottom: 10 }}>🔒</div>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 17, fontWeight: 700, color: "#e8e4da", marginBottom: 6 }}>{title}</div>
+      <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: "#6a6460", lineHeight: 1.6, marginBottom: 16, maxWidth: 340, margin: "0 auto 16px" }}>{desc}</div>
+      {openAccessKey && (
+        <button onClick={openAccessKey} style={{ background: C.gold, color: "#0d0d0f", border: "none", borderRadius: 8, padding: "10px 20px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+          Desbloquear no PRO
+        </button>
+      )}
+    </div>
+  );
+
   // ── Render ──────────────────────────────────────────────
   return (
     <div>
@@ -315,6 +331,7 @@ Sem texto extra. Seja específico e use os dados reais.`;
             </div>
           )}
           {insights && insights.map((ins, i) => {
+            if (!isPro && i >= 1) return null; // Free vê só o primeiro insight — o resto fica atrás do bloqueio abaixo
             const uc = urgColor[ins.urgencia] || C.txL;
             return (
               <div key={i} style={{ background: `${uc}06`, border: `1px solid ${uc}20`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
@@ -331,11 +348,23 @@ Sem texto extra. Seja específico e use os dados reais.`;
               </div>
             );
           })}
+          {insights && !isPro && insights.length > 1 && (
+            <AiProLock
+              title={`+${insights.length - 1} insight${insights.length - 1 > 1 ? 's' : ''} bloqueado${insights.length - 1 > 1 ? 's' : ''}`}
+              desc="O Free mostra 1 insight por vez. No PRO, você vê a análise completa da sua rede, sempre atualizada."
+            />
+          )}
         </div>
       )}
 
-      {/* ── SEÇÃO: METAS ── */}
-      {secao === 'metas' && (
+      {/* ── SEÇÃO: METAS (PRO) ── */}
+      {secao === 'metas' && !isPro && (
+        <AiProLock
+          title="Metas de 90 dias — recurso PRO"
+          desc="Metas personalizadas, geradas pela IA a partir do seu perfil relacional e do seu assessment, com prazos progressivos por mês."
+        />
+      )}
+      {secao === 'metas' && isPro && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
@@ -377,8 +406,14 @@ Sem texto extra. Seja específico e use os dados reais.`;
         </div>
       )}
 
-      {/* ── SEÇÃO: BRIEFING ── */}
-      {secao === 'briefing' && (
+      {/* ── SEÇÃO: BRIEFING (PRO) ── */}
+      {secao === 'briefing' && !isPro && (
+        <AiProLock
+          title="Briefing pré-contato — recurso PRO"
+          desc="Um resumo completo antes de cada reunião ou ligação: estado do relacionamento, pontos de atenção, gancho de conversa e próximo passo — gerado pela IA a partir do histórico real do contato."
+        />
+      )}
+      {secao === 'briefing' && isPro && (
         <div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, marginBottom: 4 }}>Briefing pré-contato</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 16 }}>Selecione um contato para receber um briefing completo antes de uma reunião ou ligação.</div>
