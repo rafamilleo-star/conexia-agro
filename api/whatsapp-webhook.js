@@ -71,7 +71,54 @@ async function logDebug(payload) {
   }
 }
 
+// ── Roteador determinístico ──────────────────────────────────
+// Correção mínima e isolada: frases óbvias e recorrentes não precisam de IA
+// pra classificar. Roda ANTES do Gemini — só cai no Gemini se nada aqui bater.
+// Não toca em nenhum handler: o formato de retorno é o mesmo que analyzeIntent
+// já produzia, então o restante do fluxo nem percebe a diferença.
+function normalizeForRouter(t) {
+  return String(t || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^\w\s]/g, '') // remove pontuação
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function routeDeterministic(rawText) {
+  const t = normalizeForRouter(rawText);
+
+  if (['minhas proximas acoes', 'proximas acoes', 'o que tenho para fazer'].includes(t)) {
+    return { intent: 'query_next_actions' };
+  }
+  if (['ajuda', 'me ajuda', 'menu'].includes(t)) {
+    return { intent: 'help' };
+  }
+  if (['cadastra um contato', 'cadastrar contato', 'novo contato'].includes(t)) {
+    return { intent: 'register_contact', contact_name: null };
+  }
+  const briefingPrefixes = ['me prepara para falar com', 'briefing', 'tenho reuniao com'];
+  for (const prefix of briefingPrefixes) {
+    if (t.startsWith(prefix)) {
+      let contactName = t.slice(prefix.length).trim();
+      // Remove artigo inicial ("o carlos" -> "carlos") e palavras de tempo comuns
+      // no final ("joao amanha" -> "joao") — sem isso, o filtro .includes() do
+      // handler de briefing quase nunca casaria com o nome real do contato.
+      contactName = contactName.replace(/^(o|a|os|as)\s+/, '');
+      contactName = contactName.replace(/\s+(hoje|amanha|agora|depois)$/, '');
+      return { intent: 'briefing', contact_name: contactName || null };
+    }
+  }
+  return null;
+}
+
 async function analyzeIntent(message, contacts) {
+  const deterministic = routeDeterministic(message);
+  if (deterministic) {
+    await logDebug({ debug: 'analyzeIntent_deterministic', message, intent: deterministic.intent });
+    return deterministic;
+  }
+
   const contactList = contacts.map(c => `- ${c.name}`).join('\n') || '(nenhum contato ainda)';
   const now = new Date();
   const hojeISO = now.toISOString().slice(0, 10);
