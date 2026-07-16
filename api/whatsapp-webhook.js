@@ -238,12 +238,18 @@ function normalizePhone(phone) {
     .replace(/\D/g, '');
 }
 
-// Gera as variações possíveis do número (com/sem o 9º dígito, comum no Brasil)
+// Gera as variações possíveis do número (com/sem o 9º dígito, comum no Brasil).
+// A heurística do 9º dígito só se aplica a números com DDI 55 (Brasil) — pra
+// não gerar variante incorreta em número internacional. Fixo não entra aqui
+// na prática: WhatsApp exige número móvel, então todo número que chega por
+// este webhook já é celular por definição do próprio provedor.
 function waVariants(num) {
   const cc = num.slice(0, 2), ddd = num.slice(2, 4), rest = num.slice(4);
   const set = new Set([num]);
-  if (rest.length === 9 && rest[0] === '9') set.add(cc + ddd + rest.slice(1));
-  if (rest.length === 8) set.add(cc + ddd + '9' + rest);
+  if (cc === '55') {
+    if (rest.length === 9 && rest[0] === '9') set.add(cc + ddd + rest.slice(1));
+    if (rest.length === 8) set.add(cc + ddd + '9' + rest);
+  }
   return [...set];
 }
 
@@ -362,6 +368,12 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp`);
   const profile = profiles?.[0];
   console.log({ from: number, normalized, profileWhatsapp: profile?.whatsapp || null }); // TEMPORÁRIO — remover depois do diagnóstico
+  // Log seguro e permanente (sem número completo): só dispara quando o match
+  // não foi pelo número exato, e sim por uma das variantes geradas — nunca
+  // grava nem sobrescreve profiles.whatsapp, é só pra visibilidade.
+  if (profile && normalized !== profile.whatsapp) {
+    console.log('telefone identificado por compatibilidade brasileira', '****' + String(profile.whatsapp || '').slice(-4));
+  }
   if (!profile) {
     await sendReply(number,
       '👋 Olá! Sou o assistente do Conéxia.\n\nNão encontrei sua conta vinculada a este número.\n\nAcesse conexia-agro-chi.vercel.app e cadastre seu WhatsApp no perfil para usar o assistente. 🚀');
