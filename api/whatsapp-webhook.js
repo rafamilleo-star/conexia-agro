@@ -115,6 +115,8 @@ Se descreve algo que ainda VAI acontecer (tem data futura, ou é um compromisso/
 mesmo que a frase comece com um verbo de comando como "agenda", "cadastra" ou "marca".
 
 Outras intenções:
+- register_contact: o usuário quer cadastrar uma pessoa NOVA na rede (ex.: "cadastra a Maria Silva, gerente comercial da Bayer", "adiciona um contato novo: João, conheci na feira", ou simplesmente "quero cadastrar um contato" sem detalhes ainda). Extraia o que conseguir: contact_name, company, role, how_met, e category (chute o mais provável entre "mentor", "aliado", "ponte", "potencial", "dormindo" com base no contexto — se não der pra saber, null). Se não vier nome nenhum, contact_name fica null mesmo assim (o sistema pergunta depois).
+- briefing: o usuário quer se preparar para falar/se encontrar com alguém (ex.: "tenho reunião com o Carlos hoje", "me prepara pra falar com a Ana", "qual foi a última conversa com o João?"). Extraia contact_name.
 - query_contacts: perguntas sobre quem ele não fala há tempo, lista de contatos, etc.
 - query_next_actions: perguntas sobre tarefas/próximos passos pendentes já cadastrados.
 - query_health: perguntas sobre a saúde geral da rede.
@@ -124,13 +126,17 @@ Outras intenções:
 
 Retorne APENAS um JSON, sem markdown, sem explicações:
 {
-  "intent": "register_interaction" | "schedule_action" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
+  "intent": "register_interaction" | "schedule_action" | "register_contact" | "briefing" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
   "contact_name": "nome do contato mencionado, o mais parecido possível com algum da lista acima, ou null",
   "sentiment": "positivo" | "neutro" | "negativo" | null,
   "note": "resumo objetivo da informação/assunto tratado (para register_interaction), em 1 frase, ou null",
   "next_action": "o que precisa ser feito no futuro, resumido, ou null",
   "next_action_date": "YYYY-MM-DD calculada a partir de hoje, ou null se não houver prazo",
-  "interaction_type": "ligacao" | "mensagem" | "reuniao" | "email" | "evento" | "outro" | null
+  "interaction_type": "ligacao" | "mensagem" | "reuniao" | "email" | "evento" | "outro" | null,
+  "company": "empresa do novo contato mencionada, para register_contact, ou null",
+  "role": "cargo do novo contato mencionado, para register_contact, ou null",
+  "category": "mentor" | "aliado" | "ponte" | "potencial" | "dormindo" | null,
+  "how_met": "como conheceu, se mencionado, ou null"
 }`;
   const g = await geminiTextRaw(prompt, 500);
   try {
@@ -229,15 +235,114 @@ function waVariants(num) {
   return [...set];
 }
 
+// ── Idempotência: nunca processar a mesma mensagem duas vezes ──────
+// Twilio e Evolution podem reentregar a mesma mensagem (retry de rede,
+// timeout na resposta, etc.) — sem isso, cada reentrega vira uma interação
+// duplicada, um segundo cadastro de contato, etc.
+async function alreadyProcessedMessage(messageId, userId) {
+  if (!messageId) return false; // sem id (não deveria acontecer) — deixa passar em vez de bloquear tudo
+  try {
+    const existing = await sb(`whatsapp_processed_messages?message_id=eq.${encodeURIComponent(messageId)}&select=message_id`);
+    if (existing?.length) return true;
+    await sb('whatsapp_processed_messages', {
+      method: 'POST',
+      body: JSON.stringify({ message_id: messageId, user_id: userId || null }),
+    });
+    return false;
+  } catch (e) {
+    // Falha ao checar/gravar não deve travar o atendimento — loga e segue.
+    console.error('[whatsapp-webhook] falha na checagem de idempotência:', e.message);
+    return false;
+  }
+}
+
+// ── Rate limit: no máximo N mensagens processadas por usuário por hora ──
+// Usa a tabela whatsapp_rate_limits, que já existia no schema mas nunca
+// tinha sido conectada a nenhuma lógica real.
+const RATE_LIMIT_PER_HOUR = 30;
+async function checkRateLimit(userId) {
+  const hourBucket = new Date();
+  hourBucket.setMinutes(0, 0, 0);
+  const hourISO = hourBucket.toISOString();
+  try {
+    const rows = await sb(`whatsapp_rate_limits?user_id=eq.${userId}&hour=eq.${encodeURIComponent(hourISO)}&select=id,message_count`);
+    if (rows?.length) {
+      const row = rows[0];
+      if (row.message_count >= RATE_LIMIT_PER_HOUR) return false;
+      await sb(`whatsapp_rate_limits?id=eq.${row.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ message_count: row.message_count + 1 }),
+      });
+    } else {
+      await sb('whatsapp_rate_limits', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, hour: hourISO, message_count: 1 }),
+      });
+    }
+    return true;
+  } catch (e) {
+    console.error('[whatsapp-webhook] falha no rate limit:', e.message);
+    return true; // falha na checagem não deve bloquear o usuário
+  }
+}
+
+// ── Ação pendente: no máximo 1 pergunta em aberto por usuário ──────
+// Usada hoje só pelo fluxo de cadastro de contato (quando falta o nome).
+async function getPendingAction(userId) {
+  try {
+    const rows = await sb(`whatsapp_pending_actions?user_id=eq.${userId}&select=intent,data,expires_at`);
+    const pending = rows?.[0];
+    if (!pending) return null;
+    if (new Date(pending.expires_at) < new Date()) {
+      await clearPendingAction(userId);
+      return null;
+    }
+    return pending;
+  } catch (e) {
+    console.error('[whatsapp-webhook] falha ao buscar ação pendente:', e.message);
+    return null;
+  }
+}
+async function setPendingAction(userId, intent, data) {
+  await sb(`whatsapp_pending_actions?user_id=eq.${userId}`, { method: 'DELETE' }).catch(() => {});
+  await sb('whatsapp_pending_actions', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, intent, data: data || {} }),
+  }).catch((e) => console.error('[whatsapp-webhook] falha ao gravar ação pendente:', e.message));
+}
+async function clearPendingAction(userId) {
+  await sb(`whatsapp_pending_actions?user_id=eq.${userId}`, { method: 'DELETE' }).catch(() => {});
+}
+
+// Cria o contato de fato — reaproveitado tanto no cadastro direto (1 mensagem
+// com dados suficientes) quanto no fluxo de esclarecimento (nome veio depois).
+async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met }) {
+  const contact = await sb('contacts', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: userId,
+      name: contact_name.trim(),
+      company: company || null,
+      role: role || null,
+      category: ['mentor', 'aliado', 'ponte', 'potencial', 'dormindo'].includes(category) ? category : 'potencial',
+      proximity: 3,
+      ideal_frequency_days: 30,
+      how_met: how_met || 'Cadastrado via WhatsApp',
+    }),
+  });
+  return contact?.[0] || null;
+}
+
 // ── Lógica de negócio compartilhada ───────────────────────────
 // Usada tanto pelo Twilio quanto pela Evolution API — só muda a função de envio.
-async function handleIncomingMessage(number, text, sendReply) {
+async function handleIncomingMessage(number, text, sendReply, messageId) {
   if (!SUPABASE_SERVICE_KEY) {
     await sendReply(number, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
     return;
   }
 
   const variants = waVariants(number);
+  console.log("NORMALIZED:", variants); // TEMPORÁRIO — remover depois do diagnóstico
 
   // 1. Localiza o perfil pelo WhatsApp
   const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at`);
@@ -249,6 +354,18 @@ async function handleIncomingMessage(number, text, sendReply) {
   }
   const userIdProfile = profile.id;
   const firstName = (profile.first_name || profile.name || '').split(' ')[0] || '';
+
+  // 1.0 Idempotência — se essa mensagem já foi processada antes (reentrega do
+  // provedor), não faz nada de novo. Silencioso de propósito: não é erro.
+  if (await alreadyProcessedMessage(messageId, userIdProfile)) {
+    return;
+  }
+
+  // 1.05 Rate limit — protege contra custo de IA descontrolado (spam, loop, etc.)
+  if (!(await checkRateLimit(userIdProfile))) {
+    await sendReply(number, `⏳ Você mandou muitas mensagens na última hora. Dá uma pausa e tenta de novo daqui a pouco — isso é só uma proteção contra uso excessivo, não é permanente.`);
+    return;
+  }
 
   // 1.1 Checa se é PRO
   const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
@@ -268,10 +385,81 @@ async function handleIncomingMessage(number, text, sendReply) {
   // 2. Busca os contatos do usuário
   const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,last_interaction_at,next_action,next_action_date`);
 
+  // 2.5 Havia uma pergunta em aberto pra este usuário? (hoje só usado pelo
+  // cadastro de contato quando falta o nome) Se sim, esta mensagem é a
+  // resposta a ela — não passa pelo analyzeIntent normal.
+  const pending = await getPendingAction(userIdProfile);
+  if (pending?.intent === 'register_contact_missing_name') {
+    const name = text.trim();
+    if (!name) {
+      await sendReply(number, 'Não peguei o nome. Qual é o nome do contato?');
+      return;
+    }
+    const created = await createContactFromWhatsapp(userIdProfile, { contact_name: name, ...pending.data });
+    await clearPendingAction(userIdProfile);
+    if (!created) {
+      await sendReply(number, `Deu um problema salvando o contato. Tenta de novo em instantes, ou cadastra pelo app.`);
+      return;
+    }
+    await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${pending.data?.company ? ` (${pending.data.company})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.`);
+    return;
+  }
+
   // 3. Entende a intenção da mensagem
   const intentData = await analyzeIntent(text, contacts || []);
 
   // 4. Executa a ação
+  if (intentData.intent === 'register_contact') {
+    if (!intentData.contact_name) {
+      await setPendingAction(userIdProfile, 'register_contact_missing_name', {
+        company: intentData.company || null,
+        role: intentData.role || null,
+        category: intentData.category || null,
+        how_met: intentData.how_met || null,
+      });
+      await sendReply(number, 'Qual é o nome do contato?');
+      return;
+    }
+    const created = await createContactFromWhatsapp(userIdProfile, {
+      contact_name: intentData.contact_name,
+      company: intentData.company,
+      role: intentData.role,
+      category: intentData.category,
+      how_met: intentData.how_met,
+    });
+    if (!created) {
+      await sendReply(number, `Deu um problema salvando o contato. Tenta de novo em instantes, ou cadastra pelo app.`);
+      return;
+    }
+    const detalhes = [intentData.role, intentData.company].filter(Boolean).join(' na ');
+    await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${detalhes ? ` (${detalhes})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.`);
+    return;
+  }
+
+  if (intentData.intent === 'briefing') {
+    const match = (contacts || []).find(c =>
+      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
+    );
+    if (!match) {
+      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
+      return;
+    }
+    const full = await sb(`contacts?id=eq.${match.id}&select=name,company,role,category,how_met,last_interaction_at,next_action,next_action_date`);
+    const c = full?.[0];
+    if (!c) { await sendReply(number, `Não encontrei os detalhes de "${match.name}".`); return; }
+    const diasSemContato = c.last_interaction_at ? Math.floor((Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000) : null;
+    const linhas = [
+      `📋 *Briefing — ${c.name}*`,
+      c.role || c.company ? `${[c.role, c.company].filter(Boolean).join(' na ')}` : null,
+      c.category ? `Categoria: ${c.category}` : null,
+      c.how_met ? `Como conheceu: ${c.how_met}` : null,
+      diasSemContato !== null ? `Última interação: há ${diasSemContato} dia(s)` : 'Última interação: nenhuma registrada ainda',
+      c.next_action ? `Próxima ação: ${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'Sem próxima ação definida',
+    ].filter(Boolean);
+    await sendReply(number, linhas.join('\n'));
+    return;
+  }
+
   if (intentData.intent === 'register_interaction') {
     const match = (contacts || []).find(c =>
       intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
@@ -366,7 +554,7 @@ async function handleIncomingMessage(number, text, sendReply) {
 
   if (intentData.intent === 'help') {
     await sendReply(number,
-      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n🧠 *Insights*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
+      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n👤 *Cadastrar contato*: "Cadastra a Maria, gerente comercial da Bayer"\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n🧭 *Briefing antes de uma conversa*: "Me prepara pra falar com a Ana"\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n🧠 *Insights*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
     return;
   }
 
@@ -423,7 +611,9 @@ export default async function handler(req, res) {
 
     // Canal Twilio
     if (fromNumber && messageText) {
-      await handleIncomingMessage(fromNumber, messageText, sendWhatsappTwilio);
+      console.log("FROM:", fromNumber); // TEMPORÁRIO — remover depois do diagnóstico
+      const messageId = body.MessageSid ? `twilio:${body.MessageSid}` : null;
+      await handleIncomingMessage(fromNumber, messageText, sendWhatsappTwilio, messageId);
       return res.status(200).json({ ok: true });
     }
 
@@ -441,7 +631,9 @@ export default async function handler(req, res) {
       const number = jid.replace(/\D/g, '');
       if (!number) return res.status(200).json({ ok: true });
 
-      await handleIncomingMessage(number, text, sendWhatsappEvolution);
+      console.log("FROM:", number); // TEMPORÁRIO — remover depois do diagnóstico
+      const messageId = data.key?.id ? `evolution:${data.key.id}` : null;
+      await handleIncomingMessage(number, text, sendWhatsappEvolution, messageId);
       return res.status(200).json({ ok: true });
     }
 
