@@ -6,7 +6,8 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const EVO_URL = (process.env.EVOLUTION_API_URL || 'https://evolution-api-production-0c6a.up.railway.app').replace(/\/$/, '');
-const EVO_KEY = process.env.EVOLUTION_API_KEY || 'BEBCA1FE-7152-470A-BB80-521851ED3D21';
+// A chave SEMPRE vem de variável de ambiente do Vercel — sem fallback hardcoded.
+const EVO_KEY = process.env.EVOLUTION_API_KEY;
 const EVO_INSTANCE = process.env.EVOLUTION_INSTANCE || 'conexia';
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
