@@ -1215,7 +1215,7 @@ function PerfilForm({ profile, userId, onSaved }) {
 }
 
 /* ═══ CRM APP ═════════════════════════════════════════════ */
-function CRM({ profile, assessment, onReset, user }) {
+function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [view, setView] = useState("dash");
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [akCode, setAkCode]   = useState("");
@@ -3004,7 +3004,7 @@ ${MENTORIA_LINK || true ? `
     <PerfilForm
       profile={profile}
       userId={user?.id}
-      onSaved={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))}
+      onSaved={(updated) => onProfileUpdate?.(updated)}
     />
   );
 
@@ -3824,7 +3824,7 @@ function App() {
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
       {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} />}
       {state === "assess"       && user && <Assess profile={profile} onDone={handleAssess} />}
-      {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} />}
+      {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} onProfileUpdate={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))} />}
     </>
   );
 }
