@@ -71,54 +71,7 @@ async function logDebug(payload) {
   }
 }
 
-// ── Roteador determinístico ──────────────────────────────────
-// Correção mínima e isolada: frases óbvias e recorrentes não precisam de IA
-// pra classificar. Roda ANTES do Gemini — só cai no Gemini se nada aqui bater.
-// Não toca em nenhum handler: o formato de retorno é o mesmo que analyzeIntent
-// já produzia, então o restante do fluxo nem percebe a diferença.
-function normalizeForRouter(t) {
-  return String(t || '')
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
-    .replace(/[^\w\s]/g, '') // remove pontuação
-    .trim()
-    .replace(/\s+/g, ' ');
-}
-
-function routeDeterministic(rawText) {
-  const t = normalizeForRouter(rawText);
-
-  if (['minhas proximas acoes', 'proximas acoes', 'o que tenho para fazer'].includes(t)) {
-    return { intent: 'query_next_actions' };
-  }
-  if (['ajuda', 'me ajuda', 'menu'].includes(t)) {
-    return { intent: 'help' };
-  }
-  if (['cadastra um contato', 'cadastrar contato', 'novo contato'].includes(t)) {
-    return { intent: 'register_contact', contact_name: null };
-  }
-  const briefingPrefixes = ['me prepara para falar com', 'briefing', 'tenho reuniao com'];
-  for (const prefix of briefingPrefixes) {
-    if (t.startsWith(prefix)) {
-      let contactName = t.slice(prefix.length).trim();
-      // Remove artigo inicial ("o carlos" -> "carlos") e palavras de tempo comuns
-      // no final ("joao amanha" -> "joao") — sem isso, o filtro .includes() do
-      // handler de briefing quase nunca casaria com o nome real do contato.
-      contactName = contactName.replace(/^(o|a|os|as)\s+/, '');
-      contactName = contactName.replace(/\s+(hoje|amanha|agora|depois)$/, '');
-      return { intent: 'briefing', contact_name: contactName || null };
-    }
-  }
-  return null;
-}
-
 async function analyzeIntent(message, contacts) {
-  const deterministic = routeDeterministic(message);
-  if (deterministic) {
-    await logDebug({ debug: 'analyzeIntent_deterministic', message, intent: deterministic.intent });
-    return deterministic;
-  }
-
   const contactList = contacts.map(c => `- ${c.name}`).join('\n') || '(nenhum contato ainda)';
   const now = new Date();
   const hojeISO = now.toISOString().slice(0, 10);
@@ -132,7 +85,25 @@ O usuário enviou: "${message}"
 Contatos já cadastrados na rede dele:
 ${contactList}
 
-Sua tarefa é entender a intenção, mesmo que a frase seja informal, incompleta ou não siga um padrão fixo.
+SUA TAREFA NÃO É PROCURAR COMANDOS OU PALAVRAS-CHAVE. Sua tarefa é responder: "o que esse usuário quer
+realizar?" — não importa como ele escreveu, mesmo que a frase seja informal, incompleta, indireta ou não
+siga nenhum padrão fixo. O usuário pode escrever naturalmente, do jeito que quiser.
+
+Exemplos do tipo de frase natural que você deve entender (a lista é só ilustrativa, não exaustiva — o
+entendimento tem que funcionar mesmo pra frases que não estão aqui):
+- "Ganhei o contato de um produtor." → register_contact
+- "Conheci uma gerente da BASF." → register_contact
+- "Recebi um WhatsApp interessante, é de um novo contato." → register_contact
+- "Conversei com o João hoje." → register_interaction
+- "Falei com João hoje." → register_interaction
+- "Preciso ligar para ele semana que vem." → schedule_action
+- "Ligar para ele sexta." → schedule_action
+- "Tenho reunião amanhã com o Carlos." → briefing
+- "Me prepara pra falar com a Ana." → briefing
+- "Quem faz tempo que não vejo?" / "Quem faz tempo que não converso?" → query_health
+- "O que tenho para fazer hoje?" → query_next_actions
+- "Me ajuda." → help
+
 Um CRM de verdade não só registra o que já aconteceu — também precisa capturar o que ainda vai acontecer,
 com prazo. Por isso existem duas intenções distintas para isso, e é essencial não confundi-las:
 
@@ -141,61 +112,97 @@ sabe sobre um contato (passado ou fato presente, não uma tarefa futura). Vale t
 ("liguei pro André, foi ótimo") quanto pra comandos diretos ("cadastra que o André foi promovido",
 "anota que falei com a Bia sobre o projeto X"). Se o usuário mencionar um contato + alguma informação/
 novidade/assunto sobre ele, é register_interaction — mesmo sem palavras como "liguei" ou "conversei".
-Extraia o "note" resumindo a informação central.
+Preencha fields.note resumindo a informação central.
 
 SCHEDULE_ACTION — use quando o usuário está pedindo pra ANOTAR/AGENDAR/MARCAR/LEMBRAR algo que ELE AINDA
 PRECISA FAZER no futuro em relação a um contato, com ou sem prazo. Isso vale tanto pra relatos em 1ª pessoa
-("preciso mandar a proposta pro Carlos até sexta", "tenho que ligar pra Ana semana que vem", "me lembra de
-enviar fotos pro Rafael Vicentini na segunda") quanto pra COMANDOS DIRETOS/IMPERATIVOS, que são o jeito mais
-comum das pessoas pedirem isso num CRM ("agenda uma ligação para o Caio Santilli na segunda-feira dia 06/07",
-"marca uma reunião com a Bia pra quinta", "agenda um follow-up com o Bruno semana que vem", "cria um lembrete
-pra ligar pro André amanhã"). Verbos como "agenda", "agende", "marca", "marque", "cria um lembrete", "cadastra
-uma ação/tarefa/ligação/reunião" indicando algo que vai acontecer no futuro SEMPRE são schedule_action, mesmo
-sem "eu preciso" — o sinal é a ação estar no futuro (ainda não aconteceu), não a pessoa gramatical do verbo.
-Nada aconteceu ainda — não é um relato do passado. Extraia "next_action" (o que precisa ser feito, resumido,
-incluindo o tipo se mencionado — ex: "Ligação agendada" ou "Reunião agendada") e "next_action_date" (formato
-YYYY-MM-DD). Datas explícitas no formato DD/MM ou DD/MM/AAAA são sempre dia/mês (padrão brasileiro, nunca
-mês/dia). Se vier só DD/MM sem ano, assuma o ano corrente ou o próximo se a data já passou este ano.
+("preciso mandar a proposta pro Carlos até sexta", "tenho que ligar pra Ana semana que vem") quanto pra
+COMANDOS DIRETOS/IMPERATIVOS ("agenda uma ligação para o Caio na segunda", "marca uma reunião com a Bia pra
+quinta"). O sinal é a ação estar no futuro (ainda não aconteceu), não a pessoa gramatical do verbo. Preencha
+fields.next_action (o que precisa ser feito, resumido) e fields.next_action_date (formato YYYY-MM-DD, calculado
+a partir de hoje). Datas explícitas DD/MM ou DD/MM/AAAA são sempre dia/mês (padrão brasileiro, nunca mês/dia).
+Se vier só DD/MM sem ano, assuma o ano corrente ou o próximo se a data já passou este ano.
 
-Regra de desambiguação: se a mensagem descreve algo que JÁ ACONTECEU ou é um fato já conhecido → register_interaction.
-Se descreve algo que ainda VAI acontecer (tem data futura, ou é um compromisso/tarefa a fazer) → schedule_action,
-mesmo que a frase comece com um verbo de comando como "agenda", "cadastra" ou "marca".
+Regra de desambiguação: algo que JÁ ACONTECEU ou é um fato já conhecido → register_interaction. Algo que
+ainda VAI acontecer (data futura, compromisso, tarefa a fazer) → schedule_action, mesmo que a frase comece
+com um verbo de comando como "agenda", "cadastra" ou "marca".
+
+REGISTER_CONTACT — use quando o usuário quer adicionar uma pessoa NOVA à rede dele, mesmo sem dizer
+explicitamente "cadastra" ou "contato" — o sinal é ele mencionar ter conhecido, ganho o contato de, ou
+recebido a indicação de alguém que ainda não está na lista de contatos já cadastrados acima. Preencha o
+que conseguir em fields: contact_name, company, role, how_met, e category (chute entre "mentor", "aliado",
+"ponte", "potencial", "dormindo" pelo contexto — null se não der pra saber). Se a mensagem não trouxer o
+nome da pessoa, contact_name fica ausente — NÃO responda unknown por causa disso, responda register_contact
+mesmo assim e liste "contact_name" em missing_fields. O sistema pergunta o nome depois.
+
+BRIEFING — o usuário quer se preparar para falar/se encontrar com alguém que JÁ está na rede dele. Preencha
+fields.contact_name com o nome mais parecido possível com algum da lista de contatos já cadastrados acima
+(sem artigos como "o"/"a", sem palavras de tempo como "hoje"/"amanhã" — só o nome).
 
 Outras intenções:
-- register_contact: o usuário quer cadastrar uma pessoa NOVA na rede (ex.: "cadastra a Maria Silva, gerente comercial da Bayer", "adiciona um contato novo: João, conheci na feira", ou simplesmente "quero cadastrar um contato" sem detalhes ainda). Extraia o que conseguir: contact_name, company, role, how_met, e category (chute o mais provável entre "mentor", "aliado", "ponte", "potencial", "dormindo" com base no contexto — se não der pra saber, null). Se não vier nome nenhum, contact_name fica null mesmo assim (o sistema pergunta depois).
-- briefing: o usuário quer se preparar para falar/se encontrar com alguém (ex.: "tenho reunião com o Carlos hoje", "me prepara pra falar com a Ana", "qual foi a última conversa com o João?"). Extraia contact_name.
 - query_contacts: perguntas sobre quem ele não fala há tempo, lista de contatos, etc.
 - query_next_actions: perguntas sobre tarefas/próximos passos pendentes já cadastrados.
-- query_health: perguntas sobre a saúde geral da rede.
+- query_health: perguntas sobre a saúde geral da rede (incluindo "quem eu não vejo há tempo" — isso é sobre a rede como um todo, não sobre 1 contato específico, então é query_health e não briefing).
 - query_insights: pedidos de insight, dica, análise geral.
 - help: pede ajuda, não sabe o que o assistente faz.
-- unknown: só use se a mensagem realmente não tiver relação nenhuma com networking/contatos (ex: só "oi", saudação vazia sem contexto).
+- unknown: só use se a mensagem realmente não tiver relação nenhuma com networking/contatos (ex: só "oi", saudação vazia sem contexto) — nunca use unknown só porque faltou um dado, veja a regra do register_contact acima.
 
-Retorne APENAS um JSON, sem markdown, sem explicações:
+Se a mensagem contiver MAIS DE UMA intenção ao mesmo tempo (ex.: "Conheci um produtor e preciso ligar pra
+ele sexta" = register_contact + schedule_action), retorne as duas no formato de múltiplas ações (formato 2
+abaixo), na ordem em que fazem sentido acontecer.
+
+Retorne APENAS JSON, sem markdown, sem texto fora do JSON, em UM dos dois formatos:
+
+FORMATO 1 — uma intenção só:
 {
   "intent": "register_interaction" | "schedule_action" | "register_contact" | "briefing" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
-  "contact_name": "nome do contato mencionado, o mais parecido possível com algum da lista acima, ou null",
-  "sentiment": "positivo" | "neutro" | "negativo" | null,
-  "note": "resumo objetivo da informação/assunto tratado (para register_interaction), em 1 frase, ou null",
-  "next_action": "o que precisa ser feito no futuro, resumido, ou null",
-  "next_action_date": "YYYY-MM-DD calculada a partir de hoje, ou null se não houver prazo",
-  "interaction_type": "ligacao" | "mensagem" | "reuniao" | "email" | "evento" | "outro" | null,
-  "company": "empresa do novo contato mencionada, para register_contact, ou null",
-  "role": "cargo do novo contato mencionado, para register_contact, ou null",
-  "category": "mentor" | "aliado" | "ponte" | "potencial" | "dormindo" | null,
-  "how_met": "como conheceu, se mencionado, ou null"
-}`;
-  const g = await geminiTextRaw(prompt, 500);
+  "confidence": 0.0 a 1.0,
+  "fields": {
+    "contact_name": string ou null,
+    "sentiment": "positivo" | "neutro" | "negativo" | null,
+    "note": string ou null,
+    "next_action": string ou null,
+    "next_action_date": "YYYY-MM-DD" ou null,
+    "interaction_type": "ligacao" | "mensagem" | "reuniao" | "email" | "evento" | "outro" | null,
+    "company": string ou null,
+    "role": string ou null,
+    "category": "mentor" | "aliado" | "ponte" | "potencial" | "dormindo" | null,
+    "how_met": string ou null
+  },
+  "missing_fields": ["nome dos campos de fields que faltam e são necessários pra essa intenção, ou array vazio"],
+  "reasoning": "1 frase curta explicando por que você entendeu essa intenção"
+}
+
+FORMATO 2 — mais de uma intenção na mesma mensagem:
+{
+  "actions": [ { ...um objeto no formato 1 para cada intenção... } ]
+}
+
+Omita campos de "fields" que não se aplicam à intenção identificada (não precisa preencher tudo, só o relevante).`;
+
+  const g = await geminiTextRaw(prompt, 700);
+  const flatten = (item) => ({
+    intent: item?.intent || 'unknown',
+    confidence: item?.confidence ?? null,
+    missing_fields: item?.missing_fields || [],
+    reasoning: item?.reasoning || null,
+    ...(item?.fields || {}),
+  });
   try {
     if (!g.ok) throw new Error(`Gemini HTTP ${g.status}: ${JSON.stringify(g.raw).slice(0, 500)}`);
     const cleaned = g.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     if (!cleaned) throw new Error('Gemini retornou texto vazio');
     const parsed = JSON.parse(cleaned);
-    await logDebug({ debug: 'analyzeIntent_ok', message, intent: parsed.intent, contact_name: parsed.contact_name, next_action: parsed.next_action, next_action_date: parsed.next_action_date });
-    return parsed;
+    const list = Array.isArray(parsed.actions) ? parsed.actions.map(flatten) : [flatten(parsed)];
+    await logDebug({
+      debug: 'analyzeIntent_ok', message,
+      intents: list.map(i => i.intent), confidences: list.map(i => i.confidence),
+      missingFields: list.map(i => i.missing_fields), reasonings: list.map(i => i.reasoning),
+    });
+    return list;
   } catch (e) {
     await logDebug({ debug: 'analyzeIntent_fail', message, error: e.message, geminiStatus: g.status, geminiRawText: g.text?.slice(0, 800), geminiRawResponse: g.raw });
-    return { intent: 'unknown' };
+    return [{ intent: 'unknown' }];
   }
 }
 
@@ -479,10 +486,21 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
     return;
   }
 
-  // 3. Entende a intenção da mensagem
-  const intentData = await analyzeIntent(text, contacts || []);
+  // 3. Entende a intenção da mensagem (pode haver mais de uma ação na mesma mensagem)
+  const intentDataList = await analyzeIntent(text, contacts || []);
 
-  // 4. Executa a ação
+  // 4. Executa cada ação identificada, na ordem em que vieram
+  for (const intentData of intentDataList) {
+    await executeIntent(intentData, { userIdProfile, contacts, number, sendReply, text, firstName, isPro });
+  }
+}
+
+// ── Dispatch de uma única ação identificada ───────────────────
+// Reaproveitado tanto pra mensagens com 1 intenção quanto pra mensagens com
+// várias (chamado uma vez por ação, na ordem). O corpo de cada `if` abaixo é
+// EXATAMENTE o mesmo que já existia — só foi movido pra uma função separada
+// pra poder ser chamado em loop sem duplicar nenhuma lógica de handler.
+async function executeIntent(intentData, { userIdProfile, contacts, number, sendReply, text, firstName, isPro }) {
   if (intentData.intent === 'register_contact') {
     if (!intentData.contact_name) {
       await setPendingAction(userIdProfile, 'register_contact_missing_name', {
@@ -511,6 +529,10 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   }
 
   if (intentData.intent === 'briefing') {
+    if (!isPro) {
+      await sendReply(number, `🔒 Briefing inteligente é um recurso PRO.\n\nNo PRO, antes de cada conversa você recebe o histórico completo, pontos de atenção e sugestão de próximo passo — não só os dados brutos.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      return;
+    }
     const match = (contacts || []).find(c =>
       intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
     );
@@ -620,6 +642,10 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   }
 
   if (intentData.intent === 'query_insights') {
+    if (!isPro) {
+      await sendReply(number, `🔒 Insights e recomendações estratégicas são um recurso PRO.\n\nNo Free você já acompanha saúde da rede e próximas ações. No PRO, a IA analisa sua rede e recomenda o que fazer.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      return;
+    }
     const summary = (contacts || []).map(c => `${c.name}: última interação ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'nunca'}`).join('; ');
     const insight = await geminiText(`Com base nesta rede de contatos: ${summary || 'sem contatos ainda'}. Dê 1 insight curto e acionável (máx. 3 frases) para ${firstName || 'o usuário'} sobre como cuidar da rede esta semana.`, 200);
     await sendReply(number, `🧠 ${insight || 'Cadastre mais contatos e interações para eu gerar insights.'}`);
@@ -628,7 +654,7 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
 
   if (intentData.intent === 'help') {
     await sendReply(number,
-      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n👤 *Cadastrar contato*: "Cadastra a Maria, gerente comercial da Bayer"\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n🧭 *Briefing antes de uma conversa*: "Me prepara pra falar com a Ana"\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n🧠 *Insights*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
+      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n👤 *Cadastrar contato*: "Cadastra a Maria, gerente comercial da Bayer"\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n\n🔒 *No PRO*:\n🧭 *Briefing antes de uma conversa*: "Me prepara pra falar com a Ana"\n🧠 *Insights e recomendações*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
     return;
   }
 
