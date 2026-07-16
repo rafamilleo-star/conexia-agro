@@ -19,9 +19,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'prompt is required' });
     }
 
-    // Key assembled at runtime to avoid secret scanners
-    const p = ['AIzaSyBJX5dQU_La', 'HEH49m2_PJAdl-kx', 'B9v2P6s'];
-    const apiKey = process.env.GEMINI_API_KEY || p.join('');
+    // A chave SEMPRE vem de variável de ambiente do Vercel — sem fallback hardcoded.
+    // Se isso disparar, é sinal de que GEMINI_API_KEY não está configurada/correta no Vercel.
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY não configurada nas variáveis de ambiente do Vercel.' });
+    }
 
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
