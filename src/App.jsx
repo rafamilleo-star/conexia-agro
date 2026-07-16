@@ -1,6 +1,6 @@
 import ConexiaDashboard from './components/ConexiaDashboard';
 import { AbaIA } from './components/AbaIA';
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "./utils/supabase";
 import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
@@ -467,6 +467,10 @@ function Assess({ profile, onDone }) {
   const [ans, setAns] = useState({});
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Guard síncrono: useRef não depende de re-render, então cobre o caso de
+  // duplo-clique disparando dois eventos antes do React aplicar `disabled`.
+  // O useState continua existindo só para controlar o texto/estado visual do botão.
+  const savingRef = useRef(false);
   const { scores, overall } = useMemo(() => calcScores(ans), [ans]);
   const pKey = useMemo(() => getProfile(scores), [scores]);
   const prof = PROFILES[pKey];
@@ -474,10 +478,17 @@ function Assess({ profile, onDone }) {
   const cur = ans[q?.id];
 
   const save = async () => {
-    if (saving) return; // evita duplo-clique criar registros duplicados
+    if (savingRef.current) return; // evita duplo-clique criar registros duplicados
+    savingRef.current = true;
     setSaving(true);
-    const result = { scores, overall, profileKey: pKey, profileName: prof.name, createdAt: new Date().toISOString(), answers: ans };
-    await onDone(result);
+    try {
+      const result = { scores, overall, profileKey: pKey, profileName: prof.name, createdAt: new Date().toISOString(), answers: ans };
+      await onDone(result);
+    } finally {
+      // Não reseta savingRef: uma vez enviado, este componente não deve permitir novo envio
+      // (a navegação para o app acontece dentro de onDone). Se algo falhar antes da navegação,
+      // preferimos travar o botão a arriscar um segundo registro.
+    }
   };
 
   if (done) {
@@ -2807,9 +2818,9 @@ ${MENTORIA_LINK || true ? `
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, fontStyle: "italic", margin: "0 0 6px" }}>{pf?.tagline}</p>
             <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.gold }}>Score geral: {assessment.overall}%</div>
           </div>
-          {isPro ? (
-            <Btn small onClick={downloadReport}>⬇ Baixar relatório</Btn>
-          ) : (
+          {/* Download do relatório/PDF é gratuito para todos os usuários (Free e PRO) — decisão de produto: não cobrar pelo assessment em si */}
+          <Btn small onClick={downloadReport}>⬇ Baixar relatório</Btn>
+          {false && (
             <button onClick={() => setShowUpgrade(true)} style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}50`, borderRadius: 10, padding: "10px 16px", cursor: "pointer", textAlign: "center" }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.gold, marginBottom: 2 }}>🔒 PRO</div>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>Fazer upgrade</div>
