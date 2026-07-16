@@ -226,6 +226,18 @@ async function sendWhatsappEvolution(number, text) {
   }
 }
 
+// Normaliza o número pra dígitos puros — remove o prefixo "whatsapp:" (Evolution
+// já não vem com isso, mas não custa cobrir) e qualquer caractere que não seja
+// dígito, incluindo o "+" do formato E.164 que o Twilio manda em `From`.
+// Sem isso, um número como "+554391557894" quebrava o waVariants (que assume
+// dígitos puros), e a busca no profiles nunca encontrava ninguém.
+function normalizePhone(phone) {
+  if (!phone) return null;
+  return String(phone)
+    .replace(/^whatsapp:/i, '')
+    .replace(/\D/g, '');
+}
+
 // Gera as variações possíveis do número (com/sem o 9º dígito, comum no Brasil)
 function waVariants(num) {
   const cc = num.slice(0, 2), ddd = num.slice(2, 4), rest = num.slice(4);
@@ -341,12 +353,15 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
     return;
   }
 
-  const variants = waVariants(number);
-  console.log("NORMALIZED:", variants); // TEMPORÁRIO — remover depois do diagnóstico
+  // Normaliza pra dígitos puros só pra buscar o perfil — 'number' (original,
+  // com "+" se vier do Twilio) continua intacto pra usar no envio da resposta.
+  const normalized = normalizePhone(number);
+  const variants = waVariants(normalized);
 
   // 1. Localiza o perfil pelo WhatsApp
-  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at`);
+  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp`);
   const profile = profiles?.[0];
+  console.log({ from: number, normalized, profileWhatsapp: profile?.whatsapp || null }); // TEMPORÁRIO — remover depois do diagnóstico
   if (!profile) {
     await sendReply(number,
       '👋 Olá! Sou o assistente do Conéxia.\n\nNão encontrei sua conta vinculada a este número.\n\nAcesse conexia-agro-chi.vercel.app e cadastre seu WhatsApp no perfil para usar o assistente. 🚀');
