@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { C } from "../utils/theme.js";
+import { BRAND } from "../config/brand";
 
 export function AbaIA({ userId, contacts, interactions, assessment, profile, pf, isPro, openAccessKey }) {
   const [secao, setSecao] = useState("insights");
@@ -21,9 +22,9 @@ export function AbaIA({ userId, contacts, interactions, assessment, profile, pf,
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefErr, setBriefErr] = useState(null);
 
-  const cacheKey = `conexia_ia_insights_${userId}`;
-  const goalsKey = `conexia_ia_goals_${userId}`;
-  const metaKey  = `conexia_ia_meta_${userId}`;
+  const cacheKey = `${BRAND.storagePrefix}_ia_insights_${userId}`;
+  const goalsKey = `${BRAND.storagePrefix}_ia_goals_${userId}`;
+  const metaKey  = `${BRAND.storagePrefix}_ia_meta_${userId}`;
 
   const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : null;
 
