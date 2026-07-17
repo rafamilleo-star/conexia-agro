@@ -13,11 +13,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, maxTokens } = req.body;
+    const { prompt, maxTokens, thinkingBudget } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'prompt is required' });
     }
+
+    // Por padrão desligamos o "pensamento" do Gemini 2.5 Flash (thinkingBudget: 0).
+    // Todos os usos atuais deste endpoint pedem saída em JSON puro, onde o thinking
+    // só consome tokens do orçamento sem melhorar o resultado. Se no futuro algum
+    // caso precisar de raciocínio mais profundo, basta enviar thinkingBudget no body
+    // da requisição (ex: { thinkingBudget: 1024 }) para sobrescrever esse padrão.
+    const effectiveThinkingBudget = typeof thinkingBudget === 'number' ? thinkingBudget : 0;
 
     // A chave SEMPRE vem de variável de ambiente do Vercel — sem fallback hardcoded.
     // Se isso disparar, é sinal de que GEMINI_API_KEY não está configurada/correta no Vercel.
@@ -36,6 +43,7 @@ export default async function handler(req, res) {
           generationConfig: {
             maxOutputTokens: maxTokens || 1024,
             temperature: 0.7,
+            thinkingConfig: { thinkingBudget: effectiveThinkingBudget },
           },
         }),
       }
