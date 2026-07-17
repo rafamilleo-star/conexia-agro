@@ -12,6 +12,26 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Log assíncrono no Supabase (mesmo padrão de api/whatsapp-webhook.js).
+  // Nunca bloqueia nem derruba a resposta ao usuário — só registra pra diagnóstico.
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
+  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+  const logDebug = async (row) => {
+    if (!SUPABASE_SERVICE_KEY) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/ai_debug_log`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_SERVICE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify(row),
+      });
+    } catch (_) { /* logging nunca deve derrubar a resposta principal */ }
+  };
+
   try {
     const { prompt, maxTokens, thinkingBudget } = req.body;
 
@@ -52,14 +72,48 @@ export default async function handler(req, res) {
     const geminiData = await geminiRes.json();
 
     if (!geminiRes.ok) {
+      await logDebug({
+        endpoint: 'claude.js',
+        ok: false,
+        http_status: geminiRes.status,
+        finish_reason: null,
+        text_length: 0,
+        prompt_preview: String(prompt).slice(0, 300),
+        response_preview: JSON.stringify(geminiData).slice(0, 500),
+        raw_gemini: geminiData,
+      });
       return res.status(geminiRes.status).json(geminiData);
     }
 
     // Normaliza para o mesmo formato que o app espera: { content: [{ text }] }
-    const text = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return res.status(200).json({ content: [{ text }] });
+    const candidate = geminiData?.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text || '';
+    const finishReason = candidate?.finishReason || null;
+
+    await logDebug({
+      endpoint: 'claude.js',
+      ok: true,
+      http_status: 200,
+      finish_reason: finishReason,
+      text_length: text.length,
+      prompt_preview: String(prompt).slice(0, 300),
+      response_preview: text.slice(0, 500) || JSON.stringify(geminiData).slice(0, 500),
+      raw_gemini: geminiData,
+    });
+
+    return res.status(200).json({ content: [{ text }], finishReason });
 
   } catch (error) {
+    await logDebug({
+      endpoint: 'claude.js',
+      ok: false,
+      http_status: 500,
+      finish_reason: 'exception',
+      text_length: 0,
+      prompt_preview: '',
+      response_preview: error.message,
+      raw_gemini: null,
+    });
     return res.status(500).json({ error: error.message });
   }
 }
