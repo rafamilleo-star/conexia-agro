@@ -16,6 +16,7 @@ export function AbaIA({ userId, contacts, interactions, assessment, profile, pf,
   const [aiGoals, setAiGoals] = useState(null);
   const [metaDone, setMetaDone] = useState({});
   const [goalsLoading, setGoalsLoading] = useState(false);
+  const [goalsErr, setGoalsErr] = useState(null);
 
   // ── Briefing ──
   const [briefing, setBriefing] = useState(null);
@@ -123,6 +124,15 @@ Sem texto extra.`;
         body: JSON.stringify({ prompt, maxTokens: 700 })
       });
       const data = await res.json();
+      // Se a API respondeu com erro (chave inválida, sem crédito, quota, etc.),
+      // 'data' vem no formato {error: ...} — sem isso o erro real ficava escondido
+      // atrás de uma mensagem genérica. Mostramos o motivo verdadeiro na tela.
+      if (!res.ok) {
+        const motivo = data?.error?.message || data?.error || `HTTP ${res.status}`;
+        setInsErr(`Falha na IA (${res.status}): ${motivo}`);
+        setInsLoading(false);
+        return;
+      }
       const text = data.content?.[0]?.text || '';
       const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
       if (parsed.insights?.length) {
@@ -130,7 +140,7 @@ Sem texto extra.`;
         setInsRefresh(new Date());
         localStorage.setItem(cacheKey, JSON.stringify({ data: parsed.insights, ts: Date.now() }));
       } else {
-        setInsErr('A IA não retornou insights válidos. Tente novamente.');
+        setInsErr('A IA respondeu, mas sem insights válidos no formato esperado. Tente novamente.');
       }
     } catch(e) {
       setInsErr('Erro ao gerar insights: ' + e.message);
@@ -142,6 +152,7 @@ Sem texto extra.`;
   const generateGoals = async () => {
     if (!pf) return;
     setGoalsLoading(true);
+    setGoalsErr(null);
     try {
       const sc = assessment?.scores||{};
       const prompt = `Você é um coach de networking estratégico. Gere EXATAMENTE 3 metas personalizadas para os próximos 90 dias.
@@ -167,13 +178,23 @@ Sem texto extra.`;
         body: JSON.stringify({ prompt, maxTokens: 400 })
       });
       const data = await res.json();
+      if (!res.ok) {
+        const motivo = data?.error?.message || data?.error || `HTTP ${res.status}`;
+        setGoalsErr(`Falha na IA (${res.status}): ${motivo}`);
+        setGoalsLoading(false);
+        return;
+      }
       const text = data.content?.[0]?.text || '';
       const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
       if (parsed.goals?.length) {
         setAiGoals(parsed.goals);
         localStorage.setItem(goalsKey, JSON.stringify(parsed.goals));
+      } else {
+        setGoalsErr('A IA respondeu, mas sem metas válidas no formato esperado. Tente novamente.');
       }
-    } catch(e) {}
+    } catch(e) {
+      setGoalsErr('Erro ao gerar metas: ' + e.message);
+    }
     setGoalsLoading(false);
   };
 
@@ -247,12 +268,18 @@ Sem texto extra. Seja específico e use os dados reais.`;
         body: JSON.stringify({ prompt, maxTokens: 700 })
       });
       const data = await res.json();
+      if (!res.ok) {
+        const motivo = data?.error?.message || data?.error || `HTTP ${res.status}`;
+        setBriefErr(`Falha na IA (${res.status}): ${motivo}`);
+        setBriefLoading(false);
+        return;
+      }
       const text = data.content?.[0]?.text || '';
       const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
       if (parsed.estado_relacionamento) {
         setBriefing(parsed);
       } else {
-        setBriefErr('Não foi possível gerar o briefing. Tente novamente.');
+        setBriefErr('A IA respondeu, mas sem o formato esperado. Tente novamente.');
       }
     } catch(e) {
       setBriefErr('Erro: ' + e.message);
@@ -380,6 +407,11 @@ Sem texto extra. Seja específico e use os dados reais.`;
           {!pf && (
             <div style={{ background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 10, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
               Complete o diagnóstico para gerar metas personalizadas.
+            </div>
+          )}
+          {goalsErr && (
+            <div style={{ background: '#3a1414', border: '1px solid #6b2020', borderRadius: 10, padding: 14, marginBottom: 16, fontFamily: "'DM Sans'", fontSize: 13, color: '#ff8080' }}>
+              ⚠️ {goalsErr}
             </div>
           )}
           {goalsLoading && (
