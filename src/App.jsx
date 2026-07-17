@@ -3,6 +3,7 @@ import { AbaIA } from './components/AbaIA';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "./utils/supabase";
 import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
+import { BRAND } from "./config/brand";
 import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
 import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
 import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
@@ -13,7 +14,7 @@ import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transpare
 const ConexiaIcon = ({ size = 64, dark = true, style = {} }) => (
   <img
     src={dark ? iconeDark : iconeTransp}
-    alt="CONÉXIA"
+    alt={BRAND.name}
     style={{ width: size, height: size, objectFit: 'contain', ...style }}
   />
 );
@@ -21,7 +22,7 @@ const ConexiaIcon = ({ size = 64, dark = true, style = {} }) => (
 const ConexiaLogo = ({ height = 48, style = {} }) => (
   <img
     src={logoTexto}
-    alt="CONÉXIA — Diagnóstico Relacional"
+    alt={`${BRAND.name} — Diagnóstico Relacional`}
     style={{ height, objectFit: 'contain', ...style }}
   />
 );
@@ -32,15 +33,15 @@ const PROFILES = {
   influenciador: { name: "O Influenciador", emoji: "🌟", tagline: "Onde você está, as coisas acontecem.", desc: "Presença de mercado e generosidade natural. As pessoas te procuram porque sabem que você conecta, indica e gera valor. Rede viva e diversa.", strengths: ["Alta visibilidade", "Generosidade natural", "Confiança rápida"], risks: ["Pode se sobrecarregar", "Rede ampla mas nem sempre profunda"], actions: ["Transforme 2 contatos superficiais em relações profundas.", "Crie critério claro para dizer não sem culpa.", "Documente os 10 contatos que mais geram valor mútuo."] },
   conector: { name: "O Conector", emoji: "🔗", tagline: "Você tece redes vivas.", desc: "Escuta de verdade e conecta A com B criando valor para ambos. Confiança natural porque se importa genuinamente.", strengths: ["Escuta ativa genuína", "Conecta pessoas certas", "Alta reciprocidade"], risks: ["Falta de direcionamento estratégico", "Pode dar mais do que recebe"], actions: ["Liste 10 conexões valiosas que fez para outros — peça algo para 3.", "Defina 3 objetivos para sua rede nos próximos 90 dias.", "Para cada conexão: isso me aproxima de qual objetivo?"] },
   tecnico_invisivel: { name: "O Técnico Invisível", emoji: "🔬", tagline: "Competente demais para ser ignorado — mas é o que acontece.", desc: "Competência inquestionável. Mas sua rede não sabe porque você não aparece. Confiança alta, presença baixa.", strengths: ["Competência reconhecida por quem convive", "Autenticidade", "Relações profundas"], risks: ["Invisibilidade profissional", "Perde oportunidades"], actions: ["Participe de 1 evento do setor nos próximos 30 dias.", "Publique 1 conteúdo técnico no LinkedIn esta semana.", "Peça a 3 pessoas: me indica para uma conversa importante."] },
-  relacional_intuitivo: { name: "O Relacional Intuitivo", emoji: "💫", tagline: "Você sente as pessoas. Falta transformar em sistema.", desc: "Dom natural para relações, opera por intuição. Quando a vida aperta, networking cai primeiro — porque não tem estrutura.", strengths: ["Inteligência emocional alta", "Relações autênticas", "Confiança rápida"], risks: ["Networking inconsistente", "Reativo — só cultiva quando precisa"], actions: ["Configure o CONÉXIA com 10 contatos mais importantes.", "Ritual semanal: toda segunda, escolha 2 pessoas para contatar.", "Escreva o que cada contato precisa. Envie algo relevante sem pedir nada."] },
+  relacional_intuitivo: { name: "O Relacional Intuitivo", emoji: "💫", tagline: "Você sente as pessoas. Falta transformar em sistema.", desc: "Dom natural para relações, opera por intuição. Quando a vida aperta, networking cai primeiro — porque não tem estrutura.", strengths: ["Inteligência emocional alta", "Relações autênticas", "Confiança rápida"], risks: ["Networking inconsistente", "Reativo — só cultiva quando precisa"], actions: [`Configure o ${BRAND.name} com 10 contatos mais importantes.`, "Ritual semanal: toda segunda, escolha 2 pessoas para contatar.", "Escreva o que cada contato precisa. Envie algo relevante sem pedir nada."] },
   ativador_intermitente: { name: "O Ativador Intermitente", emoji: "⚡", tagline: "Quando ativa, é poderoso. O problema é que nem sempre ativa.", desc: "Visão e presença. Mas a inconsistência faz sua rede nunca saber se pode contar com você.", strengths: ["Alta capacidade quando engajado", "Boa visão estratégica", "Presença forte"], risks: ["Inconsistência crônica", "Perde credibilidade pela oscilação"], actions: ["Ative alertas para contatos com mais de 15 dias sem interação.", "Comprometa-se com 3 interações por semana.", "Agende networking como reunião fixa no calendário."] },
   construtor_confianca: { name: "O Construtor de Confiança", emoji: "🏛️", tagline: "Você constrói devagar, mas o que constrói não cai.", desc: "Rede sólida. Cultiva com consistência e autenticidade. O que falta é expandir.", strengths: ["Alta confiabilidade", "Consistência no cultivo", "Autenticidade reconhecida"], risks: ["Rede pode ser pequena demais", "Dificuldade em expandir zona de conforto"], actions: ["Identifique 3 pessoas FORA do seu círculo que seriam estratégicas.", "Peça a um aliado para te apresentar a alguém novo.", "Participe de 1 evento onde não conhece ninguém."] },
-  explorador_rede: { name: "O Explorador de Rede", emoji: "🧭", tagline: "Você está no começo. E isso é vantagem.", desc: "Sem padrão dominante — pode construir do zero, com método, sem vícios. O CONÉXIA será sua fundação.", strengths: ["Mente aberta", "Sem vícios de networking", "Alto potencial"], risks: ["Pode se sentir perdido", "Risco de desistir cedo"], actions: ["Liste 15 pessoas que importam — classifique cada uma no CONÉXIA.", "Escolha 3 e envie mensagem genuína esta semana.", "Leia o capítulo 1 do livro e aplique 1 conceito."] },
+  explorador_rede: { name: "O Explorador de Rede", emoji: "🧭", tagline: "Você está no começo. E isso é vantagem.", desc: `Sem padrão dominante — pode construir do zero, com método, sem vícios. O ${BRAND.name} será sua fundação.`, strengths: ["Mente aberta", "Sem vícios de networking", "Alto potencial"], risks: ["Pode se sentir perdido", "Risco de desistir cedo"], actions: [`Liste 15 pessoas que importam — classifique cada uma no ${BRAND.name}.`, "Escolha 3 e envie mensagem genuína esta semana.", "Leia o capítulo 1 do livro e aplique 1 conceito."] },
 };
 
 const PLAN = [
   { week: 1, title: "Mapear contatos", icon: "🗺️", goal: "Construir a fundação da sua rede.", tasks: ["Cadastre 10 contatos estratégicos", "Classifique cada um", "Defina frequência ideal", "Escreva notas sobre cada pessoa"], metric: "10 contatos cadastrados" },
-  { week: 2, title: "Reativar relações", icon: "🔄", goal: "Reconectar com quem esfriou.", tasks: ["Identifique 3 contatos com menor health", "Envie mensagem genuína para cada um", "Registre cada interação no CONÉXIA"], metric: "3 relações reativadas" },
+  { week: 2, title: "Reativar relações", icon: "🔄", goal: "Reconectar com quem esfriou.", tasks: ["Identifique 3 contatos com menor health", "Envie mensagem genuína para cada um", `Registre cada interação no ${BRAND.name}`], metric: "3 relações reativadas" },
   { week: 3, title: "Gerar valor", icon: "💎", goal: "Dar antes de pedir.", tasks: ["Para cada contato-chave: o que posso oferecer?", "Faça 2 indicações", "Compartilhe conteúdo com 3 contatos"], metric: "2 indicações + 3 conteúdos" },
   { week: 4, title: "Criar sistema", icon: "⚙️", goal: "Transformar ação em hábito.", tasks: ["Defina ritual semanal", "Configure alertas", "Defina 3 metas para 90 dias"], metric: "Ritual + metas documentadas" },
 ];
@@ -550,7 +551,7 @@ function Assess({ profile, onDone }) {
               </div>
             ))}
           </div>
-          <Btn onClick={save} disabled={saving} full>{saving ? "Salvando..." : "Entrar no CONÉXIA →"}</Btn>
+          <Btn onClick={save} disabled={saving} full>{saving ? "Salvando..." : `Entrar no ${BRAND.name} →`}</Btn>
         </div>
       </div>
     );
@@ -643,7 +644,7 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
   const [lastRefresh, setLastRefresh] = useState(null);
   const [errMsg, setErrMsg] = useState(null);
 
-  const cacheKey = `conexia_ai_insights_${userId}`;
+  const cacheKey = `${BRAND.storagePrefix}_ai_insights_${userId}`;
 
   const generateInsights = async () => {
     setLoading(true);
@@ -906,7 +907,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   // Carregar estado salvo do localStorage (persistência simples e rápida)
   useEffect(() => {
     if (!userId) return;
-    const saved = localStorage.getItem(`conexia_plan_${userId}`);
+    const saved = localStorage.getItem(`${BRAND.storagePrefix}_plan_${userId}`);
     if (saved) {
       try {
         const { tasks, metas, goals } = JSON.parse(saved);
@@ -918,7 +919,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   }, [userId]);
 
   const save = (newDone, newMeta, newGoals) => {
-    localStorage.setItem(`conexia_plan_${userId}`, JSON.stringify({
+    localStorage.setItem(`${BRAND.storagePrefix}_plan_${userId}`, JSON.stringify({
       tasks: newDone ?? done,
       metas: newMeta ?? metaDone,
       goals: newGoals ?? aiGoals,
@@ -1065,7 +1066,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
 
       {/* Dicas */}
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginTop: 8 }}>
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>Dicas de uso do CONÉXIA</div>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>Dicas de uso do {BRAND.name}</div>
         {[
           { icon: '📅', title: 'Ritual semanal', desc: 'Toda segunda-feira, 15 minutos: veja os alertas do Dashboard e escolha 2 contatos para contatar.' },
           { icon: '📋', title: 'Registre interações', desc: 'Sempre que falar com alguém relevante, registre na aba Contatos. Quanto mais você registra, mais preciso o Health Score fica.' },
@@ -1187,7 +1188,7 @@ function PerfilForm({ profile, userId, onSaved }) {
         <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
         <div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Cadastre seu WhatsApp para usar o Assistente de IA</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu número cadastrado, você pode conversar com o assistente CONÉXIA diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu número cadastrado, você pode conversar com o assistente {BRAND.name} diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
         </div>
       </div>
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
@@ -1513,7 +1514,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url; a.download = "conexia-contatos.csv"; a.click();
+        a.href = url; a.download = `${BRAND.exportFileBase}-contatos.csv`; a.click();
         URL.revokeObjectURL(url);
       } catch (e) { console.error(e); }
     };
@@ -1524,7 +1525,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url; a.download = "conexia-backup.json"; a.click();
+        a.href = url; a.download = `${BRAND.exportFileBase}-backup.json`; a.click();
         URL.revokeObjectURL(url);
       } catch (e) { console.error(e); }
     };
@@ -1652,7 +1653,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.grn, marginBottom: 3 }}>Assistente por WhatsApp ativo</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>Manda mensagem pro CONÉXIA a qualquer hora: <em>"Liguei pro André hoje, foi positivo"</em>, <em>"Minhas próximas ações"</em> ou <em>"Saúde da minha rede"</em>.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>Manda mensagem pro {BRAND.name} a qualquer hora: <em>"Liguei pro André hoje, foi positivo"</em>, <em>"Minhas próximas ações"</em> ou <em>"Saúde da minha rede"</em>.</div>
               <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer" style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.grn, textDecoration: "none" }}>Abrir conversa →</a>
             </div>
           </div>
@@ -2320,7 +2321,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const UpgradeModal = () => (
     <Modal title="" onClose={() => setShowUpgrade(false)}>
       <div style={{ textAlign: "center", marginBottom: 16 }}>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.gold, marginBottom: 4 }}>CONÉXIA PRO</div>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.gold, marginBottom: 4 }}>{BRAND.name} PRO</div>
         <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Transforme diagnóstico em execução</div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
@@ -2557,7 +2558,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 <!-- ════ CAPA ══════════════════════════════════════════════════════ -->
 <div class="cover">
   <div>
-    <div class="lbl">Diagnóstico Relacional Profissional · CONÉXIA</div>
+    <div class="lbl">Diagnóstico Relacional Profissional · ${BRAND.name}</div>
     <div class="name-big">${nomePessoa}</div>
     <div class="profile-tag">
       <span class="profile-tag-name">${pf?.name||""}</span>
@@ -2588,7 +2589,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
   </div>
 
   <div class="footer-bar">
-    <div class="footer-bar-l">CONÉXIA</div>
+    <div class="footer-bar-l">${BRAND.name}</div>
     <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
   </div>
 </div>
@@ -2596,7 +2597,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 <!-- ════ P2: MAPA DIMENSIONAL + SÍNTESE ═════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
 <div style="display:grid;grid-template-columns:47% 53%;gap:16px">
@@ -2628,7 +2629,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 <!-- ════ P3: ANÁLISE PROFUNDA ════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
 <div class="lbl">Análise Profunda do Perfil</div>
@@ -2674,7 +2675,7 @@ ${(() => {
   if (!plan) return '';
   return `<div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 <div class="lbl">Plano de Ação Imediato</div>
 <h2 style="margin-bottom:6px">De diagnóstico para execução</h2>
@@ -2722,7 +2723,7 @@ ${(() => {
 <!-- ════ P4: GATILHOS ══════════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
 <div class="lbl">Gatilhos Relacionais</div>
@@ -2771,7 +2772,7 @@ ${(() => {
 <!-- ════ P5: PLANO ═════════════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
 <div class="lbl">Plano de Ativação — 4 Semanas</div>
@@ -2791,7 +2792,7 @@ ${PLAN.map((w,i)=>`<div class="week-box">
 <!-- ════ P5: TERMÔMETRO + VANTAGEM ══════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · CONÉXIA</div>
+  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
 <div class="lbl">Termômetro Relacional — 90 Dias</div>
@@ -2823,7 +2824,7 @@ ${MENTORIA_LINK || true ? `
 </div>` : ''}
 
 <div class="footer-bar" style="margin-top:20px">
-  <div class="footer-bar-l">CONÉXIA</div>
+  <div class="footer-bar-l">${BRAND.name}</div>
   <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>Diagnóstico Relacional Profissional · ${new Date().toLocaleDateString('pt-BR')}</div>
 </div>
 
@@ -3049,7 +3050,7 @@ ${MENTORIA_LINK || true ? `
         <nav style={{ width: 190, flexShrink: 0, background: C.sf, borderRight: `1px solid ${C.brd}`, padding: "20px 12px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px 18px", borderBottom: `1px solid ${C.brd}`, marginBottom: 14 }}>
             <ConexiaIcon size={30} dark={true} />
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15, fontWeight: 700, color: C.txt }}>CONÉXIA</div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 15, fontWeight: 700, color: C.txt }}>{BRAND.name}</div>
           </div>
           {NAVS.map(n => (
             <button key={n.id} onClick={() => { setView(n.id); setSelId(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, background: view === n.id ? C.gD : "transparent", border: view === n.id ? `1px solid ${C.gL}` : "1px solid transparent", borderRadius: 7, padding: "9px 12px", cursor: "pointer", marginBottom: 3 }}>
@@ -3078,7 +3079,7 @@ ${MENTORIA_LINK || true ? `
         <div style={{ background: C.sf, borderBottom: `1px solid ${C.brd}`, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <ConexiaIcon size={26} dark={true} />
-            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 14, fontWeight: 700, color: C.txt }}>CONÉXIA</span>
+            <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 14, fontWeight: 700, color: C.txt }}>{BRAND.name}</span>
           </div>
           <button onClick={() => { setView("perfil"); setSelId(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: 6 }}>
             <span style={{ fontSize: 14 }}>👤</span>
@@ -3320,7 +3321,7 @@ function SplashScreen({ onDone }) {
           "Para ser intencional<br/>precisa ser estratégico."
         </p>
         <div style={{ width: 40, height: 1, background: C.gD, margin: '0 auto 20px' }} />
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, letterSpacing: '.12em', textTransform: 'uppercase' }}>CONÉXIA</div>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, letterSpacing: '.12em', textTransform: 'uppercase' }}>{BRAND.name}</div>
       </div>
       <div style={{ position: 'absolute', bottom: 32, fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, opacity: 0.35, letterSpacing: '.06em' }}>toque para continuar</div>
     </div>
@@ -3335,7 +3336,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       {/* Logo */}
       <div style={{ textAlign:"center", marginBottom:40 }}>
         <ConexiaLogo height={72} style={{ margin: "0 auto 12px", display: "block" }} />
-        <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>Plataforma IAGRO</div>
+        <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>{BRAND.platformTag}</div>
       </div>
 
       {/* Headline */}
@@ -3403,7 +3404,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
         redirectTo: window.location.origin,
       });
       if (error) throw error;
-      setForgotMsg("✅ Se esse email tiver uma conta no CONÉXIA, enviamos um link pra redefinir a senha. Confere sua caixa de entrada (e o spam) — o link é válido por 1 hora.");
+      setForgotMsg(`✅ Se esse email tiver uma conta no ${BRAND.name}, enviamos um link pra redefinir a senha. Confere sua caixa de entrada (e o spam) — o link é válido por 1 hora.`);
     } catch (e) {
       console.error("[ForgotPassword]", e);
       setForgotMsg("Não consegui enviar agora. Tenta de novo em instantes.");
@@ -3446,7 +3447,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
       <div style={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
         <div style={{ width: 60, height: 60, borderRadius: 16, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.bg }}>C</div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>CONÉXIA</h1>
+        <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>{BRAND.name}</h1>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, margin: "0 0 28px" }}>Seu sistema pessoal de inteligência relacional.</p>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 28, textAlign: "left" }}>
           <div style={{ display: "flex", marginBottom: 22 }}>
@@ -3493,12 +3494,12 @@ function Auth({ onAuth, initialMode = "signup" }) {
                   <button onClick={() => setShowPrivacy(false)} style={{ background:"none", border:"none", color:C.txL, fontSize:20, cursor:"pointer", lineHeight:1 }}>×</button>
                 </div>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7 }}>
-                  <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>CONÉXIA, plataforma de inteligência relacional para profissionais do agronegócio.</p>
+                  <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligência relacional para profissionais do agronegócio.</p>
                   <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Coletamos nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
                   <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Os dados são utilizados exclusivamente para personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
                   <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>O tratamento é realizado com base no consentimento do titular (Art. 7º, I) e para execução do contrato de uso da plataforma (Art. 7º, V).</p>
                   <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados não são vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
-                  <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Você pode solicitar acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento pelo e-mail: <strong>contato@conexia.app</strong>.</p>
+                  <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Você pode solicitar acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento pelo e-mail: <strong>{BRAND.supportEmail}</strong>.</p>
                   <p><strong style={{color:C.txt}}>7. Retenção</strong><br/>Os dados são mantidos enquanto a conta estiver ativa. Após exclusão, os dados são removidos em até 30 dias.</p>
                   <p><strong style={{color:C.txt}}>8. Termos de Uso</strong><br/>O uso da plataforma é pessoal e intransferível. É vedado o uso para fins ilícitos, spam ou coleta de dados de terceiros sem consentimento.</p>
                 </div>
@@ -3555,7 +3556,7 @@ function ResetPassword({ onDone }) {
       <div style={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
         <div style={{ width: 60, height: 60, borderRadius: 16, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.bg }}>C</div>
         <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Nova senha</h1>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, margin: "0 0 24px" }}>Defina sua nova senha de acesso ao CONÉXIA.</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, margin: "0 0 24px" }}>Defina sua nova senha de acesso ao {BRAND.name}.</p>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 28, textAlign: "left" }}>
           {err && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, background: C.corD, borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>{err}</div>}
           <Inp label="Nova senha" value={pass} onChange={setPass} placeholder="Mínimo 6 caracteres" type="password" />
@@ -3568,7 +3569,7 @@ function ResetPassword({ onDone }) {
 }
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
-function ProLock({ title = "Recurso disponível no PRO", desc = "Desbloqueie o CONÉXIA completo para transformar diagnóstico em ação prática.", cta = "Assinar PRO — R$ 39,90/mês", onKey, user }) {
+function ProLock({ title = "Recurso disponível no PRO", desc = `Desbloqueie o ${BRAND.name} completo para transformar diagnóstico em ação prática.`, cta = "Assinar PRO — R$ 39,90/mês", onKey, user }) {
   return (
     <div style={{ background:"#161618", border:"1px solid #2a2825", borderRadius:12, padding:24, textAlign:"center", margin:"8px 0" }}>
       <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
@@ -3630,7 +3631,7 @@ function App() {
   }, []);
 
   const loadUserData = async (userId) => {
-    const lsKey = "conexia_done_" + userId;
+    const lsKey = BRAND.storagePrefix + "_done_" + userId;
     try {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       if (p) p.name = p.name || p.first_name || "";
@@ -3819,7 +3820,7 @@ function App() {
   if (state === "loading") return (
     <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
       <div style={{ width:44, height:44, borderRadius:11, background:`linear-gradient(135deg,${C.gold},${C.gB})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.bg }}>C</div>
-      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, color:C.gold, letterSpacing:".06em" }}>CONÉXIA</div>
+      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, color:C.gold, letterSpacing:".06em" }}>{BRAND.name}</div>
       <div style={{ width:32, height:2, borderRadius:1, background:C.gD, animation:"none", marginTop:4 }}/>
       <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".08em" }}>Verificando acesso...</div>
     </div>
@@ -3831,14 +3832,14 @@ function App() {
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:99999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
           <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
             <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Atualizamos nossa Política de Privacidade</h2>
-            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Pra continuar usando o CONÉXIA, precisamos que você confirme sua ciência sobre o tratamento dos seus dados, conforme a LGPD.</p>
+            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Pra continuar usando o {BRAND.name}, precisamos que você confirme sua ciência sobre o tratamento dos seus dados, conforme a LGPD.</p>
             <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7, marginBottom:16 }}>
-              <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>CONÉXIA, plataforma de inteligência relacional para profissionais do agronegócio.</p>
+              <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligência relacional para profissionais do agronegócio.</p>
               <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
               <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
               <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>Consentimento do titular (Art. 7º, I) e execução do contrato de uso da plataforma (Art. 7º, V).</p>
               <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados não são vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
-              <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento: <strong>contato@conexia.app</strong>.</p>
+              <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento: <strong>{BRAND.supportEmail}</strong>.</p>
             </div>
             <button onClick={acceptConsentNow} disabled={consentBusy} style={{ width:"100%", background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer" }}>{consentBusy ? "Aguarde..." : "Li e aceito"}</button>
           </div>
