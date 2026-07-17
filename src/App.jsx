@@ -3375,7 +3375,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       )}
       <div style={{ marginTop:20, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
-        Gratuito · Sem cadastro
+        Criado por Rafael Milléo
       </div>
     </div>
   );
