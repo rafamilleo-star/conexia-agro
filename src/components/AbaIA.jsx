@@ -134,13 +134,20 @@ Sem texto extra.`;
         return;
       }
       const text = data.content?.[0]?.text || '';
-      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      let parsed = {};
+      try {
+        parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      } catch (parseErr) {
+        setInsErr(`A IA respondeu algo que não é JSON válido. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
+        setInsLoading(false);
+        return;
+      }
       if (parsed.insights?.length) {
         setInsights(parsed.insights);
         setInsRefresh(new Date());
         localStorage.setItem(cacheKey, JSON.stringify({ data: parsed.insights, ts: Date.now() }));
       } else {
-        setInsErr('A IA respondeu, mas sem insights válidos no formato esperado. Tente novamente.');
+        setInsErr(`A IA respondeu, mas sem insights no formato esperado. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
       }
     } catch(e) {
       setInsErr('Erro ao gerar insights: ' + e.message);
@@ -185,12 +192,19 @@ Sem texto extra.`;
         return;
       }
       const text = data.content?.[0]?.text || '';
-      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      let parsed = {};
+      try {
+        parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      } catch (parseErr) {
+        setGoalsErr(`A IA respondeu algo que não é JSON válido. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
+        setGoalsLoading(false);
+        return;
+      }
       if (parsed.goals?.length) {
         setAiGoals(parsed.goals);
         localStorage.setItem(goalsKey, JSON.stringify(parsed.goals));
       } else {
-        setGoalsErr('A IA respondeu, mas sem metas válidas no formato esperado. Tente novamente.');
+        setGoalsErr(`A IA respondeu, mas sem metas no formato esperado. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
       }
     } catch(e) {
       setGoalsErr('Erro ao gerar metas: ' + e.message);
@@ -275,11 +289,18 @@ Sem texto extra. Seja específico e use os dados reais.`;
         return;
       }
       const text = data.content?.[0]?.text || '';
-      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      let parsed = {};
+      try {
+        parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      } catch (parseErr) {
+        setBriefErr(`A IA respondeu algo que não é JSON válido. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
+        setBriefLoading(false);
+        return;
+      }
       if (parsed.estado_relacionamento) {
         setBriefing(parsed);
       } else {
-        setBriefErr('A IA respondeu, mas sem o formato esperado. Tente novamente.');
+        setBriefErr(`A IA respondeu, mas sem o formato esperado. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
       }
     } catch(e) {
       setBriefErr('Erro: ' + e.message);
