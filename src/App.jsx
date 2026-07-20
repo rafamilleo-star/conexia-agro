@@ -262,11 +262,29 @@ function Btn({ children, onClick, variant = "primary", disabled, small, full }) 
 }
 
 function Inp({ label, value, onChange, placeholder, type = "text", textarea }) {
-  const s = { width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, outline: "none" };
+  const [showPass, setShowPass] = useState(false);
+  const isPassword = type === "password";
+  const s = { width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 8, padding: isPassword ? "12px 42px 12px 14px" : "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, outline: "none" };
   return (
     <div style={{ marginBottom: 16 }}>
       {label && <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 6 }}>{label}</label>}
-      {textarea ? <textarea value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={3} style={{ ...s, resize: "vertical" }} /> : <input type={type} value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={s} />}
+      {textarea ? (
+        <textarea value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={3} style={{ ...s, resize: "vertical" }} />
+      ) : isPassword ? (
+        <div style={{ position: "relative" }}>
+          <input type={showPass ? "text" : "password"} value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={s} />
+          <button
+            type="button"
+            onClick={() => setShowPass(v => !v)}
+            aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
+            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", color: C.txL, fontSize: 16, lineHeight: 1 }}
+          >
+            {showPass ? "🙈" : "👁️"}
+          </button>
+        </div>
+      ) : (
+        <input type={type} value={value || ""} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={s} />
+      )}
     </div>
   );
 }
@@ -3444,6 +3462,34 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
   );
 }
 
+/* ═══ Traduz mensagens de erro do Supabase Auth pra português simples ═══ */
+function friendlyAuthError(e, fallback = "Erro de conexão.") {
+  const raw = e?.message || "";
+  const m = raw.toLowerCase();
+  if (m.includes("password") && (m.includes("character") || m.includes("weak") || m.includes("should contain") || m.includes("at least"))) {
+    return "A senha deve conter pelo menos 1 letra maiúscula, 1 número e 1 caractere especial.";
+  }
+  if (m.includes("password") && m.includes("6 characters")) {
+    return "A senha precisa ter no mínimo 6 caracteres.";
+  }
+  if (m.includes("invalid login credentials")) {
+    return "Email ou senha incorretos.";
+  }
+  if (m.includes("user already registered") || (m.includes("already") && m.includes("registered"))) {
+    return "Já existe uma conta com esse email. Tenta entrar em vez de criar uma nova.";
+  }
+  if (m.includes("email") && m.includes("invalid")) {
+    return "Digite um email válido.";
+  }
+  if (m.includes("rate limit") || m.includes("too many")) {
+    return "Muitas tentativas seguidas. Espera um minuto e tenta de novo.";
+  }
+  if (m.includes("network") || m.includes("fetch")) {
+    return "Erro de conexão. Confere sua internet e tenta de novo.";
+  }
+  return raw || fallback;
+}
+
 /* ═══ AUTH ═════════════════════════════════════════════════ */
 function Auth({ onAuth, initialMode = "signup" }) {
   const [mode, setMode] = useState(initialMode || "signup");
@@ -3502,7 +3548,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
         if (error) throw error;
         if (data?.session) { onAuth(data.session, data.user); return; }
       }
-    } catch (e) { setErr(e.message || "Erro de conexão."); }
+    } catch (e) { setErr(friendlyAuthError(e)); }
     setBusy(false);
   };
 
@@ -3609,7 +3655,7 @@ function ResetPassword({ onDone }) {
       onDone();
     } catch (e) {
       console.error("[ResetPassword]", e);
-      setErr(e.message || "Não consegui atualizar a senha. Tenta gerar um novo link.");
+      setErr(friendlyAuthError(e, "Não consegui atualizar a senha. Tenta gerar um novo link."));
     }
     setBusy(false);
   };
