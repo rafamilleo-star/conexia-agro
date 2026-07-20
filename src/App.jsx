@@ -903,58 +903,95 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   const [metaDone, setMetaDone] = useState({});
   const [aiGoals, setAiGoals] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [realProgress, setRealProgress] = useState(null); // atividade real (interactions/contacts) vinda do banco
+  const [loaded, setLoaded] = useState(false);
 
-  // Carregar estado salvo do localStorage (persistência simples e rápida)
-  useEffect(() => {
+  // Carrega estado real do Supabase: checklist (plan_step_completion), metas de IA
+  // com progresso calculado (ai_goals_progress) e atividade real registrada (plan_progress).
+  const loadAll = async () => {
     if (!userId) return;
-    const saved = localStorage.getItem(`${BRAND.storagePrefix}_plan_${userId}`);
-    if (saved) {
-      try {
-        const { tasks, metas, goals } = JSON.parse(saved);
-        if (tasks) setDone(tasks);
-        if (metas) setMetaDone(metas);
-        if (goals) setAiGoals(goals);
-      } catch (e) {}
-    }
-  }, [userId]);
-
-  const save = (newDone, newMeta, newGoals) => {
-    localStorage.setItem(`${BRAND.storagePrefix}_plan_${userId}`, JSON.stringify({
-      tasks: newDone ?? done,
-      metas: newMeta ?? metaDone,
-      goals: newGoals ?? aiGoals,
-    }));
-  };
-
-  const toggleTask = (weekNum, taskIdx) => {
-    const key = `${weekNum}_${taskIdx}`;
-    const newDone = { ...done, [key]: !done[key] };
+    const [{ data: steps }, { data: goals }, { data: progress }] = await Promise.all([
+      supabase.from('plan_step_completion').select('week, step_number').eq('user_id', userId).eq('phase', 1),
+      supabase.from('ai_goals_progress').select('*').eq('user_id', userId).eq('archived', false).order('created_at', { ascending: false }),
+      supabase.from('plan_progress').select('*').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1),
+    ]);
+    const newDone = {}, newMeta = {};
+    (steps || []).forEach(s => {
+      if (s.step_number === -1) newMeta[s.week] = true;
+      else newDone[`${s.week}_${s.step_number}`] = true;
+    });
     setDone(newDone);
-    save(newDone, null, null);
-  };
-
-  const toggleMeta = (weekNum) => {
-    const newMeta = { ...metaDone, [weekNum]: !metaDone[weekNum] };
     setMetaDone(newMeta);
-    save(null, newMeta, null);
+    setAiGoals(goals || []);
+    setRealProgress(progress?.[0] || null);
+    setLoaded(true);
   };
 
+  useEffect(() => { loadAll(); }, [userId]);
+
+  const toggleTask = async (weekNum, taskIdx) => {
+    const key = `${weekNum}_${taskIdx}`;
+    const wasDone = !!done[key];
+    setDone(d => ({ ...d, [key]: !wasDone })); // otimista
+    if (wasDone) {
+      await supabase.from('plan_step_completion').delete()
+        .eq('user_id', userId).eq('phase', 1).eq('week', weekNum).eq('step_number', taskIdx);
+    } else {
+      const { error } = await supabase.from('plan_step_completion')
+        .upsert({ user_id: userId, phase: 1, week: weekNum, step_number: taskIdx, completed_at: new Date().toISOString() },
+          { onConflict: 'user_id,phase,week,step_number' });
+      if (error) { console.error('[Plano] falha ao salvar tarefa:', error); setDone(d => ({ ...d, [key]: wasDone })); }
+    }
+  };
+
+  const toggleMeta = async (weekNum) => {
+    const wasDone = !!metaDone[weekNum];
+    setMetaDone(m => ({ ...m, [weekNum]: !wasDone }));
+    if (wasDone) {
+      await supabase.from('plan_step_completion').delete()
+        .eq('user_id', userId).eq('phase', 1).eq('week', weekNum).eq('step_number', -1);
+    } else {
+      const { error } = await supabase.from('plan_step_completion')
+        .upsert({ user_id: userId, phase: 1, week: weekNum, step_number: -1, completed_at: new Date().toISOString() },
+          { onConflict: 'user_id,phase,week,step_number' });
+      if (error) { console.error('[Plano] falha ao salvar meta:', error); setMetaDone(m => ({ ...m, [weekNum]: wasDone })); }
+    }
+  };
+
+  // Gera metas de 90 dias com métrica real e mensurável (interações ou contatos engajados),
+  // não texto solto: a IA define o alvo numérico, e o progresso evolui sozinho a partir do uso real da plataforma.
   const generateAiGoals = async () => {
     if (!pf) return;
     setAiLoading(true);
     try {
-      const prompt = `Você é um coach de networking estratégico. O usuário tem o perfil relacional "${pf.name}" (${pf.tagline}). Pontos fortes: ${pf.strengths?.join(', ')}. Riscos: ${pf.risks?.join(', ')}. Gere exatamente 3 metas personalizadas para os próximos 90 dias, específicas e mensuráveis para esse perfil. Responda APENAS com JSON no formato: {"goals": ["meta 1", "meta 2", "meta 3"]}. Sem texto extra.`;
+      const [{ count: interactionsCount }, { data: contactRows }] = await Promise.all([
+        supabase.from('interactions').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+        supabase.from('interactions').select('contact_id').eq('user_id', userId),
+      ]);
+      const contactsEngaged = new Set((contactRows || []).map(r => r.contact_id)).size;
+
+      const prompt = `Você é um coach de networking estratégico. O usuário tem o perfil relacional "${pf.name}" (${pf.tagline}). Pontos fortes: ${pf.strengths?.join(', ')}. Riscos: ${pf.risks?.join(', ')}. Hoje ele tem ${interactionsCount || 0} interações registradas e ${contactsEngaged} contatos engajados na plataforma. Gere exatamente 3 metas mensuráveis para os próximos 90 dias, cada uma medida por UM destes dois indicadores: "interactions_count" (total de interações registradas) ou "contacts_engaged" (contatos distintos com quem interagiu). Defina um alvo numérico realista acima do valor atual. Responda APENAS com JSON no formato: {"goals": [{"text": "descrição curta e específica da meta", "metric_type": "interactions_count", "target_value": 40}]}. Sem texto extra.`;
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, maxTokens: 300 })
+        body: JSON.stringify({ prompt, maxTokens: 500 })
       });
       const data = await res.json();
       const text = data.content?.[0]?.text || '';
       const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
       if (parsed.goals?.length) {
-        setAiGoals(parsed.goals);
-        save(null, null, parsed.goals);
+        const rows = parsed.goals.map(g => ({
+          user_id: userId,
+          goal_text: g.text,
+          metric_type: g.metric_type === 'contacts_engaged' ? 'contacts_engaged' : 'interactions_count',
+          baseline_value: g.metric_type === 'contacts_engaged' ? contactsEngaged : (interactionsCount || 0),
+          target_value: Number(g.target_value) || (g.metric_type === 'contacts_engaged' ? contactsEngaged + 5 : (interactionsCount || 0) + 10),
+        }));
+        // Arquiva metas antigas (mantém histórico) e cria as novas
+        await supabase.from('ai_goals').update({ archived: true }).eq('user_id', userId).eq('archived', false);
+        const { error } = await supabase.from('ai_goals').insert(rows);
+        if (error) console.error('[Plano] falha ao salvar metas de IA:', error);
+        await loadAll();
       }
     } catch (e) {
       console.error('AI goals error:', e);
@@ -962,40 +999,66 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     setAiLoading(false);
   };
 
+  const hasActiveGoals = aiGoals && aiGoals.length > 0;
+
   return (
     <div>
-      {/* Metas de IA */}
+      {/* Atividade real registrada (vem do trigger do banco, não é auto-declarada) */}
+      {realProgress && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          <div style={{ flex: 1, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Interações — semana atual</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 22, fontWeight: 700, color: C.txt, marginTop: 4 }}>{realProgress.interactions_count ?? 0}</div>
+          </div>
+          <div style={{ flex: 1, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Contatos engajados</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 22, fontWeight: 700, color: C.txt, marginTop: 4 }}>{realProgress.contacts_engaged ?? 0}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Metas de IA — mensuráveis, com progresso calculado a partir do uso real */}
       <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>🎯 Suas metas para 90 dias</div>
-          {!aiGoals && (
+          {!hasActiveGoals && (
             <button onClick={generateAiGoals} disabled={aiLoading || !pf}
               style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '6px 14px', fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, cursor: aiLoading || !pf ? 'default' : 'pointer', opacity: aiLoading || !pf ? 0.6 : 1 }}>
               {aiLoading ? 'Gerando...' : 'Gerar com IA'}
             </button>
           )}
-          {aiGoals && (
+          {hasActiveGoals && (
             <button onClick={generateAiGoals} disabled={aiLoading}
               style={{ background: 'transparent', border: 'none', fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, cursor: 'pointer', textDecoration: 'underline' }}>
               {aiLoading ? '...' : 'Regenerar'}
             </button>
           )}
         </div>
-        {!aiGoals && !aiLoading && (
+        {!hasActiveGoals && !aiLoading && loaded && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
-            {pf ? 'Clique em "Gerar com IA" para receber metas personalizadas para o seu perfil.' : 'Complete o diagnóstico para gerar metas personalizadas.'}
+            {pf ? 'Clique em "Gerar com IA" para receber metas personalizadas e mensuráveis para o seu perfil.' : 'Complete o diagnóstico para gerar metas personalizadas.'}
           </div>
         )}
         {aiLoading && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>A IA está analisando seu perfil...</div>}
-        {aiGoals && aiGoals.map((g, i) => (
-          <div key={i} onClick={() => toggleMeta(`goal_${i}`)}
-            style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10, cursor: 'pointer', padding: '8px 10px', borderRadius: 8, background: metaDone[`goal_${i}`] ? C.grnD : 'transparent', border: `1px solid ${metaDone[`goal_${i}`] ? C.grn + '40' : 'transparent'}`, transition: 'all .2s' }}>
-            <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${metaDone[`goal_${i}`] ? C.grn : C.gL}`, background: metaDone[`goal_${i}`] ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-              {metaDone[`goal_${i}`] && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+        {hasActiveGoals && aiGoals.map((g) => {
+          const pct = Math.max(0, Math.min(100, g.progress_percentage ?? 0));
+          const achieved = g.status === 'achieved' || pct >= 100;
+          const daysLeft = Math.max(0, Math.ceil((new Date(g.deadline_at) - new Date()) / 86400000));
+          return (
+            <div key={g.id} style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 8, background: achieved ? C.grnD : C.w06, border: `1px solid ${achieved ? C.grn + '40' : C.brd}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.4 }}>{achieved ? '✅ ' : ''}{g.goal_text}</span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, flexShrink: 0 }}>{daysLeft}d restantes</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: C.brd, overflow: 'hidden', marginBottom: 4 }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: achieved ? C.grn : C.gold, transition: 'width .3s' }} />
+              </div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
+                {g.current_value ?? 0} / {g.target_value} {g.metric_type === 'contacts_engaged' ? 'contatos' : 'interações'} · {pct}%
+              </div>
             </div>
-            <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: metaDone[`goal_${i}`] ? C.txL : C.txM, lineHeight: 1.5, textDecoration: metaDone[`goal_${i}`] ? 'line-through' : 'none' }}>{g}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Semanas do plano */}
@@ -3763,6 +3826,22 @@ function App() {
         console.error("[Assess] update em profiles falhou, tentando novamente:", updateError);
         const { error: retryError } = await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
         if (retryError) console.error("[Assess] retry do update em profiles falhou:", retryError);
+      }
+
+      // Ativa o plano mensurável: cria user_plans se ainda não existir para este usuário.
+      // Isso liga o trigger update_plan_progress (interactions -> plan_progress) que já existe no banco.
+      const { data: existingPlan } = await supabase.from("user_plans").select("id").eq("user_id", user.id).maybeSingle();
+      if (!existingPlan) {
+        const dimEntries = DIMS.map(d => ({ label: d.label, score: scores?.[d.key] ?? 0 }));
+        const weakest = dimEntries.reduce((min, d) => (d.score < min.score ? d : min), dimEntries[0]);
+        const { error: planError } = await supabase.from("user_plans").insert({
+          user_id: user.id,
+          target_dimension: weakest.label,
+          target_dimension_score: Math.min(100, (weakest.score || 0) + 20),
+          phase: 1,
+          week: 1,
+        });
+        if (planError) console.error("[Assess] falha ao criar user_plans:", planError);
       }
     } catch (e) { console.error("[Assess] excecao:", e); }
     sendToMake(result);
