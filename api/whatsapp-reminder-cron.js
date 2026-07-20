@@ -10,6 +10,9 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+const EVO_URL = (process.env.EVOLUTION_API_URL || 'https://evolution-api-production-0c6a.up.railway.app').replace(/\/$/, '');
+const EVO_KEY = process.env.EVOLUTION_API_KEY;
+const EVO_INSTANCE = process.env.EVOLUTION_INSTANCE || 'conexia';
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
 async function sb(path, opts = {}) {
@@ -37,10 +40,7 @@ function toE164(number) {
 }
 
 async function sendWhatsappTwilio(number, text) {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
-    console.error('[whatsapp-reminder-cron] Twilio não configurado (faltam TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN).');
-    return false;
-  }
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) return false;
   try {
     const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
     const res = await fetch(
@@ -68,6 +68,35 @@ async function sendWhatsappTwilio(number, text) {
     console.error('[whatsapp-reminder-cron] erro ao enviar via Twilio:', e.message);
     return false;
   }
+}
+
+async function sendWhatsappEvolution(number, text) {
+  if (!EVO_KEY) return false;
+  try {
+    const res = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
+      body: JSON.stringify({ number, text }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('[whatsapp-reminder-cron] falha ao enviar via Evolution:', res.status, body);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[whatsapp-reminder-cron] erro ao enviar via Evolution:', e.message);
+    return false;
+  }
+}
+
+// Os dois canais rodam em paralelo, igual no webhook de entrada — hoje o
+// Twilio é quem entrega de verdade, mas quando o número Business (Evolution)
+// voltar a funcionar, este fallback passa a usá-lo sem precisar mexer em nada.
+async function sendWhatsapp(number, text) {
+  if (await sendWhatsappTwilio(number, text)) return true;
+  if (await sendWhatsappEvolution(number, text)) return true;
+  return false;
 }
 
 export default async function handler(req, res) {
@@ -129,7 +158,7 @@ export default async function handler(req, res) {
         ? `⏰ Lembrete atrasado: *${contato.next_action}* com *${contato.name}* (era pra ${dataFormatada}).`
         : `⏰ Lembrete de hoje: *${contato.next_action}* com *${contato.name}*.`;
 
-      const ok = await sendWhatsappTwilio(profile.whatsapp, texto);
+      const ok = await sendWhatsapp(profile.whatsapp, texto);
       if (!ok) continue;
 
       await sb(`contacts?id=eq.${contato.id}`, {
@@ -145,7 +174,7 @@ export default async function handler(req, res) {
 
       const texto = `🎂 Hoje é aniversário de *${contato.name}*! Boa hora pra mandar uma mensagem — reciprocidade genuína conta mais que qualquer ligação estratégica.`;
 
-      const ok = await sendWhatsappTwilio(profile.whatsapp, texto);
+      const ok = await sendWhatsapp(profile.whatsapp, texto);
       if (!ok) continue;
 
       await sb(`contacts?id=eq.${contato.id}`, {
