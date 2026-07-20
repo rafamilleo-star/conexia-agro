@@ -1,14 +1,15 @@
 // api/whatsapp-reminder-cron.js
-// Roda diariamente (via Vercel Cron, ver vercel.json). Busca contatos com
-// next_action_date vencendo hoje (ou atrasada) que ainda não geraram lembrete,
-// e manda uma mensagem de WhatsApp pro dono do contato avisando.
+// Roda diariamente (via Vercel Cron, ver vercel.json). Dois tipos de lembrete:
+// 1) next_action_date vencendo hoje (ou atrasada) que ainda não gerou lembrete
+// 2) aniversário de contato caindo hoje, uma vez por ano
+// Envia por Twilio — mesmo canal já em uso e funcionando no assistente de WhatsApp
+// (a Evolution API usada aqui antes tinha entrega silenciosamente quebrada).
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const EVO_URL = (process.env.EVOLUTION_API_URL || 'https://evolution-api-production-0c6a.up.railway.app').replace(/\/$/, '');
-// A chave SEMPRE vem de variável de ambiente do Vercel — sem fallback hardcoded.
-const EVO_KEY = process.env.EVOLUTION_API_KEY;
-const EVO_INSTANCE = process.env.EVOLUTION_INSTANCE || 'conexia';
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
 async function sb(path, opts = {}) {
@@ -29,31 +30,48 @@ async function sb(path, opts = {}) {
   return data;
 }
 
-async function sendWhatsapp(number, text) {
+// Garante formato E.164 (com "+") — no banco a maioria está salvo só em dígitos.
+function toE164(number) {
+  const n = String(number || '').trim();
+  return n.startsWith('+') ? n : `+${n}`;
+}
+
+async function sendWhatsappTwilio(number, text) {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    console.error('[whatsapp-reminder-cron] Twilio não configurado (faltam TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN).');
+    return false;
+  }
   try {
-    const res = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-      body: JSON.stringify({ number, text }),
-    });
+    const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          From: TWILIO_WHATSAPP_NUMBER,
+          To: `whatsapp:${toE164(number)}`,
+          Body: text,
+        }).toString(),
+      }
+    );
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      console.error('[whatsapp-reminder-cron] falha ao enviar:', res.status, body);
+      console.error('[whatsapp-reminder-cron] falha ao enviar via Twilio:', res.status, body);
+      return false;
     }
+    return true;
   } catch (e) {
-    console.error('[whatsapp-reminder-cron] erro ao enviar:', e.message);
+    console.error('[whatsapp-reminder-cron] erro ao enviar via Twilio:', e.message);
+    return false;
   }
 }
 
 export default async function handler(req, res) {
   try {
-    // PAUSADO TEMPORARIAMENTE em 2026-07-08: o número do bot está sendo aceito
-    // pela Evolution API mas as mensagens não chegam no destino (padrão de
-    // limitação silenciosa do WhatsApp em cima do número). Parando os envios
-    // automáticos em massa pra dar chance do número se recuperar. Reverter
-    // removendo este bloco assim que a entrega voltar ao normal.
-    return res.status(200).json({ ok: true, enviados: 0, pausado: true });
-
     // Se CRON_SECRET estiver configurado nas env vars da Vercel, exige o header.
     // Se não estiver configurado, roda sem exigir (mais simples, mas menos travado).
     if (CRON_SECRET) {
@@ -67,24 +85,41 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: false, error: 'SUPABASE_SERVICE_KEY ausente' });
     }
 
-    const hojeISO = new Date().toISOString().slice(0, 10);
+    const hoje = new Date();
+    const hojeISO = hoje.toISOString().slice(0, 10);
+    const anoAtual = hoje.getUTCFullYear();
+    const mesHoje = hoje.getUTCMonth() + 1;
+    const diaHoje = hoje.getUTCDate();
 
-    // Ações com prazo pra hoje ou atrasadas, que ainda não geraram lembrete
+    // 1) Ações com prazo pra hoje ou atrasadas, que ainda não geraram lembrete
     const pendentes = await sb(
       `contacts?select=id,user_id,name,next_action,next_action_date&next_action_date=lte.${hojeISO}&next_action=not.is.null&next_action_reminded_at=is.null`
     );
 
-    if (!pendentes || !pendentes.length) {
+    // 2) Aniversários de hoje (mês/dia, ignorando o ano-placeholder) que ainda
+    // não geraram lembrete este ano — evita repetir todo santo dia até o fim
+    // do ano, e evita repetir de novo no ano seguinte sem necessidade.
+    const aniversariantes = await sb(
+      `contacts?select=id,user_id,name,birthday,birthday_last_reminded_year&birthday=not.is.null`
+    );
+    const aniversariantesHoje = (aniversariantes || []).filter(c => {
+      if (!c.birthday) return false;
+      const [, mes, dia] = c.birthday.split('-').map(Number);
+      return mes === mesHoje && dia === diaHoje && c.birthday_last_reminded_year !== anoAtual;
+    });
+
+    if ((!pendentes || !pendentes.length) && !aniversariantesHoje.length) {
       return res.status(200).json({ ok: true, enviados: 0 });
     }
 
-    // Busca os perfis (números de WhatsApp) dos donos desses contatos, de uma vez
-    const userIds = [...new Set(pendentes.map(c => c.user_id))];
+    // Busca os perfis (números de WhatsApp) dos donos, de uma vez só
+    const userIds = [...new Set([...(pendentes || []).map(c => c.user_id), ...aniversariantesHoje.map(c => c.user_id)])];
     const profiles = await sb(`profiles?id=in.(${userIds.join(',')})&select=id,whatsapp,first_name,name`);
     const profileById = Object.fromEntries((profiles || []).map(p => [p.id, p]));
 
     let enviados = 0;
-    for (const contato of pendentes) {
+
+    for (const contato of (pendentes || [])) {
       const profile = profileById[contato.user_id];
       if (!profile?.whatsapp) continue; // usuário sem WhatsApp cadastrado, pula
 
@@ -94,11 +129,28 @@ export default async function handler(req, res) {
         ? `⏰ Lembrete atrasado: *${contato.next_action}* com *${contato.name}* (era pra ${dataFormatada}).`
         : `⏰ Lembrete de hoje: *${contato.next_action}* com *${contato.name}*.`;
 
-      await sendWhatsapp(profile.whatsapp, texto);
+      const ok = await sendWhatsappTwilio(profile.whatsapp, texto);
+      if (!ok) continue;
 
       await sb(`contacts?id=eq.${contato.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ next_action_reminded_at: new Date().toISOString() }),
+      });
+      enviados++;
+    }
+
+    for (const contato of aniversariantesHoje) {
+      const profile = profileById[contato.user_id];
+      if (!profile?.whatsapp) continue;
+
+      const texto = `🎂 Hoje é aniversário de *${contato.name}*! Boa hora pra mandar uma mensagem — reciprocidade genuína conta mais que qualquer ligação estratégica.`;
+
+      const ok = await sendWhatsappTwilio(profile.whatsapp, texto);
+      if (!ok) continue;
+
+      await sb(`contacts?id=eq.${contato.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ birthday_last_reminded_year: anoAtual }),
       });
       enviados++;
     }
