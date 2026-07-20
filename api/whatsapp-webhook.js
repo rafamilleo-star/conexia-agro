@@ -386,6 +386,117 @@ async function clearPendingAction(userId) {
   await sb(`whatsapp_pending_actions?user_id=eq.${userId}`, { method: 'DELETE' }).catch(() => {});
 }
 
+// Match exato (case-insensitive) por nome — usado pra não duplicar contato
+// quando o mesmo nome é cadastrado de novo (por mensagem ou por vCard).
+function findExistingContactByName(contacts, name) {
+  const target = (name || '').trim().toLowerCase();
+  if (!target) return null;
+  return (contacts || []).find(c => (c.name || '').trim().toLowerCase() === target) || null;
+}
+
+// Baixa o anexo de mídia do Twilio (contato compartilhado, áudio, etc.) —
+// exige autenticação básica com as mesmas credenciais usadas pra enviar.
+async function downloadTwilioMedia(url) {
+  const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+  const res = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+  if (!res.ok) throw new Error(`Twilio media ${res.status}`);
+  return await res.text();
+}
+
+// Parser simples de vCard (formato que o WhatsApp usa ao compartilhar um
+// contato da agenda). Cobre os campos que interessam pro cadastro: nome,
+// telefone e empresa. Não tenta ser um parser de vCard completo.
+function parseVCard(raw) {
+  const lines = String(raw || '').split(/\r?\n/);
+  let name = null, phone = null, org = null;
+  for (const line of lines) {
+    const sep = line.indexOf(':');
+    if (sep === -1) continue;
+    const rawKey = line.slice(0, sep);
+    const value = line.slice(sep + 1).trim();
+    const key = rawKey.split(';')[0].toUpperCase();
+    if (key === 'FN' && !name) name = value;
+    if (key === 'N' && !name) {
+      // Formato N:Sobrenome;Nome;Nome do meio;;
+      const parts = value.split(';').filter(Boolean);
+      if (parts.length) name = parts.reverse().join(' ').trim();
+    }
+    if (key === 'TEL' && !phone) phone = value.replace(/[^\d+]/g, '');
+    if (key === 'ORG' && !org) org = value.split(';')[0].trim() || null;
+  }
+  return { name, phone, org };
+}
+
+// Fluxo completo pra quando alguém compartilha um contato da agenda pelo
+// WhatsApp: identifica o usuário, baixa o vCard, extrai os dados e cadastra
+// direto na rede — mesmo caminho de dados do register_contact por texto.
+async function handleSharedContact(number, mediaUrl, sendReply) {
+  if (!SUPABASE_SERVICE_KEY) {
+    await sendReply(number, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
+    return;
+  }
+  const normalized = normalizePhone(number);
+  const variants = waVariants(normalized);
+  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp`);
+  const profile = profiles?.[0];
+  if (!profile) {
+    await sendReply(number, '👋 Olá! Sou o assistente do Conéxia.\n\nNão encontrei sua conta vinculada a este número.\n\nAcesse conexia-agro-chi.vercel.app e cadastre seu WhatsApp no perfil para usar o assistente. 🚀');
+    return;
+  }
+  const userIdProfile = profile.id;
+
+  if (!(await checkRateLimit(userIdProfile))) {
+    await sendReply(number, `⏳ Você mandou muitas mensagens na última hora. Dá uma pausa e tenta de novo daqui a pouco — isso é só uma proteção contra uso excessivo, não é permanente.`);
+    return;
+  }
+
+  const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
+  if (!isPro) {
+    const diasDesdeCadastro = profile.created_at ? (Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24) : 0;
+    if (diasDesdeCadastro > 28) {
+      await sendReply(number, `👋 Seu período gratuito do assistente de WhatsApp (4 semanas) terminou.\n\nPra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO: acesse conexia-agro-chi.vercel.app. 🚀`);
+      return;
+    }
+  }
+
+  let vcardRaw;
+  try {
+    vcardRaw = await downloadTwilioMedia(mediaUrl);
+  } catch (e) {
+    await logDebug({ debug: 'vcard_download_fail', error: e.message, mediaUrl });
+    await sendReply(number, 'Recebi o contato, mas não consegui abrir o arquivo. Me manda o nome (e telefone, se quiser) em texto que eu cadastro.');
+    return;
+  }
+
+  const { name, phone, org } = parseVCard(vcardRaw);
+  await logDebug({ debug: 'vcard_parsed', name, phone: phone ? '***' + phone.slice(-4) : null, org });
+  if (!name) {
+    await sendReply(number, 'Recebi o contato, mas não consegui ler o nome dele no arquivo. Me manda o nome em texto?');
+    return;
+  }
+
+  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name`);
+  const dup = findExistingContactByName(contacts, name);
+  if (dup) {
+    await sendReply(number, `Você já tem *${dup.name}* cadastrado na sua rede. Se quiser registrar uma conversa com ele, manda "conversei com ${dup.name.split(' ')[0]} hoje" que eu já registro.`);
+    return;
+  }
+
+  const created = await createContactFromWhatsapp(userIdProfile, {
+    contact_name: name,
+    company: org,
+    role: null,
+    category: null,
+    how_met: 'Contato compartilhado via WhatsApp',
+  });
+  if (!created) {
+    await sendReply(number, 'Deu um problema salvando o contato. Tenta de novo em instantes, ou cadastra pelo app.');
+    return;
+  }
+  const tel = phone ? `\n📞 ${phone}` : '';
+  await sendReply(number, `✅ *${created.name}* cadastrado na sua rede a partir do contato compartilhado!${org ? ` (${org})` : ''}${tel}\n\nPróximo passo: manda "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.`);
+}
+
 // Cria o contato de fato — reaproveitado tanto no cadastro direto (1 mensagem
 // com dados suficientes) quanto no fluxo de esclarecimento (nome veio depois).
 async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met }) {
@@ -476,6 +587,12 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
       await sendReply(number, 'Não peguei o nome. Qual é o nome do contato?');
       return;
     }
+    const dupContact = findExistingContactByName(contacts, name);
+    if (dupContact) {
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, `Você já tem *${dupContact.name}* cadastrado na sua rede. Se quiser registrar uma conversa com ele, manda "conversei com ${dupContact.name.split(' ')[0]} hoje" que eu já registro.`);
+      return;
+    }
     const created = await createContactFromWhatsapp(userIdProfile, { contact_name: name, ...pending.data });
     await clearPendingAction(userIdProfile);
     if (!created) {
@@ -510,6 +627,11 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
         how_met: intentData.how_met || null,
       });
       await sendReply(number, 'Qual é o nome do contato?');
+      return;
+    }
+    const dupContact = findExistingContactByName(contacts, intentData.contact_name);
+    if (dupContact) {
+      await sendReply(number, `Você já tem *${dupContact.name}* cadastrado na sua rede. Se quiser registrar uma conversa com ele, manda "conversei com ${dupContact.name.split(' ')[0]} hoje" que eu já registro.`);
       return;
     }
     const created = await createContactFromWhatsapp(userIdProfile, {
@@ -575,12 +697,17 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
         value_generated: false,
       }),
     });
+    // Registrar uma interação com o contato resolve a pendência anterior dele —
+    // por isso sempre limpamos next_action aqui, a não ser que esta mesma
+    // mensagem já defina uma nova ação. Antes disso, a ação ficava presa pra
+    // sempre porque nada nunca limpava o campo.
     await sb(`contacts?id=eq.${match.id}`, {
       method: 'PATCH',
       body: JSON.stringify({
         last_interaction_at: new Date().toISOString(),
-        ...(intentData.next_action ? { next_action: intentData.next_action, next_action_reminded_at: null } : {}),
-        ...(intentData.next_action_date ? { next_action_date: intentData.next_action_date } : {}),
+        next_action: intentData.next_action || null,
+        next_action_date: intentData.next_action_date || null,
+        next_action_reminded_at: null,
       }),
     });
     await sendReply(number, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
@@ -699,6 +826,18 @@ export default async function handler(req, res) {
     const fromNumber = body.From?.replace('whatsapp:', '') || '';
     const messageText = body.Body || '';
 
+    // Contato compartilhado da agenda chega como mídia (Body vazio), não como
+    // texto. Varre os anexos procurando um vCard antes de decidir a rota.
+    const numMedia = parseInt(body.NumMedia || '0', 10) || 0;
+    let sharedContactUrl = null;
+    for (let i = 0; i < numMedia; i++) {
+      const ct = (body[`MediaContentType${i}`] || '').toLowerCase();
+      if (ct.includes('vcard') || ct.includes('x-vcard') || ct === 'text/directory') {
+        sharedContactUrl = body[`MediaUrl${i}`];
+        break;
+      }
+    }
+
     // Log incondicional de todo request recebido — sem isso, um mismatch de
     // parsing derruba a mensagem em silêncio (retorna 200 sem processar nada).
     await logDebug({
@@ -709,7 +848,13 @@ export default async function handler(req, res) {
       messagePresent: !!messageText,
     });
 
-    // Canal Twilio
+    // Canal Twilio — contato compartilhado (vCard)
+    if (fromNumber && sharedContactUrl) {
+      await handleSharedContact(fromNumber, sharedContactUrl, sendWhatsappTwilio);
+      return res.status(200).json({ ok: true });
+    }
+
+    // Canal Twilio — mensagem de texto normal
     if (fromNumber && messageText) {
       console.log("FROM:", fromNumber); // TEMPORÁRIO — remover depois do diagnóstico
       const messageId = body.MessageSid ? `twilio:${body.MessageSid}` : null;
