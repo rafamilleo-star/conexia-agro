@@ -112,6 +112,7 @@ REGRAS OBRIGATÓRIAS:
 - Cruze o assessment com os dados da rede (ex: reciprocidade baixa + contatos sem valor gerado = contradição)
 - Priorize situações críticas: relacionamentos deteriorando, alto potencial sem contato, ações vencidas
 - PROIBIDO ser genérico — seja específico e cirúrgico
+- Cada campo de texto ("observacao", "acao") no máximo 2 frases curtas — direto ao ponto, sem listar vários nomes na mesma observação
 - Urgência: "alta" = precisa agir hoje/essa semana, "media" = essa quinzena, "baixa" = esse mês
 
 Responda APENAS com JSON válido:
@@ -121,7 +122,7 @@ Sem texto extra.`;
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, maxTokens: 700 })
+        body: JSON.stringify({ prompt, maxTokens: 1600 })
       });
       const data = await res.json();
       // Se a API respondeu com erro (chave inválida, sem crédito, quota, etc.),
@@ -138,7 +139,8 @@ Sem texto extra.`;
       try {
         parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
       } catch (parseErr) {
-        setInsErr(`A IA respondeu algo que não é JSON válido. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
+        const motivoTrunc = data.finishReason === 'MAX_TOKENS' ? ' A resposta foi cortada por limite de tokens — tenta de novo.' : '';
+        setInsErr(`A IA respondeu algo que não é JSON válido.${motivoTrunc} Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
         setInsLoading(false);
         return;
       }
@@ -182,7 +184,7 @@ Sem texto extra.`;
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, maxTokens: 400 })
+        body: JSON.stringify({ prompt, maxTokens: 700 })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -196,7 +198,8 @@ Sem texto extra.`;
       try {
         parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
       } catch (parseErr) {
-        setGoalsErr(`A IA respondeu algo que não é JSON válido. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
+        const motivoTrunc = data.finishReason === 'MAX_TOKENS' ? ' A resposta foi cortada por limite de tokens — tenta de novo.' : '';
+        setGoalsErr(`A IA respondeu algo que não é JSON válido.${motivoTrunc} Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
         setGoalsLoading(false);
         return;
       }
@@ -279,7 +282,7 @@ Sem texto extra. Seja específico e use os dados reais.`;
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, maxTokens: 700 })
+        body: JSON.stringify({ prompt, maxTokens: 1400 })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -293,7 +296,8 @@ Sem texto extra. Seja específico e use os dados reais.`;
       try {
         parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
       } catch (parseErr) {
-        setBriefErr(`A IA respondeu algo que não é JSON válido. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
+        const motivoTrunc = data.finishReason === 'MAX_TOKENS' ? ' A resposta foi cortada por limite de tokens — tenta de novo.' : '';
+        setBriefErr(`A IA respondeu algo que não é JSON válido.${motivoTrunc} Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
         setBriefLoading(false);
         return;
       }
