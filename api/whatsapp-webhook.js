@@ -135,6 +135,14 @@ que conseguir em fields: contact_name, company, role, how_met, e category (chute
 nome da pessoa, contact_name fica ausente — NÃO responda unknown por causa disso, responda register_contact
 mesmo assim e liste "contact_name" em missing_fields. O sistema pergunta o nome depois.
 
+CAPTURA PASSIVA (hobbies e aniversário) — vale tanto pra register_contact quanto pra register_interaction.
+NUNCA pergunte ativamente por isso — só preencha fields.hobbies e/ou fields.birthday se o usuário JÁ
+mencionou espontaneamente algo do tipo (ex.: "ele pesca nos fins de semana", "gosta de corrida", "aniversário
+dele é dia 15/03", "faz aniversário mês que vem dia 4"). fields.hobbies é um texto curto livre. fields.birthday
+é "YYYY-MM-DD" — se o ano não for dado (o mais comum), use 1900 como ano-placeholder (ex.: "15/03" vira
+"1900-03-15"); nunca invente o ano. Se nada foi mencionado, deixe os dois de fora — não é obrigatório em
+nenhuma intenção.
+
 BRIEFING — o usuário quer se preparar para falar/se encontrar com alguém que JÁ está na rede dele. Preencha
 fields.contact_name com o nome mais parecido possível com algum da lista de contatos já cadastrados acima
 (sem artigos como "o"/"a", sem palavras de tempo como "hoje"/"amanhã" — só o nome).
@@ -167,7 +175,9 @@ FORMATO 1 — uma intenção só:
     "company": string ou null,
     "role": string ou null,
     "category": "mentor" | "aliado" | "ponte" | "potencial" | "dormindo" | null,
-    "how_met": string ou null
+    "how_met": string ou null,
+    "hobbies": string ou null,
+    "birthday": "YYYY-MM-DD ou null (use 1900 como ano se não foi informado)"
   },
   "missing_fields": ["nome dos campos de fields que faltam e são necessários pra essa intenção, ou array vazio"],
   "reasoning": "1 frase curta explicando por que você entendeu essa intenção"
@@ -386,6 +396,11 @@ async function clearPendingAction(userId) {
   await sb(`whatsapp_pending_actions?user_id=eq.${userId}`, { method: 'DELETE' }).catch(() => {});
 }
 
+// Frase curta usada depois de todo cadastro de contato pelo WhatsApp — não
+// pergunta hobby/aniversário aqui (quebraria a rapidez do canal), só lembra
+// de completar no app, incluindo as 4 perguntas de relevância do contato.
+const APP_ENRICHMENT_NUDGE = '\n\n💡 Cadastro feito por aqui é só o essencial. Pra melhor experiência, completa no app as outras informações (aniversário, hobby, cidade...) e as 4 perguntas de relevância do contato.';
+
 // Match exato (case-insensitive) por nome — usado pra não duplicar contato
 // quando o mesmo nome é cadastrado de novo (por mensagem ou por vCard).
 function findExistingContactByName(contacts, name) {
@@ -494,12 +509,12 @@ async function handleSharedContact(number, mediaUrl, sendReply) {
     return;
   }
   const tel = phone ? `\n📞 ${phone}` : '';
-  await sendReply(number, `✅ *${created.name}* cadastrado na sua rede a partir do contato compartilhado!${org ? ` (${org})` : ''}${tel}\n\nPróximo passo: manda "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.`);
+  await sendReply(number, `✅ *${created.name}* cadastrado na sua rede a partir do contato compartilhado!${org ? ` (${org})` : ''}${tel}\n\nPróximo passo: manda "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.${APP_ENRICHMENT_NUDGE}`);
 }
 
 // Cria o contato de fato — reaproveitado tanto no cadastro direto (1 mensagem
 // com dados suficientes) quanto no fluxo de esclarecimento (nome veio depois).
-async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met }) {
+async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met, hobbies, birthday }) {
   const contact = await sb('contacts', {
     method: 'POST',
     body: JSON.stringify({
@@ -511,6 +526,8 @@ async function createContactFromWhatsapp(userId, { contact_name, company, role, 
       proximity: 3,
       ideal_frequency_days: 30,
       how_met: how_met || 'Cadastrado via WhatsApp',
+      hobbies: hobbies || null,
+      birthday: birthday || null,
     }),
   });
   return contact?.[0] || null;
@@ -599,7 +616,7 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
       await sendReply(number, `Deu um problema salvando o contato. Tenta de novo em instantes, ou cadastra pelo app.`);
       return;
     }
-    await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${pending.data?.company ? ` (${pending.data.company})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.`);
+    await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${pending.data?.company ? ` (${pending.data.company})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.${APP_ENRICHMENT_NUDGE}`);
     return;
   }
 
@@ -625,6 +642,8 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
         role: intentData.role || null,
         category: intentData.category || null,
         how_met: intentData.how_met || null,
+        hobbies: intentData.hobbies || null,
+        birthday: intentData.birthday || null,
       });
       await sendReply(number, 'Qual é o nome do contato?');
       return;
@@ -640,13 +659,15 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
       role: intentData.role,
       category: intentData.category,
       how_met: intentData.how_met,
+      hobbies: intentData.hobbies,
+      birthday: intentData.birthday,
     });
     if (!created) {
       await sendReply(number, `Deu um problema salvando o contato. Tenta de novo em instantes, ou cadastra pelo app.`);
       return;
     }
     const detalhes = [intentData.role, intentData.company].filter(Boolean).join(' na ');
-    await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${detalhes ? ` (${detalhes})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.`);
+    await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${detalhes ? ` (${detalhes})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.${APP_ENRICHMENT_NUDGE}`);
     return;
   }
 
@@ -708,6 +729,9 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
         next_action: intentData.next_action || null,
         next_action_date: intentData.next_action_date || null,
         next_action_reminded_at: null,
+        // Só sobrescreve se a mensagem trouxe algo novo — nunca apaga o que já tinha.
+        ...(intentData.hobbies ? { hobbies: intentData.hobbies } : {}),
+        ...(intentData.birthday ? { birthday: intentData.birthday } : {}),
       }),
     });
     await sendReply(number, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
