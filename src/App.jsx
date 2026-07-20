@@ -605,17 +605,16 @@ const MAKE_WEBHOOK = "https://hook.us2.make.com/ao22pba9b6y41uuxnj50hev7m1oq790r
 const MENTORIA_LINK = ""; // Preencher com link WhatsApp/Calendly
 
 /* ═══ STRIPE — CONFIGURAÇÃO CENTRALIZADA ═══════════════════
-   Um único lugar para trocar os links quando saírem do modo teste.
-   IMPORTANTE: estes ainda são os links de TESTE (buy.stripe.com/test_...).
-   Antes de ir pra produção, troque STRIPE.mensalUrl e STRIPE.anualUrl pelos
-   links reais gerados no Dashboard da Stripe (Payment Links, modo Live). */
+   Um único Payment Link (modo Live) com os dois preços cadastrados
+   dentro dele — o cliente escolhe mensal (R$39,90) ou anual (R$399)
+   na própria tela de checkout da Stripe. Não são dois links separados. */
 const STRIPE = {
-  mensalUrl: "https://buy.stripe.com/test_7sY6oz7eW0u2dUu7HQ7g401",
-  anualUrl:  "https://buy.stripe.com/test_eVq3cnar8gt06s29PY7g400",
+  checkoutUrl: "https://buy.stripe.com/dRm5kF9Rs4oKguA388gfu02",
 };
-// Mantidos por compatibilidade com o restante do arquivo — apontam pra o objeto acima.
-const STRIPE_MENSAL = STRIPE.mensalUrl;
-const STRIPE_ANUAL  = STRIPE.anualUrl;
+// Mantidos por compatibilidade com o restante do arquivo — todos apontam
+// pro mesmo link único, já que mensal e anual vivem dentro dele.
+const STRIPE_MENSAL = STRIPE.checkoutUrl;
+const STRIPE_ANUAL  = STRIPE.checkoutUrl;
 
 /* Monta a URL do Payment Link já associada ao usuário logado.
    client_reference_id e prefilled_email são parâmetros oficiais da Stripe
@@ -2421,7 +2420,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, lineHeight: 1 }}>R$39,90</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 16 }}>/mês</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 16, lineHeight: 1.5 }}>Cancele quando quiser</div>
-          <button onClick={() => window.open(buildStripeCheckoutUrl(STRIPE.mensalUrl, user), "_blank")} style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, color: C.txt, borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Assinar mensal</button>
+          <button onClick={() => window.open(buildStripeCheckoutUrl(STRIPE.checkoutUrl, user), "_blank")} style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, color: C.txt, borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Assinar mensal</button>
           <button onClick={() => { setShowUpgrade(false); openAccessKey(); }} style={{ width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline", marginTop:4 }}>Tenho uma chave de acesso</button>
         </div>
         <div style={{ background: `${C.gold}10`, border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: 20, textAlign: "center", position: "relative" }}>
@@ -2430,7 +2429,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.gold, lineHeight: 1 }}>R$399</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 4 }}>/ano · R$33,25/mês</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginBottom: 16, lineHeight: 1.5 }}>Economia de R$79,80 vs mensal</div>
-          <button onClick={() => window.open(buildStripeCheckoutUrl(STRIPE.anualUrl, user), "_blank")} style={{ width: "100%", background: C.gold, border: "none", color: "#0d0d0f", borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Assinar anual ⚡</button>
+          <button onClick={() => window.open(buildStripeCheckoutUrl(STRIPE.checkoutUrl, user), "_blank")} style={{ width: "100%", background: C.gold, border: "none", color: "#0d0d0f", borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Assinar anual ⚡</button>
         </div>
       </div>
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: 14 }}>
@@ -3360,7 +3359,7 @@ ${MENTORIA_LINK || true ? `
             No plano Free você pode gerenciar até <strong style={{ color:C.txt }}>10 contatos</strong>. Assine o PRO para contatos ilimitados, Relevance Score e ações inteligentes.
           </p>
         </div>
-        <a href={buildStripeCheckoutUrl(STRIPE.mensalUrl, user)} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
+        <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
           style={{ display:"block", background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center", marginBottom:10 }}>
           Assinar PRO — R$ 39,90/mês
         </a>
@@ -3684,7 +3683,7 @@ function ProLock({ title = "Recurso disponível no PRO", desc = `Desbloqueie o $
       <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
       <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:17, fontWeight:700, color:"#e8e4da", marginBottom:6 }}>{title}</div>
       <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:"#6a6460", lineHeight:1.6, marginBottom:16, maxWidth:340, margin:"0 auto 16px" }}>{desc}</div>
-      <a href={buildStripeCheckoutUrl(STRIPE.mensalUrl, user)} target="_blank" rel="noreferrer"
+      <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer"
         style={{ display:"block", background:"#c9a227", color:"#0d0d0f", borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", marginBottom:10 }}>
         {cta}
       </a>
