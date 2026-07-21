@@ -1458,8 +1458,16 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       tags: inf.tags ? inf.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
       value_generated: inf.valueGen,
     });
-    // Atualiza last_interaction_at no contato (essencial para Health Score)
-    await supabase.from("contacts").update({ last_interaction_at: new Date().toISOString() }).eq("id", intCid).eq("user_id", user.id);
+    // Atualiza last_interaction_at no contato (essencial para Health Score) e
+    // limpa a próxima ação/data pendente — registrar uma interação resolve a
+    // pendência anterior, igual já acontece no assistente de WhatsApp. Sem isso,
+    // um contato com "próxima ação vencida" nunca some da lista de Movimentos
+    // da Semana, mesmo depois de já ter sido acionado.
+    await supabase.from("contacts").update({
+      last_interaction_at: new Date().toISOString(),
+      next_action: null,
+      next_action_date: null,
+    }).eq("id", intCid).eq("user_id", user.id);
     // Push interação para Make
     const contact = cts.find(c => c.id === intCid);
     if (contact) {
