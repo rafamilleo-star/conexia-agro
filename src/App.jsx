@@ -1330,6 +1330,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [proToast, setProToast] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [cts, setCts] = useState([]);
+  const [savingContact, setSavingContact] = useState(false);
+  const [savingInteraction, setSavingInteraction] = useState(false);
   const [its, setIts] = useState([]);
   const [selId, setSelId] = useState(null);
   const [editId, setEditId] = useState(null);
@@ -1400,6 +1402,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const addC = async () => {
     if (!cf.name.trim() || !user?.id) { setDbgMsg("⚠️ Bloqueado: " + (!user?.id ? "sem user.id" : "nome vazio")); return; }
     if (!isPro && cts.length >= FREE_CT_LIMIT) { setModal("limiteCt"); return; }
+    if (savingContact) return; // trava contra duplo clique / duplo submit
+    setSavingContact(true);
+    try {
     setDbgMsg("⏳ Salvando...");
     const { data: newContact, error } = await supabase.from("contacts").insert({
       user_id: user.id, name: cf.name.trim(), company: cf.company.trim(),
@@ -1448,6 +1453,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     setCf({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "", influenciaPessoas: "", geraOportunidade: "", abrePortas: "", momentoAtual: "" });
     setModal(null);
     await load();
+    } finally {
+      setSavingContact(false);
+    }
   };
 
   const addI = async () => {
@@ -1456,6 +1464,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const nIntContato = its.filter(i => i.contactId === intCid).length;
       if (nIntContato >= FREE_IT_PER_CT_LIMIT) { setModal("limiteIt"); return; }
     }
+    if (savingInteraction) return; // trava contra duplo clique / duplo submit
+    setSavingInteraction(true);
+    try {
     await supabase.from("interactions").insert({
       user_id: user.id, contact_id: intCid, type: inf.type,
       description: inf.desc.trim(), sentiment: inf.sentiment,
@@ -1503,6 +1514,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     setInf({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
     setModal(null);
     await load();
+    } finally {
+      setSavingInteraction(false);
+    }
   };
 
   const delC = async (id) => {
@@ -3266,7 +3280,7 @@ ${MENTORIA_LINK || true ? `
             <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>Tenho uma chave de acesso</button>
           </div>
         )}
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn small onClick={addC} disabled={!cf.name.trim()}>Salvar</Btn></div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn small onClick={addC} disabled={!cf.name.trim() || savingContact}>{savingContact ? "Salvando..." : "Salvar"}</Btn></div>
       </Modal>}
       {modal === "editC" && <Modal title="Editar contato" onClose={() => { setModal(null); setEditId(null); }}>
         <Inp label="Nome *" value={cf.name} onChange={v => setCf({ ...cf, name: v })} placeholder="Nome completo" />
@@ -3405,7 +3419,7 @@ ${MENTORIA_LINK || true ? `
         <div style={{ marginBottom: 16 }}><label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 6 }}>Sentimento</label><div style={{ display: "flex", gap: 8 }}>{SENTS.map(s => <button key={s.value} onClick={() => setInf({ ...inf, sentiment: s.value })} style={{ flex: 1, background: inf.sentiment === s.value ? `${s.color}14` : C.sf, border: `1px solid ${inf.sentiment === s.value ? `${s.color}40` : C.brd}`, borderRadius: 6, padding: "10px 0", cursor: "pointer", textAlign: "center", fontFamily: "'DM Sans'", fontSize: 12, color: inf.sentiment === s.value ? s.color : C.txL }}>{s.icon} {s.label}</button>)}</div></div>
         <div style={{ marginBottom: 16 }}><button onClick={() => setInf({ ...inf, valueGen: !inf.valueGen })} style={{ display: "flex", alignItems: "center", gap: 10, background: inf.valueGen ? C.grnD : C.sf, border: `1px solid ${inf.valueGen ? `${C.grn}40` : C.brd}`, borderRadius: 8, padding: "12px 14px", cursor: "pointer", width: "100%" }}><span style={{ fontSize: 16 }}>{inf.valueGen ? "💎" : "○"}</span><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: inf.valueGen ? C.grn : C.txM }}>Gerei valor nesta interação</span></button></div>
         <Inp label="Tags (vírgula)" value={inf.tags} onChange={v => setInf({ ...inf, tags: v })} placeholder="café, projeto, follow-up..." />
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn variant="success" small onClick={addI} disabled={!inf.desc.trim()}>Registrar</Btn></div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn variant="success" small onClick={addI} disabled={!inf.desc.trim() || savingInteraction}>{savingInteraction ? "Registrando..." : "Registrar"}</Btn></div>
       </Modal>}
     </div>
   );
