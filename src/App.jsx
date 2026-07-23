@@ -1164,7 +1164,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
 }
 
 /* ═══ PERFIL FORM ════════════════════════════════════════ */
-function PerfilForm({ profile, userId, onSaved }) {
+function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey }) {
   const NETWORK_SIZES = [
     { value: "1-20",   label: "1-20 contatos" },
     { value: "21-50",  label: "21-50 contatos" },
@@ -1264,13 +1264,24 @@ function PerfilForm({ profile, userId, onSaved }) {
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Meu Perfil</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: 0 }}>Mantenha suas informações atualizadas para personalizar os insights da IA.</p>
       </div>
-      <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
-        <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
-        <div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Cadastre seu WhatsApp para usar o Assistente de IA</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu número cadastrado, você pode conversar com o assistente {BRAND.name} diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
+      {isPro ? (
+        <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
+          <div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Cadastre seu WhatsApp para usar o Assistente de IA</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu número cadastrado, você pode conversar com o assistente {BRAND.name} diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>🔒</span>
+          <div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 3 }}>Assistente por WhatsApp é exclusivo PRO</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Assine o PRO para conversar com o assistente {BRAND.name} direto pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
+            <button onClick={openAccessKey} style={{ background: "none", border: "none", fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, cursor: "pointer", textDecoration: "underline", padding: 0, marginTop: 6 }}>Tenho uma chave de acesso</button>
+          </div>
+        </div>
+      )}
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Dados Pessoais</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
@@ -1287,8 +1298,8 @@ function PerfilForm({ profile, userId, onSaved }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <div style={{ gridColumn: "1 / -1" }}>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>📱 WhatsApp <span style={{ color: C.txL, fontWeight: 400 }}>(para o Assistente de IA)</span></label>
-              <input type="tel" value={pf.whatsapp || ""} onChange={e => sp('whatsapp')(e.target.value)} placeholder="Ex: 11999999999 (DDD + número, sem 55)" style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, outline: "none" }} />
+              <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: isPro ? C.gold : C.txL, display: "block", marginBottom: 6 }}>📱 WhatsApp <span style={{ color: C.txL, fontWeight: 400 }}>{isPro ? "(para o Assistente de IA)" : "(Assistente de IA — recurso PRO)"}</span></label>
+              <input type="tel" value={pf.whatsapp || ""} onChange={e => sp('whatsapp')(e.target.value)} disabled={!isPro} placeholder={isPro ? "Ex: 11999999999 (DDD + número, sem 55)" : "Assine o PRO para ativar"} style={{ width: "100%", boxSizing: "border-box", background: isPro ? C.sf : C.w06, border: `1px solid ${isPro ? C.gold+"50" : C.brd}`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: isPro ? C.txt : C.txL, outline: "none", cursor: isPro ? "text" : "not-allowed" }} />
             </div>
           </div>
           <Inp label="Instagram" value={pf.instagram} onChange={sp('instagram')} placeholder="@seuinstagram" />
@@ -1753,8 +1764,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 4px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 16px" }}>{cts.length === 0 ? "Cadastre seu primeiro contato para ativar sua rede." : `${cts.length} contatos · ${active} ativos · ${wk} interações esta semana`}</p>
 
-        {/* ── Descoberta do Assistente via WhatsApp ── */}
-        {profile?.whatsapp ? (
+        {/* ── Descoberta do Assistente via WhatsApp (recurso PRO) ── */}
+        {isPro && profile?.whatsapp ? (
           <div style={{ background: `${C.grn}08`, border: `1px solid ${C.grn}30`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
             <div style={{ flex: 1 }}>
@@ -1763,12 +1774,21 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer" style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.grn, textDecoration: "none" }}>Abrir conversa →</a>
             </div>
           </div>
-        ) : (
+        ) : isPro ? (
           <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Ative o Assistente por WhatsApp</div>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Registre interações e consulte sua rede direto pelo WhatsApp. Toque aqui pra cadastrar seu número.</div>
+            </div>
+            <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
+          </div>
+        ) : (
+          <div onClick={openAccessKey} style={{ cursor: "pointer", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>🔒</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 3 }}>Assistente por WhatsApp é exclusivo PRO</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Registre interações e consulte sua rede direto pelo WhatsApp. Toque aqui pra assinar o PRO.</div>
             </div>
             <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
           </div>
@@ -3138,6 +3158,8 @@ ${MENTORIA_LINK || true ? `
       profile={profile}
       userId={user?.id}
       onSaved={(updated) => onProfileUpdate?.(updated)}
+      isPro={isPro}
+      openAccessKey={openAccessKey}
     />
   );
 
