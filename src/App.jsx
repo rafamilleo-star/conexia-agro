@@ -630,9 +630,9 @@ const buildStripeCheckoutUrl = (baseUrl, user) => {
   return `${baseUrl}?${params.toString()}`;
 };
 
-const ADMIN_EMAILS      = ["rafaelmilleo@yahoo.com.br", "rafamilleo@gmail.com"];
-const FREE_CT_LIMIT     = 10;
-const FREE_IT_LIMIT     = 20;
+const ADMIN_EMAILS           = ["rafaelmilleo@yahoo.com.br", "rafamilleo@gmail.com"];
+const FREE_CT_LIMIT          = 5;
+const FREE_IT_PER_CT_LIMIT   = 3; // interações por contato no plano Free
 
 const isProUser = (prof, email) => {
   if (!prof && !email) return false;
@@ -1452,6 +1452,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
   const addI = async () => {
     if (!inf.desc.trim() || !intCid || !user?.id) return;
+    if (!isPro) {
+      const nIntContato = its.filter(i => i.contactId === intCid).length;
+      if (nIntContato >= FREE_IT_PER_CT_LIMIT) { setModal("limiteIt"); return; }
+    }
     await supabase.from("interactions").insert({
       user_id: user.id, contact_id: intCid, type: inf.type,
       description: inf.desc.trim(), sentiment: inf.sentiment,
@@ -3359,12 +3363,30 @@ ${MENTORIA_LINK || true ? `
         </div>
       </Modal>}
 
+      {/* Limite interações por contato Free */}
+      {modal === "limiteIt" && <Modal title="Limite do plano gratuito" onClose={() => setModal(null)}>
+        <div style={{ textAlign:"center", marginBottom:20 }}>
+          <div style={{ fontSize:32, marginBottom:10 }}>🔒</div>
+          <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.7 }}>
+            No plano Free você pode registrar até <strong style={{ color:C.txt }}>3 interações por contato</strong>. Assine o PRO para interações ilimitadas, Relevance Score e ações inteligentes.
+          </p>
+        </div>
+        <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
+          style={{ display:"block", background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center", marginBottom:10 }}>
+          Assinar PRO — R$ 39,90/mês
+        </a>
+        <button onClick={() => { setModal(null); openAccessKey(); }}
+          style={{ display:"block", width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>
+          Tenho uma chave de acesso
+        </button>
+      </Modal>}
+
       {/* Limite contatos Free */}
       {modal === "limiteCt" && <Modal title="Limite do plano gratuito" onClose={() => setModal(null)}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
           <div style={{ fontSize:32, marginBottom:10 }}>🔒</div>
           <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.7 }}>
-            No plano Free você pode gerenciar até <strong style={{ color:C.txt }}>10 contatos</strong>. Assine o PRO para contatos ilimitados, Relevance Score e ações inteligentes.
+            No plano Free você pode gerenciar até <strong style={{ color:C.txt }}>5 contatos</strong>. Assine o PRO para contatos ilimitados, Relevance Score e ações inteligentes.
           </p>
         </div>
         <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
