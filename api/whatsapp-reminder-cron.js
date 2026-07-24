@@ -143,14 +143,27 @@ export default async function handler(req, res) {
 
     // Busca os perfis (números de WhatsApp) dos donos, de uma vez só
     const userIds = [...new Set([...(pendentes || []).map(c => c.user_id), ...aniversariantesHoje.map(c => c.user_id)])];
-    const profiles = await sb(`profiles?id=in.(${userIds.join(',')})&select=id,whatsapp,first_name,name`);
+    const profiles = await sb(`profiles?id=in.(${userIds.join(',')})&select=id,whatsapp,first_name,name,is_pro,plan,pro_expires_at,whatsapp_trial_started_at`);
     const profileById = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+
+    // Mesma regra de acesso usada no app e no webhook: PRO sempre libera;
+    // Free só recebe lembrete dentro dos 10 dias de trial após cadastrar o
+    // WhatsApp. Sem isso, o cron continuaria mandando mensagem pra Free
+    // mesmo depois do trial acabar, ignorando o paywall.
+    const hasWhatsappAccess = (profile) => {
+      if (!profile?.whatsapp) return false;
+      const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
+      if (isPro) return true;
+      if (!profile.whatsapp_trial_started_at) return false;
+      const diasDeTrial = (Date.now() - new Date(profile.whatsapp_trial_started_at).getTime()) / (1000 * 60 * 60 * 24);
+      return diasDeTrial <= 10;
+    };
 
     let enviados = 0;
 
     for (const contato of (pendentes || [])) {
       const profile = profileById[contato.user_id];
-      if (!profile?.whatsapp) continue; // usuário sem WhatsApp cadastrado, pula
+      if (!hasWhatsappAccess(profile)) continue; // sem WhatsApp, ou Free fora do trial
 
       const atrasada = contato.next_action_date < hojeISO;
       const dataFormatada = new Date(contato.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR');
@@ -170,7 +183,7 @@ export default async function handler(req, res) {
 
     for (const contato of aniversariantesHoje) {
       const profile = profileById[contato.user_id];
-      if (!profile?.whatsapp) continue;
+      if (!hasWhatsappAccess(profile)) continue;
 
       const texto = `🎂 Hoje é aniversário de *${contato.name}*! Boa hora pra mandar uma mensagem — reciprocidade genuína conta mais que qualquer ligação estratégica.`;
 
