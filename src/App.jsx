@@ -3255,7 +3255,13 @@ ${MENTORIA_LINK || true ? `
             <div style={{ marginTop:4, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
               <span style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", padding:"2px 7px", borderRadius:3, background: isPro?`${C.gold}20`:C.w06, color: isPro?C.gold:C.txL, border:`1px solid ${isPro?C.gL:C.brd}` }}>{planLabel}</span>
               {!isPro && <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:9, color:C.txL, cursor:"pointer", padding:0 }}>Chave</button>}
-              {!profile?.whatsapp && <button onClick={() => setView("perfil")} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:9, color:C.gold, cursor:"pointer", padding:0 }}>📱 Cadastrar WhatsApp</button>}
+              {!isPro && (
+                <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer"
+                  style={{ display:"flex", alignItems:"baseline", gap:3, textDecoration:"none", cursor:"pointer" }}>
+                  <span style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>seja</span>
+                  <span style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:800, color:C.gold, letterSpacing:".02em" }}>PRO</span>
+                </a>
+              )}
             </div>
             {admin && <Tag color={C.vio} small>Admin</Tag>}
           </div>
