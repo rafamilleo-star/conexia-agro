@@ -2516,11 +2516,11 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
         <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:10, padding:14 }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>Free — R$ 0</div>
-          {["1 diagnóstico","Até 5 contatos","Health Score","Teia simples","Semana 1 do plano"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>✓ {f}</div>)}
+          {["1 diagnóstico","Até 5 contatos","Health Score","Teia simples","Semana 1 do plano","1 insight por vez (IA)","WhatsApp — teste grátis 10 dias"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>✓ {f}</div>)}
         </div>
         <div style={{ background:`${C.gold}08`, border:`1.5px solid ${C.gold}`, borderRadius:10, padding:14 }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>PRO — R$ 39,90/mês</div>
-          {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Metas de 90 dias (IA)","Plano de 4 semanas completo","Teia avançada","Exportação"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>⭐ {f}</div>)}
+          {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Insights ilimitados (IA)","Metas de 90 dias (IA)","Briefing pré-contato (IA)","Assistente por WhatsApp sem limite","Plano de 4 semanas completo","Teia avançada","Exportação"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>⭐ {f}</div>)}
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
