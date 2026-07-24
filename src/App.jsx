@@ -4103,7 +4103,7 @@ function App() {
         birthday: form.birthday || null,
         challenge: form.challenge || null,
         network_size: form.networkSize || null,
-        objectives: form.objectives.join(","), onboarding_completed: true,
+        objectives: form.objectives, onboarding_completed: true,
       });
       if (error) {
         // Antes este erro era silenciosamente ignorado — a tela seguia pro
