@@ -769,7 +769,7 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
 
       const ctx = {
         assessment: assessmentScores,
-        objetivo: profile?.objective || '',
+        objetivo: profile?.objectives || '',
         totalContatos: contacts.length,
         distribuicaoEmpresas: empCount,
         distribuicaoCategorias: catCount,
@@ -3456,10 +3456,19 @@ ${MENTORIA_LINK || true ? `
           />
           {akMsg && <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.cor, marginTop:8 }}>{akMsg}</div>}
         </div>
-        <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+        <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginBottom:18 }}>
           <Btn variant="ghost" small onClick={() => setShowAccessKey(false)}>Cancelar</Btn>
           <Btn small onClick={redeemKey} disabled={akBusy || !akCode.trim()}>{akBusy ? "Ativando..." : "Ativar PRO"}</Btn>
         </div>
+        <div style={{ display:"flex", alignItems:"center", gap:10, margin:"4px 0 16px" }}>
+          <div style={{ flex:1, height:1, background:C.brd }} />
+          <span style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>ou</span>
+          <div style={{ flex:1, height:1, background:C.brd }} />
+        </div>
+        <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" onClick={() => setShowAccessKey(false)}
+          style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center" }}>
+          💳 Assinar PRO — R$ 39,90/mês
+        </a>
       </Modal>}
 
       {/* Limite interações por contato Free */}
@@ -3918,7 +3927,7 @@ function App() {
   const handleOnboard = async (form, voucherCode) => {
     if (voucherCode) setPendingKey(voucherCode);
     try {
-      await supabase.from("profiles").upsert({
+      const { error } = await supabase.from("profiles").upsert({
         id: user.id, first_name: form.name, name: form.name, email: form.email,
         role: form.role, company: form.company || null, segment: form.segment,
         state: form.state, city: form.city || null,
@@ -3929,10 +3938,22 @@ function App() {
         birthday: form.birthday || null,
         challenge: form.challenge || null,
         network_size: form.networkSize || null,
-        objective: form.objectives.join(","), onboarding_completed: true,
+        objectives: form.objectives.join(","), onboarding_completed: true,
       });
+      if (error) {
+        // Antes este erro era silenciosamente ignorado — a tela seguia pro
+        // quiz como se tivesse salvo, mas nada persistia no banco. Agora
+        // avisa e não deixa perder os dados do onboarding sem o usuário saber.
+        console.error("[handleOnboard] falha ao salvar perfil:", error);
+        alert("Não consegui salvar seus dados de perfil (" + (error.message || "erro desconhecido") + "). Tenta de novo em instantes — se persistir, avisa o suporte.");
+        return;
+      }
       setProfile({ ...profile, ...form, first_name: form.name, onboarding_completed: true });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error("[handleOnboard] erro inesperado:", e);
+      alert("Não consegui salvar seus dados de perfil. Tenta de novo em instantes — se persistir, avisa o suporte.");
+      return;
+    }
     setState("assess");
   };
 
@@ -3948,7 +3969,7 @@ function App() {
         cargo: p.role || "",
         segmento: p.segment || "",
         estado: p.state || "",
-        objetivos: p.objective || "",
+        objetivos: p.objectives || "",
         perfilKey: result.profileKey || "",
         perfilNome: result.profileName || "",
         scoreGeral: result.overall || 0,
