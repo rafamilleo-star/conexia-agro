@@ -452,7 +452,7 @@ async function handleSharedContact(number, mediaUrl, sendReply) {
   }
   const normalized = normalizePhone(number);
   const variants = waVariants(normalized);
-  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp`);
+  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp,whatsapp_trial_started_at`);
   const profile = profiles?.[0];
   if (!profile) {
     await sendReply(number, '👋 Olá! Sou o assistente do Conéxia.\n\nNão encontrei sua conta vinculada a este número.\n\nAcesse conexia-agro-chi.vercel.app e cadastre seu WhatsApp no perfil para usar o assistente. 🚀');
@@ -467,9 +467,11 @@ async function handleSharedContact(number, mediaUrl, sendReply) {
 
   const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
   if (!isPro) {
-    const diasDesdeCadastro = profile.created_at ? (Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24) : 0;
-    if (diasDesdeCadastro > 28) {
-      await sendReply(number, `👋 Seu período gratuito do assistente de WhatsApp (4 semanas) terminou.\n\nPra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO: acesse conexia-agro-chi.vercel.app. 🚀`);
+    // Trial conta a partir do cadastro do número (whatsapp_trial_started_at),
+    // não da criação da conta — alinhado com a regra do app (10 dias).
+    const diasDeTrial = profile.whatsapp_trial_started_at ? (Date.now() - new Date(profile.whatsapp_trial_started_at).getTime()) / (1000 * 60 * 60 * 24) : 0;
+    if (diasDeTrial > 10) {
+      await sendReply(number, `👋 Seu período gratuito do assistente de WhatsApp (10 dias) terminou.\n\nPra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO: acesse conexia-agro-chi.vercel.app. 🚀`);
       return;
     }
   }
@@ -547,7 +549,7 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   const variants = waVariants(normalized);
 
   // 1. Localiza o perfil pelo WhatsApp
-  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp`);
+  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp,whatsapp_trial_started_at`);
   const profile = profiles?.[0];
   console.log({ from: number, normalized, profileWhatsapp: profile?.whatsapp || null }); // TEMPORÁRIO — remover depois do diagnóstico
   // Log seguro e permanente (sem número completo): só dispara quando o match
@@ -579,14 +581,15 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   // 1.1 Checa se é PRO
   const isPro = !!profile.is_pro || (profile.plan === 'pro' && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date()));
 
-  // 1.2 Usuário Free: assistente liberado só nas primeiras 4 semanas
+  // 1.2 Usuário Free: assistente liberado só nos primeiros 10 dias após
+  // cadastrar o WhatsApp (whatsapp_trial_started_at) — não da criação da conta.
   if (!isPro) {
-    const diasDesdeCadastro = profile.created_at
-      ? (Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    const diasDeTrial = profile.whatsapp_trial_started_at
+      ? (Date.now() - new Date(profile.whatsapp_trial_started_at).getTime()) / (1000 * 60 * 60 * 24)
       : 0;
-    if (diasDesdeCadastro > 28) {
+    if (diasDeTrial > 10) {
       await sendReply(number,
-        `👋 Oi${firstName ? ' ' + firstName : ''}! Seu período gratuito do assistente de WhatsApp (4 semanas) terminou.\n\nPra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO (R$39,90/mês): acesse conexia-agro-chi.vercel.app e ative seu plano. 🚀`);
+        `👋 Oi${firstName ? ' ' + firstName : ''}! Seu período gratuito do assistente de WhatsApp (10 dias) terminou.\n\nPra continuar usando o CONÉXIA por aqui, faça upgrade pro PRO (R$39,90/mês): acesse conexia-agro-chi.vercel.app e ative seu plano. 🚀`);
       return;
     }
   }
