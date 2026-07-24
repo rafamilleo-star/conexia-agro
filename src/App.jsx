@@ -1400,6 +1400,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [teiaSel, setTeiaSel] = useState(null);
   const [dbgMsg, setDbgMsg] = useState("");
   const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "", influenciaPessoas: "", geraOportunidade: "", abrePortas: "", momentoAtual: "" });
+  const [metrics, setMetrics] = useState(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsErr, setMetricsErr] = useState("");
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
 
   // ── Computed plan ─────────────────────────────────────────
@@ -1461,6 +1464,52 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   }, [user?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ── Métricas administrativas: acompanhamento do produto CONÉXIA ──
+  // Contas de teste do próprio admin ficam de fora de todas as agregações,
+  // para refletir apenas o comportamento de usuários reais.
+  const loadMetrics = useCallback(async () => {
+    setMetricsLoading(true); setMetricsErr("");
+    try {
+      const [{ data: profs, error: pe }, { data: assess, error: ae }, { data: inter, error: ie }, { data: subs, error: se }] = await Promise.all([
+        supabase.from("profiles").select("id,email,created_at,onboarding_completed,assessment_completed,is_pro,plan,pro_access_source,pro_expires_at"),
+        supabase.from("assessments").select("id,user_id,created_at"),
+        supabase.from("interactions").select("id,user_id"),
+        supabase.from("stripe_subscriptions").select("id,user_id,status,stripe_price_id"),
+      ]);
+      if (pe || ae || ie || se) throw (pe || ae || ie || se);
+
+      const testers = new Set((profs || []).filter(p => ADMIN_EMAILS.includes((p.email || "").toLowerCase())).map(p => p.id));
+      const real = (profs || []).filter(p => !testers.has(p.id));
+
+      const onboardingDone = real.filter(p => p.onboarding_completed).length;
+      const assessmentDone = real.filter(p => p.assessment_completed).length;
+      const usersWithInteraction = new Set((inter || []).filter(i => !testers.has(i.user_id)).map(i => i.user_id)).size;
+      const proReal = real.filter(p => p.is_pro);
+      const proBySource = proReal.reduce((acc, p) => { const k = p.pro_access_source || "desconhecido"; acc[k] = (acc[k] || 0) + 1; return acc; }, {});
+      const payingReal = (subs || []).filter(s => !testers.has(s.user_id) && s.status === "active" && s.stripe_price_id !== "price_pro_monthly_test").length;
+
+      const weekKey = (d) => { const dt = new Date(d); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() - day + 1); return dt.toISOString().slice(0, 10); };
+      const weekly = {};
+      real.forEach(p => { const k = weekKey(p.created_at); weekly[k] = (weekly[k] || 0) + 1; });
+      const weeklySignups = Object.entries(weekly).sort(([a], [b]) => a.localeCompare(b)).map(([week, count]) => ({ week, count }));
+
+      setMetrics({
+        totalReal: real.length,
+        onboardingDone, onboardingPct: real.length ? Math.round(onboardingDone / real.length * 100) : 0,
+        assessmentDone, assessmentPct: real.length ? Math.round(assessmentDone / real.length * 100) : 0,
+        usersWithInteraction,
+        proConcedido: proReal.length,
+        proBySource,
+        payingReal,
+        weeklySignups,
+      });
+    } catch (e) {
+      setMetricsErr(e?.message || "Erro ao carregar métricas.");
+    }
+    setMetricsLoading(false);
+  }, []);
+
 
   const addC = async () => {
     if (!cf.name.trim() || !user?.id) { setDbgMsg("⚠️ Bloqueado: " + (!user?.id ? "sem user.id" : "nome vazio")); return; }
@@ -1641,6 +1690,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const pf = assessment ? PROFILES[assessment.profileKey] : null;
   const sc = assessment?.scores || {};
   const admin = isAdmin(profile?.email);
+  const isMetricsAdmin = isAdminEmail(user?.email);
   const NAVS = [
     { id: "dashboard", icon: "📈", label: "Analytics" },
     { id: "dash", icon: "◎", label: "Dashboard" },
@@ -1650,7 +1700,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     { id: "ia", icon: "🧠", label: "IA" },
     { id: "report", icon: "📊", label: "Relatório" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }, { id: "export", icon: "⬇", label: "Exportar" }] : []),
+    ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
   ];
+
+  useEffect(() => {
+    if (view === "metrics" && isMetricsAdmin && !metrics && !metricsLoading) loadMetrics();
+  }, [view, isMetricsAdmin, metrics, metricsLoading, loadMetrics]);
 
   const renderMentor = () => {
     // In localStorage mode, mentor sees shared data. In Supabase mode, RLS handles cross-user reads.
@@ -1723,6 +1778,73 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, marginBottom: 6 }}>Google Drive · Em breve</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>No deploy com Supabase, este botão conectará ao Google Drive via OAuth exclusivo do admin. Relatórios, contatos e backups serão salvos automaticamente na pasta MILLÉO STRATEGIC HUB.</div>
         </div>
+      </div>
+    );
+  };
+
+  const renderMetrics = () => {
+    const Card = ({ label, value, danger }) => (
+      <div style={{ background: danger ? C.corD : C.card, border: `1px solid ${danger ? C.cor + "40" : C.brd}`, borderRadius: 12, padding: "16px 18px" }}>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 6 }}>{label}</div>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 26, fontWeight: 700, color: danger ? C.cor : C.txt }}>{value}</div>
+      </div>
+    );
+    const sourceLabels = { access_key: "Convite (grátis)", admin: "Concedido (admin)", stripe: "Stripe", stripe_test: "Teste Stripe", demo: "Demo", desconhecido: "Desconhecido" };
+
+    return (
+      <div>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Métricas do CONÉXIA</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Visão administrativa do produto — contas de teste do admin excluídas.</p>
+
+        {metricsLoading && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando métricas…</p>}
+        {metricsErr && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.cor }}>{metricsErr}</p>}
+
+        {metrics && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
+              <Card label="Usuários reais" value={metrics.totalReal} />
+              <Card label="Onboarding completo" value={`${metrics.onboardingPct}%`} />
+              <Card label="Avaliação completa" value={`${metrics.assessmentPct}%`} />
+              <Card label="Com 1ª interação" value={metrics.usersWithInteraction} />
+              <Card label="Pro concedido" value={metrics.proConcedido} />
+              <Card label="Pagantes externos reais" value={metrics.payingReal} danger={metrics.payingReal === 0} />
+            </div>
+
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Cadastros reais por semana</div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120, marginBottom: 24, padding: "0 2px" }}>
+              {metrics.weeklySignups.map(({ week, count }) => {
+                const max = Math.max(...metrics.weeklySignups.map(w => w.count), 1);
+                return (
+                  <div key={week} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txM }}>{count}</div>
+                    <div style={{ width: "100%", height: Math.max(4, (count / max) * 90), background: C.blu, borderRadius: 3 }} />
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL }}>{week.slice(5)}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Origem do acesso pro</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+              {Object.entries(metrics.proBySource).map(([src, qtd]) => (
+                <div key={src} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 140, fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{sourceLabels[src] || src}</div>
+                  <div style={{ flex: 1, background: C.sf, borderRadius: 4, height: 18, position: "relative" }}>
+                    <div style={{ width: `${Math.max(6, (qtd / metrics.proConcedido) * 100)}%`, height: "100%", background: C.vio, borderRadius: 4 }} />
+                  </div>
+                  <div style={{ width: 24, textAlign: "right", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{qtd}</div>
+                </div>
+              ))}
+            </div>
+
+            {metrics.payingReal === 0 && (
+              <div style={{ background: C.corD, border: `1px solid ${C.cor}40`, borderRadius: 10, padding: 16 }}>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, marginBottom: 6 }}>Estado real do negócio</div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>Nenhum cliente externo paga hoje. O acesso pro em uso vem de convites gratuitos. Monetização ainda não foi validada no mercado.</div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     );
   };
@@ -3296,6 +3418,7 @@ ${MENTORIA_LINK || true ? `
         {view === "report" && renderReport()}
         {view === "mentor" && admin && renderMentor()}
         {view === "export" && admin && renderExport()}
+        {view === "metrics" && isMetricsAdmin && renderMetrics()}
         {view === "perfil" && renderPerfil()}
       </main>
 
