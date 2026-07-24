@@ -3982,6 +3982,12 @@ function App() {
   const [pendingKey, setPendingKey] = useState(urlKey ? urlKey.toUpperCase() : "");
   const [needsConsent, setNeedsConsent] = useState(false);
   const [consentBusy, setConsentBusy] = useState(false);
+  // Contas afetadas pelo bug de 24/07 (objectives salvo como string em vez de
+  // array, rejeitado pelo Postgres). onboarding ficou marcado como concluído
+  // mas o campo nunca foi persistido. Pede pra corrigir só esse campo no login.
+  const [needsObjectivesFix, setNeedsObjectivesFix] = useState(false);
+  const [objectivesFixSel, setObjectivesFixSel] = useState([]);
+  const [objectivesFixBusy, setObjectivesFixBusy] = useState(false);
   const activationTrackedRef = useRef(new Set());
 
   const trackActivationEvent = useCallback(async (eventType, tabName, metadata = null) => {
@@ -4047,6 +4053,9 @@ function App() {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       if (p) p.name = p.name || p.first_name || "";
       setProfile(p);
+      if (p?.onboarding_completed && (!p.objectives || p.objectives.length === 0)) {
+        setNeedsObjectivesFix(true);
+      }
 
       // Contas criadas antes da correção do registro de consentimento LGPD
       // não têm esse aceite gravado. Verifica e pede pra confirmar agora.
@@ -4258,6 +4267,24 @@ function App() {
     setConsentBusy(false);
   };
 
+  const saveObjectivesFix = async () => {
+    if (!user || objectivesFixSel.length === 0) return;
+    setObjectivesFixBusy(true);
+    try {
+      const { error } = await supabase.from("profiles").update({ objectives: objectivesFixSel }).eq("id", user.id);
+      if (error) {
+        console.error("[ObjectivesFix]", error);
+        setObjectivesFixBusy(false);
+        return;
+      }
+      setProfile(prev => ({ ...(prev || {}), objectives: objectivesFixSel }));
+      setNeedsObjectivesFix(false);
+    } catch (e) {
+      console.error("[ObjectivesFix]", e);
+    }
+    setObjectivesFixBusy(false);
+  };
+
   // Splash aparece imediatamente na primeira abertura, independente do estado de auth
   if (!splashShown) return <SplashScreen onDone={() => setSplashShown(true)} />;
 
@@ -4286,6 +4313,26 @@ function App() {
               <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento: <strong>{BRAND.supportEmail}</strong>.</p>
             </div>
             <button onClick={acceptConsentNow} disabled={consentBusy} style={{ width:"100%", background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer" }}>{consentBusy ? "Aguarde..." : "Li e aceito"}</button>
+          </div>
+        </div>
+      )}
+      {needsObjectivesFix && user && !needsConsent && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:99998, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
+            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Só falta um detalhe</h2>
+            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Seus objetivos de networking não foram salvos por uma falha técnica. Selecione de novo pra deixar seu diagnóstico completo.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:20 }}>
+              {OBJECTIVES.map(o => {
+                const sel = objectivesFixSel.includes(o.value);
+                return (
+                  <button key={o.value} onClick={() => setObjectivesFixSel(p => p.includes(o.value) ? p.filter(x => x !== o.value) : [...p, o.value])} style={{ background: sel ? C.gD : C.sf, border: `1px solid ${sel ? C.gL : C.brd}`, borderRadius: 10, padding: 14, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{o.icon}</span>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: sel ? 600 : 400, color: sel ? C.gold : C.txM }}>{o.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button onClick={saveObjectivesFix} disabled={objectivesFixBusy || objectivesFixSel.length === 0} style={{ width:"100%", background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer", opacity: objectivesFixSel.length === 0 ? 0.6 : 1 }}>{objectivesFixBusy ? "Salvando..." : "Salvar e continuar"}</button>
           </div>
         </div>
       )}
