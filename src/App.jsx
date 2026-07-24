@@ -3401,10 +3401,18 @@ ${MENTORIA_LINK || true ? `
             <ConexiaIcon size={26} dark={true} />
             <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 14, fontWeight: 700, color: C.txt }}>{BRAND.name}</span>
           </div>
-          <button onClick={() => { setView("perfil"); setSelId(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: 6 }}>
-            <span style={{ fontSize: 14 }}>👤</span>
-            <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: view === "perfil" ? C.gold : C.txL, fontWeight: view === "perfil" ? 700 : 400 }}>{profile?.name || "Perfil"}</span>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {!isPro && (
+              <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: 4, background: C.gold, color: C.bg, borderRadius: 20, padding: "5px 12px", fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+                seja PRO
+              </a>
+            )}
+            <button onClick={() => { setView("perfil"); setSelId(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: 6 }}>
+              <span style={{ fontSize: 14 }}>👤</span>
+              <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: view === "perfil" ? C.gold : C.txL, fontWeight: view === "perfil" ? 700 : 400 }}>{profile?.name || "Perfil"}</span>
+            </button>
+          </div>
         </div>
       )}
 
