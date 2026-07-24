@@ -382,8 +382,8 @@ function Onboard({ onDone, initialKey = "" }) {
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
       <div style={{ maxWidth: 440, width: "100%" }}>
         <Tag>Passo 1 de 3 · Quem você é</Tag>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Conte sobre você</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 24px" }}>Personaliza seu diagnóstico e os insights da IA.</p>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Seu diagnóstico começa aqui</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 24px", lineHeight: 1.6 }}>Estas informações, junto com 12 perguntas rápidas, permitem adaptar seu plano e suas recomendações à forma como você constrói relações.</p>
         <Inp label="Seu nome" value={form.name} onChange={s('name')} placeholder="Como podemos te chamar?" />
         <Inp label="Email" value={form.email} onChange={s('email')} placeholder="seu@email.com" type="email" />
         <Inp label="Empresa" value={form.company} onChange={s('company')} placeholder="Ex: BASF, Syngenta, Bayer..." />
@@ -473,7 +473,7 @@ function Onboard({ onDone, initialKey = "" }) {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Btn onClick={() => setStep(2)} style={{ flex: 1, background: C.sf, color: C.txM }}>← Voltar</Btn>
-          <Btn onClick={() => onDone(form, voucher.trim())} style={{ flex: 2 }}>Iniciar assessment →</Btn>
+          <Btn onClick={() => onDone(form, voucher.trim())} style={{ flex: 2 }}>Descobrir meu perfil →</Btn>
         </div>
       </div>
     </div>
@@ -3851,6 +3851,33 @@ function App() {
   const [pendingKey, setPendingKey] = useState(urlKey ? urlKey.toUpperCase() : "");
   const [needsConsent, setNeedsConsent] = useState(false);
   const [consentBusy, setConsentBusy] = useState(false);
+  const activationTrackedRef = useRef(new Set());
+
+  const trackActivationEvent = useCallback(async (eventType, tabName, metadata = null) => {
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase.from("page_events").insert({
+        user_id: user.id,
+        event_type: eventType,
+        tab_name: tabName,
+        metadata,
+      });
+      if (error) console.warn("[Activation Analytics]", error);
+    } catch (error) {
+      console.warn("[Activation Analytics]", error);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !["onboard", "assess"].includes(state)) return;
+    const eventKey = `${user.id}:${state}`;
+    if (activationTrackedRef.current.has(eventKey)) return;
+    activationTrackedRef.current.add(eventKey);
+    void trackActivationEvent(
+      state === "onboard" ? "onboarding_view" : "assessment_view",
+      state
+    );
+  }, [state, user?.id, trackActivationEvent]);
 
   useEffect(() => {
     // Verificar sessão atual ao iniciar
@@ -3961,6 +3988,7 @@ function App() {
       alert("Não consegui salvar seus dados de perfil. Tenta de novo em instantes — se persistir, avisa o suporte.");
       return;
     }
+    void trackActivationEvent("onboarding_completed", "onboard");
     setState("assess");
   };
 
@@ -4047,6 +4075,10 @@ function App() {
       }
     } catch (e) { console.error("[Assess] excecao:", e); }
     sendToMake(result);
+    void trackActivationEvent("assessment_completed", "assess", {
+      overall: result.overall,
+      profile_key: result.profileKey,
+    });
     setAssessment(result);
     setState("app");
     // Auto-aplicar chave pendente (de URL param ou onboarding)
