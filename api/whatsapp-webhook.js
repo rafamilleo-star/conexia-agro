@@ -71,17 +71,20 @@ async function logDebug(payload) {
   }
 }
 
-async function analyzeIntent(message, contacts) {
+async function analyzeIntent(message, contacts, focusContact) {
   const contactList = contacts.map(c => `- ${c.name}`).join('\n') || '(nenhum contato ainda)';
   const now = new Date();
   const hojeISO = now.toISOString().slice(0, 10);
   const diaSemana = now.toLocaleDateString('pt-BR', { weekday: 'long' });
+  const contextoFoco = focusContact
+    ? `\nCONTEXTO DA CONVERSA: nas últimas mensagens o usuário estava falando sobre "${focusContact.name}". Se a mensagem atual não citar nenhum nome mas continuar claramente no mesmo assunto (pronomes como "ele"/"ela", ou perguntas de acompanhamento tipo "como devo agir", "que assunto eu puxo", "como continuo essa conversa"), assuma que contact_name = "${focusContact.name}". Se a mensagem citar outro nome ou mudar de assunto, ignore este contexto.\n`
+    : '';
   const prompt = `Você é o assistente do Conéxia, um CRM de inteligência relacional via WhatsApp.
 
 Hoje é ${diaSemana}, ${hojeISO} (use isso como referência pra calcular datas relativas como "segunda que vem", "sexta", "daqui 2 semanas" etc.).
 
 O usuário enviou: "${message}"
-
+${contextoFoco}
 Contatos já cadastrados na rede dele:
 ${contactList}
 
@@ -100,6 +103,7 @@ entendimento tem que funcionar mesmo pra frases que não estão aqui):
 - "Ligar para ele sexta." → schedule_action
 - "Tenho reunião amanhã com o Carlos." → briefing
 - "Me prepara pra falar com a Ana." → briefing
+- "Como devo agir com o Caio?" / "Como puxo essa conversa?" → contact_coaching
 - "Quem faz tempo que não vejo?" / "Quem faz tempo que não converso?" → query_health
 - "O que tenho para fazer hoje?" → query_next_actions
 - "Me ajuda." → help
@@ -143,9 +147,21 @@ dele é dia 15/03", "faz aniversário mês que vem dia 4"). fields.hobbies é um
 "1900-03-15"); nunca invente o ano. Se nada foi mencionado, deixe os dois de fora — não é obrigatório em
 nenhuma intenção.
 
-BRIEFING — o usuário quer se preparar para falar/se encontrar com alguém que JÁ está na rede dele. Preencha
-fields.contact_name com o nome mais parecido possível com algum da lista de contatos já cadastrados acima
-(sem artigos como "o"/"a", sem palavras de tempo como "hoje"/"amanhã" — só o nome).
+BRIEFING — o usuário quer os DADOS objetivos que já estão cadastrados sobre alguém antes de falar com essa
+pessoa (empresa, cargo, categoria, como conheceu, última interação, próxima ação). É um pedido de "me
+lembra quem é essa pessoa e onde paramos". Preencha fields.contact_name com o nome mais parecido possível
+com algum da lista de contatos já cadastrados acima (sem artigos como "o"/"a", sem palavras de tempo como
+"hoje"/"amanhã" — só o nome).
+
+CONTACT_COACHING — o usuário já sabe quem é a pessoa e quer CONSELHO/ESTRATÉGIA sobre como agir, abordar ou
+conduzir a relação com ela — não os dados brutos. Sinais: "como devo agir com...", "como puxo essa
+conversa", "que assunto eu levo pra reunião com...", "como me aproximo de...", "vale a pena eu falar de X
+com ele?". Preencha fields.contact_name (mesma regra do briefing) e, se der pra identificar, fields.note com
+o ângulo específico da dúvida (ex.: "quer saber que assunto puxar", "quer saber se deve pedir apresentação
+pra outra pessoa") — deixe null se a pergunta for genérica tipo "como devo agir".
+
+Diferença prática entre os dois: "me prepara pra falar com o Caio" / "resumo da interação com o Caio" =
+briefing. "como devo agir com o Caio" / "como puxo a conversa" = contact_coaching.
 
 Outras intenções:
 - query_contacts: perguntas sobre quem ele não fala há tempo, lista de contatos, etc.
@@ -163,7 +179,7 @@ Retorne APENAS JSON, sem markdown, sem texto fora do JSON, em UM dos dois format
 
 FORMATO 1 — uma intenção só:
 {
-  "intent": "register_interaction" | "schedule_action" | "register_contact" | "briefing" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
+  "intent": "register_interaction" | "schedule_action" | "register_contact" | "briefing" | "contact_coaching" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
   "confidence": 0.0 a 1.0,
   "fields": {
     "contact_name": string ou null,
@@ -549,7 +565,7 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   const variants = waVariants(normalized);
 
   // 1. Localiza o perfil pelo WhatsApp
-  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp,whatsapp_trial_started_at`);
+  const profiles = await sb(`profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,created_at,whatsapp,whatsapp_trial_started_at,last_discussed_contact_id,last_discussed_contact_at`);
   const profile = profiles?.[0];
   console.log({ from: number, normalized, profileWhatsapp: profile?.whatsapp || null }); // TEMPORÁRIO — remover depois do diagnóstico
   // Log seguro e permanente (sem número completo): só dispara quando o match
@@ -595,7 +611,20 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   }
 
   // 2. Busca os contatos do usuário
-  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,last_interaction_at,next_action,next_action_date`);
+  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,company,role,category,how_met,last_interaction_at,next_action,next_action_date`);
+
+  // 2.1 Contato "em foco" na conversa — se o usuário falou de alguém há pouco
+  // (últimos 30 min) e a próxima mensagem não repete o nome, é provável que
+  // ainda seja sobre a mesma pessoa (ex.: "como devo puxar a conversa" logo
+  // depois de "como devo agir com o Caio"). Passado como contexto pro Gemini
+  // decidir, nunca aplicado de forma cega.
+  let focusContact = null;
+  if (profile.last_discussed_contact_id && profile.last_discussed_contact_at) {
+    const minutosDesde = (Date.now() - new Date(profile.last_discussed_contact_at).getTime()) / 60000;
+    if (minutosDesde <= 30) {
+      focusContact = (contacts || []).find(c => c.id === profile.last_discussed_contact_id) || null;
+    }
+  }
 
   // 2.5 Havia uma pergunta em aberto pra este usuário? (hoje só usado pelo
   // cadastro de contato quando falta o nome) Se sim, esta mensagem é a
@@ -624,11 +653,25 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   }
 
   // 3. Entende a intenção da mensagem (pode haver mais de uma ação na mesma mensagem)
-  const intentDataList = await analyzeIntent(text, contacts || []);
+  const intentDataList = await analyzeIntent(text, contacts || [], focusContact);
 
   // 4. Executa cada ação identificada, na ordem em que vieram
   for (const intentData of intentDataList) {
     await executeIntent(intentData, { userIdProfile, contacts, number, sendReply, text, firstName, isPro });
+  }
+}
+
+// Atualiza qual contato está "em foco" na conversa — chamado sempre que uma
+// intenção referente a um contato específico é resolvida com sucesso, pra
+// que perguntas de acompanhamento sem repetir o nome continuem funcionando.
+async function setFocusContact(userIdProfile, contactId) {
+  try {
+    await sb(`profiles?id=eq.${userIdProfile}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ last_discussed_contact_id: contactId, last_discussed_contact_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    console.error('[whatsapp-webhook] falha ao gravar foco de contato:', e.message);
   }
 }
 
@@ -699,6 +742,53 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
       c.next_action ? `Próxima ação: ${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'Sem próxima ação definida',
     ].filter(Boolean);
     await sendReply(number, linhas.join('\n'));
+    await setFocusContact(userIdProfile, match.id);
+    return;
+  }
+
+  if (intentData.intent === 'contact_coaching') {
+    if (!isPro) {
+      await sendReply(number, `🔒 Orientação sobre como agir com um contato é um recurso PRO.\n\nNo PRO a IA analisa o histórico da relação e te diz como puxar a conversa, não só os dados cadastrados.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      return;
+    }
+    const match = (contacts || []).find(c =>
+      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
+    );
+    if (!match) {
+      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede pra te orientar. Confere o nome?`);
+      return;
+    }
+    const full = await sb(`contacts?id=eq.${match.id}&select=name,company,role,category,how_met,hobbies,last_interaction_at,next_action,next_action_date`);
+    const c = full?.[0];
+    if (!c) { await sendReply(number, `Não encontrei os detalhes de "${match.name}".`); return; }
+    // Últimas interações reais — sem isso o conselho fica genérico igual ao
+    // briefing. É essa diferença que justifica o intent existir separado.
+    const recentInteractions = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.desc&limit=5&select=type,description,sentiment,created_at`);
+    const diasSemContato = c.last_interaction_at ? Math.floor((Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000) : null;
+    const historico = (recentInteractions || []).length
+      ? recentInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description}`).join('\n')
+      : 'Nenhuma interação registrada ainda.';
+    const anguloDaDuvida = intentData.note ? `\nA dúvida específica do usuário: ${intentData.note}` : '\nA pergunta foi genérica (só "como devo agir"), então cubra: abertura da conversa, assunto pra puxar, e um ponto de atenção.';
+    const coachingPrompt = `Você é um mentor de networking estratégico ajudando ${firstName || 'o usuário'} a se relacionar melhor com um contato profissional dele no agronegócio.
+
+Dados do contato:
+- Nome: ${c.name}
+- Cargo/Empresa: ${[c.role, c.company].filter(Boolean).join(' na ') || 'não informado'}
+- Categoria da relação: ${c.category || 'não classificada'}
+- Como se conheceram: ${c.how_met || 'não informado'}
+- Última interação: ${diasSemContato !== null ? `há ${diasSemContato} dia(s)` : 'nenhuma registrada'}
+- Próxima ação já planejada: ${c.next_action || 'nenhuma'}
+
+Histórico das últimas interações:
+${historico}
+${anguloDaDuvida}
+
+Dê um conselho curto, direto e ACIONÁVEL (máximo 4 frases, sem enrolação, sem tom de coach genérico) sobre
+como ${firstName || 'o usuário'} deve conduzir essa relação agora — puxando de algo concreto do histórico
+acima sempre que possível, não conselho genérico que serviria pra qualquer contato.`;
+    const conselho = await geminiText(coachingPrompt, 300);
+    await sendReply(number, `🧭 *Como agir com ${c.name}*\n\n${conselho || 'Não consegui gerar uma orientação agora. Tenta de novo em instantes.'}`);
+    await setFocusContact(userIdProfile, match.id);
     return;
   }
 
@@ -738,6 +828,7 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
       }),
     });
     await sendReply(number, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
+    await setFocusContact(userIdProfile, match.id);
     return;
   }
 
@@ -765,6 +856,7 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
       ? ` até *${new Date(intentData.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')}*`
       : '';
     await sendReply(number, `🗓️ Anotado! Próxima ação com *${match.name}*: ${intentData.next_action}${prazo}.${intentData.next_action_date ? '\n\nTe aviso por aqui quando chegar o dia.' : ''}`);
+    await setFocusContact(userIdProfile, match.id);
     return;
   }
 
@@ -808,7 +900,7 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
 
   if (intentData.intent === 'help') {
     await sendReply(number,
-      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n👤 *Cadastrar contato*: "Cadastra a Maria, gerente comercial da Bayer"\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n\n🔒 *No PRO*:\n🧭 *Briefing antes de uma conversa*: "Me prepara pra falar com a Ana"\n🧠 *Insights e recomendações*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
+      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n👤 *Cadastrar contato*: "Cadastra a Maria, gerente comercial da Bayer"\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n\n🔒 *No PRO*:\n🧭 *Briefing antes de uma conversa*: "Me prepara pra falar com a Ana"\n🎯 *Como agir com alguém*: "Como devo puxar a conversa com o Caio?"\n🧠 *Insights e recomendações*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
     return;
   }
 
