@@ -1163,6 +1163,48 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   );
 }
 
+/* ═══ TOUR DE USO (primeira vez + lâmpada de dicas) ═════════ */
+const TOUR_STEPS = [
+  { icon: "✨", title: `Bem-vindo(a) ao ${BRAND.name}`, desc: "Isso aqui não é um CRM tradicional. É um sistema pra cultivar relacionamentos estratégicos de forma intencional — com diagnóstico, plano de ação e IA te ajudando no caminho. Vamos te mostrar rapidinho cada parte." },
+  { icon: "📈", title: "Analytics", desc: "Evolução das suas métricas de rede ao longo do tempo." },
+  { icon: "◎", title: "Dashboard", desc: "Seu painel principal: Health Score, alertas de contatos esfriando e as próximas ações recomendadas." },
+  { icon: "◈", title: "Contatos", desc: "Sua rede cadastrada. Registre toda interação relevante aqui — quanto mais você registra, mais preciso fica o seu diagnóstico." },
+  { icon: "⊛", title: "Teia", desc: "Um mapa visual da sua rede: veja rápido quem está próximo, distante ou esquecido." },
+  { icon: "🗺️", title: "Plano", desc: "Seu plano de ativação de 90 dias, com metas semanais baseadas no seu perfil relacional." },
+  { icon: "🧠", title: "IA", desc: "Seu coach de relacionamento particular. Peça sugestões, análises e próximos passos personalizados." },
+  { icon: "📊", title: "Relatório", desc: "Seu diagnóstico relacional completo, pronto pra baixar em PDF." },
+  { icon: "👤", title: "Perfil", desc: "Seus dados, plano PRO e chave de acesso ficam aqui." },
+];
+
+function TourModal({ onClose, onFinish }) {
+  const [step, setStep] = useState(0);
+  const total = TOUR_STEPS.length;
+  const s = TOUR_STEPS[step];
+  const isLast = step === total - 1;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(5,12,9,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 16, padding: 28, maxWidth: 360, width: "100%", position: "relative" }}>
+        <button onClick={onClose} aria-label="Fechar" style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: C.txL, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
+        <div style={{ fontSize: 34, marginBottom: 12 }}>{s.icon}</div>
+        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 8 }}>{s.title}</div>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, marginBottom: 20 }}>{s.desc}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: 5 }}>
+            {TOUR_STEPS.map((_, i) => (
+              <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: i === step ? C.gold : C.brd }} />
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {step > 0 && <Btn variant="ghost" small onClick={() => setStep(step - 1)}>Voltar</Btn>}
+            {!isLast && <Btn small onClick={() => setStep(step + 1)}>Próximo</Btn>}
+            {isLast && <Btn small onClick={onFinish}>Concluir</Btn>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══ PERFIL FORM ════════════════════════════════════════ */
 function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey }) {
   const NETWORK_SIZES = [
@@ -3355,8 +3397,36 @@ ${MENTORIA_LINK || true ? `
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // ── Tour de uso (primeira vez) ─────────────────────────────
+  // Mostra automaticamente só na primeira visita (profile.tour_completed
+  // ainda não true). Depois disso só reabre pela lâmpada de dicas, e nunca
+  // mais de forma automática — fechar em qualquer ponto já marca como visto.
+  const [showTour, setShowTour] = useState(false);
+  useEffect(() => {
+    if (profile && profile.tour_completed !== true) setShowTour(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const closeTour = async () => {
+    setShowTour(false);
+    if (profile?.tour_completed || !user?.id) return;
+    try {
+      const { error } = await supabase.from("profiles").update({ tour_completed: true }).eq("id", user.id);
+      if (error) console.error("[Tour] falha ao salvar tour_completed:", error);
+    } catch (e) { console.error("[Tour] excecao ao salvar tour_completed:", e); }
+    onProfileUpdate?.({ tour_completed: true });
+  };
+
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
+      {/* Tour de uso: automático na 1ª vez, e reaberto a qualquer momento pela lâmpada */}
+      {showTour && <TourModal onClose={closeTour} onFinish={closeTour} />}
+      <button
+        onClick={() => setShowTour(true)}
+        title="Dicas de uso"
+        aria-label="Dicas de uso"
+        style={{ position: "fixed", bottom: isMobile ? 78 : 20, right: 20, width: 44, height: 44, borderRadius: "50%", background: C.gold, border: "none", boxShadow: "0 4px 14px #00000040", fontSize: 20, cursor: "pointer", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }}
+      >💡</button>
       {/* PRO Activation Toast */}
       {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
       {!isMobile && (
