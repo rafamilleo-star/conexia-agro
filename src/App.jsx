@@ -1980,6 +1980,21 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 4px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 16px" }}>{cts.length === 0 ? "Cadastre seu primeiro contato para ativar sua rede." : `${cts.length} contatos · ${active} ativos · ${wk} interações esta semana`}</p>
 
+        {/* ── Benefício do PRO (só aparece pra Free, na tela inicial) ── */}
+        {!isPro && (
+          <div style={{ background: `${C.gold}0d`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>🔓</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Sem limite de contatos. Plano completo de 90 dias. A IA te avisando toda semana quem chamar.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 10 }}>Isso é o PRO — R$ 39,90/mês ou R$ 399/ano.</div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" style={{ background: C.gold, color: C.bg, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Assinar PRO</a>
+                <button onClick={openAccessKey} style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, cursor: "pointer" }}>Já tenho uma chave</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Descoberta do Assistente via WhatsApp (PRO ou trial grátis de 10 dias) ── */}
         {hasWhatsappAccess && profile?.whatsapp ? (
           <div style={{ background: `${C.grn}08`, border: `1px solid ${C.grn}30`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
