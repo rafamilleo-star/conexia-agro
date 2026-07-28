@@ -4134,6 +4134,10 @@ function App() {
 
   const loadUserData = async (userId) => {
     const lsKey = BRAND.storagePrefix + "_done_" + userId;
+    // Dispara sem esperar (fire-and-forget) — se falhar, não deve travar o
+    // carregamento do perfil. Usado pelo cron de check-in de inatividade
+    // (api/relationship-inactivity-cron.js) para saber quem está ausente.
+    supabase.from("profiles").update({ last_access_at: new Date().toISOString() }).eq("id", userId).then(() => {}, () => {});
     try {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       if (p) p.name = p.name || p.first_name || "";
