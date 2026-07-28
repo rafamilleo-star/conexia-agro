@@ -16,6 +16,17 @@ export function onboardingReminderMessage(firstName, step /* 'first' | 'second' 
   return `Ei${greet(firstName)}! Você chegou tão perto. Bora continuar?\n\nAqui você consegue organizar quem realmente importa, lembrar das histórias e interações e perceber quem merece sua atenção neste momento.\n\nSeu cadastro está salvo. É só continuar de onde parou.`;
 }
 
+// Etapa diferente do onboarding: aqui a pessoa JÁ terminou o cadastro (nome,
+// WhatsApp, empresa etc.) — falta só o assessment relacional que gera o
+// perfil/arquétipo. Mensagem não repete "seu cadastro está salvo" porque
+// isso já não é verdade nessa etapa; seria inventar/confundir o que falta.
+export function assessmentReminderMessage(firstName, step /* 'first' | 'second' */) {
+  if (step === 'second') {
+    return `Oi${greet(firstName)}! Só faltam algumas perguntas rápidas pra eu te mostrar seu perfil relacional completo.\n\nLeva poucos minutos, e a partir dele eu já consigo te ajudar de verdade com sugestões pra sua rede.`;
+  }
+  return `Ei${greet(firstName)}! Seu cadastro no CONÉXIA já está pronto — falta só um passo: as perguntas que revelam seu perfil relacional.\n\nBora terminar? É rápido, e é a partir daí que eu passo a te dar sugestões personalizadas de verdade.`;
+}
+
 export function inactivityCheckInMessage(firstName) {
   return `E aí${greet(firstName)}, como você está?\n\nPassei para lembrar que você é importante para nós — e também para te incentivar a não deixar de lado quem é importante para você.\n\nPosso te ajudar a escolher sua próxima ação?`;
 }
