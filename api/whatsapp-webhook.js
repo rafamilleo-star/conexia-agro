@@ -156,7 +156,10 @@ com algum da lista de contatos já cadastrados acima (sem artigos como "o"/"a", 
 CONTACT_COACHING — o usuário já sabe quem é a pessoa e quer CONSELHO/ESTRATÉGIA sobre como agir, abordar ou
 conduzir a relação com ela — não os dados brutos. Sinais: "como devo agir com...", "como puxo essa
 conversa", "que assunto eu levo pra reunião com...", "como me aproximo de...", "vale a pena eu falar de X
-com ele?". Preencha fields.contact_name (mesma regra do briefing) e, se der pra identificar, fields.note com
+com ele?", "me dá um insight/dica sobre [nome de um contato]". Qualquer pedido de insight, dica ou análise
+que nomeie um contato específico é contact_coaching, não query_insights — a palavra "insight" sozinha não
+define a intenção, o que define é se tem um nome de contato junto. Preencha fields.contact_name (mesma
+regra do briefing) e, se der pra identificar, fields.note com
 o ângulo específico da dúvida (ex.: "quer saber que assunto puxar", "quer saber se deve pedir apresentação
 pra outra pessoa") — deixe null se a pergunta for genérica tipo "como devo agir".
 
@@ -167,7 +170,7 @@ Outras intenções:
 - query_contacts: perguntas sobre quem ele não fala há tempo, lista de contatos, etc.
 - query_next_actions: perguntas sobre tarefas/próximos passos pendentes já cadastrados.
 - query_health: perguntas sobre a saúde geral da rede (incluindo "quem eu não vejo há tempo" — isso é sobre a rede como um todo, não sobre 1 contato específico, então é query_health e não briefing).
-- query_insights: pedidos de insight, dica, análise geral.
+- query_insights: pedidos de insight, dica, análise geral SOBRE A REDE COMO UM TODO, sem nomear um contato específico. Se o usuário nomear um contato (ex.: "me dá um insight sobre a Ana", "insight do contato Caio"), a intenção é contact_coaching, não query_insights — mesmo que a palavra usada seja "insight" e não "como agir".
 - help: pede ajuda, não sabe o que o assistente faz.
 - unknown: só use se a mensagem realmente não tiver relação nenhuma com networking/contatos (ex: só "oi", saudação vazia sem contexto) — nunca use unknown só porque faltou um dado, veja a regra do register_contact acima.
 
