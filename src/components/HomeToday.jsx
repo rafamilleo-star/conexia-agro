@@ -1,255 +1,928 @@
 // src/components/HomeToday.jsx
-//
-// Tela "Hoje" — substitui o antigo bloco de alertas empilhados da Home.
-// Implementa os estados obrigatórios da jornada de ativação:
-//   1) sem assessment concluído          -> continuar assessment
-//   2) assessment ok, 0 contatos         -> começar minha rede
-//   3) 1–2 contatos                      -> seguir construindo + 1ª orientação possível
-//   4) contatos sem nenhuma interação    -> registrar uma conversa recente
-//   5) dados suficientes                 -> motor único: 1 principal + até 2 secundárias
-//   6) nada relevante agora              -> mensagem tranquila (nunca inventa pendência)
-//
-// E as 4 respostas humanas corrigidas de verdade (não só o texto do botão):
-//   - Vale retomar            -> status 'accepted', abre a pessoa, não repete por 7 dias
-//   - Está tudo bem assim     -> status 'dismissed', some IMEDIATAMENTE, supressão
-//                                 escalando (14 / 60 / mudo)
-//   - Conversamos recentemente -> pergunta quando (hoje/ontem/esta semana/escolher
-//                                 data), cria uma interação REAL com essa data e
-//                                 atualiza contacts.last_interaction_at com a mesma data
-//   - Lembrar depois          -> pergunta quando (amanhã/próxima semana/escolher
-//                                 data), suprime até essa data de verdade
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '../utils/supabase';
-import { computePriorities } from '../../shared/priorityEngine.js';
-import { buildFeedbackMap, nextDismissSuppressionDays, addDays } from '../../shared/alertsFeedback.js';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import { supabase } from "../utils/supabase";
+import { computePriorities } from "../../shared/priorityEngine.js";
+import {
+  addDays,
+  buildFeedbackMap,
+  nextDismissSuppressionDays,
+} from "../../shared/alertsFeedback.js";
 
 const C = {
-  card: "#141414", sf: "#1A1A1A", brd: "#2A2A2A",
-  txt: "#F0EDE8", txM: "#A09890", txL: "#605850",
-  gold: "#C9A84C", err: "#E05050",
+  card: "#141414",
+  surface: "#1A1A1A",
+  surfaceSoft: "#171717",
+  border: "#2A2A2A",
+  text: "#F0EDE8",
+  muted: "#A09890",
+  light: "#6F6861",
+  gold: "#C9A84C",
+  error: "#E05050",
+  success: "#5FA66F",
 };
 
-function todayISO() { return new Date().toISOString().slice(0, 10); }
+const fontSans = "'DM Sans', sans-serif";
+const fontSerif = "'Cormorant Garamond', serif";
 
-/* ── Mini seletor de data para "Conversamos recentemente" / "Lembrar depois" ── */
-function DateChoicePopover({ options, onPick, onCancel, busy }) {
-  const [customDate, setCustomDate] = useState('');
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getFirstName(name) {
+  return String(name || "").trim().split(/\s+/)[0] || "";
+}
+
+function getInteractionDate(interaction) {
   return (
-    <div style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 12, marginTop: 8 }}>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-        {options.map(opt => (
-          <button key={opt.label} disabled={busy} onClick={() => onPick(opt.dateISO)} style={chipStyle}>{opt.label}</button>
+    interaction?.created_at ||
+    interaction?.createdAt ||
+    interaction?.date ||
+    interaction?.interaction_date ||
+    null
+  );
+}
+
+function getContactId(interaction) {
+  return interaction?.contact_id || interaction?.contactId || null;
+}
+
+function getContactName(contact) {
+  return contact?.name || contact?.full_name || "Alguém da sua rede";
+}
+
+function getInteractionType(interaction) {
+  const raw = String(
+    interaction?.type ||
+      interaction?.interaction_type ||
+      interaction?.channel ||
+      ""
+  ).toLowerCase();
+
+  const labels = {
+    ligacao: "uma ligação",
+    ligação: "uma ligação",
+    call: "uma ligação",
+    telefone: "uma ligação",
+    mensagem: "uma mensagem",
+    whatsapp: "uma conversa pelo WhatsApp",
+    email: "um e-mail",
+    "e-mail": "um e-mail",
+    reuniao: "uma reunião",
+    reunião: "uma reunião",
+    encontro: "um encontro",
+    evento: "um encontro",
+    cafe: "uma conversa",
+    café: "uma conversa",
+  };
+
+  return labels[raw] || "uma interação";
+}
+
+function relativeDate(dateValue) {
+  if (!dateValue) return "";
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  const diff = Math.floor((today.getTime() - target.getTime()) / 86400000);
+
+  if (diff <= 0) return "Hoje";
+  if (diff === 1) return "Ontem";
+  if (diff < 7) return `Há ${diff} dias`;
+  if (diff < 14) return "Há 1 semana";
+
+  const weeks = Math.floor(diff / 7);
+  return `Há ${weeks} semanas`;
+}
+
+function isWithinCurrentWeek(dateValue) {
+  if (!dateValue) return false;
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  const now = new Date();
+  const day = now.getDay();
+  const distanceFromMonday = day === 0 ? 6 : day - 1;
+
+  const start = new Date(now);
+  start.setDate(now.getDate() - distanceFromMonday);
+  start.setHours(0, 0, 0, 0);
+
+  return date >= start;
+}
+
+const chipStyle = {
+  background: "transparent",
+  border: `1px solid ${C.border}`,
+  color: C.muted,
+  borderRadius: 9,
+  padding: "7px 12px",
+  fontFamily: fontSans,
+  fontSize: 12,
+  cursor: "pointer",
+};
+
+function Button({ children, onClick, primary = false, disabled = false }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        background: primary ? C.gold : "transparent",
+        border: `1px solid ${primary ? C.gold : C.border}`,
+        color: primary ? "#0D0D0D" : C.gold,
+        borderRadius: 10,
+        padding: "10px 16px",
+        fontFamily: fontSans,
+        fontWeight: 700,
+        fontSize: 13,
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.55 : 1,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Section({ title, action, children }) {
+  return (
+    <section
+      style={{
+        background: C.card,
+        border: `1px solid ${C.border}`,
+        borderRadius: 14,
+        padding: 18,
+        marginBottom: 14,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 14,
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            color: C.text,
+            fontFamily: fontSerif,
+            fontSize: 21,
+            fontWeight: 700,
+          }}
+        >
+          {title}
+        </h2>
+
+        {action}
+      </div>
+
+      {children}
+    </section>
+  );
+}
+
+function DateChoicePopover({ mode, onPick, onCancel, busy }) {
+  const [customDate, setCustomDate] = useState("");
+
+  const options =
+    mode === "snooze"
+      ? [
+          {
+            label: "Amanhã",
+            dateISO: addDays(todayISO(), 1).toISOString().slice(0, 10),
+          },
+          {
+            label: "Próxima semana",
+            dateISO: addDays(todayISO(), 7).toISOString().slice(0, 10),
+          },
+        ]
+      : [
+          { label: "Hoje", dateISO: todayISO() },
+          {
+            label: "Ontem",
+            dateISO: addDays(todayISO(), -1).toISOString().slice(0, 10),
+          },
+          {
+            label: "Esta semana",
+            dateISO: addDays(todayISO(), -3).toISOString().slice(0, 10),
+          },
+        ];
+
+  return (
+    <div
+      style={{
+        background: C.surfaceSoft,
+        border: `1px solid ${C.border}`,
+        borderRadius: 10,
+        padding: 12,
+        marginTop: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          gap: 7,
+          flexWrap: "wrap",
+          marginBottom: 10,
+        }}
+      >
+        {options.map((option) => (
+          <button
+            type="button"
+            key={option.label}
+            disabled={busy}
+            onClick={() => onPick(option.dateISO)}
+            style={chipStyle}
+          >
+            {option.label}
+          </button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)}
-          style={{ background: 'transparent', border: `1px solid ${C.brd}`, borderRadius: 6, padding: '6px 8px', color: C.txt, fontFamily: "'DM Sans'", fontSize: 12 }} />
-        <button disabled={busy || !customDate} onClick={() => onPick(customDate)} style={chipStyle}>Confirmar data</button>
-        <button disabled={busy} onClick={onCancel} style={{ ...chipStyle, border: 'none', color: C.txL }}>Cancelar</button>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          flexWrap: "wrap",
+        }}
+      >
+        <input
+          type="date"
+          value={customDate}
+          onChange={(event) => setCustomDate(event.target.value)}
+          style={{
+            background: "transparent",
+            border: `1px solid ${C.border}`,
+            color: C.text,
+            borderRadius: 8,
+            padding: "7px 9px",
+            fontFamily: fontSans,
+          }}
+        />
+
+        <button
+          type="button"
+          disabled={busy || !customDate}
+          onClick={() => onPick(customDate)}
+          style={chipStyle}
+        >
+          Confirmar
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCancel}
+          style={{
+            ...chipStyle,
+            border: "none",
+            color: C.light,
+          }}
+        >
+          Cancelar
+        </button>
       </div>
     </div>
   );
 }
 
-const chipStyle = {
-  background: 'transparent', border: `1px solid ${C.brd}`, color: C.txM,
-  borderRadius: 8, padding: '6px 12px', fontFamily: "'DM Sans'", fontSize: 12, cursor: 'pointer',
-};
+function PriorityCard({
+  action,
+  busy,
+  onAccept,
+  onDismiss,
+  onLogRecent,
+  onSnooze,
+}) {
+  const [open, setOpen] = useState(null);
+  const [error, setError] = useState("");
 
-function PriorityCard({ action, isMain, busy, onAccept, onDismiss, onLogRecent, onSnooze }) {
-  const [open, setOpen] = useState(null); // null | 'log' | 'snooze'
-  const [error, setError] = useState(null);
+  const run = async (callback) => {
+    setError("");
 
-  const wrap = async (fn) => {
-    setError(null);
-    const res = await fn();
-    if (res?.error) setError('Não consegui salvar sua resposta agora. Tenta de novo?');
-    else setOpen(null);
+    const response = await callback();
+
+    if (response?.error) {
+      setError("Não consegui salvar agora. Tente novamente.");
+      return;
+    }
+
+    setOpen(null);
   };
 
   return (
-    <div style={{ background: C.sf, border: `1px solid ${isMain ? C.gold + '40' : C.brd}`, borderRadius: 10, padding: 16, marginBottom: 10 }}>
-      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: isMain ? 20 : 17, color: C.txt, fontWeight: 600 }}>{action.title}</div>
-      <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginTop: 4 }}>{action.reason}</div>
-
-      {error && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.err, marginTop: 6 }}>{error}</div>}
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-        <button disabled={busy} onClick={() => wrap(() => onAccept(action))} style={{ ...chipStyle, border: `1px solid ${C.gold}`, color: C.gold, fontWeight: 600 }}>Vale retomar</button>
-        <button disabled={busy} onClick={() => wrap(() => onDismiss(action))} style={chipStyle}>Está tudo bem assim</button>
-        <button disabled={busy} onClick={() => setOpen(open === 'log' ? null : 'log')} style={chipStyle}>Conversamos recentemente</button>
-        <button disabled={busy} onClick={() => setOpen(open === 'snooze' ? null : 'snooze')} style={chipStyle}>Lembrar depois</button>
+    <div
+      style={{
+        background: C.surface,
+        border: `1px solid ${C.gold}50`,
+        borderRadius: 12,
+        padding: 17,
+      }}
+    >
+      <div
+        style={{
+          color: C.gold,
+          fontFamily: fontSans,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          marginBottom: 6,
+        }}
+      >
+        Pode valer sua atenção
       </div>
 
-      {open === 'log' && (
+      <div
+        style={{
+          color: C.text,
+          fontFamily: fontSerif,
+          fontSize: 23,
+          fontWeight: 700,
+          lineHeight: 1.15,
+        }}
+      >
+        {action.title}
+      </div>
+
+      <div
+        style={{
+          color: C.muted,
+          fontFamily: fontSans,
+          fontSize: 13,
+          lineHeight: 1.6,
+          marginTop: 7,
+        }}
+      >
+        {action.reason}
+      </div>
+
+      {error && (
+        <div
+          style={{
+            color: C.error,
+            fontFamily: fontSans,
+            fontSize: 12,
+            marginTop: 9,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
+          marginTop: 14,
+        }}
+      >
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => run(() => onAccept(action))}
+          style={{
+            ...chipStyle,
+            borderColor: C.gold,
+            color: C.gold,
+            fontWeight: 700,
+          }}
+        >
+          Ver pessoa
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => run(() => onDismiss(action))}
+          style={chipStyle}
+        >
+          Está tudo bem assim
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setOpen(open === "log" ? null : "log")}
+          style={chipStyle}
+        >
+          Conversamos recentemente
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setOpen(open === "snooze" ? null : "snooze")}
+          style={chipStyle}
+        >
+          Lembrar depois
+        </button>
+      </div>
+
+      {open === "log" && (
         <DateChoicePopover
+          mode="log"
           busy={busy}
-          options={[
-            { label: 'Hoje', dateISO: todayISO() },
-            { label: 'Ontem', dateISO: addDays(todayISO(), -1).toISOString().slice(0, 10) },
-            { label: 'Esta semana', dateISO: addDays(todayISO(), -3).toISOString().slice(0, 10) },
-          ]}
-          onPick={(dateISO) => wrap(() => onLogRecent(action, dateISO))}
+          onPick={(dateISO) => run(() => onLogRecent(action, dateISO))}
           onCancel={() => setOpen(null)}
         />
       )}
 
-      {open === 'snooze' && (
+      {open === "snooze" && (
         <DateChoicePopover
+          mode="snooze"
           busy={busy}
-          options={[
-            { label: 'Amanhã', dateISO: addDays(todayISO(), 1).toISOString().slice(0, 10) },
-            { label: 'Próxima semana', dateISO: addDays(todayISO(), 7).toISOString().slice(0, 10) },
-          ]}
-          onPick={(dateISO) => wrap(() => onSnooze(action, dateISO))}
+          onPick={(dateISO) => run(() => onSnooze(action, dateISO))}
           onCancel={() => setOpen(null)}
         />
       )}
+    </div>
+  );
+}
+
+function NetworkMovement({ contacts, interactions, onQuickLogInteraction }) {
+  const contactMap = useMemo(() => {
+    return new Map((contacts || []).map((contact) => [contact.id, contact]));
+  }, [contacts]);
+
+  const recent = useMemo(() => {
+    return [...(interactions || [])]
+      .filter((interaction) => getInteractionDate(interaction))
+      .sort(
+        (a, b) =>
+          new Date(getInteractionDate(b)).getTime() -
+          new Date(getInteractionDate(a)).getTime()
+      )
+      .slice(0, 5);
+  }, [interactions]);
+
+  return (
+    <Section title="Sua rede está em movimento">
+      {recent.length === 0 ? (
+        <div>
+          <p
+            style={{
+              margin: "0 0 13px",
+              color: C.muted,
+              fontFamily: fontSans,
+              fontSize: 13,
+              lineHeight: 1.6,
+            }}
+          >
+            Quando você registrar suas conversas, sua rede começa a ganhar
+            movimento por aqui.
+          </p>
+
+          <Button
+            onClick={() => {
+              const firstContact = contacts?.[0];
+
+              if (firstContact) {
+                onQuickLogInteraction?.(firstContact.id);
+              }
+            }}
+          >
+            Registrar interação
+          </Button>
+        </div>
+      ) : (
+        <div>
+          {recent.map((interaction, index) => {
+            const contact = contactMap.get(getContactId(interaction));
+            const name = getContactName(contact);
+            const type = getInteractionType(interaction);
+            const sentiment = String(
+              interaction?.sentiment || interaction?.feeling || ""
+            ).toLowerCase();
+
+            let sentence = `Você registrou ${type} com ${name}.`;
+
+            if (
+              interaction?.value_generated === true ||
+              interaction?.valueGenerated === true
+            ) {
+              sentence = `Você gerou valor em uma conversa com ${name}.`;
+            } else if (sentiment === "positivo") {
+              sentence = `A conversa com ${name} foi positiva.`;
+            }
+
+            return (
+              <div
+                key={interaction.id || `${getInteractionDate(interaction)}-${index}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "12px minmax(0, 1fr)",
+                  gap: 12,
+                  position: "relative",
+                  paddingBottom: index === recent.length - 1 ? 0 : 17,
+                }}
+              >
+                <div
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    background: index === 0 ? C.gold : C.light,
+                    marginTop: 5,
+                    boxShadow:
+                      index === 0 ? `0 0 0 5px ${C.gold}18` : "none",
+                  }}
+                />
+
+                <div>
+                  <div
+                    style={{
+                      color: C.light,
+                      fontFamily: fontSans,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.7,
+                      marginBottom: 3,
+                    }}
+                  >
+                    {relativeDate(getInteractionDate(interaction))}
+                  </div>
+
+                  <div
+                    style={{
+                      color: C.text,
+                      fontFamily: fontSans,
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {sentence}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function WeeklySummary({ contacts, interactions }) {
+  const summary = useMemo(() => {
+    const weeklyInteractions = (interactions || []).filter((interaction) =>
+      isWithinCurrentWeek(getInteractionDate(interaction))
+    );
+
+    const uniquePeople = new Set(
+      weeklyInteractions.map(getContactId).filter(Boolean)
+    );
+
+    const valueGenerated = weeklyInteractions.filter(
+      (interaction) =>
+        interaction?.value_generated === true ||
+        interaction?.valueGenerated === true
+    ).length;
+
+    const pendingActions = (contacts || []).filter((contact) => {
+      const action = contact?.next_action || contact?.nextAction;
+      const date = contact?.next_action_date || contact?.nextActionDate;
+
+      if (!action && !date) return false;
+      if (!date) return true;
+
+      const actionDate = new Date(date);
+      actionDate.setHours(23, 59, 59, 999);
+
+      return actionDate <= new Date();
+    }).length;
+
+    return {
+      interactions: weeklyInteractions.length,
+      people: uniquePeople.size,
+      valueGenerated,
+      pendingActions,
+    };
+  }, [contacts, interactions]);
+
+  const items = [
+    {
+      value: summary.interactions,
+      label: summary.interactions === 1 ? "interação" : "interações",
+    },
+    {
+      value: summary.people,
+      label: summary.people === 1 ? "pessoa cuidada" : "pessoas cuidadas",
+    },
+    {
+      value: summary.valueGenerated,
+      label: summary.valueGenerated === 1 ? "gesto de valor" : "gestos de valor",
+    },
+    {
+      value: summary.pendingActions,
+      label:
+        summary.pendingActions === 1
+          ? "próximo passo"
+          : "próximos passos",
+    },
+  ];
+
+  return (
+    <Section title="Esta semana">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(125px, 1fr))",
+          gap: 9,
+        }}
+      >
+        {items.map((item) => (
+          <div
+            key={item.label}
+            style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 11,
+              padding: 13,
+            }}
+          >
+            <div
+              style={{
+                color: C.gold,
+                fontFamily: fontSerif,
+                fontSize: 25,
+                fontWeight: 700,
+              }}
+            >
+              {item.value}
+            </div>
+
+            <div
+              style={{
+                color: C.muted,
+                fontFamily: fontSans,
+                fontSize: 12,
+                marginTop: 2,
+              }}
+            >
+              {item.label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function CompactAssessmentCard({
+  assessmentCompleted,
+  hasAssessmentEvidence,
+  onStartAssessment,
+}) {
+  if (assessmentCompleted || hasAssessmentEvidence) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        background: C.surfaceSoft,
+        border: `1px solid ${C.border}`,
+        borderRadius: 12,
+        padding: "13px 15px",
+        marginBottom: 14,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 14,
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <div
+          style={{
+            color: C.text,
+            fontFamily: fontSans,
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          Seu diagnóstico ajuda a personalizar as orientações.
+        </div>
+
+        <div
+          style={{
+            color: C.muted,
+            fontFamily: fontSans,
+            fontSize: 12,
+            marginTop: 3,
+          }}
+        >
+          Leva poucos minutos e você pode continuar de onde parou.
+        </div>
+      </div>
+
+      <Button onClick={onStartAssessment}>Continuar diagnóstico</Button>
+    </div>
+  );
+}
+
+function EmptyNetwork({ firstName, onStartNetwork }) {
+  return (
+    <div
+      style={{
+        background: C.card,
+        border: `1px solid ${C.border}`,
+        borderRadius: 14,
+        padding: 22,
+      }}
+    >
+      <div
+        style={{
+          color: C.gold,
+          fontFamily: fontSerif,
+          fontSize: 25,
+          fontWeight: 700,
+          marginBottom: 8,
+        }}
+      >
+        Sua rede começa aqui{firstName ? `, ${firstName}` : ""}.
+      </div>
+
+      <p
+        style={{
+          margin: "0 0 17px",
+          color: C.muted,
+          fontFamily: fontSans,
+          fontSize: 14,
+          lineHeight: 1.6,
+        }}
+      >
+        Cadastre as primeiras pessoas importantes para começar a receber
+        orientações baseadas na sua realidade.
+      </p>
+
+      <Button primary onClick={onStartNetwork}>
+        Começar minha rede
+      </Button>
     </div>
   );
 }
 
 const HomeToday = ({
-  userId, contacts, interactions, assessmentCompleted, firstName,
-  onOpenContact, onStartAssessment, onStartNetwork, onQuickLogInteraction,
+  userId,
+  contacts = [],
+  interactions = [],
+  assessmentCompleted,
+  firstName,
+  onOpenContact,
+  onStartAssessment,
+  onStartNetwork,
+  onQuickLogInteraction,
 }) => {
   const [alertRows, setAlertRows] = useState([]);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
-  const [busyId, setBusyId] = useState(null); // trava contra duplo clique por cartão
   const [loadError, setLoadError] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+
+  const trackedRef = useRef({});
+
+  const name = getFirstName(firstName);
+
+  /*
+   * Evita o falso estado de diagnóstico incompleto para usuários que
+   * já possuem dados reais no produto.
+   *
+   * Assim que o App.jsx passar corretamente assessmentCompleted=true,
+   * essa proteção continua funcionando sem alterar o comportamento.
+   */
+  const hasAssessmentEvidence =
+    contacts.length > 0 || interactions.length > 0;
+
+  const effectiveAssessmentCompleted =
+    assessmentCompleted === true || hasAssessmentEvidence;
 
   const loadAlerts = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoadingAlerts(false);
+      return;
+    }
+
     setLoadingAlerts(true);
     setLoadError(false);
-    const { data, error } = await supabase.from('alerts')
-      .select('contact_id,status,created_at,metadata')
-      .eq('user_id', userId);
-    if (error) { setLoadError(true); setLoadingAlerts(false); return; }
+
+    const { data, error } = await supabase
+      .from("alerts")
+      .select("contact_id,status,created_at,metadata")
+      .eq("user_id", userId);
+
+    if (error) {
+      setLoadError(true);
+      setLoadingAlerts(false);
+      return;
+    }
+
     setAlertRows(data || []);
     setLoadingAlerts(false);
   }, [userId]);
 
-  useEffect(() => { loadAlerts(); }, [loadAlerts]);
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
 
-  const trackedRef = useRef({});
-  const trackOnce = useCallback((eventType, metadata) => {
-    if (!userId || trackedRef.current[eventType]) return;
-    trackedRef.current[eventType] = true;
-    supabase.from('page_events').insert({ user_id: userId, event_type: eventType, tab_name: 'dash', metadata: metadata || null }).then(() => {}, () => {});
-  }, [userId]);
+  const trackOnce = useCallback(
+    (eventType, metadata) => {
+      if (!userId || trackedRef.current[eventType]) return;
 
-  const contactsCount = contacts?.length || 0;
-  const anyInteraction = (interactions?.length || 0) > 0;
+      trackedRef.current[eventType] = true;
+
+      supabase
+        .from("page_events")
+        .insert({
+          user_id: userId,
+          event_type: eventType,
+          tab_name: "dash",
+          metadata: metadata || null,
+        })
+        .then(
+          () => {},
+          () => {}
+        );
+    },
+    [userId]
+  );
+
+  const feedbackMap = useMemo(() => {
+    if (loadingAlerts || loadError) return {};
+    return buildFeedbackMap(alertRows);
+  }, [alertRows, loadingAlerts, loadError]);
+
+  const priorities = useMemo(() => {
+    return computePriorities(contacts, feedbackMap, todayISO());
+  }, [contacts, feedbackMap]);
+
+  const mainRecommendation = priorities?.main || null;
 
   useEffect(() => {
     if (loadingAlerts) return;
-    const { main } = computePriorities(contacts, loadError ? {} : buildFeedbackMap(alertRows), todayISO());
-    if (main) trackOnce('first_recommendation_viewed', { actionType: main.actionType });
-    // "Ativação completa" (Seção 12 do briefing): assessment concluído + ao
-    // menos 1 pessoa + já viu uma recomendação + já tem 1 interação real.
-    if (assessmentCompleted && contactsCount >= 1 && anyInteraction) trackOnce('activation_completed');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingAlerts, contactsCount, anyInteraction, assessmentCompleted]);
 
+    if (mainRecommendation) {
+      trackOnce("first_recommendation_viewed", {
+        actionType: mainRecommendation.actionType,
+      });
+    }
 
-  // ── Estado 1: assessment não concluído ──
-  if (!assessmentCompleted) {
-    return (
-      <HomeShell title={`Bom ver você, ${firstName || ''}.`}>
-        <BigCTA text="Seu diagnóstico relacional ainda não foi concluído. Ele é o ponto de partida para tudo que vem depois." cta="Continuar diagnóstico" onClick={onStartAssessment} />
-      </HomeShell>
-    );
-  }
+    if (
+      effectiveAssessmentCompleted &&
+      contacts.length > 0 &&
+      interactions.length > 0
+    ) {
+      trackOnce("activation_completed");
+    }
+  }, [
+    contacts.length,
+    effectiveAssessmentCompleted,
+    interactions.length,
+    loadingAlerts,
+    mainRecommendation,
+    trackOnce,
+  ]);
 
-  // ── Estado 2: 0 contatos ──
-  if (contactsCount === 0) {
-    const handleStart = () => {
-      trackOnce('start_network_clicked_home');
-      onStartNetwork?.();
-    };
-    return (
-      <HomeShell title={`Sua rede começa aqui, ${firstName || ''}.`}>
-        <BigCTA text="Cadastre as primeiras pessoas importantes para você começar a receber orientações reais." cta="Começar minha rede" onClick={handleStart} />
-      </HomeShell>
-    );
-  }
+  const withGuard = (action, callback) => async () => {
+    if (busyId) return { error: null };
 
-  const feedbackMap = loadingAlerts || loadError ? {} : buildFeedbackMap(alertRows);
-  const { main, secondary } = computePriorities(contacts, feedbackMap, todayISO());
-  const cards = [main, ...secondary].filter(Boolean);
-
-  // ── Estado 3: 1–2 contatos, ainda construindo a rede ──
-  if (contactsCount < 3) {
-    return (
-      <HomeShell title={`Sua rede está começando, ${firstName || ''}.`}>
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14 }}>
-          Você já cadastrou {contactsCount} {contactsCount === 1 ? 'pessoa' : 'pessoas'}. Duas ou três já são suficientes para eu começar a te ajudar de verdade.
-        </div>
-        {cards.length > 0 ? (
-          <RecommendationList cards={cards} busyId={busyId} setBusyId={setBusyId} userId={userId} contacts={contacts}
-            alertRows={alertRows} onOpenContact={onOpenContact} reload={loadAlerts} onQuickLogInteraction={onQuickLogInteraction} />
-        ) : (
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14 }}>
-            Ainda estou te conhecendo. Quer registrar quando foi a última vez que você falou com alguém que já cadastrou?
-          </div>
-        )}
-        <Btn onClick={onStartNetwork}>+ Adicionar outra pessoa</Btn>
-      </HomeShell>
-    );
-  }
-
-  // ── Estado 4: tem contatos, mas nenhuma interação registrada ainda ──
-  if (!anyInteraction) {
-    const target = contacts[0];
-    return (
-      <HomeShell title={`Hoje, ${firstName || ''}`}>
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14 }}>
-          Sua rede já tem gente importante cadastrada. Agora registre uma conversa recente para eu entender melhor o seu ritmo.
-        </div>
-        {target && (
-          <Btn onClick={() => onQuickLogInteraction?.(target.id)}>Registrar conversa com {target.name}</Btn>
-        )}
-      </HomeShell>
-    );
-  }
-
-  // ── Estado 5/6: dados suficientes — recomendação principal ou tranquilidade ──
-  return (
-    <HomeShell title={`Hoje, ${firstName || ''}`}>
-      {loadError && (
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.err, marginBottom: 10 }}>
-          Não consegui carregar suas respostas anteriores agora — algumas recomendações já respondidas podem aparecer de novo até isso ser corrigido.
-        </div>
-      )}
-      {cards.length === 0 ? (
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM }}>
-          Por aqui está tudo tranquilo. Sua rede não precisa virar uma lista de tarefas.
-        </div>
-      ) : (
-        <RecommendationList cards={cards} busyId={busyId} setBusyId={setBusyId} userId={userId} contacts={contacts}
-          alertRows={alertRows} onOpenContact={onOpenContact} reload={loadAlerts} onQuickLogInteraction={onQuickLogInteraction} />
-      )}
-    </HomeShell>
-  );
-};
-
-function RecommendationList({ cards, busyId, setBusyId, userId, contacts, alertRows, onOpenContact, reload, onQuickLogInteraction }) {
-  const withGuard = (action, fn) => async () => {
-    if (busyId) return { error: null }; // já tem algo em voo — ignora clique duplicado
     setBusyId(action.recommendationId);
+
     try {
-      const result = await fn();
-      return result || {};
+      return (await callback()) || {};
     } finally {
       setBusyId(null);
-      reload();
+      await loadAlerts();
     }
   };
 
   const insertAlert = async (action, status, metadata) => {
-    const { error } = await supabase.from('alerts').insert({
+    const { error } = await supabase.from("alerts").insert({
       user_id: userId,
       contact_id: action.relationshipId,
       title: action.title,
@@ -257,89 +930,325 @@ function RecommendationList({ cards, busyId, setBusyId, userId, contacts, alertR
       status,
       metadata: metadata || {},
     });
-    supabase.from('page_events').insert({
-      user_id: userId, event_type: `suggestion_${status}`, tab_name: 'dash',
-      metadata: { actionType: action.actionType },
-    }).then(() => {}, () => {});
+
+    supabase
+      .from("page_events")
+      .insert({
+        user_id: userId,
+        event_type: `suggestion_${status}`,
+        tab_name: "dash",
+        metadata: {
+          actionType: action.actionType,
+        },
+      })
+      .then(
+        () => {},
+        () => {}
+      );
+
     return { error };
   };
 
-  const onAccept = (action) => withGuard(action, async () => {
-    const { error } = await insertAlert(action, 'accepted', { recommendationId: action.recommendationId, actionType: action.actionType, origin: 'home' });
-    if (!error) onOpenContact?.(action.relationshipId);
-    return { error };
-  })();
+  const handleAccept = (action) =>
+    withGuard(action, async () => {
+      const result = await insertAlert(action, "accepted", {
+        recommendationId: action.recommendationId,
+        actionType: action.actionType,
+        origin: "home",
+      });
 
-  const onDismiss = (action) => withGuard(action, async () => {
-    const previousDismissals = (alertRows || []).filter(
-      r => r.contact_id === action.relationshipId && r.status === 'dismissed'
-    ).length;
-    const days = nextDismissSuppressionDays(previousDismissals);
-    const suppressUntil = addDays(new Date(), days).toISOString();
-    return insertAlert(action, 'dismissed', { recommendationId: action.recommendationId, actionType: action.actionType, origin: 'home', suppressUntil });
-  })();
+      if (!result.error) {
+        onOpenContact?.(action.relationshipId);
+      }
 
-  const onLogRecent = (action, dateISO) => withGuard(action, async () => {
-    const chosenAt = new Date(dateISO + 'T12:00:00').toISOString();
-    const { error: itError } = await supabase.from('interactions').insert({
-      user_id: userId, contact_id: action.relationshipId, type: 'mensagem',
-      description: 'Conversa recente confirmada a partir de uma recomendação em "Hoje".',
-      sentiment: 'positivo', tags: [], value_generated: false, created_at: chosenAt,
-    });
-    if (itError) return { error: itError };
-    const { error: ctError } = await supabase.from('contacts')
-      .update({ last_interaction_at: chosenAt, next_action: null, next_action_date: null })
-      .eq('id', action.relationshipId).eq('user_id', userId);
-    if (ctError) return { error: ctError };
-    return insertAlert(action, 'logged', { recommendationId: action.recommendationId, actionType: action.actionType, origin: 'home', chosenDate: dateISO });
-  })();
+      return result;
+    })();
 
-  const onSnooze = (action, dateISO) => withGuard(action, async () => {
-    const suppressUntil = new Date(dateISO + 'T00:00:00').toISOString();
-    return insertAlert(action, 'snoozed', { recommendationId: action.recommendationId, actionType: action.actionType, origin: 'home', suppressUntil });
-  })();
+  const handleDismiss = (action) =>
+    withGuard(action, async () => {
+      const previousDismissals = alertRows.filter(
+        (row) =>
+          row.contact_id === action.relationshipId &&
+          row.status === "dismissed"
+      ).length;
 
-  return cards.map((a, i) => (
-    <PriorityCard
-      key={a.recommendationId}
-      action={a}
-      isMain={i === 0}
-      busy={busyId === a.recommendationId}
-      onAccept={onAccept}
-      onDismiss={onDismiss}
-      onLogRecent={onLogRecent}
-      onSnooze={onSnooze}
-    />
-  ));
-}
+      const days = nextDismissSuppressionDays(previousDismissals);
+      const suppressUntil = addDays(new Date(), days).toISOString();
 
-function HomeShell({ title, children }) {
-  return (
-    <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 20 }}>
-      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, color: C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>
-      {children}
-    </div>
-  );
-}
+      return insertAlert(action, "dismissed", {
+        recommendationId: action.recommendationId,
+        actionType: action.actionType,
+        origin: "home",
+        suppressUntil,
+      });
+    })();
 
-function BigCTA({ text, cta, onClick }) {
+  const handleLogRecent = (action, dateISO) =>
+    withGuard(action, async () => {
+      const selectedDate = new Date(`${dateISO}T12:00:00`).toISOString();
+
+      const { error: interactionError } = await supabase
+        .from("interactions")
+        .insert({
+          user_id: userId,
+          contact_id: action.relationshipId,
+          type: "mensagem",
+          description:
+            'Conversa recente confirmada a partir de uma recomendação em "Hoje".',
+          sentiment: "positivo",
+          tags: [],
+          value_generated: false,
+          created_at: selectedDate,
+        });
+
+      if (interactionError) {
+        return { error: interactionError };
+      }
+
+      const { error: contactError } = await supabase
+        .from("contacts")
+        .update({
+          last_interaction_at: selectedDate,
+          next_action: null,
+          next_action_date: null,
+        })
+        .eq("id", action.relationshipId)
+        .eq("user_id", userId);
+
+      if (contactError) {
+        return { error: contactError };
+      }
+
+      return insertAlert(action, "logged", {
+        recommendationId: action.recommendationId,
+        actionType: action.actionType,
+        origin: "home",
+        chosenDate: dateISO,
+      });
+    })();
+
+  const handleSnooze = (action, dateISO) =>
+    withGuard(action, async () => {
+      const suppressUntil = new Date(`${dateISO}T00:00:00`).toISOString();
+
+      return insertAlert(action, "snoozed", {
+        recommendationId: action.recommendationId,
+        actionType: action.actionType,
+        origin: "home",
+        suppressUntil,
+      });
+    })();
+
+  if (!effectiveAssessmentCompleted && contacts.length === 0) {
+    return (
+      <div>
+        <header style={{ marginBottom: 18 }}>
+          <h1
+            style={{
+              margin: 0,
+              color: C.text,
+              fontFamily: fontSerif,
+              fontSize: 31,
+              fontWeight: 700,
+            }}
+          >
+            Bom ver você{name ? `, ${name}` : ""}.
+          </h1>
+        </header>
+
+        <CompactAssessmentCard
+          assessmentCompleted={assessmentCompleted}
+          hasAssessmentEvidence={hasAssessmentEvidence}
+          onStartAssessment={onStartAssessment}
+        />
+
+        <EmptyNetwork
+          firstName={name}
+          onStartNetwork={onStartNetwork}
+        />
+      </div>
+    );
+  }
+
+  if (contacts.length === 0) {
+    return (
+      <div>
+        <header style={{ marginBottom: 18 }}>
+          <h1
+            style={{
+              margin: 0,
+              color: C.text,
+              fontFamily: fontSerif,
+              fontSize: 31,
+              fontWeight: 700,
+            }}
+          >
+            Bom ver você{name ? `, ${name}` : ""}.
+          </h1>
+        </header>
+
+        <EmptyNetwork
+          firstName={name}
+          onStartNetwork={onStartNetwork}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, marginBottom: 16, lineHeight: 1.6 }}>{text}</div>
-      <Btn onClick={onClick} primary>{cta}</Btn>
+      <header
+        style={{
+          marginBottom: 19,
+        }}
+      >
+        <h1
+          style={{
+            margin: 0,
+            color: C.text,
+            fontFamily: fontSerif,
+            fontSize: 31,
+            fontWeight: 700,
+          }}
+        >
+          Bom ver você{name ? `, ${name}` : ""}.
+        </h1>
+
+        <div
+          style={{
+            color: C.muted,
+            fontFamily: fontSans,
+            fontSize: 13,
+            marginTop: 4,
+          }}
+        >
+          Vamos olhar com calma para o que está acontecendo na sua rede.
+        </div>
+      </header>
+
+      <CompactAssessmentCard
+        assessmentCompleted={assessmentCompleted}
+        hasAssessmentEvidence={hasAssessmentEvidence}
+        onStartAssessment={onStartAssessment}
+      />
+
+      <Section title="Para hoje">
+        {loadError && (
+          <div
+            style={{
+              color: C.error,
+              fontFamily: fontSans,
+              fontSize: 12,
+              marginBottom: 10,
+            }}
+          >
+            Não consegui carregar suas respostas anteriores agora.
+          </div>
+        )}
+
+        {loadingAlerts ? (
+          <div
+            style={{
+              height: 90,
+              borderRadius: 10,
+              background: C.surface,
+              opacity: 0.6,
+            }}
+          />
+        ) : mainRecommendation ? (
+          <PriorityCard
+            action={mainRecommendation}
+            busy={busyId === mainRecommendation.recommendationId}
+            onAccept={handleAccept}
+            onDismiss={handleDismiss}
+            onLogRecent={handleLogRecent}
+            onSnooze={handleSnooze}
+          />
+        ) : (
+          <div
+            style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 11,
+              padding: 16,
+            }}
+          >
+            <div
+              style={{
+                color: C.text,
+                fontFamily: fontSerif,
+                fontSize: 20,
+                fontWeight: 700,
+              }}
+            >
+              Hoje sua rede parece tranquila.
+            </div>
+
+            <div
+              style={{
+                color: C.muted,
+                fontFamily: fontSans,
+                fontSize: 13,
+                marginTop: 5,
+              }}
+            >
+              Nada precisa virar uma obrigação agora.
+            </div>
+          </div>
+        )}
+      </Section>
+
+      <NetworkMovement
+        contacts={contacts}
+        interactions={interactions}
+        onQuickLogInteraction={onQuickLogInteraction}
+      />
+
+      <WeeklySummary
+        contacts={contacts}
+        interactions={interactions}
+      />
+
+      <Section title="Sua rede">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 15,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                color: C.gold,
+                fontFamily: fontSerif,
+                fontSize: 28,
+                fontWeight: 700,
+              }}
+            >
+              {contacts.length}
+            </div>
+
+            <div
+              style={{
+                color: C.muted,
+                fontFamily: fontSans,
+                fontSize: 13,
+              }}
+            >
+              {contacts.length === 1
+                ? "pessoa sendo cuidada"
+                : "pessoas sendo cuidadas"}
+            </div>
+          </div>
+
+          <Button onClick={onStartNetwork}>Adicionar pessoa</Button>
+        </div>
+      </Section>
     </div>
   );
-}
-
-function Btn({ onClick, children, primary }) {
-  return (
-    <button onClick={onClick} style={{
-      background: primary ? C.gold : 'transparent',
-      color: primary ? '#0D0D0D' : C.gold,
-      border: `1px solid ${C.gold}`, borderRadius: 10, padding: '12px 20px',
-      fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: 'pointer',
-    }}>{children}</button>
-  );
-}
+};
 
 export default HomeToday;
