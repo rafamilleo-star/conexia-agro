@@ -1,5 +1,6 @@
-import ConexiaDashboard from './components/ConexiaDashboard';
 import { AbaIA } from './components/AbaIA';
+import HomeToday from './components/HomeToday';
+import GuidedNetworkStart from './components/GuidedNetworkStart';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "./utils/supabase";
 import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
@@ -92,7 +93,7 @@ const getRelevanceLabel = (rs) => {
   if (rs >= 80) return "Estratégico";
   if (rs >= 60) return "Relevante";
   if (rs >= 40) return "Manter no radar";
-  return "Baixa prioridade";
+  return "Sem prioridade agora";
 };
 
 const getRelevanceLabelColor = (rs) => {
@@ -105,28 +106,28 @@ const getRelevanceLabelColor = (rs) => {
 
 const getContactPriorityStatus = (health, rs) => {
   if (rs === null || rs === undefined) return {
-    status: "Completar relevância",
-    msg: "Preencha os 4 critérios para entender a prioridade real deste contato.",
+    status: "Dados incompletos",
+    msg: "Preencha os 4 critérios para entender melhor essa relação.",
     color: "#5a5650"
   };
   if (health >= 70 && rs >= 70) return {
-    status: "Proteger e expandir",
-    msg: "Relacionamento quente e estratégico. Mantenha proximidade e gere valor recorrente.",
+    status: "Presente e importante",
+    msg: "Uma relação presente e importante para o seu momento atual.",
     color: "#4caf50"
   };
   if (health < 70 && rs >= 70) return {
-    status: "Reativar urgente",
-    msg: "Contato estratégico esfriando. Prioridade máxima de reativação.",
-    color: "#ef5350"
+    status: "Talvez mereça atenção",
+    msg: "Uma relação importante para você, com pouco registro recente.",
+    color: "#E8A020"
   };
   if (health >= 70 && rs < 70) return {
-    status: "Manter leve",
-    msg: "Relação saudável, mas com menor prioridade estratégica.",
+    status: "Relação tranquila",
+    msg: "Uma relação presente, em um ritmo tranquilo.",
     color: "#ff9800"
   };
   return {
-    status: "Baixa prioridade",
-    msg: "Não consumir energia agora, salvo contexto específico.",
+    status: "Sem prioridade agora",
+    msg: "Nada que precise da sua atenção nesta relação agora.",
     color: "#6a6460"
   };
 };
@@ -481,11 +482,98 @@ function Onboard({ onDone, initialKey = "" }) {
 }
 
 /* ═══ ASSESSMENT ══════════════════════════════════════════ */
+// Tela final do assessment — reescrita para terminar em 1 CTA único
+// ("Começar minha rede"), em vez de radar + 6 dimensões + plano de 4
+// semanas + PDF antes de qualquer botão. Essa pilha de conteúdo era
+// exatamente o ponto identificado de maior abandono (assessment concluído,
+// usuário nunca chega a cadastrar ninguém). O diagnóstico completo continua
+// existindo — como um link secundário que não bloqueia o próximo passo.
+function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, onSave, userId }) {
+  const [showFull, setShowFull] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from("page_events").insert({ user_id: userId, event_type: "assessment_result_viewed", tab_name: "assess" }).then(() => {}, () => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleStartNetwork = () => {
+    if (userId) supabase.from("page_events").insert({ user_id: userId, event_type: "start_network_clicked", tab_name: "assess" }).then(() => {}, () => {});
+    onSave();
+  };
+
+  const forcaLabel = (maxD?.label || "").toLowerCase();
+  const desafioLabel = (minD?.label || "").toLowerCase();
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
+      <div style={{ maxWidth: 480, width: "100%" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>{prof.emoji}</div>
+          <Tag color={C.grn}>Diagnóstico concluído</Tag>
+          <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 34, fontWeight: 700, color: C.gold, margin: "12px 0 4px", fontStyle: "italic" }}>{prof.name}</h1>
+          <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, fontStyle: "italic" }}>{prof.tagline}</p>
+        </div>
+
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 22, marginBottom: 20 }}>
+          <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, lineHeight: 1.7, margin: 0 }}>
+            {maxD && minD ? (
+              <>Seu perfil mostra facilidade em <strong style={{ color: C.gold }}>{forcaLabel}</strong>, mas indica que <strong style={{ color: C.gold }}>{desafioLabel}</strong> pode ser um desafio. Agora vamos transformar esse diagnóstico em uma rede que você consegue cuidar no dia a dia.</>
+            ) : (
+              <>Seu diagnóstico está pronto. Agora vamos transformar isso em uma rede que você consegue cuidar no dia a dia.</>
+            )}
+          </p>
+        </div>
+
+        <Btn onClick={handleStartNetwork} disabled={saving} full>{saving ? "Salvando..." : "Começar minha rede →"}</Btn>
+        {saveError && (
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, textAlign: "center", marginTop: 10 }}>{saveError}</div>
+        )}
+
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <button onClick={() => setShowFull(s => !s)} style={{ background: "none", border: "none", color: C.txL, fontFamily: "'DM Sans'", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+            {showFull ? "Ocultar diagnóstico completo" : "Ver diagnóstico completo"}
+          </button>
+        </div>
+
+        {showFull && (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.gold, textAlign: "center", marginBottom: 12 }}>Score geral: {overall}%</div>
+            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}><RadarChart scores={scores} /></div>
+            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Suas 6 dimensões</div>
+              {DIMS.map((d, i) => { const v = scores[d.key] || 0; return (
+                <div key={i} style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 500, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 600, color: d.color }}>{v}%</span></div>
+                  <div style={{ height: 8, borderRadius: 4, background: C.w06 }}><div style={{ height: 8, borderRadius: 4, background: d.color, width: `${v}%`, transition: "width 1s" }} /></div>
+                </div>
+              ); })}
+            </div>
+            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Análise profunda</div>
+              <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.65 }}>{prof.desc}</p>
+            </div>
+            <div style={{ textAlign: "center", fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
+              O plano de 4 semanas completo e o PDF continuam disponíveis depois, dentro de "Eu".
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Assess({ profile, onDone }) {
-  const [qi, setQi] = useState(0);
-  const [ans, setAns] = useState({});
+  // ── Rascunho persistente (retomada entre sessões/dispositivos) ──
+  // Restaura de profile.assessment_draft/assessment_draft_step no primeiro
+  // render — não localStorage, porque precisa sobreviver a troca de
+  // dispositivo/navegador, e profile já vem carregado do Supabase.
+  const hadDraft = !!(profile?.assessment_draft && Object.keys(profile.assessment_draft).length > 0);
+  const [qi, setQi] = useState(() => (hadDraft ? (profile.assessment_draft_step || 0) : 0));
+  const [ans, setAns] = useState(() => (hadDraft ? profile.assessment_draft : {}));
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   // Guard síncrono: useRef não depende de re-render, então cobre o caso de
   // duplo-clique disparando dois eventos antes do React aplicar `disabled`.
   // O useState continua existindo só para controlar o texto/estado visual do botão.
@@ -496,83 +584,67 @@ function Assess({ profile, onDone }) {
   const q = QS[qi];
   const cur = ans[q?.id];
 
+  const trackAssess = (eventType, metadata) => {
+    if (!profile?.id) return;
+    supabase.from("page_events").insert({ user_id: profile.id, event_type: eventType, tab_name: "assess", metadata: metadata || null }).then(() => {}, () => {});
+  };
+
+  // Dispara 1x no mount: assessment_started (rascunho novo) ou
+  // assessment_resumed (já havia respostas salvas).
+  useEffect(() => {
+    trackAssess(hadDraft ? "assessment_resumed" : "assessment_started", hadDraft ? { resumedAtStep: qi } : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Salva o rascunho automaticamente a cada resposta/mudança de pergunta.
+  // Erro de salvamento nunca bloqueia o preenchimento — só fica registrado
+  // no console; a próxima resposta tenta salvar de novo.
+  const draftSaveRef = useRef(null);
+  useEffect(() => {
+    if (done || !profile?.id) return;
+    if (Object.keys(ans).length === 0) return; // nada ainda para salvar
+    clearTimeout(draftSaveRef.current);
+    draftSaveRef.current = setTimeout(() => {
+      supabase.from("profiles")
+        .update({ assessment_draft: ans, assessment_draft_step: qi })
+        .eq("id", profile.id)
+        .then(({ error }) => { if (error) console.warn("[Assess] falha ao salvar rascunho:", error); });
+    }, 400); // pequeno debounce — não salva a cada tecla, salva por resposta
+    return () => clearTimeout(draftSaveRef.current);
+  }, [ans, qi, done, profile?.id]);
+
+  const answerQuestion = (questionId, value) => {
+    setAns(p => ({ ...p, [questionId]: value }));
+    trackAssess("assessment_step_completed", { step: qi, questionId });
+  };
+
   const save = async () => {
     if (savingRef.current) return; // evita duplo-clique criar registros duplicados
     savingRef.current = true;
     setSaving(true);
+    setSaveError(null);
     try {
       const result = { scores, overall, profileKey: pKey, profileName: prof.name, createdAt: new Date().toISOString(), answers: ans };
       await onDone(result);
-    } finally {
-      // Não reseta savingRef: uma vez enviado, este componente não deve permitir novo envio
-      // (a navegação para o app acontece dentro de onDone). Se algo falhar antes da navegação,
-      // preferimos travar o botão a arriscar um segundo registro.
+      // Sucesso: mantém o guard travado de propósito — a navegação para o
+      // app acontece dentro de onDone, então não deve haver novo envio.
+    } catch (e) {
+      // Erro real: libera o guard para o usuário poder tentar de novo, sem
+      // perder as respostas (ans/qi continuam intactos no estado).
+      console.error("[Assess] falha ao concluir o assessment:", e);
+      savingRef.current = false;
+      setSaving(false);
+      setSaveError("Não consegui salvar seu diagnóstico agora. Suas respostas continuam aqui — tenta de novo?");
     }
   };
 
   if (done) {
+
     const vals = Object.entries(scores);
     const maxD = DIMS.find(d => d.key === vals.sort((a, b) => b[1] - a[1])[0]?.[0]);
     const minD = DIMS.find(d => d.key === vals.sort((a, b) => a[1] - b[1])[0]?.[0]);
 
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
-        <div style={{ maxWidth: 560, width: "100%", overflowY: "auto", maxHeight: "100vh", paddingBottom: 40 }}>
-          <div style={{ textAlign: "center", marginBottom: 28 }}>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>{prof.emoji}</div>
-            <Tag color={C.grn}>Diagnóstico completo</Tag>
-            <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 700, color: C.gold, margin: "12px 0 4px", fontStyle: "italic" }}>{prof.name}</h1>
-            <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, fontStyle: "italic" }}>{prof.tagline}</p>
-            <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.gold, marginTop: 6 }}>Score geral: {overall}%</div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}><RadarChart scores={scores} /></div>
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Suas 6 dimensões</div>
-            {DIMS.map((d, i) => { const v = scores[d.key] || 0; return (
-              <div key={i} style={{ marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 500, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 600, color: d.color }}>{v}%</span></div>
-                <div style={{ height: 8, borderRadius: 4, background: C.w06 }}><div style={{ height: 8, borderRadius: 4, background: d.color, width: `${v}%`, transition: "width 1s" }} /></div>
-              </div>
-            ); })}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-            <div style={{ background: C.grnD, border: `1px solid ${C.grn}28`, borderRadius: 10, padding: 14 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, textTransform: "uppercase", marginBottom: 4 }}>Sua força</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt }}>{maxD?.label}</div>
-            </div>
-            <div style={{ background: C.corD, border: `1px solid ${C.cor}28`, borderRadius: 10, padding: 14 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.cor, textTransform: "uppercase", marginBottom: 4 }}>Oportunidade</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt }}>{minD?.label}</div>
-            </div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Análise profunda</div>
-            <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.65 }}>{prof.desc}</p>
-          </div>
-          <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 4 }}>Você é {prof.name}.</div>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 14 }}>Agora faça estas 3 ações:</div>
-            {prof.actions.map((a, i) => (
-              <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 7, background: C.gD, border: `1px solid ${C.gL}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 600, color: C.gold, flexShrink: 0 }}>{i + 1}</div>
-                <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5, margin: 0 }}>{a}</p>
-              </div>
-            ))}
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 24 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Plano de ativação · 4 semanas</div>
-            {PLAN.map((w, i) => (
-              <div key={i} style={{ marginTop: 16, paddingTop: i > 0 ? 16 : 0, borderTop: i > 0 ? `1px solid ${C.brd}` : "none" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}><span style={{ fontSize: 18 }}>{w.icon}</span><div><Tag color={C.amb} small>Semana {w.week}</Tag><div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, marginTop: 3 }}>{w.title}</div></div></div>
-                <p style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 4, fontStyle: "italic" }}>{w.goal}</p>
-                {w.tasks.map((t, j) => <div key={j} style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, paddingLeft: 12 }}>→ {t}</div>)}
-              </div>
-            ))}
-          </div>
-          <Btn onClick={save} disabled={saving} full>{saving ? "Salvando..." : `Entrar no ${BRAND.name} →`}</Btn>
-        </div>
-      </div>
-    );
+    return <AssessResult prof={prof} overall={overall} maxD={maxD} minD={minD} scores={scores} saving={saving} saveError={saveError} onSave={save} userId={profile?.id} />;
   }
 
   return (
@@ -585,7 +657,7 @@ function Assess({ profile, onDone }) {
         <div style={{ height: 4, borderRadius: 2, background: C.w06, marginBottom: 32 }}><div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${((qi + 1) / QS.length) * 100}%`, transition: "width .3s" }} /></div>
         <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: C.txt, lineHeight: 1.35, margin: "0 0 28px", minHeight: 80 }}>{q.text}</p>
         {(q.opcoes || []).map(o => (
-          <button key={o.v} onClick={() => setAns(p => ({ ...p, [q.id]: o.v }))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: cur === o.v ? C.gD : C.sf, border: `1.5px solid ${cur === o.v ? C.gold : C.brd}`, borderRadius: 10, padding: "14px 18px", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
+          <button key={o.v} onClick={() => answerQuestion(q.id, o.v)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: cur === o.v ? C.gD : C.sf, border: `1.5px solid ${cur === o.v ? C.gold : C.brd}`, borderRadius: 10, padding: "14px 18px", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
             <div style={{ width: 22, height: 22, borderRadius: 11, border: `2px solid ${cur === o.v ? C.gold : C.brd}`, display: "flex", alignItems: "center", justifyContent: "center", background: cur === o.v ? C.gold : "transparent", flexShrink: 0 }}>{cur === o.v && <div style={{ width: 8, height: 8, borderRadius: 4, background: C.bg }} />}</div>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 14, color: cur === o.v ? C.gold : C.txM, fontWeight: cur === o.v ? 600 : 400, lineHeight: 1.4 }}><strong style={{ color: cur === o.v ? C.gold : C.txL, marginRight: 6 }}>{o.v}.</strong>{o.l}</span>
           </button>
@@ -1583,6 +1655,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     if (error) { setDbgMsg("❌ " + error.message + " [" + error.code + "]"); return; }
     setDbgMsg("✅ Salvo: " + newContact?.name);
     if (newContact) {
+      trackEvent("contact_added", "contacts", { contactId: newContact.id });
       try {
         const p = profile || {};
         await fetch(MAKE_WEBHOOK, {
@@ -1637,6 +1710,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       next_action: null,
       next_action_date: null,
     }).eq("id", intCid).eq("user_id", user.id);
+    trackEvent("interaction_logged", "contacts", { contactId: intCid, type: inf.type });
     // Push interação para Make
     const contact = cts.find(c => c.id === intCid);
     if (contact) {
@@ -1733,14 +1807,19 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const sc = assessment?.scores || {};
   const admin = isAdmin(profile?.email);
   const isMetricsAdmin = isAdminEmail(user?.email);
+  // Navegação principal reorganizada em 3 âncoras (Hoje / Rede / Eu). Os ids
+  // internos de view ("contacts", "perfil", "teia", "plano", "report", "ia")
+  // continuam existindo exatamente como antes — só o que aparece na barra
+  // principal mudou, para não quebrar nenhuma das chamadas diretas de
+  // setView(...) espalhadas pelo restante do arquivo. "Analytics" saiu da
+  // navegação porque consulta uma tabela/coluna que não existe no schema
+  // atual (contacts.health_score, assessment_results) — está confirmado
+  // quebrado, e a regra é não manter uma funcionalidade sabidamente quebrada
+  // só para preservar a estrutura anterior.
   const NAVS = [
-    { id: "dashboard", icon: "📈", label: "Analytics" },
-    { id: "dash", icon: "◎", label: "Dashboard" },
-    { id: "contacts", icon: "◈", label: "Contatos" },
-    { id: "teia", icon: "⊛", label: "Teia" },
-    { id: "plano", icon: "🗺️", label: "Plano" },
-    { id: "ia", icon: "🧠", label: "IA" },
-    { id: "report", icon: "📊", label: "Relatório" },
+    { id: "dash", icon: "◎", label: "Hoje" },
+    { id: "contacts", icon: "⊛", label: "Rede" },
+    { id: "perfil", icon: "👤", label: "Eu" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }, { id: "export", icon: "⬇", label: "Exportar" }] : []),
     ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
   ];
@@ -1913,76 +1992,38 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   };
 
   const renderDash = () => {
-    const active = cts.filter(c => c.health > 40).length;
-    const avg = cts.length ? Math.round(cts.reduce((s, c) => s + c.health, 0) / cts.length) : 0;
-    const wk = its.filter(i => dSince(i.createdAt) <= 7).length;
-    const cooling = [...cts].filter(c => c.health <= 40 && c.health > 0).sort((a, b) => a.health - b.health);
-    const dead = cts.filter(c => c.health === 0 && c.lastInteraction);
-    const noAction = cts.filter(c => !c.nextAction && c.status === "active");
-    const rc = sc?.ritual_consistencia || 0;
-
-    // Alert generation
-    const alerts = [];
-    cooling.slice(0, 3).forEach(c => {
-      const days = dSince(c.lastInteraction);
-      alerts.push({ type: "esfriando", icon: "⏳", severity: "high", color: C.cor, title: `${c.name} está esfriando`, msg: `Faz ${days} dias desde a última interação. Uma mensagem curta pode reativar essa conexão.`, action: "Envie uma mensagem simples hoje.", cid: c.id });
-    });
-    dead.slice(0, 2).forEach(c => {
-      const days = dSince(c.lastInteraction);
-      alerts.push({ type: "perdido", icon: "🔥", severity: "critical", color: C.cor, title: `${c.name} — conexão perdida`, msg: `${days} dias sem contato. Reative antes que vire apenas um nome.`, action: "Ligue ou mande mensagem genuína hoje.", cid: c.id });
-    });
-    noAction.slice(0, 2).forEach(c => {
-      alerts.push({ type: "sem_acao", icon: "📋", severity: "medium", color: C.amb, title: `${c.name} sem próxima ação`, msg: `Relacionamento sem direção esfria. Defina o próximo passo.`, action: "Defina uma próxima interação.", cid: c.id });
-    });
-    // Rede concentrada
-    if (cts.length >= 3) {
-      const catCount = {};
-      cts.forEach(c => { catCount[c.category] = (catCount[c.category] || 0) + 1; });
-      const maxCat = Math.max(...Object.values(catCount));
-      if (maxCat / cts.length > 0.7) {
-        const dominant = Object.entries(catCount).sort((a, b) => b[1] - a[1])[0][0];
-        const catLabel = CATS.find(c => c.value === dominant)?.label || dominant;
-        alerts.push({ type: "concentrada", icon: "🎯", severity: "medium", color: C.amb, title: "Rede pouco diversa", msg: `${Math.round(maxCat / cts.length * 100)}% dos seus contatos são "${catLabel}". Diversifique para criar mais oportunidades.`, action: "Busque 2 contatos de categorias diferentes." });
-      }
-    }
-    // Aniversários próximos (7 dias)
-    cts.forEach(c => {
-      const days = birthdayDaysAway(c.birthday);
-      if (days !== null && days <= 7) {
-        alerts.push({ type: "aniversario", icon: "🎂", severity: days === 0 ? "critical" : "high", color: C.vio, title: days === 0 ? `Hoje é aniversário de ${c.name}!` : `Aniversário de ${c.name} em ${days} dia${days > 1 ? "s" : ""}`, msg: days === 0 ? `Envie uma mensagem personalizada agora — é um momento único para fortalecer o vínculo.` : `Prepare uma mensagem especial com antecedência. Demonstra que você se importa de verdade.`, action: `Envie uma mensagem genuína${c.whatsapp ? ` pelo WhatsApp ${c.whatsapp}` : ""}.`, cid: c.id });
-      }
-    });
-    // Ritual de consistência
-    if (assessment && rc < 60) {
-      alerts.push({ type: "consistencia", icon: "⚡", severity: "medium", color: C.vio, title: "Ritual de Consistência em atenção", msg: `Seu score está em ${rc}%. Sua rede esfria mais rápido do que você nutre.`, action: "Crie um ritual: toda segunda, 15min, 2 contatos." });
-    }
-
-    // Weekly ritual
-    const toReactivate = [...cts].filter(c => c.health < 60 && c.health > 0).sort((a, b) => a.health - b.health).slice(0, 3);
-    const forValue = cts.filter(c => c.health >= 60).sort(() => Math.random() - 0.5)[0];
-    const catCounts = {};
-    cts.forEach(c => { catCounts[c.category] = (catCounts[c.category] || 0) + 1; });
-    const leastCat = CATS.filter(ct => (catCounts[ct.value] || 0) === Math.min(...CATS.map(x => catCounts[x.value] || 0)))[0];
-
-    // Health arc SVG
-    const arcSize = 120;
-    const arcR = 48;
-    const arcPerc = avg / 100;
-    const arcEnd = Math.PI * 2 * arcPerc - Math.PI / 2;
-    const arcX = arcSize / 2 + arcR * Math.cos(arcEnd);
-    const arcY = arcSize / 2 + arcR * Math.sin(arcEnd);
-    const arcLarge = arcPerc > 0.5 ? 1 : 0;
-    const arcColor = avg >= 70 ? C.grn : avg >= 40 ? C.amb : C.cor;
+    // A Home ("Hoje") deixou de acumular 4 mecanismos de prioridade
+    // paralelos e contraditórios entre si (arco de saúde/score, "Movimento
+    // da Semana", "Ritual Semanal", "Ações Prioritárias" e "Top 5
+    // Movimentos" — todos usando fórmulas diferentes). Agora existe só uma
+    // fonte de verdade: <HomeToday>, que usa shared/priorityEngine.js — o
+    // mesmo motor do WhatsApp. Isso também resolve a instrução explícita de
+    // não começar a Home com quantidade de contatos, saúde da rede, scores,
+    // gráficos ou banner de venda no topo.
+    const assessmentCompleted = !!(profile?.assessment_completed ?? assessment);
 
     return (
       <div>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 4px", textAlign: "center" }}>Olá, {profile?.name || ""}</h2>
-        {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 4px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 16px" }}>{cts.length === 0 ? "Cadastre seu primeiro contato para ativar sua rede." : `${cts.length} contatos · ${active} ativos · ${wk} interações esta semana`}</p>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 4px", textAlign: "center" }}>
+          {profile?.first_name || profile?.name ? `Bom ver você, ${profile.first_name || profile.name}.` : "Hoje"}
+        </h2>
+        {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 16px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
 
-        {/* ── Benefício do PRO (só aparece pra Free, na tela inicial) ── */}
+        <HomeToday
+          userId={user?.id}
+          contacts={cts}
+          interactions={its}
+          assessmentCompleted={assessmentCompleted}
+          firstName={profile?.first_name || profile?.name || ""}
+          onOpenContact={(cid) => { setSelId(cid); setView("contacts"); }}
+          onStartAssessment={() => { setView("perfil"); setSelId(null); }}
+          onStartNetwork={() => setView("startNetwork")}
+          onQuickLogInteraction={(cid) => { setSelId(cid); setIntCid(cid); setModal("addI"); }}
+        />
+
+        {/* ── Áreas secundárias: nunca competem com a orientação principal acima ── */}
         {!isPro && (
-          <div style={{ background: `${C.gold}0d`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ background: `${C.gold}0d`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginTop: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>🔓</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Sem limite de contatos. Plano completo de 90 dias. A IA te avisando toda semana quem chamar.</div>
@@ -1995,20 +2036,19 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           </div>
         )}
 
-        {/* ── Descoberta do Assistente via WhatsApp (PRO ou trial grátis de 10 dias) ── */}
         {hasWhatsappAccess && profile?.whatsapp ? (
-          <div style={{ background: `${C.grn}08`, border: `1px solid ${C.grn}30`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ background: `${C.grn}08`, border: `1px solid ${C.grn}30`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "flex-start", gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.grn, marginBottom: 3 }}>
                 Assistente por WhatsApp ativo{!isPro && diasDeTrialCrm !== null ? ` — teste grátis, ${Math.max(0, Math.ceil(10 - diasDeTrialCrm))} dia(s) restante(s)` : ""}
               </div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>Manda mensagem pro {BRAND.name} a qualquer hora: <em>"Liguei pro André hoje, foi positivo"</em>, <em>"Minhas próximas ações"</em> ou <em>"Saúde da minha rede"</em>.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>Manda mensagem pro {BRAND.name} a qualquer hora: <em>"Liguei pro André hoje, foi positivo"</em> ou <em>"Minhas próximas ações"</em>.</div>
               <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer" style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.grn, textDecoration: "none" }}>Abrir conversa →</a>
             </div>
           </div>
         ) : hasWhatsappAccess ? (
-          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Ative o Assistente por WhatsApp</div>
@@ -2017,7 +2057,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
           </div>
         ) : profile?.whatsapp_trial_started_at ? (
-          <div onClick={openAccessKey} style={{ cursor: "pointer", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+          <div onClick={openAccessKey} style={{ cursor: "pointer", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>🔒</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 3 }}>Seu teste grátis do WhatsApp acabou</div>
@@ -2026,7 +2066,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
           </div>
         ) : (
-          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Teste grátis o Assistente por WhatsApp — 10 dias</div>
@@ -2035,211 +2075,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
           </div>
         )}
-
-        {cts.length === 0 ? (
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 44, textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 16, opacity: 0.4 }}>◈</div>
-            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 10px" }}>Sua rede começa aqui</h3>
-            <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.6, margin: "0 auto 16px", maxWidth: 380 }}>Cadastre 5-10 pessoas estratégicas na aba <strong style={{ color: C.gold }}>Contatos</strong>.</p>
-            {pf && <div style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 10, padding: 14, textAlign: "left", marginTop: 12 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, marginBottom: 6 }}>Sua primeira ação como {pf.name}:</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{pf.actions[0]}</div>
-            </div>}
-          </div>
-        ) : (
-          <>
-            {/* IA removida daqui — disponível apenas na aba IA */}
-            {/* ── Health Score + Metrics ── */}
-            <div style={{ display: "flex", gap: 14, marginBottom: 16, flexWrap: "wrap" }}>
-              <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 16, display: "flex", alignItems: "center", gap: 16, flex: isMobile ? "1 1 100%" : "0 0 auto" }}>
-                <svg width={arcSize} height={arcSize} viewBox={`0 0 ${arcSize} ${arcSize}`}>
-                  <circle cx={arcSize / 2} cy={arcSize / 2} r={arcR} fill="none" stroke={C.brd} strokeWidth={6} />
-                  {avg > 0 && <path d={`M ${arcSize / 2} ${arcSize / 2 - arcR} A ${arcR} ${arcR} 0 ${arcLarge} 1 ${arcX.toFixed(1)} ${arcY.toFixed(1)}`} fill="none" stroke={arcColor} strokeWidth={6} strokeLinecap="round" />}
-                  <text x={arcSize / 2} y={arcSize / 2 - 4} textAnchor="middle" fill={arcColor} fontSize={22} fontWeight={700} fontFamily="'JetBrains Mono'">{avg}%</text>
-                  <text x={arcSize / 2} y={arcSize / 2 + 14} textAnchor="middle" fill={C.txL} fontSize={9} fontFamily="'DM Sans'" fontWeight={600}>SAÚDE DA REDE</text>
-                </svg>
-                <div>
-                  {[{ l: "Ativos", v: active, c: C.grn }, { l: "Esfriando", v: cooling.length, c: C.amb }, { l: "Perdidos", v: dead.length, c: C.cor }, { l: "Semana", v: wk, c: C.blu }].map((m, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: 3, background: m.c }} />
-                      <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, minWidth: 70 }}>{m.l}</span>
-                      <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 600, color: m.c }}>{m.v}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Alerts ── */}
-            {alerts.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>🔔 Alertas da sua rede ({alerts.length})</div>
-                {alerts.map((al, i) => (
-                  <div key={i} style={{ background: `${al.color}08`, border: `1px solid ${al.color}25`, borderRadius: 12, padding: 16, marginBottom: 8 }}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{al.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, marginBottom: 3 }}>{al.title}</div>
-                        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>{al.msg}</div>
-                        <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 6, padding: "8px 12px", marginBottom: 8 }}>
-                          <div style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Ação sugerida</div>
-                          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{al.action}</div>
-                        </div>
-                        {al.cid && <Btn variant="ghost" small onClick={() => { setSelId(al.cid); setView("contacts"); }}>Ver contato →</Btn>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* ── Movimento da Semana ── */}
-            {(() => {
-              const moves = generateWeeklyMoves(cts, its);
-              const top = moves[0];
-              if (!top) return null;
-              const prioColor = top.priorityLevel===1?C.cor:top.priorityLevel===2?C.cor:top.priorityLevel===3?C.vio:top.priorityLevel===4?C.amb:C.blu;
-              const prioIcon = top.priorityLevel===1?"🔥":top.priorityLevel===2?"📋":top.priorityLevel===3?"🎂":top.priorityLevel===4?"⚡":"⏰";
-              return (
-                <div style={{ background:`linear-gradient(135deg,${C.card} 0%,${C.gD} 100%)`, border:`1.5px solid ${C.gL}`, borderRadius:14, padding:18, marginBottom:16 }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ fontSize:16 }}>{prioIcon}</span>
-                      <div style={{ fontFamily:"'DM Sans'", fontSize:10, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".12em" }}>Movimento da Semana</div>
-                    </div>
-                    <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:prioColor, background:`${prioColor}14`, border:`1px solid ${prioColor}30`, padding:"2px 8px", borderRadius:4, fontWeight:600 }}>{top.suggestedDeadline}</div>
-                  </div>
-                  <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
-                    <div style={{ width:40, height:40, borderRadius:10, background:`${prioColor}14`, border:`1px solid ${prioColor}30`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:prioColor, flexShrink:0 }}>{top.contactName[0]}</div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:700, color:C.txt, marginBottom:2 }}>{top.contactName}</div>
-                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:6 }}>{top.companyOrCategory}</div>
-                      <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:prioColor, fontWeight:500, marginBottom:4 }}>{top.reason}</div>
-                      <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM }}>→ {top.suggestedAction}</div>
-                    </div>
-                  </div>
-                  <div style={{ display:"flex", gap:8, marginTop:14 }}>
-                    <button onClick={e=>{e.stopPropagation();setSelId(top.contactId);setIntCid(top.contactId);setModal("addI");}} style={{ flex:1, background:C.gold, border:"none", borderRadius:8, padding:"9px 0", fontFamily:"'DM Sans'", fontSize:12, fontWeight:700, color:C.bg, cursor:"pointer" }}>+ Registrar interação</button>
-                    <button onClick={e=>{e.stopPropagation();setSelId(top.contactId);setView("contacts");}} style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"9px 14px", fontFamily:"'DM Sans'", fontSize:12, color:C.txM, cursor:"pointer" }}>Ver contato</button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── Ritual Semanal ── */}
-            {cts.length >= 3 && (
-              <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 20, marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                  <span style={{ fontSize: 18 }}>✨</span>
-                  <div>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em" }}>Seu ritual da semana</div>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>5 micro-ações para nutrir sua rede</div>
-                  </div>
-                </div>
-
-                {toReactivate.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.teal, textTransform: "uppercase", marginBottom: 6 }}>🔄 Reativar</div>
-                    {toReactivate.map((c, i) => {
-                      const ci = CATS.find(x => x.value === c.category);
-                      return (
-                        <div key={i} onClick={() => { setSelId(c.id); setView("contacts"); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: i < toReactivate.length - 1 ? `1px solid ${C.brd}` : "none" }}>
-                          <div style={{ width: 24, height: 24, borderRadius: 6, background: `${ci?.color || C.gold}18`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: ci?.color }}>{c.name[0]}</div>
-                          <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, flex: 1 }}>{c.name}</span>
-                          <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 10, color: C.cor }}>{c.health}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {forValue && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, textTransform: "uppercase", marginBottom: 6 }}>💎 Gerar valor</div>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Envie algo útil para <strong style={{ color: C.txt }}>{forValue.name}</strong> — um artigo, uma indicação ou um elogio genuíno. Sem pedir nada.</div>
-                  </div>
-                )}
-
-                <div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.blu, textTransform: "uppercase", marginBottom: 6 }}>🌱 Expandir rede</div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Busque 1 contato novo na categoria <strong style={{ color: C.txt }}>{leastCat?.label || "Ponte"}</strong>. Sua rede precisa de diversidade para gerar oportunidades inesperadas.</div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Ações Prioritárias ── */}
-            {(cooling.length > 0 || noAction.length > 0) && (
-              <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>⚡ Ações prioritárias</div>
-                {cooling.slice(0, 5).map((c, i) => {
-                  const ci = CATS.find(x => x.value === c.category);
-                  return (
-                    <div key={i} onClick={() => { setSelId(c.id); setView("contacts"); }} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, cursor: "pointer" }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 7, background: `${ci?.color || C.gold}14`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: ci?.color }}>{c.name[0]}</div>
-                      <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, flex: 1 }}>{c.name}</span>
-                      <div style={{ width: 65 }}><HBar score={c.health} small /></div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── Top 5 Movimentos da Semana ── */}
-        {cts.length > 0 && !isPro && (
-          <ProLock
-            title="Desbloqueie seus 5 movimentos da semana"
-            desc="Saiba exatamente quem acionar, por que acionar e qual ação fazer para manter sua rede viva."
-            onKey={openAccessKey}
-            user={user}
-          />
-        )}
-        {cts.length > 0 && isPro && (() => {
-          const moves = generateWeeklyMoves(cts, its);
-          const prioColor = (p) => p===1?C.cor:p===2?C.cor:p===3?C.vio:p===4?C.amb:C.blu;
-          const prioIcon = (p) => p===1?"🔥":p===2?"📋":p===3?"🎂":p===4?"⚡":"⏰";
-          return (
-            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 18, marginBottom: 14 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
-                <span style={{ fontSize:18 }}>🎯</span>
-                <div>
-                  <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em" }}>Seus 5 movimentos da semana</div>
-                  <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>Quem acionar, por quê e o que fazer</div>
-                </div>
-              </div>
-              {moves.length === 0 ? (
-                <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", padding:"16px 0", fontStyle:"italic" }}>
-                  Sua rede está organizada esta semana. Revise seus contatos estratégicos ou cadastre novas relações.
-                </div>
-              ) : moves.map((m, i) => (
-                <div key={m.contactId} style={{ borderBottom: i < moves.length-1 ? `1px solid ${C.brd}` : "none", paddingBottom: i < moves.length-1 ? 12 : 0, marginBottom: i < moves.length-1 ? 12 : 0 }}>
-                  <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-                    <div style={{ width:32, height:32, borderRadius:8, background:`${prioColor(m.priorityLevel)}14`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>{prioIcon(m.priorityLevel)}</div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
-                        <div style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:600, color:C.txt, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.contactName}</div>
-                        <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:prioColor(m.priorityLevel), background:`${prioColor(m.priorityLevel)}12`, padding:"2px 7px", borderRadius:4, flexShrink:0, marginLeft:6 }}>{m.suggestedDeadline}</div>
-                      </div>
-                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>{m.companyOrCategory}</div>
-                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:prioColor(m.priorityLevel), marginBottom:3, fontWeight:500 }}>{m.reason}</div>
-                      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>→ {m.suggestedAction}</div>
-                      <div style={{ marginTop:8, display:"flex", gap:8 }}>
-                        <button onClick={() => { setSelId(m.contactId); setIntCid(m.contactId); setModal("addI"); }} style={{ background:C.gD, border:`1px solid ${C.gL}`, borderRadius:6, padding:"5px 10px", fontFamily:"'DM Sans'", fontSize:11, fontWeight:600, color:C.gold, cursor:"pointer" }}>+ Registrar interação</button>
-                        <button onClick={() => { setSelId(m.contactId); setView("contacts"); }} style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:6, padding:"5px 10px", fontFamily:"'DM Sans'", fontSize:11, color:C.txM, cursor:"pointer" }}>Ver contato</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-                })()}
-
       </div>
     );
   };
-  const renderContacts = () => {
+  const renderContactsList = () => {
     if (sel) {
       const ci = CATS.find(c => c.value === sel.category);
       return (
@@ -2254,7 +2093,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               {(() => {
                 const rs = calculateRelevanceScore(sel);
                 const priority = getContactPriorityStatus(sel.health, rs);
-                const badgeColors = {"Reativar urgente":"#ef5350","Proteger e expandir":"#4caf50","Manter leve":"#ff9800","Baixa prioridade":"#5a5650","Completar relevância":"#9B59B6"};
+                const badgeColors = {"Talvez mereça atenção":"#E8A020","Presente e importante":"#4caf50","Relação tranquila":"#ff9800","Sem prioridade agora":"#5a5650","Dados incompletos":"#9B59B6"};
                 const bc = badgeColors[priority.status] || C.txL;
                 return (
                   <div style={{ marginTop:10 }}>
@@ -2270,7 +2109,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                           ? (<><div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:getRelevanceLabelColor(rs), marginBottom:5 }}>{rs}%</div>
                              <div style={{ height:6, borderRadius:3, background:C.w06 }}><div style={{ height:6, borderRadius:3, background:getRelevanceLabelColor(rs), width:`${rs}%` }}/></div></>)
                           : (<><div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic", marginTop:4 }}>Não avaliado</div>
-                             <button onClick={()=>openEditC(sel)} style={{ marginTop:6, background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.gold, cursor:"pointer", padding:0, textAlign:"left" }}>→ Completar relevância</button></>)}
+                             <button onClick={()=>openEditC(sel)} style={{ marginTop:6, background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.gold, cursor:"pointer", padding:0, textAlign:"left" }}>→ Preencher esses dados</button></>)}
                       </div>
                     </div>
                     <div style={{ background:`${bc}10`, border:`1px solid ${bc}25`, borderRadius:8, padding:"8px 12px", display:"flex", alignItems:"flex-start", gap:8 }}>
@@ -2352,14 +2191,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           return (
             <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:12, padding:14, marginBottom:14 }}>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em" }}>Matriz de Prioridade</div>
-                <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>Health × Relevância</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em" }}>Como sua rede está agora</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>Presença × Importância</div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom: q.incomplete.length ? 8 : 0 }}>
-                <QCell label="Reativar urgente" color="#ef5350" icon="🔥" contacts={q.reactivate} />
-                <QCell label="Proteger e expandir" color="#4caf50" icon="⭐" contacts={q.protect} />
-                <QCell label="Baixa prioridade" color="#5a5650" icon="○" contacts={q.low} />
-                <QCell label="Manter leve" color="#ff9800" icon="→" contacts={q.maintain} />
+                <QCell label="Talvez mereça atenção" color="#E8A020" icon="◐" contacts={q.reactivate} />
+                <QCell label="Presente e importante" color="#4caf50" icon="⭐" contacts={q.protect} />
+                <QCell label="Sem prioridade agora" color="#5a5650" icon="○" contacts={q.low} />
+                <QCell label="Relação tranquila" color="#ff9800" icon="→" contacts={q.maintain} />
               </div>
               {q.incomplete.length > 0 && (
                 <div style={{ background:`${"#9B59B6"}08`, border:`1px solid ${"#9B59B6"}20`, borderRadius:8, padding:"8px 12px", display:"flex", alignItems:"center", gap:8 }}>
@@ -2381,9 +2220,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
                 <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{c.company || "—"}</span>
                 {(() => { const rs = calculateRelevanceScore(c); const p = getContactPriorityStatus(c.health, rs);
-                  const badgeColors = { "Reativar urgente":"#ef5350","Proteger e expandir":"#4caf50","Manter leve":"#ff9800","Baixa prioridade":"#5a5650","Completar relevância":"#9B59B6" };
+                  const badgeColors = { "Talvez mereça atenção":"#E8A020","Presente e importante":"#4caf50","Relação tranquila":"#ff9800","Sem prioridade agora":"#5a5650","Dados incompletos":"#9B59B6" };
                   const bc = badgeColors[p.status] || C.txL;
-                  return p.status !== "Completar relevância" ? (
+                  return p.status !== "Dados incompletos" ? (
                     <span style={{ fontFamily:"'DM Sans'",fontSize:8,fontWeight:700,color:bc,background:`${bc}14`,border:`1px solid ${bc}25`,padding:"1px 5px",borderRadius:3,textTransform:"uppercase",letterSpacing:".04em",flexShrink:0 }}>{p.status}</span>
                   ) : null; })()}
               </div>
@@ -2423,11 +2262,11 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       </div>
     );
     const PRIO_COLORS = {
-      "Proteger e expandir": "#4caf50",
-      "Reativar urgente":    "#ef5350",
-      "Manter leve":         "#ff9800",
-      "Baixa prioridade":    "#6a6460",
-      "Completar relevância":"#5B9BD5",
+      "Presente e importante": "#4caf50",
+      "Talvez mereça atenção":    "#E8A020",
+      "Relação tranquila":         "#ff9800",
+      "Sem prioridade agora":    "#6a6460",
+      "Dados incompletos":"#5B9BD5",
     };
 
     // Apply filter
@@ -2435,8 +2274,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const rs = calculateRelevanceScore(c);
       const p  = getContactPriorityStatus(c.health, rs);
       if (teiaFilter === "todos")          return true;
-      if (teiaFilter === "estrategicos")   return p.status === "Proteger e expandir";
-      if (teiaFilter === "reativar")       return p.status === "Reativar urgente";
+      if (teiaFilter === "estrategicos")   return p.status === "Presente e importante";
+      if (teiaFilter === "reativar")       return p.status === "Talvez mereça atenção";
       if (teiaFilter === "sem_acao")       return !c.nextAction;
       if (teiaFilter === "frios")          return c.health < 40;
       if (CATS.find(ct => ct.value === teiaFilter)) return c.category === teiaFilter;
@@ -2474,9 +2313,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     const FILTERS = [
       { key:"todos",        label:"Todos" },
       { key:"estrategicos", label:"Estratégicos" },
-      { key:"reativar",     label:"Reativar urgente" },
+      { key:"reativar",     label:"Talvez mereça atenção" },
       { key:"sem_acao",     label:"Sem próxima ação" },
-      { key:"frios",        label:"Frios" },
+      { key:"frios",        label:"Há um tempo sem contato" },
       ...CATS.map(ct => ({ key: ct.value, label: ct.label })),
     ];
 
@@ -2650,23 +2489,23 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:8 }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #4caf50", flexShrink:0 }}/>
-              Proteger e expandir
+              Presente e importante
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
-              <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #ef5350", flexShrink:0 }}/>
-              Reativar urgente
+              <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #E8A020", flexShrink:0 }}/>
+              Talvez mereça atenção
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #ff9800", flexShrink:0 }}/>
-              Manter leve
+              Relação tranquila
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #6a6460", flexShrink:0 }}/>
-              Baixa prioridade
+              Sem prioridade agora
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #5B9BD5", flexShrink:0 }}/>
-              Completar relevância
+              Dados incompletos
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <div style={{ width:28, height:8, background:`linear-gradient(to right,${C.brd},${C.txM})`, borderRadius:4, flexShrink:0 }}/>
@@ -2730,6 +2569,20 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         Após o pagamento, seu acesso PRO é liberado automaticamente. ✓
       </div>
     </Modal>
+  );
+
+  // ── "Rede" (âncora principal) = Pessoas + Teia num só lugar ──
+  // Reaproveita renderContactsList() e renderTeia() sem tocar no que já
+  // funciona — só adiciona um alternador simples por cima.
+  const [redeSubTab, setRedeSubTab] = useState("pessoas");
+  const renderContacts = () => (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button onClick={() => setRedeSubTab("pessoas")} style={{ background: redeSubTab === "pessoas" ? C.gD : "transparent", border: `1px solid ${redeSubTab === "pessoas" ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: redeSubTab === "pessoas" ? C.gold : C.txM, cursor: "pointer" }}>Pessoas</button>
+        <button onClick={() => setRedeSubTab("teia")} style={{ background: redeSubTab === "teia" ? C.gD : "transparent", border: `1px solid ${redeSubTab === "teia" ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: redeSubTab === "teia" ? C.gold : C.txM, cursor: "pointer" }}>Teia</button>
+      </div>
+      {redeSubTab === "pessoas" ? renderContactsList() : renderTeia()}
+    </div>
   );
 
   const renderReport = () => {
@@ -3395,7 +3248,7 @@ ${MENTORIA_LINK || true ? `
   };
 
   // ── Aba Perfil ────────────────────────────────────────────
-  const renderPerfil = () => (
+  const renderPerfilForm = () => (
     <PerfilForm
       profile={profile}
       userId={user?.id}
@@ -3403,6 +3256,31 @@ ${MENTORIA_LINK || true ? `
       isPro={isPro}
       openAccessKey={openAccessKey}
     />
+  );
+
+  // ── "Eu" (âncora principal) = Perfil + Plano + Relatório + Insights (IA) ──
+  // A antiga aba "IA" deixa de ser destino principal da navegação (fica
+  // dentro de "Eu"), mas o componente AbaIA continua existindo e acessível
+  // — nada foi excluído, só deixou de competir com o onboarding/Home.
+  const [euSubTab, setEuSubTab] = useState("perfil");
+  const EU_TABS = [
+    { id: "perfil", label: "Perfil" },
+    { id: "plano", label: "Plano" },
+    { id: "report", label: "Relatório" },
+    { id: "ia", label: "Insights" },
+  ];
+  const renderPerfil = () => (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {EU_TABS.map(t => (
+          <button key={t.id} onClick={() => setEuSubTab(t.id)} style={{ background: euSubTab === t.id ? C.gD : "transparent", border: `1px solid ${euSubTab === t.id ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: euSubTab === t.id ? C.gold : C.txM, cursor: "pointer" }}>{t.label}</button>
+        ))}
+      </div>
+      {euSubTab === "perfil" && renderPerfilForm()}
+      {euSubTab === "plano" && renderPlan()}
+      {euSubTab === "report" && renderReport()}
+      {euSubTab === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
+    </div>
   );
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
@@ -3502,8 +3380,14 @@ ${MENTORIA_LINK || true ? `
       )}
 
       <main style={{ flex: 1, padding: isMobile ? "16px" : "24px 28px", overflowY: "auto", maxHeight: isMobile ? "calc(100vh - 110px)" : "100vh", paddingBottom: isMobile ? 70 : 24 }}>
-        {view === "dashboard" && <ConexiaDashboard userId={user?.id} />}
         {view === "dash" && renderDash()}
+        {view === "startNetwork" && (
+          <GuidedNetworkStart
+            userId={user?.id}
+            onFinish={() => { load(); setView("dash"); }}
+            onExit={() => { load(); setView("dash"); }}
+          />
+        )}
         {view === "contacts" && renderContacts()}
         {view === "teia" && renderTeia()}
         {view === "plano" && renderPlan()}
@@ -3897,6 +3781,9 @@ function Auth({ onAuth, initialMode = "signup" }) {
           } },
         });
         if (error) throw error;
+        if (data?.user) {
+          supabase.from("page_events").insert({ user_id: data.user.id, event_type: "signup_completed", tab_name: "auth" }).then(() => {}, () => {});
+        }
         // O aceite LGPD é gravado no servidor pelo gatilho handle_new_user,
         // de forma confiável independente de haver sessão ativa neste momento
         // (necessário pois signUp pode não retornar sessão se a confirmação
@@ -4099,6 +3986,9 @@ function App() {
       state === "onboard" ? "onboarding_view" : "assessment_view",
       state
     );
+    // assessment_started / assessment_resumed agora são disparados dentro do
+    // próprio componente Assess, que sabe se havia um rascunho (profile.
+    // assessment_draft) — aqui não dá pra distinguir os dois casos.
   }, [state, user?.id, trackActivationEvent]);
 
   useEffect(() => {
@@ -4261,32 +4151,63 @@ function App() {
   };
 
   const handleAssess = async (result) => {
-    try {
-      const scores = result.scores;
-      const fullScores = { ...scores, profileKey: result.profileKey, profileName: result.profileName, overall: result.overall };
+    const scores = result.scores;
+    const fullScores = { ...scores, profileKey: result.profileKey, profileName: result.profileName, overall: result.overall };
+
+    // Idempotência: se uma tentativa anterior já inseriu o assessment mas
+    // falhou no update do perfil logo depois, uma nova tentativa (mesmo
+    // `result`, mesma sessão) não deve criar um segundo registro. Verifica
+    // se já existe um assessment igual (mesmo overall + profileKey) nos
+    // últimos 10 minutos para este usuário antes de inserir.
+    const tenMinAgoISO = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: existingAttempt } = await supabase.from("assessments")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("overall", result.overall)
+      .eq("profile_key", result.profileKey)
+      .gte("created_at", tenMinAgoISO)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!existingAttempt) {
       const { error: insertError } = await supabase.from("assessments").insert({
         user_id: user.id,
         scores: fullScores,
         overall: result.overall,
       });
-      if (insertError) console.error("[Assess] insert em assessments falhou:", insertError);
-
-      const profileUpdate = {
-        assessment_completed: true,
-        onboarding_completed: true,
-        last_assessment_at: new Date().toISOString(),
-        overall_score: result.overall,
-        profile_key: result.profileKey,
-        profile_name: result.profileName,
-        assessment_scores: fullScores,
-      };
-      const { error: updateError } = await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
-      if (updateError) {
-        console.error("[Assess] update em profiles falhou, tentando novamente:", updateError);
-        const { error: retryError } = await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
-        if (retryError) console.error("[Assess] retry do update em profiles falhou:", retryError);
+      if (insertError) {
+        console.error("[Assess] insert em assessments falhou:", insertError);
+        throw insertError; // crítico: sem isso não há diagnóstico salvo — o usuário precisa poder tentar de novo
       }
+    }
 
+    const profileUpdate = {
+      assessment_completed: true,
+      onboarding_completed: true,
+      last_assessment_at: new Date().toISOString(),
+      overall_score: result.overall,
+      profile_key: result.profileKey,
+      profile_name: result.profileName,
+      assessment_scores: fullScores,
+      // Limpa o rascunho — o assessment foi concluído, não faz sentido
+      // restaurar respostas antigas numa próxima visita a esta tela.
+      assessment_draft: null,
+      assessment_draft_step: null,
+    };
+    let { error: updateError } = await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
+    if (updateError) {
+      console.error("[Assess] update em profiles falhou, tentando novamente:", updateError);
+      const retry = await supabase.from("profiles").update(profileUpdate).eq("id", user.id);
+      updateError = retry.error;
+      if (updateError) console.error("[Assess] retry do update em profiles falhou:", updateError);
+    }
+    if (updateError) throw updateError; // crítico: sem isso o app nunca sai da tela de assessment (assessment_completed continuaria false)
+
+    // Daqui pra baixo é best-effort — não deve impedir a navegação nem
+    // acionar o retry do usuário se falhar (nada aqui é indispensável para
+    // ele seguir em frente).
+    try {
       // Ativa o plano mensurável: cria user_plans se ainda não existir para este usuário.
       // Isso liga o trigger update_plan_progress (interactions -> plan_progress) que já existe no banco.
       const { data: existingPlan } = await supabase.from("user_plans").select("id").eq("user_id", user.id).maybeSingle();
@@ -4302,7 +4223,8 @@ function App() {
         });
         if (planError) console.error("[Assess] falha ao criar user_plans:", planError);
       }
-    } catch (e) { console.error("[Assess] excecao:", e); }
+    } catch (e) { console.error("[Assess] excecao (não-crítica):", e); }
+
     sendToMake(result);
     void trackActivationEvent("assessment_completed", "assess", {
       overall: result.overall,
@@ -4324,6 +4246,7 @@ function App() {
       setPendingKey("");
     }
   };
+
 
   const handlePasswordUpdated = async () => {
     const { data: { session } } = await supabase.auth.getSession();
