@@ -1848,10 +1848,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   // atual (contacts.health_score, assessment_results) — está confirmado
   // quebrado, e a regra é não manter uma funcionalidade sabidamente quebrada
   // só para preservar a estrutura anterior.
+  // "Eu"/"Perfil" foi removido daqui de propósito: já existe um botão
+  // dedicado no rodapé da barra lateral (área da conta) que leva pro mesmo
+  // view="perfil" — eram 2 caminhos pro mesmo lugar, ficou só 1.
   const NAVS = [
     { id: "dash", icon: "◎", label: "Hoje" },
     { id: "contacts", icon: "⊛", label: "Rede" },
-    { id: "perfil", icon: "👤", label: "Eu" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }, { id: "export", icon: "⬇", label: "Exportar" }] : []),
     ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
   ];
