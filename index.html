@@ -16,6 +16,22 @@
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #1A1A2C; border-radius: 4px; }
+
+      /* Feedback tátil visual: todo botão "afunda" levemente ao ser tocado/
+         clicado, como no iOS. Uma linha, aplicada a todo botão do app de
+         uma vez — nenhum componente precisa declarar isso individualmente. */
+      button:not(:disabled):active { transform: scale(0.97); }
+      button { transition: transform 90ms cubic-bezier(0.4, 0, 0.2, 1); }
+
+      /* Respeita quem tem "reduzir movimento" ligado no sistema — inclusive
+         para as animações adicionadas nesta rodada (toast, skeleton, etc). */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
     </style>
   </head>
   <body>
