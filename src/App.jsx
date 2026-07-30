@@ -1,9 +1,10 @@
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
 import GuidedNetworkStart from './components/GuidedNetworkStart';
+import { computePriorities } from '../shared/priorityEngine.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "./utils/supabase";
-import { C, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
+import { C, MOTION, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { BRAND } from "./config/brand";
 import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
 import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
@@ -257,7 +258,7 @@ function getProfile(scores) {
 
 /* ─── UI Components ───────────────────────────────────── */
 function Btn({ children, onClick, variant = "primary", disabled, small, full }) {
-  const base = { fontFamily: "'DM Sans',sans-serif", fontSize: small ? 12 : 15, fontWeight: 600, border: "none", borderRadius: 8, cursor: disabled ? "default" : "pointer", padding: small ? "8px 16px" : "14px 28px", transition: "all .15s", opacity: disabled ? 0.5 : 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, width: full ? "100%" : "auto" };
+  const base = { fontFamily: "'DM Sans',sans-serif", fontSize: small ? 12 : 15, fontWeight: 600, border: "none", borderRadius: 8, cursor: disabled ? "default" : "pointer", padding: small ? "8px 16px" : "14px 28px", transition: `all ${MOTION.fast}`, opacity: disabled ? 0.5 : 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, width: full ? "100%" : "auto" };
   const v = { primary: { color: C.bg, background: `linear-gradient(135deg,${C.gold},${C.gB})` }, secondary: { color: C.txt, background: C.w06 }, ghost: { color: C.txM, background: "transparent" }, danger: { color: C.cor, background: C.corD }, success: { color: C.grn, background: C.grnD } };
   return <button onClick={onClick} disabled={disabled} style={{ ...base, ...v[variant] }}>{children}</button>;
 }
@@ -312,7 +313,7 @@ function HBar({ score, small }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ flex: 1, height: h, borderRadius: h, background: C.w06 }}>
-        <div style={{ height: h, borderRadius: h, background: cl, width: `${score}%`, transition: "width .6s" }} />
+        <div style={{ height: h, borderRadius: h, background: cl, width: `${score}%`, transition: `width ${MOTION.slow}` }} />
       </div>
       <span style={{ fontFamily: "'JetBrains Mono'", fontSize: small ? 10 : 11, fontWeight: 600, color: cl, minWidth: 28, textAlign: "right" }}>{score}%</span>
     </div>
@@ -548,7 +549,7 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
               {DIMS.map((d, i) => { const v = scores[d.key] || 0; return (
                 <div key={i} style={{ marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 500, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 600, color: d.color }}>{v}%</span></div>
-                  <div style={{ height: 8, borderRadius: 4, background: C.w06 }}><div style={{ height: 8, borderRadius: 4, background: d.color, width: `${v}%`, transition: "width 1s" }} /></div>
+                  <div style={{ height: 8, borderRadius: 4, background: C.w06 }}><div style={{ height: 8, borderRadius: 4, background: d.color, width: `${v}%`, transition: `width ${MOTION.slow}` }} /></div>
                 </div>
               ); })}
             </div>
@@ -660,7 +661,7 @@ function Assess({ profile, onDone }) {
           <Tag color={DIMS[q.dim].color}>{DIMS[q.dim].label}</Tag>
           <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, color: C.txL }}>{qi + 1}/{QS.length}</span>
         </div>
-        <div style={{ height: 4, borderRadius: 2, background: C.w06, marginBottom: 32 }}><div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${((qi + 1) / QS.length) * 100}%`, transition: "width .3s" }} /></div>
+        <div style={{ height: 4, borderRadius: 2, background: C.w06, marginBottom: 32 }}><div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${((qi + 1) / QS.length) * 100}%`, transition: `width ${MOTION.slow}` }} /></div>
         <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: C.txt, lineHeight: 1.35, margin: "0 0 28px", minHeight: 80 }}>{q.text}</p>
         {(q.opcoes || []).map(o => (
           <button key={o.v} onClick={() => answerQuestion(q.id, o.v)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: cur === o.v ? C.gD : C.sf, border: `1.5px solid ${cur === o.v ? C.gold : C.brd}`, borderRadius: 10, padding: "14px 18px", cursor: "pointer", marginBottom: 8, textAlign: "left" }}>
@@ -1146,7 +1147,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
                 <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, flexShrink: 0 }}>{daysLeft}d restantes</span>
               </div>
               <div style={{ height: 6, borderRadius: 3, background: C.brd, overflow: 'hidden', marginBottom: 4 }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: achieved ? C.grn : C.gold, transition: 'width .3s' }} />
+                <div style={{ height: '100%', width: `${pct}%`, background: achieved ? C.grn : C.gold, transition: `width ${MOTION.slow}` }} />
               </div>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
                 {g.current_value ?? 0} / {g.target_value} {g.metric_type === 'contacts_engaged' ? 'contatos' : 'interações'} · {pct}%
@@ -1198,7 +1199,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
               const checked = !!done[key];
               return (
                 <div key={j} onClick={() => toggleTask(w.week, j)}
-                  style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: 'all .2s' }}>
+                  style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: `all ${MOTION.base}` }}>
                   <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? C.grn : isCurrent ? C.gL : C.brd}`, background: checked ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
                     {checked && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
                   </div>
@@ -1209,7 +1210,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
 
             {/* Meta da semana com flag */}
             <div onClick={() => toggleMeta(w.week)}
-              style={{ marginTop: 12, background: metaDone[w.week] ? C.grnD : C.w06, border: `1px solid ${metaDone[w.week] ? C.grn + '40' : 'transparent'}`, borderRadius: 6, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all .2s' }}>
+              style={{ marginTop: 12, background: metaDone[w.week] ? C.grnD : C.w06, border: `1px solid ${metaDone[w.week] ? C.grn + '40' : 'transparent'}`, borderRadius: 6, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: `all ${MOTION.base}` }}>
               <div style={{ width: 16, height: 16, borderRadius: 3, border: `1.5px solid ${metaDone[w.week] ? C.grn : C.txL}`, background: metaDone[w.week] ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {metaDone[w.week] && <span style={{ color: '#fff', fontSize: 10 }}>✓</span>}
               </div>
@@ -1496,7 +1497,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey }) {
             <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 8 }}>Principais desafios <span style={{ color: C.txL, fontWeight: 400 }}>(selecione quantos quiser)</span></label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {CHALLENGES.map(c => (
-                <button key={c.value} onClick={() => toggleChallenge(c.value)} style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 20, cursor: "pointer", border: pf.challenges.includes(c.value) ? `1px solid ${C.gold}` : `1px solid ${C.brd}`, background: pf.challenges.includes(c.value) ? `${C.gold}18` : "transparent", color: pf.challenges.includes(c.value) ? C.gold : C.txM, transition: "all .15s" }}>{c.label}</button>
+                <button key={c.value} onClick={() => toggleChallenge(c.value)} style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 20, cursor: "pointer", border: pf.challenges.includes(c.value) ? `1px solid ${C.gold}` : `1px solid ${C.brd}`, background: pf.challenges.includes(c.value) ? `${C.gold}18` : "transparent", color: pf.challenges.includes(c.value) ? C.gold : C.txM, transition: `all ${MOTION.fast}` }}>{c.label}</button>
               ))}
             </div>
           </div>
@@ -2333,6 +2334,18 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     );
 
     const CX = 280, CY = 255, R = 190;
+    // Cruzamento com o motor único (mesmo usado na Home/WhatsApp) — não
+    // muda a posição/cor dos nós (isso continua vindo de hScore/relevância,
+    // decisão deliberada pra não arriscar a matemática do SVG sem QA
+    // visual), só marca visualmente quem também está entre as prioridades
+    // atuais da Home, pra reduzir a sensação de "são duas leituras
+    // diferentes". Usa feedbackMap vazio aqui (a Teia ainda não busca
+    // `alerts`) — pode, por isso, destacar alguém que já foi dispensado na
+    // Home; é uma simplificação assumida, não um bug.
+    const homePriority = computePriorities(cts, {}, new Date());
+    const homePriorityIds = new Set(
+      [homePriority.main, ...(homePriority.secondary || [])].filter(Boolean).map(a => a.relationshipId)
+    );
     const step = filtered.length > 0 ? (2 * Math.PI) / filtered.length : 0;
     const nodes = filtered.map((c, i) => {
       const a   = -Math.PI / 2 + i * step;
@@ -2415,10 +2428,13 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                 {/* Contact nodes */}
                 {nodes.map((n,i) => {
                   const isSel = teiaSel === n.c.id;
+                  const isHomePriority = homePriorityIds.has(n.c.id);
                   return (
                     <g key={i} onClick={() => setTeiaSel(teiaSel===n.c.id ? null : n.c.id)} style={{ cursor:"pointer" }}>
                       {/* Glow when selected */}
                       {isSel && <circle cx={n.x} cy={n.y} r={n.nr+6} fill={n.col} opacity={0.15} />}
+                      {/* Anel pontilhado: também está entre as prioridades da Home agora */}
+                      {isHomePriority && <circle cx={n.x} cy={n.y} r={n.nr+4} fill="none" stroke={C.gold} strokeWidth={1} strokeDasharray="2,3" opacity={0.65} />}
                       {/* Outer ring */}
                       <circle cx={n.x} cy={n.y} r={n.nr} fill={`${n.col}20`}
                         stroke={n.col} strokeWidth={isSel?2.5:1.5} />
@@ -3197,7 +3213,7 @@ ${MENTORIA_LINK || true ? `
                         <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, color: cc }}>{count} ({pct}%)</span>
                       </div>
                       <div style={{ height: 6, borderRadius: 3, background: C.w06 }}>
-                        <div style={{ height: 6, borderRadius: 3, background: cc, width: `${pct}%`, transition: 'width .4s' }} />
+                        <div style={{ height: 6, borderRadius: 3, background: cc, width: `${pct}%`, transition: `width ${MOTION.slow}` }} />
                       </div>
                     </div>
                   );
