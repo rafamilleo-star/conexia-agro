@@ -2430,7 +2430,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           ))}
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns: "1fr 300px", gap:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 300px", gap:12 }}>
           {/* SVG Teia */}
           <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16 }}>
             {filtered.length === 0 ? (
