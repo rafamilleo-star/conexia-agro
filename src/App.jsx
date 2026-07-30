@@ -2000,13 +2000,15 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     // mesmo motor do WhatsApp. Isso também resolve a instrução explícita de
     // não começar a Home com quantidade de contatos, saúde da rede, scores,
     // gráficos ou banner de venda no topo.
-    const assessmentCompleted = !!(profile?.assessment_completed ?? assessment);
+    // Correção de um bug real: usava `??` (nullish coalescing), que só cai
+    // para `assessment` quando profile.assessment_completed é null/undefined.
+    // Contas com assessment_completed=false por inconsistência de dado
+    // antiga (mas com um assessment de verdade já carregado em `assessment`)
+    // ficavam presas na tela de "diagnóstico não concluído" para sempre.
+    const assessmentCompleted = !!(profile?.assessment_completed || assessment);
 
     return (
       <div>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 4px", textAlign: "center" }}>
-          {profile?.first_name || profile?.name ? `Bom ver você, ${profile.first_name || profile.name}.` : "Hoje"}
-        </h2>
         {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 16px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
 
         <HomeToday
