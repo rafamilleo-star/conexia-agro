@@ -2047,7 +2047,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
     return (
       <div>
-        {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 16px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
+        {/* Removido: "{pf.emoji} {pf.name}" ocupava a posição mais nobre da
+            página (antes até do card do WhatsApp) pra mostrar algo puramente
+            decorativo, não acionável. O arquétipo continua visível em "Eu". */}
 
         {/* ── Assistente por WhatsApp: em destaque, no topo — não é um
             detalhe de rodapé, é o jeito mais usado de falar com o CONÉXIA
@@ -2310,7 +2312,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           const nodes=cts.map((c,i)=>{const a=-Math.PI/2+i*step;const d=R*Math.max(0.15,c.health/100);const ci=CATS.find(x=>x.value===c.category);return{c,x:CX+d*Math.cos(a),y:CY+d*Math.sin(a),col:ci?.color||C.gold,r:Math.max(7,Math.min(18,7+its.filter(x=>x.contactId===c.id).length*2))};});
           return (<div>
             <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16, marginBottom:12 }}>
-              <svg viewBox="0 0 560 480" style={{ width:"100%", height:"auto" }}>
+              <svg viewBox="0 0 560 480" style={{ width:"100%", height:"auto", maxWidth: 480, maxHeight: "60vh", display: "block", margin: "0 auto" }}>
                 {[0.2,0.4,0.6,0.8,1].map((p,i)=><circle key={i} cx={CX} cy={CY} r={R*p} fill="none" stroke={C.brd} strokeWidth={0.5} strokeDasharray={p<1?"3,7":"none"} opacity={0.4}/>)}
                 <circle cx={CX} cy={CY} r={7} fill={C.gold} opacity={0.9}/>
                 {nodes.map((n,i)=>{const lx=CX+(R+28)*Math.cos(-Math.PI/2+i*step);const ly=CY+(R+28)*Math.sin(-Math.PI/2+i*step);const ta=-Math.PI/2+i*step;return(<g key={i} onClick={()=>{setSelId(n.c.id);setView("contacts");}} style={{cursor:"pointer"}}><circle cx={n.x} cy={n.y} r={n.r} fill={`${n.col}25`} stroke={n.col} strokeWidth={1.5}/><text x={lx} y={ly} textAnchor={ta>Math.PI/2||ta<-Math.PI/2?"end":"start"} dominantBaseline="middle" fill={C.txM} fontSize={10} fontFamily="'DM Sans'">{n.c.name.length>13?n.c.name.slice(0,12)+"…":n.c.name}</text></g>);})}
@@ -2426,7 +2428,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                 Nenhum contato neste filtro.
               </div>
             ) : (
-              <svg viewBox="0 0 560 510" style={{ width:"100%", height:"auto" }}>
+              <svg viewBox="0 0 560 510" style={{ width:"100%", height:"auto", maxWidth: 480, maxHeight: "60vh", display: "block", margin: "0 auto" }}>
                 {/* Rings */}
                 {[0.2,0.4,0.6,0.8,1].map((pct,i) => (
                   <circle key={i} cx={CX} cy={CY} r={R*pct} fill="none"
