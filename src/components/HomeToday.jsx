@@ -9,7 +9,7 @@ import React, {
 } from "react";
 
 import { supabase } from "../utils/supabase";
-import { MOTION } from "../utils/theme";
+import { MOTION, TYPE } from "../utils/theme";
 import { computePriorities } from "../../shared/priorityEngine.js";
 import {
   addDays,
@@ -24,7 +24,7 @@ const C = {
   border: "#2A2A2A",
   text: "#F0EDE8",
   muted: "#A09890",
-  light: "#6F6861",
+  light: "#8B837A", // corrigido: #6F6861 dava só 3,17–3,36:1 sobre card/surface (reprovava pra texto pequeno). Agora 4,66–4,93:1.
   gold: "#C9A84C",
   error: "#E05050",
   success: "#5FA66F",
@@ -135,8 +135,11 @@ const chipStyle = {
   color: C.muted,
   borderRadius: 9,
   padding: "7px 12px",
+  minHeight: 44, // alvo de toque mínimo (WCAG 2.5.5 / iOS HIG) — as 4 respostas de feedback usam este estilo
+  display: "inline-flex",
+  alignItems: "center",
   fontFamily: fontSans,
-  fontSize: 12,
+  fontSize: TYPE.caption,
   cursor: "pointer",
 };
 
@@ -152,9 +155,13 @@ function Button({ children, onClick, primary = false, disabled = false }) {
         color: primary ? "#0D0D0D" : C.gold,
         borderRadius: 10,
         padding: "10px 16px",
+        minHeight: 44,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
         fontFamily: fontSans,
         fontWeight: 700,
-        fontSize: 13,
+        fontSize: TYPE.caption,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.55 : 1,
       }}
@@ -163,6 +170,7 @@ function Button({ children, onClick, primary = false, disabled = false }) {
     </button>
   );
 }
+
 
 function Section({ title, action, children }) {
   return (
@@ -189,7 +197,7 @@ function Section({ title, action, children }) {
             margin: 0,
             color: C.text,
             fontFamily: fontSerif,
-            fontSize: 21,
+            fontSize: TYPE.title,
             fontWeight: 700,
           }}
         >
@@ -355,7 +363,7 @@ function PriorityCard({
         style={{
           color: C.gold,
           fontFamily: fontSans,
-          fontSize: 11,
+          fontSize: TYPE.micro,
           fontWeight: 700,
           letterSpacing: 1,
           textTransform: "uppercase",
@@ -369,7 +377,7 @@ function PriorityCard({
         style={{
           color: C.text,
           fontFamily: fontSerif,
-          fontSize: 23,
+          fontSize: TYPE.title,
           fontWeight: 700,
           lineHeight: 1.15,
         }}
@@ -381,7 +389,7 @@ function PriorityCard({
         style={{
           color: C.muted,
           fontFamily: fontSans,
-          fontSize: 13,
+          fontSize: TYPE.body,
           lineHeight: 1.6,
           marginTop: 7,
         }}
@@ -394,7 +402,7 @@ function PriorityCard({
           style={{
             color: C.error,
             fontFamily: fontSans,
-            fontSize: 12,
+            fontSize: TYPE.caption,
             marginTop: 9,
           }}
         >
@@ -412,7 +420,7 @@ function PriorityCard({
             gap: 6,
             color: C.success,
             fontFamily: fontSans,
-            fontSize: 12,
+            fontSize: TYPE.caption,
             fontWeight: 600,
             marginTop: 9,
             animation: `conexiaFadeIn ${MOTION.base}`,
@@ -529,7 +537,7 @@ function NetworkMovement({ contacts, interactions, onQuickLogInteraction }) {
               margin: "0 0 13px",
               color: C.muted,
               fontFamily: fontSans,
-              fontSize: 13,
+              fontSize: TYPE.body,
               lineHeight: 1.6,
             }}
           >
@@ -598,7 +606,7 @@ function NetworkMovement({ contacts, interactions, onQuickLogInteraction }) {
                     style={{
                       color: C.light,
                       fontFamily: fontSans,
-                      fontSize: 11,
+                      fontSize: TYPE.micro,
                       fontWeight: 700,
                       textTransform: "uppercase",
                       letterSpacing: 0.7,
@@ -612,7 +620,7 @@ function NetworkMovement({ contacts, interactions, onQuickLogInteraction }) {
                     style={{
                       color: C.text,
                       fontFamily: fontSans,
-                      fontSize: 13,
+                      fontSize: TYPE.body,
                       lineHeight: 1.5,
                     }}
                   >
@@ -721,7 +729,7 @@ function WeeklySummary({ contacts, interactions }) {
               style={{
                 color: C.muted,
                 fontFamily: fontSans,
-                fontSize: 12,
+                fontSize: TYPE.caption,
                 marginTop: 2,
               }}
             >
@@ -764,7 +772,7 @@ function CompactAssessmentCard({
             color: C.text,
             fontFamily: fontSans,
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: TYPE.caption,
           }}
         >
           Seu diagnóstico ajuda a personalizar as orientações.
@@ -774,7 +782,7 @@ function CompactAssessmentCard({
           style={{
             color: C.muted,
             fontFamily: fontSans,
-            fontSize: 12,
+            fontSize: TYPE.caption,
             marginTop: 3,
           }}
         >
@@ -793,17 +801,21 @@ function EmptyNetwork({ firstName, onStartNetwork }) {
       style={{
         background: C.card,
         border: `1px solid ${C.border}`,
-        borderRadius: 14,
-        padding: 22,
+        borderRadius: 16,
+        padding: "48px 32px",
+        textAlign: "center",
       }}
     >
+      <div style={{ fontSize: 34, marginBottom: 18, opacity: 0.9 }}>✦</div>
+
       <div
         style={{
           color: C.gold,
           fontFamily: fontSerif,
-          fontSize: 25,
+          fontSize: TYPE.display,
           fontWeight: 700,
-          marginBottom: 8,
+          marginBottom: 12,
+          lineHeight: 1.2,
         }}
       >
         Sua rede começa aqui{firstName ? `, ${firstName}` : ""}.
@@ -811,10 +823,11 @@ function EmptyNetwork({ firstName, onStartNetwork }) {
 
       <p
         style={{
-          margin: "0 0 17px",
+          margin: "0 auto 26px",
+          maxWidth: 340,
           color: C.muted,
           fontFamily: fontSans,
-          fontSize: 14,
+          fontSize: TYPE.body,
           lineHeight: 1.6,
         }}
       >
@@ -954,10 +967,24 @@ const HomeToday = ({
     setBusyId(action.recommendationId);
 
     try {
-      return (await callback()) || {};
-    } finally {
+      const result = (await callback()) || {};
+      // A confirmação (✓ dentro do PriorityCard) já aparece na hora — é a
+      // escrita real que acabou de resolver. O que atrasamos aqui é só o
+      // *recarregamento* dos dados reais, porque ele recalcula
+      // mainRecommendation e faria o cartão sumir no meio da confirmação
+      // (antes da pessoa conseguir ler "Anotado"). 1.6s dá tempo do toast
+      // aparecer. O guard (busyId) continua travado até lá, pra não deixar
+      // clicar de novo numa recomendação que já foi resolvida.
+      if (!result.error) {
+        setTimeout(() => { setBusyId(null); loadAlerts(); }, 1600);
+      } else {
+        setBusyId(null);
+        await loadAlerts();
+      }
+      return result;
+    } catch (e) {
       setBusyId(null);
-      await loadAlerts();
+      throw e;
     }
   };
 
@@ -1088,7 +1115,7 @@ const HomeToday = ({
               margin: 0,
               color: C.text,
               fontFamily: fontSerif,
-              fontSize: 31,
+              fontSize: TYPE.display,
               fontWeight: 700,
             }}
           >
@@ -1119,7 +1146,7 @@ const HomeToday = ({
               margin: 0,
               color: C.text,
               fontFamily: fontSerif,
-              fontSize: 31,
+              fontSize: TYPE.display,
               fontWeight: 700,
             }}
           >
@@ -1148,7 +1175,7 @@ const HomeToday = ({
             margin: 0,
             color: C.text,
             fontFamily: fontSerif,
-            fontSize: 31,
+            fontSize: TYPE.display,
             fontWeight: 700,
           }}
         >
@@ -1159,7 +1186,7 @@ const HomeToday = ({
           style={{
             color: C.muted,
             fontFamily: fontSans,
-            fontSize: 13,
+            fontSize: TYPE.caption,
             marginTop: 4,
           }}
         >
@@ -1179,7 +1206,7 @@ const HomeToday = ({
             style={{
               color: C.error,
               fontFamily: fontSans,
-              fontSize: 12,
+              fontSize: TYPE.caption,
               marginBottom: 10,
             }}
           >
@@ -1210,15 +1237,18 @@ const HomeToday = ({
             style={{
               background: C.surface,
               border: `1px solid ${C.border}`,
-              borderRadius: 11,
-              padding: 16,
+              borderRadius: 12,
+              padding: "34px 24px",
+              textAlign: "center",
             }}
           >
+            <div style={{ fontSize: 22, marginBottom: 10, opacity: 0.85 }}>☾</div>
+
             <div
               style={{
                 color: C.text,
                 fontFamily: fontSerif,
-                fontSize: 20,
+                fontSize: TYPE.title,
                 fontWeight: 700,
               }}
             >
@@ -1229,8 +1259,8 @@ const HomeToday = ({
               style={{
                 color: C.muted,
                 fontFamily: fontSans,
-                fontSize: 13,
-                marginTop: 5,
+                fontSize: TYPE.body,
+                marginTop: 7,
               }}
             >
               Nada precisa virar uma obrigação agora.
@@ -1276,7 +1306,7 @@ const HomeToday = ({
               style={{
                 color: C.muted,
                 fontFamily: fontSans,
-                fontSize: 13,
+                fontSize: TYPE.caption,
               }}
             >
               {contacts.length === 1
