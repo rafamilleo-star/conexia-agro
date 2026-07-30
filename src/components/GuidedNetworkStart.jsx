@@ -34,6 +34,7 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [addedCount, setAddedCount] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
 
   const reset = () => setForm({ name: '', context: '', importance: 3, lastTalk: '' });
 
@@ -79,7 +80,22 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
   };
 
   return (
-    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative' }}>
+      <button
+        onClick={() => setShowHelp(s => !s)}
+        title="Dicas desta tela"
+        aria-label="Dicas desta tela"
+        style={{ position: 'fixed', bottom: 20, right: 20, width: 44, height: 44, borderRadius: '50%', background: C.gold, border: 'none', boxShadow: '0 4px 14px #00000040', fontSize: 20, cursor: 'pointer', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >💡</button>
+      {showHelp && (
+        <div style={{ position: 'fixed', bottom: 74, right: 20, maxWidth: 280, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, zIndex: 9998, boxShadow: '0 8px 24px #00000060' }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 6 }}>🫂 Cadastro guiado</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
+            Uma pessoa de cada vez, só o essencial. Você pode pular a qualquer momento — nada aqui é obrigatório, e dá pra completar o resto depois no perfil de cada pessoa.
+          </div>
+          <button onClick={() => setShowHelp(false)} style={{ marginTop: 10, background: 'none', border: 'none', color: C.txL, fontFamily: "'DM Sans'", fontSize: 11, cursor: 'pointer' }}>Fechar</button>
+        </div>
+      )}
       <div style={{ maxWidth: 460, width: '100%' }}>
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
           Pessoa {Math.min(addedCount + 1, 3)} de 3
