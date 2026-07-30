@@ -31,7 +31,7 @@ function inputStyle() {
 
 const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
   const [step, setStep] = useState(1); // 1..3
-  const [form, setForm] = useState({ name: '', context: '', importance: 3, lastTalk: '' });
+  const [form, setForm] = useState({ name: '', context: '', importance: 3, lastTalk: '', birthday: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [addedCount, setAddedCount] = useState(0);
@@ -39,13 +39,13 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
   const [savedPeople, setSavedPeople] = useState([]); // [{id, name, context, importance, lastTalk}]
   const [editingId, setEditingId] = useState(null);
 
-  const reset = () => setForm({ name: '', context: '', importance: 3, lastTalk: '' });
+  const reset = () => setForm({ name: '', context: '', importance: 3, lastTalk: '', birthday: '' });
 
   const editPrevious = () => {
     const last = savedPeople[savedPeople.length - 1];
     if (!last) return;
     setEditingId(last.id);
-    setForm({ name: last.name, context: last.context, importance: last.importance, lastTalk: last.lastTalk || '' });
+    setForm({ name: last.name, context: last.context, importance: last.importance, lastTalk: last.lastTalk || '', birthday: last.birthday || '' });
   };
 
   const cancelEdit = () => {
@@ -64,11 +64,12 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
         name: form.name.trim(),
         category: form.context.trim() || null,
         proximity: form.importance,
+        birthday: form.birthday || null,
       }).eq('id', editingId).eq('user_id', userId);
 
       if (updError) { setError('Não consegui salvar a correção agora. Tenta de novo?'); setSaving(false); return; }
 
-      setSavedPeople(list => list.map(p => p.id === editingId ? { ...p, name: form.name.trim(), context: form.context.trim(), importance: form.importance } : p));
+      setSavedPeople(list => list.map(p => p.id === editingId ? { ...p, name: form.name.trim(), context: form.context.trim(), importance: form.importance, birthday: form.birthday } : p));
       setEditingId(null);
       setSaving(false);
       reset();
@@ -82,6 +83,7 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
       proximity: form.importance,
       ideal_frequency_days: 30,
       last_interaction_at: form.lastTalk || null,
+      birthday: form.birthday || null,
     }).select().single();
 
     if (ctError) { setError('Não consegui salvar essa pessoa agora. Tenta de novo?'); setSaving(false); return; }
@@ -101,7 +103,7 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
       tab_name: 'startNetwork',
     }).then(() => {}, () => {});
 
-    setSavedPeople(list => [...list, { id: newContact.id, name: form.name.trim(), context: form.context.trim(), importance: form.importance, lastTalk: form.lastTalk }]);
+    setSavedPeople(list => [...list, { id: newContact.id, name: form.name.trim(), context: form.context.trim(), importance: form.importance, lastTalk: form.lastTalk, birthday: form.birthday }]);
     setSaving(false);
     const nextCount = addedCount + 1;
     setAddedCount(nextCount);
@@ -161,6 +163,9 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
             <input type="date" style={inputStyle()} value={form.lastTalk} onChange={e => setForm(p => ({ ...p, lastTalk: e.target.value }))} />
           </>
         )}
+
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.txM, marginBottom: 8 }}>Quando é o aniversário dela? <span style={{ color: C.txL }}>(opcional, mas ajuda muito — o CONÉXIA lembra por você)</span></div>
+        <input type="date" style={inputStyle()} value={form.birthday} onChange={e => setForm(p => ({ ...p, birthday: e.target.value }))} />
 
         {error && <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.err, marginBottom: 12 }}>{error}</div>}
 
