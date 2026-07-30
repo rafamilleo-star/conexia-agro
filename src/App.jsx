@@ -1228,7 +1228,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>Dicas de uso do {BRAND.name}</div>
         {[
           { icon: '📅', title: 'Ritual semanal', desc: 'Toda segunda-feira, 15 minutos: veja os alertas do Dashboard e escolha 2 contatos para contatar.' },
-          { icon: '📋', title: 'Registre interações', desc: 'Sempre que falar com alguém relevante, registre na aba Contatos. Quanto mais você registra, mais preciso o Health Score fica.' },
+          { icon: '📋', title: 'Registre interações', desc: 'Sempre que falar com alguém relevante, registre na aba Contatos. Quanto mais você registra, mais precisas as recomendações ficam.' },
           { icon: '🎯', title: 'Próxima ação', desc: 'Todo contato deve ter sempre uma próxima ação definida. Relacionamento sem direção esfria.' },
           { icon: '🌱', title: 'Diversifique categorias', desc: 'Equilibre sua rede entre Mentores, Aliados, Pontes e Potenciais. Redes diversas geram mais oportunidades.' },
         ].map((tip, i) => (
@@ -2049,6 +2049,54 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       <div>
         {pf && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.gold, margin: "0 0 16px", fontWeight: 500, textAlign: "center" }}>{pf.emoji} {pf.name}</p>}
 
+        {/* ── Assistente por WhatsApp: em destaque, no topo — não é um
+            detalhe de rodapé, é o jeito mais usado de falar com o CONÉXIA
+            (na palma da mão, sem precisar abrir o app). Antes ficava depois
+            de "Sua rede", exigindo rolar a tela inteira pra ver. ── */}
+        {hasWhatsappAccess && profile?.whatsapp ? (
+          <div style={{ background: `linear-gradient(135deg, ${C.grn}14, ${C.grn}05)`, border: `1px solid ${C.grn}35`, borderRadius: 14, padding: "20px 22px", marginBottom: 18 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.grn}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>💬</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.grn, marginBottom: 4 }}>
+                  Seu assistente já está no WhatsApp{!isPro && diasDeTrialCrm !== null ? ` — teste grátis, ${Math.max(0, Math.ceil(10 - diasDeTrialCrm))} dia(s) restante(s)` : ""}
+                </div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55, marginBottom: 12 }}>
+                  Não precisa abrir o {BRAND.name} pra usar. Manda uma mensagem de onde estiver: <em>"Liguei pro André hoje, foi positivo"</em> ou <em>"Minhas próximas ações"</em> — e o assistente cuida do resto.
+                </div>
+                <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.grn, color: "#0D0D0D", borderRadius: 8, padding: "9px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Abrir conversa no WhatsApp →</a>
+              </div>
+            </div>
+          </div>
+        ) : hasWhatsappAccess ? (
+          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `linear-gradient(135deg, ${C.gold}14, ${C.gold}05)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "20px 22px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📱</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.gold, marginBottom: 4 }}>Ative o assistente no WhatsApp</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Registre interações e consulte sua rede direto do WhatsApp, sem precisar abrir o app. Toque aqui pra cadastrar seu número.</div>
+            </div>
+            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>→</span>
+          </div>
+        ) : profile?.whatsapp_trial_started_at ? (
+          <div onClick={openAccessKey} style={{ cursor: "pointer", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: C.w06, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>🔒</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.txt, marginBottom: 4 }}>Seu teste grátis do WhatsApp acabou</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Você testou 10 dias grátis. Toque aqui pra assinar o PRO e continuar usando pelo WhatsApp.</div>
+            </div>
+            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>→</span>
+          </div>
+        ) : (
+          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `linear-gradient(135deg, ${C.gold}14, ${C.gold}05)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "20px 22px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📱</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.gold, marginBottom: 4 }}>Teste grátis o assistente no WhatsApp — 10 dias</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Registre interações e consulte sua rede direto do WhatsApp, na palma da mão. Toque aqui pra cadastrar seu número e começar.</div>
+            </div>
+            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>→</span>
+          </div>
+        )}
+
         <HomeToday
           userId={user?.id}
           contacts={cts}
@@ -2075,46 +2123,6 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             </div>
           </div>
         )}
-
-        {hasWhatsappAccess && profile?.whatsapp ? (
-          <div style={{ background: `${C.grn}08`, border: `1px solid ${C.grn}30`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>💬</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.grn, marginBottom: 3 }}>
-                Assistente por WhatsApp ativo{!isPro && diasDeTrialCrm !== null ? ` — teste grátis, ${Math.max(0, Math.ceil(10 - diasDeTrialCrm))} dia(s) restante(s)` : ""}
-              </div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>Manda mensagem pro {BRAND.name} a qualquer hora: <em>"Liguei pro André hoje, foi positivo"</em> ou <em>"Minhas próximas ações"</em>.</div>
-              <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer" style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.grn, textDecoration: "none" }}>Abrir conversa →</a>
-            </div>
-          </div>
-        ) : hasWhatsappAccess ? (
-          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Ative o Assistente por WhatsApp</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Registre interações e consulte sua rede direto pelo WhatsApp. Toque aqui pra cadastrar seu número.</div>
-            </div>
-            <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
-          </div>
-        ) : profile?.whatsapp_trial_started_at ? (
-          <div onClick={openAccessKey} style={{ cursor: "pointer", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>🔒</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 3 }}>Seu teste grátis do WhatsApp acabou</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Você testou 10 dias grátis. Toque aqui pra assinar o PRO e continuar usando.</div>
-            </div>
-            <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
-          </div>
-        ) : (
-          <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Teste grátis o Assistente por WhatsApp — 10 dias</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Registre interações e consulte sua rede direto pelo WhatsApp. Toque aqui pra cadastrar seu número e começar.</div>
-            </div>
-            <span style={{ fontSize: 16, color: C.gold, flexShrink: 0 }}>→</span>
-          </div>
-        )}
       </div>
     );
   };
@@ -2139,12 +2147,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   <div style={{ marginTop:10 }}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
                       <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px" }}>
-                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Health Score</div>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Presença</div>
                         <div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:sel.health>=70?C.grn:sel.health>=40?C.amb:C.cor, marginBottom:5 }}>{sel.health}%</div>
                         <HBar score={sel.health} />
                       </div>
                       <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px" }}>
-                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Relevance Score</div>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Relevância</div>
                         {rs !== null
                           ? (<><div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:getRelevanceLabelColor(rs), marginBottom:5 }}>{rs}%</div>
                              <div style={{ height:6, borderRadius:3, background:C.w06 }}><div style={{ height:6, borderRadius:3, background:getRelevanceLabelColor(rs), width:`${rs}%` }}/></div></>)
@@ -2252,8 +2260,20 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         })()}
 
         {cts.length === 0 ? <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 40, textAlign: "center" }}><Btn small onClick={() => setModal("addC")}>+ Primeiro contato</Btn></div>
-        : cts.map(c => { const ci = CATS.find(x => x.value === c.category); return (
-          <div key={c.id} onClick={() => setSelId(c.id)} style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "12px 14px", marginBottom: 6, cursor: "pointer" }}>
+        : [...cts].sort((a, b) => {
+            // Ordena por prioridade, não por ordem de cadastro — usa o mesmo
+            // status já calculado pra Teia/detalhe de contato, sem criar
+            // uma segunda lógica. "Talvez mereça atenção" sempre primeiro;
+            // dentro de cada grupo, quem tem menos presença (health) vem
+            // antes (mais urgente primeiro).
+            const order = { "Talvez mereça atenção": 0, "Presente e importante": 1, "Relação tranquila": 2, "Sem prioridade agora": 3, "Dados incompletos": 4 };
+            const pa = getContactPriorityStatus(a.health, calculateRelevanceScore(a)).status;
+            const pb = getContactPriorityStatus(b.health, calculateRelevanceScore(b)).status;
+            const oa = order[pa] ?? 5, ob = order[pb] ?? 5;
+            if (oa !== ob) return oa - ob;
+            return (a.health ?? 100) - (b.health ?? 100);
+          }).map(c => { const ci = CATS.find(x => x.value === c.category); return (
+          <div key={c.id} onClick={() => setSelId(c.id)} style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1px solid ${C.brd}`, borderLeft: `3px solid ${{ "Talvez mereça atenção":"#E8A020","Presente e importante":"#4caf50","Relação tranquila":"#ff9800" }[getContactPriorityStatus(c.health, calculateRelevanceScore(c)).status] || C.brd}`, borderRadius: 10, padding: "12px 14px", marginBottom: 6, cursor: "pointer" }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: `${ci?.color || C.gold}14`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: ci?.color }}>{c.name[0]}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 500, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
@@ -2579,7 +2599,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <svg width="28" height="16"><circle cx="14" cy="8" r="6" fill="none" stroke={C.txL} strokeWidth="1.5" strokeDasharray="2,2"/></svg>
-              Distância = Health Score
+              Distância = Presença
             </div>
           </div>
             </div>
@@ -2638,7 +2658,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   // ── "Rede" (âncora principal) = Pessoas + Teia num só lugar ──
   // Reaproveita renderContactsList() e renderTeia() sem tocar no que já
   // funciona — só adiciona um alternador simples por cima.
-  const [redeSubTab, setRedeSubTab] = useState("pessoas");
+  const [redeSubTab, setRedeSubTab] = useState("teia"); // Teia como padrão — é o elemento mais diferenciado do produto, não devia ficar atrás de um clique extra
   const renderContacts = () => (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -3505,7 +3525,7 @@ ${MENTORIA_LINK || true ? `
         {isPro ? (
           <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular o Relevance Score.</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular a relevância.</div>
             {[
               { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
               { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
@@ -3524,12 +3544,12 @@ ${MENTORIA_LINK || true ? `
                 <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, marginTop: 2 }}><span>0</span><span>5</span><span>10</span></div>
               </div>
             ))}
-            {(() => { const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null }); return rs !== null ? (<div style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}><span style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM }}>Relevance Score</span><span style={{ fontFamily:"'JetBrains Mono'", fontSize:14, fontWeight:700, color:getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span></div>) : (<div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic" }}>Preencha os 4 campos para calcular.</div>); })()}
+            {(() => { const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null }); return rs !== null ? (<div style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}><span style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM }}>Relevância</span><span style={{ fontFamily:"'JetBrains Mono'", fontSize:14, fontWeight:700, color:getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span></div>) : (<div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic" }}>Preencha os 4 campos para calcular.</div>); })()}
           </div>
         ) : (
           <div style={{ borderTop:`1px solid ${C.brd}`, marginTop:16, paddingTop:16, background:`${C.gold}06`, borderRadius:8, padding:14 }}>
             <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:600, color:C.gold, marginBottom:4 }}>🔒 Relevância estratégica — PRO</div>
-            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:8 }}>Quer saber quem realmente importa na sua rede? O Relevance Score está disponível no PRO.</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:8 }}>Quer saber quem realmente importa na sua rede? A leitura de relevância está disponível no PRO.</div>
             <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>Tenho uma chave de acesso</button>
           </div>
         )}
@@ -3568,7 +3588,7 @@ ${MENTORIA_LINK || true ? `
         <Inp label="📝 Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
         <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular o Relevance Score.</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular a relevância.</div>
           {[
             { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
             { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
@@ -3599,7 +3619,7 @@ ${MENTORIA_LINK || true ? `
             const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null });
             return rs !== null ? (
               <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Relevance Score</span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Relevância</span>
                 <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span>
               </div>
             ) : (
@@ -3735,9 +3755,6 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
             "Para ser intencional precisa ser estratégico."
           </p>
         </div>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.5, margin:0 }}>
-          Diagnóstico seu perfil relacional em 5 minutos.
-        </p>
       </div>
 
       {/* CTAs */}
