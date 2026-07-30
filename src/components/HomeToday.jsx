@@ -9,6 +9,7 @@ import React, {
 } from "react";
 
 import { supabase } from "../utils/supabase";
+import { MOTION } from "../utils/theme";
 import { computePriorities } from "../../shared/priorityEngine.js";
 import {
   addDays,
@@ -319,11 +320,16 @@ function PriorityCard({
 }) {
   const [open, setOpen] = useState(null);
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(null); // qual botão está em voo
+  const [confirmed, setConfirmed] = useState(null); // mensagem de confirmação transitória
 
-  const run = async (callback) => {
+  const run = async (callback, pendingKey, confirmMessage) => {
     setError("");
+    setPending(pendingKey);
 
     const response = await callback();
+
+    setPending(null);
 
     if (response?.error) {
       setError("Não consegui salvar agora. Tente novamente.");
@@ -331,6 +337,8 @@ function PriorityCard({
     }
 
     setOpen(null);
+    setConfirmed(confirmMessage);
+    setTimeout(() => setConfirmed(null), 2200);
   };
 
   return (
@@ -342,6 +350,7 @@ function PriorityCard({
         padding: 17,
       }}
     >
+      <style>{"@keyframes conexiaFadeIn{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:translateY(0)}}"}</style>
       <div
         style={{
           color: C.gold,
@@ -393,6 +402,26 @@ function PriorityCard({
         </div>
       )}
 
+      {/* Confirmação transitória — fecha o loop "a IA me ouviu" sem esperar
+          o cartão sumir/atualizar pra saber que a resposta foi registrada. */}
+      {confirmed && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            color: C.success,
+            fontFamily: fontSans,
+            fontSize: 12,
+            fontWeight: 600,
+            marginTop: 9,
+            animation: `conexiaFadeIn ${MOTION.base}`,
+          }}
+        >
+          <span>✓</span> {confirmed}
+        </div>
+      )}
+
       <div
         style={{
           display: "flex",
@@ -404,24 +433,25 @@ function PriorityCard({
         <button
           type="button"
           disabled={busy}
-          onClick={() => run(() => onAccept(action))}
+          onClick={() => run(() => onAccept(action), "accept", "Combinado.")}
           style={{
             ...chipStyle,
             borderColor: C.gold,
             color: C.gold,
             fontWeight: 700,
+            opacity: pending === "accept" ? 0.6 : 1,
           }}
         >
-          Ver pessoa
+          {pending === "accept" ? "Abrindo…" : "Ver pessoa"}
         </button>
 
         <button
           type="button"
           disabled={busy}
-          onClick={() => run(() => onDismiss(action))}
-          style={chipStyle}
+          onClick={() => run(() => onDismiss(action), "dismiss", "Anotado — não trago essa de novo tão cedo.")}
+          style={{ ...chipStyle, opacity: pending === "dismiss" ? 0.6 : 1 }}
         >
-          Está tudo bem assim
+          {pending === "dismiss" ? "Um instante…" : "Está tudo bem assim"}
         </button>
 
         <button
@@ -443,23 +473,33 @@ function PriorityCard({
         </button>
       </div>
 
-      {open === "log" && (
-        <DateChoicePopover
-          mode="log"
-          busy={busy}
-          onPick={(dateISO) => run(() => onLogRecent(action, dateISO))}
-          onCancel={() => setOpen(null)}
-        />
-      )}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: open ? "1fr" : "0fr",
+          transition: `grid-template-rows ${MOTION.base}`,
+        }}
+      >
+        <div style={{ overflow: "hidden" }}>
+          {open === "log" && (
+            <DateChoicePopover
+              mode="log"
+              busy={busy}
+              onPick={(dateISO) => run(() => onLogRecent(action, dateISO), "log", "Registrado.")}
+              onCancel={() => setOpen(null)}
+            />
+          )}
 
-      {open === "snooze" && (
-        <DateChoicePopover
-          mode="snooze"
-          busy={busy}
-          onPick={(dateISO) => run(() => onSnooze(action, dateISO))}
-          onCancel={() => setOpen(null)}
-        />
-      )}
+          {open === "snooze" && (
+            <DateChoicePopover
+              mode="snooze"
+              busy={busy}
+              onPick={(dateISO) => run(() => onSnooze(action, dateISO), "snooze", "Vou lembrar você.")}
+              onCancel={() => setOpen(null)}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1097,6 +1137,7 @@ const HomeToday = ({
 
   return (
     <div>
+      <style>{"@keyframes conexiaPulse{0%,100%{opacity:.55}50%{opacity:1}}"}</style>
       <header
         style={{
           marginBottom: 19,
@@ -1152,7 +1193,7 @@ const HomeToday = ({
               height: 90,
               borderRadius: 10,
               background: C.surface,
-              opacity: 0.6,
+              animation: "conexiaPulse 1.4s ease-in-out infinite",  // pulsação contínua, fora da escala fast/base/slow (não é reação a evento)
             }}
           />
         ) : mainRecommendation ? (
