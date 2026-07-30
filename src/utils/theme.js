@@ -12,7 +12,7 @@ export const C = {
   brdH: "#3A3A3A",
   txt:  "#F0EDE8",
   txM:  "#A09890",
-  txL:  "#605850",
+  txL:  "#8C8074", // corrigido: #605850 dava 2,64:1 sobre C.card (reprovava até o AA "texto grande"). Agora 4,5–4,8:1, mesmo tom, só mais claro.
   gold: "#C9A84C",
   gB:   "#A8873A",
   gD:   "#1A1508",
@@ -38,4 +38,18 @@ export const MOTION = {
   fast: "150ms cubic-bezier(0.4, 0, 0.2, 1)",
   base: "220ms cubic-bezier(0.4, 0, 0.2, 1)",
   slow: "400ms cubic-bezier(0.16, 1, 0.3, 1)",
+};
+
+// Escala tipográfica — mesma lógica: nome semântico em vez de número solto.
+// Aplicada por enquanto nos componentes novos/ativamente mantidos (Home,
+// cadastro guiado, assessment). O restante do App.jsx tem ~4400 linhas com
+// tamanhos escolhidos ad-hoc em cada tela — migrar tudo de uma vez seria
+// alto risco de regressão visual sem QA visual real; fica como próxima
+// rodada dedicada, tela por tela.
+export const TYPE = {
+  display: 32, // resultado do assessment, greeting da Home
+  title:   22, // título de card, título de seção
+  body:    15, // texto de leitura principal
+  caption: 13, // meta-informação, labels de campo
+  micro:   11, // uppercase labels, badges
 };
