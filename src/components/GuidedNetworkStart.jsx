@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../utils/supabase';
+import { MOTION } from '../utils/theme';
 
 const C = {
   card: "#141414", sf: "#1A1A1A", brd: "#2A2A2A",
@@ -35,13 +36,45 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
   const [error, setError] = useState(null);
   const [addedCount, setAddedCount] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
+  const [savedPeople, setSavedPeople] = useState([]); // [{id, name, context, importance, lastTalk}]
+  const [editingId, setEditingId] = useState(null);
 
   const reset = () => setForm({ name: '', context: '', importance: 3, lastTalk: '' });
+
+  const editPrevious = () => {
+    const last = savedPeople[savedPeople.length - 1];
+    if (!last) return;
+    setEditingId(last.id);
+    setForm({ name: last.name, context: last.context, importance: last.importance, lastTalk: last.lastTalk || '' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    reset();
+  };
 
   const savePerson = async () => {
     if (!form.name.trim() || saving) return;
     setSaving(true);
     setError(null);
+
+    // ── Editando a pessoa anterior (voltou pelo "Corrigir a anterior") ──
+    if (editingId) {
+      const { error: updError } = await supabase.from('contacts').update({
+        name: form.name.trim(),
+        category: form.context.trim() || null,
+        proximity: form.importance,
+      }).eq('id', editingId).eq('user_id', userId);
+
+      if (updError) { setError('Não consegui salvar a correção agora. Tenta de novo?'); setSaving(false); return; }
+
+      setSavedPeople(list => list.map(p => p.id === editingId ? { ...p, name: form.name.trim(), context: form.context.trim(), importance: form.importance } : p));
+      setEditingId(null);
+      setSaving(false);
+      reset();
+      return;
+    }
+
     const { data: newContact, error: ctError } = await supabase.from('contacts').insert({
       user_id: userId,
       name: form.name.trim(),
@@ -68,6 +101,7 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
       tab_name: 'startNetwork',
     }).then(() => {}, () => {});
 
+    setSavedPeople(list => [...list, { id: newContact.id, name: form.name.trim(), context: form.context.trim(), importance: form.importance, lastTalk: form.lastTalk }]);
     setSaving(false);
     const nextCount = addedCount + 1;
     setAddedCount(nextCount);
@@ -101,11 +135,11 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
           Pessoa {Math.min(addedCount + 1, 3)} de 3
         </div>
         <div style={{ height: 4, borderRadius: 2, background: '#ffffff10', marginBottom: 24 }}>
-          <div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${(addedCount / 3) * 100}%`, transition: 'width .3s' }} />
+          <div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${(addedCount / 3) * 100}%`, transition: `width ${MOTION.slow}` }} />
         </div>
 
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: '0 0 16px' }}>
-          {addedCount === 0 ? 'Quem é importante para você agora?' : 'Vamos adicionar mais alguém?'}
+          {editingId ? 'Corrigindo essa pessoa' : (addedCount === 0 ? 'Quem é importante para você agora?' : 'Vamos adicionar mais alguém?')}
         </h2>
 
         <input style={inputStyle()} placeholder="Nome" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
@@ -121,28 +155,47 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
           ))}
         </div>
 
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 8 }}>Quando vocês conversaram pela última vez? <span style={{ color: C.txL }}>(opcional)</span></div>
-        <input type="date" style={inputStyle()} value={form.lastTalk} onChange={e => setForm(p => ({ ...p, lastTalk: e.target.value }))} />
+        {!editingId && (
+          <>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 8 }}>Quando vocês conversaram pela última vez? <span style={{ color: C.txL }}>(opcional)</span></div>
+            <input type="date" style={inputStyle()} value={form.lastTalk} onChange={e => setForm(p => ({ ...p, lastTalk: e.target.value }))} />
+          </>
+        )}
 
         {error && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.err, marginBottom: 12 }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
           <button disabled={saving || !form.name.trim()} onClick={savePerson}
             style={{ flex: 1, background: C.gold, border: 'none', borderRadius: 10, padding: '12px 0', fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: '#0D0D0D', cursor: saving ? 'default' : 'pointer', opacity: saving || !form.name.trim() ? 0.6 : 1 }}>
-            {saving ? 'Salvando...' : (addedCount >= 2 ? 'Concluir' : 'Adicionar e continuar')}
+            {saving ? 'Salvando...' : (editingId ? 'Salvar correção' : (addedCount >= 2 ? 'Concluir' : 'Adicionar e continuar'))}
           </button>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14 }}>
-          <button disabled={saving} onClick={() => onExit?.(addedCount)} style={{ background: 'none', border: 'none', color: C.txL, fontFamily: "'DM Sans'", fontSize: 12, cursor: 'pointer' }}>
-            {addedCount > 0 ? 'Continuar depois' : 'Pular por agora'}
-          </button>
-          {addedCount > 0 && (
-            <button disabled={saving} onClick={() => onFinish?.(addedCount)} style={{ background: 'none', border: 'none', color: C.gold, fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-              Já cadastrei o suficiente →
+          {editingId && (
+            <button disabled={saving} onClick={cancelEdit}
+              style={{ background: 'none', border: `1px solid ${C.brd}`, borderRadius: 10, padding: '0 16px', fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, cursor: 'pointer' }}>
+              Cancelar
             </button>
           )}
         </div>
+
+        {!editingId && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 14 }}>
+              <button disabled={saving} onClick={() => onExit?.(addedCount)} style={{ background: 'none', border: 'none', color: C.txL, fontFamily: "'DM Sans'", fontSize: 12, cursor: 'pointer' }}>
+                {addedCount > 0 ? 'Continuar depois' : 'Pular por agora'}
+              </button>
+              {addedCount > 0 && (
+                <button disabled={saving} onClick={editPrevious} style={{ background: 'none', border: 'none', color: C.txM, fontFamily: "'DM Sans'", fontSize: 12, cursor: 'pointer' }}>
+                  ← Corrigir {savedPeople[savedPeople.length - 1]?.name || 'a anterior'}
+                </button>
+              )}
+            </div>
+            {addedCount > 0 && (
+              <button disabled={saving} onClick={() => onFinish?.(addedCount)} style={{ background: 'none', border: 'none', color: C.gold, fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                Já cadastrei o suficiente →
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
