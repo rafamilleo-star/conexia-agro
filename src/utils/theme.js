@@ -27,3 +27,15 @@ export const C = {
   teal: "#4ABFBF",
   vio:  "#9B59B6",
 };
+
+// Tokens de movimento — mesma ideia da paleta de cores, mas pra "como as
+// coisas se movem" em vez de "como parecem paradas". Todo `transition`/
+// `animation` do app deveria puxar daqui, não escrever duração/curva solta.
+//   fast: reage ao toque na hora (hover, toggle, botão)
+//   base: abrir/fechar cartão, revelar popover
+//   slow: transição de tela, revelação de resultado importante
+export const MOTION = {
+  fast: "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+  base: "220ms cubic-bezier(0.4, 0, 0.2, 1)",
+  slow: "400ms cubic-bezier(0.16, 1, 0.3, 1)",
+};
