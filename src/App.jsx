@@ -1312,7 +1312,7 @@ function TourModal({ onClose, onFinish, steps }) {
 }
 
 /* ═══ PERFIL FORM ════════════════════════════════════════ */
-function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey }) {
+function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype }) {
   const NETWORK_SIZES = [
     { value: "1-20",   label: "1-20 contatos" },
     { value: "21-50",  label: "21-50 contatos" },
@@ -1427,6 +1427,16 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey }) {
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Meu Perfil</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: 0 }}>Mantenha suas informações atualizadas para personalizar os insights da IA.</p>
       </div>
+      {archetype && (
+        <div style={{ background: `linear-gradient(135deg, ${C.gold}14, ${C.gold}03)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "20px 22px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ fontSize: 34, flexShrink: 0 }}>{archetype.emoji}</div>
+          <div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 3 }}>Seu perfil relacional</div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.gold }}>{archetype.name}</div>
+            {archetype.tagline && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginTop: 2, fontStyle: "italic" }}>{archetype.tagline}</div>}
+          </div>
+        </div>
+      )}
       {isPro ? (
         <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
           <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
@@ -2312,10 +2322,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           const nodes=cts.map((c,i)=>{const a=-Math.PI/2+i*step;const d=R*Math.max(0.15,c.health/100);const ci=CATS.find(x=>x.value===c.category);return{c,x:CX+d*Math.cos(a),y:CY+d*Math.sin(a),col:ci?.color||C.gold,r:Math.max(7,Math.min(18,7+its.filter(x=>x.contactId===c.id).length*2))};});
           return (<div>
             <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16, marginBottom:12 }}>
-              <svg viewBox="0 0 560 480" style={{ width:"100%", height:"auto", maxWidth: 480, maxHeight: "60vh", display: "block", margin: "0 auto" }}>
+              <svg viewBox="0 0 560 480" style={{ width:"100%", height:"auto", maxWidth: 640, maxHeight: "72vh", display: "block", margin: "0 auto" }}>
                 {[0.2,0.4,0.6,0.8,1].map((p,i)=><circle key={i} cx={CX} cy={CY} r={R*p} fill="none" stroke={C.brd} strokeWidth={0.5} strokeDasharray={p<1?"3,7":"none"} opacity={0.4}/>)}
                 <circle cx={CX} cy={CY} r={7} fill={C.gold} opacity={0.9}/>
-                {nodes.map((n,i)=>{const lx=CX+(R+28)*Math.cos(-Math.PI/2+i*step);const ly=CY+(R+28)*Math.sin(-Math.PI/2+i*step);const ta=-Math.PI/2+i*step;return(<g key={i} onClick={()=>{setSelId(n.c.id);setView("contacts");}} style={{cursor:"pointer"}}><circle cx={n.x} cy={n.y} r={n.r} fill={`${n.col}25`} stroke={n.col} strokeWidth={1.5}/><text x={lx} y={ly} textAnchor={ta>Math.PI/2||ta<-Math.PI/2?"end":"start"} dominantBaseline="middle" fill={C.txM} fontSize={10} fontFamily="'DM Sans'">{n.c.name.length>13?n.c.name.slice(0,12)+"…":n.c.name}</text></g>);})}
+                {nodes.map((n,i)=>{const lx=CX+(R+28)*Math.cos(-Math.PI/2+i*step);const ly=CY+(R+28)*Math.sin(-Math.PI/2+i*step);const ta=-Math.PI/2+i*step;return(<g key={i} onClick={()=>{setSelId(n.c.id);setView("contacts");}} style={{cursor:"pointer"}}><title>{`${n.c.name}\nPresença: ${n.c.health}%`}</title><circle cx={n.x} cy={n.y} r={n.r} fill={`${n.col}25`} stroke={n.col} strokeWidth={1.5}/><text x={lx} y={ly} textAnchor={ta>Math.PI/2||ta<-Math.PI/2?"end":"start"} dominantBaseline="middle" fill={C.txM} fontSize={10} fontFamily="'DM Sans'">{n.c.name.length>13?n.c.name.slice(0,12)+"…":n.c.name}</text></g>);})}
               </svg>
             </div>
             <ProLock title="Teia avançada disponível no PRO" desc="Veja quem é estratégico, quem está esfriando e onde sua rede precisa de ação — com filtros, cores de prioridade e painel estratégico." onKey={openAccessKey} user={user} />
@@ -2428,7 +2438,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                 Nenhum contato neste filtro.
               </div>
             ) : (
-              <svg viewBox="0 0 560 510" style={{ width:"100%", height:"auto", maxWidth: 480, maxHeight: "60vh", display: "block", margin: "0 auto" }}>
+              <svg viewBox="0 0 560 510" style={{ width:"100%", height:"auto", maxWidth: 640, maxHeight: "72vh", display: "block", margin: "0 auto" }}>
                 {/* Rings */}
                 {[0.2,0.4,0.6,0.8,1].map((pct,i) => (
                   <circle key={i} cx={CX} cy={CY} r={R*pct} fill="none"
@@ -2454,6 +2464,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   const isHomePriority = homePriorityIds.has(n.c.id);
                   return (
                     <g key={i} onClick={() => setTeiaSel(teiaSel===n.c.id ? null : n.c.id)} style={{ cursor:"pointer" }}>
+                      <title>{`${n.c.name}\nPresença: ${n.c.health}%${n.rs !== null ? `\nRelevância: ${n.rs}%` : ''}\n${n.p.status}`}</title>
                       {/* Glow when selected */}
                       {isSel && <circle cx={n.x} cy={n.y} r={n.nr+6} fill={n.col} opacity={0.15} />}
                       {/* Anel pontilhado: também está entre as prioridades da Home agora */}
@@ -3341,6 +3352,7 @@ ${MENTORIA_LINK || true ? `
       onSaved={(updated) => onProfileUpdate?.(updated)}
       isPro={isPro}
       openAccessKey={openAccessKey}
+      archetype={pf}
     />
   );
 
