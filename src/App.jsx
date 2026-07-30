@@ -1258,7 +1258,8 @@ const HELP_STEPS = {
   // App principal, já com as 3 âncoras atuais.
   dash: [WELCOME_STEP, { icon: "◎", title: "Hoje", desc: "A recomendação mais importante do momento — no máximo 1 principal + 2 secundárias. Sem lista acumulada, sem pressão." }],
   contacts: [{ icon: "⊛", title: "Rede", desc: "Suas pessoas e a Teia (mapa visual da sua rede) ficam juntas aqui — use o alternador \"Pessoas / Teia\" no topo pra trocar de visão." }],
-  perfil: [{ icon: "👤", title: "Eu", desc: "Perfil, plano de ativação, relatório em PDF e os insights da IA ficam todos aqui, num só lugar — use as abas no topo pra navegar entre eles." }],
+  perfil: [{ icon: "👤", title: "Perfil", desc: "Seus dados pessoais e de contato. Mantenha atualizado pra IA personalizar melhor as sugestões." }],
+  insights: [{ icon: "🧠", title: "Insights", desc: "Sugestões, análises e próximos passos da IA. Seu plano de ativação e o relatório em PDF também ficam aqui, nas abas do topo." }],
 };
 
 function getHelpSteps(context) {
@@ -1848,12 +1849,13 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   // atual (contacts.health_score, assessment_results) — está confirmado
   // quebrado, e a regra é não manter uma funcionalidade sabidamente quebrada
   // só para preservar a estrutura anterior.
-  // "Eu"/"Perfil" foi removido daqui de propósito: já existe um botão
-  // dedicado no rodapé da barra lateral (área da conta) que leva pro mesmo
-  // view="perfil" — eram 2 caminhos pro mesmo lugar, ficou só 1.
+  // "Insights" é o chamariz da IA na coluna lateral (com Plano e Relatório
+  // juntos). Cadastro/perfil ficou só no botão de baixo, na área da conta
+  // (view="perfil") — não tem mais 2 caminhos pro mesmo lugar.
   const NAVS = [
     { id: "dash", icon: "◎", label: "Hoje" },
     { id: "contacts", icon: "⊛", label: "Rede" },
+    { id: "insights", icon: "🧠", label: "Insights" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }, { id: "export", icon: "⬇", label: "Exportar" }] : []),
     ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
   ];
@@ -3294,28 +3296,28 @@ ${MENTORIA_LINK || true ? `
     />
   );
 
-  // ── "Eu" (âncora principal) = Perfil + Plano + Relatório + Insights (IA) ──
-  // A antiga aba "IA" deixa de ser destino principal da navegação (fica
-  // dentro de "Eu"), mas o componente AbaIA continua existindo e acessível
-  // — nada foi excluído, só deixou de competir com o onboarding/Home.
-  const [euSubTab, setEuSubTab] = useState("perfil");
-  const EU_TABS = [
-    { id: "perfil", label: "Perfil" },
+  // ── "Insights" (âncora principal, coluna lateral) = IA + Plano + Relatório ──
+  // Cadastro/atualização de perfil NÃO fica aqui — só no botão "Perfil" do
+  // rodapé da barra lateral (view="perfil", renderPerfilForm acima). São 2
+  // destinos diferentes agora, cada um com um conteúdo diferente:
+  //   - "Insights" (coluna lateral): chamariz pra IA, com Plano/Relatório juntos
+  //   - "Perfil" (rodapé, área da conta): só cadastro/dados pessoais
+  const [insightsSubTab, setInsightsSubTab] = useState("ia");
+  const INSIGHTS_TABS = [
+    { id: "ia", label: "Insights" },
     { id: "plano", label: "Plano" },
     { id: "report", label: "Relatório" },
-    { id: "ia", label: "Insights" },
   ];
-  const renderPerfil = () => (
+  const renderInsightsHub = () => (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {EU_TABS.map(t => (
-          <button key={t.id} onClick={() => setEuSubTab(t.id)} style={{ background: euSubTab === t.id ? C.gD : "transparent", border: `1px solid ${euSubTab === t.id ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: euSubTab === t.id ? C.gold : C.txM, cursor: "pointer" }}>{t.label}</button>
+        {INSIGHTS_TABS.map(t => (
+          <button key={t.id} onClick={() => setInsightsSubTab(t.id)} style={{ background: insightsSubTab === t.id ? C.gD : "transparent", border: `1px solid ${insightsSubTab === t.id ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: insightsSubTab === t.id ? C.gold : C.txM, cursor: "pointer" }}>{t.label}</button>
         ))}
       </div>
-      {euSubTab === "perfil" && renderPerfilForm()}
-      {euSubTab === "plano" && renderPlan()}
-      {euSubTab === "report" && renderReport()}
-      {euSubTab === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
+      {insightsSubTab === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
+      {insightsSubTab === "plano" && renderPlan()}
+      {insightsSubTab === "report" && renderReport()}
     </div>
   );
 
@@ -3350,7 +3352,7 @@ ${MENTORIA_LINK || true ? `
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
       {/* Ajuda: automática na 1ª vez (boas-vindas), depois sempre contextual
           ao que a pessoa está vendo — não é mais um tour fixo do app inteiro. */}
-      {showTour && <TourModal onClose={closeTour} onFinish={closeTour} steps={getHelpSteps(["dash", "contacts", "perfil", "startNetwork"].includes(view) ? view : "dash")} />}
+      {showTour && <TourModal onClose={closeTour} onFinish={closeTour} steps={getHelpSteps(["dash", "contacts", "perfil", "insights", "startNetwork"].includes(view) ? view : "dash")} />}
       <HelpButton onClick={() => setShowTour(true)} bottom={isMobile ? 78 : 20} />
       {/* PRO Activation Toast */}
       {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
@@ -3428,7 +3430,8 @@ ${MENTORIA_LINK || true ? `
         {view === "mentor" && admin && renderMentor()}
         {view === "export" && admin && renderExport()}
         {view === "metrics" && isMetricsAdmin && renderMetrics()}
-        {view === "perfil" && renderPerfil()}
+        {view === "insights" && renderInsightsHub()}
+        {view === "perfil" && renderPerfilForm()}
       </main>
 
       {isMobile && (
