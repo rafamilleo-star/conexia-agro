@@ -4,7 +4,7 @@ import GuidedNetworkStart from './components/GuidedNetworkStart';
 import { computePriorities } from '../shared/priorityEngine.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "./utils/supabase";
-import { C, MOTION, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
+import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { BRAND } from "./config/brand";
 import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
 import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
@@ -515,12 +515,12 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>{prof.emoji}</div>
           <Tag color={C.grn}>Diagnóstico concluído</Tag>
-          <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 34, fontWeight: 700, color: C.gold, margin: "12px 0 4px", fontStyle: "italic" }}>{prof.name}</h1>
-          <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, fontStyle: "italic" }}>{prof.tagline}</p>
+          <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: TYPE.display, fontWeight: 700, color: C.gold, margin: "12px 0 4px", fontStyle: "italic" }}>{prof.name}</h1>
+          <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txM, fontStyle: "italic" }}>{prof.tagline}</p>
         </div>
 
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 22, marginBottom: 20 }}>
-          <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, lineHeight: 1.7, margin: 0 }}>
+          <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txt, lineHeight: 1.7, margin: 0 }}>
             {maxD && minD ? (
               <>Seu perfil mostra facilidade em <strong style={{ color: C.gold }}>{forcaLabel}</strong>, mas indica que <strong style={{ color: C.gold }}>{desafioLabel}</strong> pode ser um desafio. Agora vamos transformar esse diagnóstico em uma rede que você consegue cuidar no dia a dia.</>
             ) : (
@@ -531,11 +531,11 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
 
         <Btn onClick={handleStartNetwork} disabled={saving} full>{saving ? "Salvando..." : "Começar minha rede →"}</Btn>
         {saveError && (
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, textAlign: "center", marginTop: 10 }}>{saveError}</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.cor, textAlign: "center", marginTop: 10 }}>{saveError}</div>
         )}
 
         <div style={{ textAlign: "center", marginTop: 16 }}>
-          <button onClick={() => setShowFull(s => !s)} style={{ background: "none", border: "none", color: C.txL, fontFamily: "'DM Sans'", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+          <button onClick={() => setShowFull(s => !s)} style={{ background: "none", border: "none", color: C.txL, fontFamily: "'DM Sans'", fontSize: TYPE.caption, cursor: "pointer", textDecoration: "underline" }}>
             {showFull ? "Ocultar diagnóstico completo" : "Ver diagnóstico completo"}
           </button>
         </div>
@@ -548,16 +548,16 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
               <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Suas 6 dimensões</div>
               {DIMS.map((d, i) => { const v = scores[d.key] || 0; return (
                 <div key={i} style={{ marginBottom: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 500, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 600, color: d.color }}>{v}%</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 500, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: TYPE.caption, fontWeight: 600, color: d.color }}>{v}%</span></div>
                   <div style={{ height: 8, borderRadius: 4, background: C.w06 }}><div style={{ height: 8, borderRadius: 4, background: d.color, width: `${v}%`, transition: `width ${MOTION.slow}` }} /></div>
                 </div>
               ); })}
             </div>
             <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Análise profunda</div>
-              <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.65 }}>{prof.desc}</p>
+              <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txM, lineHeight: 1.65 }}>{prof.desc}</p>
             </div>
-            <div style={{ textAlign: "center", fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
+            <div style={{ textAlign: "center", fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.txL }}>
               O plano de 4 semanas completo e o PDF continuam disponíveis depois, dentro de "Eu".
             </div>
           </div>
@@ -1546,6 +1546,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [intCid, setIntCid] = useState(null);
   const [teiaFilter, setTeiaFilter] = useState("todos");
   const [teiaSel, setTeiaSel] = useState(null);
+  const [teiaLegendOpen, setTeiaLegendOpen] = useState(false);
   const [dbgMsg, setDbgMsg] = useState("");
   const [cf, setCf] = useState({ name: "", company: "", role: "", category: "potencial", proximity: "3", idealFreq: "30", notes: "", howMet: "", whatsapp: "", contactEmail: "", linkedin: "", birthday: "", hobbies: "", mainCulture: "", city: "", stateCode: "", nextAction: "", nextActionDate: "", influenciaPessoas: "", geraOportunidade: "", abrePortas: "", momentoAtual: "" });
   const [metrics, setMetrics] = useState(null);
@@ -2537,10 +2538,17 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           )}
         </div>
 
-        {/* Legenda */}
-        <div style={{ marginTop:14, background:C.card, border:`1px solid ${C.brd}`, borderRadius:10, padding:"12px 16px" }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:10, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:10 }}>Legenda</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:8 }}>
+        {/* Legenda — recolhida por padrão. É informação de referência, não
+            precisa competir visualmente com o gráfico toda vez que alguém
+            abre a Teia; quem precisa, abre. */}
+        <div style={{ marginTop:14, background:C.card, border:`1px solid ${C.brd}`, borderRadius:10, padding: teiaLegendOpen ? "12px 16px" : "8px 16px" }}>
+          <button onClick={() => setTeiaLegendOpen(o => !o)} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"none", border:"none", cursor:"pointer", padding:0 }}>
+            <span style={{ fontFamily:"'DM Sans'", fontSize:10, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em" }}>Legenda</span>
+            <span style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>{teiaLegendOpen ? "ocultar ▲" : "ver ▾"}</span>
+          </button>
+          <div style={{ display: "grid", gridTemplateRows: teiaLegendOpen ? "1fr" : "0fr", transition: `grid-template-rows ${MOTION.base}` }}>
+            <div style={{ overflow: "hidden" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:8, marginTop:10 }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <div style={{ width:14, height:14, borderRadius:7, background:"transparent", border:"2px solid #4caf50", flexShrink:0 }}/>
               Presente e importante
@@ -2572,6 +2580,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             <div style={{ display:"flex", alignItems:"center", gap:7, fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>
               <svg width="28" height="16"><circle cx="14" cy="8" r="6" fill="none" stroke={C.txL} strokeWidth="1.5" strokeDasharray="2,2"/></svg>
               Distância = Health Score
+            </div>
+          </div>
             </div>
           </div>
         </div>
