@@ -2322,7 +2322,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           const nodes=cts.map((c,i)=>{const a=-Math.PI/2+i*step;const d=R*Math.max(0.15,c.health/100);const ci=CATS.find(x=>x.value===c.category);return{c,x:CX+d*Math.cos(a),y:CY+d*Math.sin(a),col:ci?.color||C.gold,r:Math.max(7,Math.min(18,7+its.filter(x=>x.contactId===c.id).length*2))};});
           return (<div>
             <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16, marginBottom:12 }}>
-              <svg viewBox="0 0 560 480" style={{ width:"100%", height:"auto", maxWidth: 640, maxHeight: "72vh", display: "block", margin: "0 auto" }}>
+              <svg viewBox="0 0 560 480" style={{ width:"100%", height:"auto", maxWidth: 720, maxHeight: "78vh", display: "block", margin: "0 auto" }}>
                 {[0.2,0.4,0.6,0.8,1].map((p,i)=><circle key={i} cx={CX} cy={CY} r={R*p} fill="none" stroke={C.brd} strokeWidth={0.5} strokeDasharray={p<1?"3,7":"none"} opacity={0.4}/>)}
                 <circle cx={CX} cy={CY} r={7} fill={C.gold} opacity={0.9}/>
                 {nodes.map((n,i)=>{const lx=CX+(R+28)*Math.cos(-Math.PI/2+i*step);const ly=CY+(R+28)*Math.sin(-Math.PI/2+i*step);const ta=-Math.PI/2+i*step;return(<g key={i} onClick={()=>{setSelId(n.c.id);setView("contacts");}} style={{cursor:"pointer"}}><title>{`${n.c.name}\nPresença: ${n.c.health}%`}</title><circle cx={n.x} cy={n.y} r={n.r} fill={`${n.col}25`} stroke={n.col} strokeWidth={1.5}/><text x={lx} y={ly} textAnchor={ta>Math.PI/2||ta<-Math.PI/2?"end":"start"} dominantBaseline="middle" fill={C.txM} fontSize={10} fontFamily="'DM Sans'">{n.c.name.length>13?n.c.name.slice(0,12)+"…":n.c.name}</text></g>);})}
@@ -2430,7 +2430,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           ))}
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns: teiaSel ? "1fr 280px" : "1fr", gap:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns: "1fr 300px", gap:12 }}>
           {/* SVG Teia */}
           <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16 }}>
             {filtered.length === 0 ? (
@@ -2438,7 +2438,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                 Nenhum contato neste filtro.
               </div>
             ) : (
-              <svg viewBox="0 0 560 510" style={{ width:"100%", height:"auto", maxWidth: 640, maxHeight: "72vh", display: "block", margin: "0 auto" }}>
+              <svg viewBox="0 0 560 510" style={{ width:"100%", height:"auto", maxWidth: 720, maxHeight: "78vh", display: "block", margin: "0 auto" }}>
                 {/* Rings */}
                 {[0.2,0.4,0.6,0.8,1].map((pct,i) => (
                   <circle key={i} cx={CX} cy={CY} r={R*pct} fill="none"
@@ -2488,6 +2488,52 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           </div>
 
           {/* Side panel */}
+          {!(teiaSel && selContact) && (() => {
+            // Visão geral da rede — mesmo lugar onde aparece o detalhe da
+            // pessoa, só que mostrando o todo em vez de uma pessoa só,
+            // enquanto nada estiver selecionado. Reaproveita o status já
+            // calculado por contato (mesma fonte da cor de cada nó).
+            const statuses = filtered.map(c => getContactPriorityStatus(c.health, calculateRelevanceScore(c)).status);
+            const countBy = (s) => statuses.filter(x => x === s).length;
+            const avgHealth = filtered.length ? Math.round(filtered.reduce((sum, c) => sum + (c.health || 0), 0) / filtered.length) : 0;
+            const rows = [
+              { label: "Talvez mereça atenção", count: countBy("Talvez mereça atenção"), color: "#E8A020" },
+              { label: "Presente e importante", count: countBy("Presente e importante"), color: "#4caf50" },
+              { label: "Relação tranquila", count: countBy("Relação tranquila"), color: "#ff9800" },
+              { label: "Sem prioridade agora", count: countBy("Sem prioridade agora"), color: "#89827C" },
+              { label: "Dados incompletos", count: countBy("Dados incompletos"), color: "#5B9BD5" },
+            ].filter(r => r.count > 0);
+
+            return (
+              <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16 }}>
+                <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:19, fontWeight:700, color:C.txt, marginBottom:2 }}>Sua rede</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:16 }}>{filtered.length} {filtered.length === 1 ? "pessoa" : "pessoas"} neste filtro</div>
+
+                <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px", marginBottom:14 }}>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:8, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>Presença média</div>
+                  <div style={{ fontFamily:"'JetBrains Mono'", fontSize:22, fontWeight:700, color: avgHealth>=70?C.grn:avgHealth>=40?C.amb:C.cor }}>{avgHealth}%</div>
+                </div>
+
+                <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>Como está agora</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                  {rows.map(r => (
+                    <div key={r.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                        <div style={{ width:8, height:8, borderRadius:4, background:r.color, flexShrink:0 }} />
+                        <span style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM }}>{r.label}</span>
+                      </div>
+                      <span style={{ fontFamily:"'JetBrains Mono'", fontSize:12, fontWeight:700, color:r.color }}>{r.count}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic", lineHeight:1.5 }}>
+                  Toque em uma pessoa na teia pra ver os detalhes dela.
+                </div>
+              </div>
+            );
+          })()}
+
           {teiaSel && selContact && (
             <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16, position:"relative" }}>
               <button onClick={() => setTeiaSel(null)}
