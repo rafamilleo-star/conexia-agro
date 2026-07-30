@@ -172,14 +172,15 @@ function Button({ children, onClick, primary = false, disabled = false }) {
 }
 
 
-function Section({ title, action, children }) {
+function Section({ title, action, children, variant = "info" }) {
+  const isAction = variant === "action";
   return (
     <section
       style={{
-        background: C.card,
-        border: `1px solid ${C.border}`,
+        background: isAction ? C.card : "transparent",
+        border: `1px solid ${isAction ? C.border : C.border + "80"}`,
         borderRadius: 14,
-        padding: 18,
+        padding: isAction ? 18 : 15,
         marginBottom: 14,
       }}
     >
@@ -189,16 +190,18 @@ function Section({ title, action, children }) {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          marginBottom: 14,
+          marginBottom: isAction ? 14 : 10,
         }}
       >
         <h2
           style={{
             margin: 0,
-            color: C.text,
-            fontFamily: fontSerif,
-            fontSize: TYPE.title,
-            fontWeight: 700,
+            color: isAction ? C.text : C.muted,
+            fontFamily: isAction ? fontSerif : fontSans,
+            fontSize: isAction ? TYPE.title : TYPE.micro,
+            fontWeight: isAction ? 700 : 700,
+            textTransform: isAction ? "none" : "uppercase",
+            letterSpacing: isAction ? "normal" : "0.06em",
           }}
         >
           {title}
@@ -1200,7 +1203,7 @@ const HomeToday = ({
         onStartAssessment={onStartAssessment}
       />
 
-      <Section title="Para hoje">
+      <Section title="Para hoje" variant="action">
         {loadError && (
           <div
             style={{
