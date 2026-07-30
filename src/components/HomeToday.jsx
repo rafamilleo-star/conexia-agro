@@ -217,6 +217,7 @@ function Section({ title, action, children, variant = "info" }) {
 
 function DateChoicePopover({ mode, onPick, onCancel, busy }) {
   const [customDate, setCustomDate] = useState("");
+  const [note, setNote] = useState("");
 
   const options =
     mode === "snooze"
@@ -265,13 +266,34 @@ function DateChoicePopover({ mode, onPick, onCancel, busy }) {
             type="button"
             key={option.label}
             disabled={busy}
-            onClick={() => onPick(option.dateISO)}
+            onClick={() => onPick(option.dateISO, note)}
             style={chipStyle}
           >
             {option.label}
           </button>
         ))}
       </div>
+
+      {mode !== "snooze" && (
+        <textarea
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="O que aconteceu, rapidinho? (opcional, mas ajuda o CONÉXIA a te conhecer melhor)"
+          rows={2}
+          style={{
+            width: "100%",
+            background: "transparent",
+            border: `1px solid ${C.border}`,
+            color: C.text,
+            borderRadius: 8,
+            padding: "8px 10px",
+            fontFamily: fontSans,
+            fontSize: TYPE.caption,
+            marginBottom: 10,
+            resize: "vertical",
+          }}
+        />
+      )}
 
       <div
         style={{
@@ -298,7 +320,7 @@ function DateChoicePopover({ mode, onPick, onCancel, busy }) {
         <button
           type="button"
           disabled={busy || !customDate}
-          onClick={() => onPick(customDate)}
+          onClick={() => onPick(customDate, note)}
           style={chipStyle}
         >
           Confirmar
@@ -324,6 +346,7 @@ function DateChoicePopover({ mode, onPick, onCancel, busy }) {
 function PriorityCard({
   action,
   busy,
+  historyLabel,
   onAccept,
   onDismiss,
   onLogRecent,
@@ -399,6 +422,19 @@ function PriorityCard({
       >
         {action.reason}
       </div>
+
+      {historyLabel && (
+        <div
+          style={{
+            color: C.light,
+            fontFamily: fontSans,
+            fontSize: TYPE.micro,
+            marginTop: 6,
+          }}
+        >
+          {historyLabel}
+        </div>
+      )}
 
       {error && (
         <div
@@ -496,7 +532,7 @@ function PriorityCard({
             <DateChoicePopover
               mode="log"
               busy={busy}
-              onPick={(dateISO) => run(() => onLogRecent(action, dateISO), "log", "Registrado.")}
+              onPick={(dateISO, note) => run(() => onLogRecent(action, dateISO, note), "log", "Registrado.")}
               onCancel={() => setOpen(null)}
             />
           )}
@@ -938,6 +974,24 @@ const HomeToday = ({
   }, [contacts, feedbackMap]);
 
   const mainRecommendation = priorities?.main || null;
+  // Até 3 cartões, nunca um número fixo — só os que realmente existem hoje.
+  // Antes só o `main` aparecia; "às vezes vamos ter mais de 1 por dia".
+  const priorityCards = [priorities?.main, ...(priorities?.secondary || [])].filter(Boolean);
+
+  // "Onde fica a inteligência dos dados depois, baseado nas interações?" —
+  // cada cartão agora mostra um resumo real do histórico com essa pessoa,
+  // não só a recomendação isolada.
+  const historyLabelFor = useCallback((contactId) => {
+    const withThisContact = (interactions || []).filter(i => getContactId(i) === contactId);
+    if (withThisContact.length === 0) return "Nenhuma interação registrada ainda.";
+    const last = withThisContact
+      .map(i => getInteractionDate(i))
+      .filter(Boolean)
+      .sort((a, b) => new Date(b) - new Date(a))[0];
+    const count = withThisContact.length;
+    const countLabel = count === 1 ? "1 interação registrada" : `${count} interações registradas`;
+    return last ? `${countLabel} · a última foi ${relativeDate(last).toLowerCase()}` : countLabel;
+  }, [interactions]);
 
   useEffect(() => {
     if (loadingAlerts) return;
@@ -1053,9 +1107,10 @@ const HomeToday = ({
       });
     })();
 
-  const handleLogRecent = (action, dateISO) =>
+  const handleLogRecent = (action, dateISO, note) =>
     withGuard(action, async () => {
       const selectedDate = new Date(`${dateISO}T12:00:00`).toISOString();
+      const trimmedNote = (note || "").trim();
 
       const { error: interactionError } = await supabase
         .from("interactions")
@@ -1063,8 +1118,10 @@ const HomeToday = ({
           user_id: userId,
           contact_id: action.relationshipId,
           type: "mensagem",
-          description:
-            'Conversa recente confirmada a partir de uma recomendação em "Hoje".',
+          // Antes disso era sempre um texto genérico fixo, mesmo quando a
+          // pessoa contava o que realmente aconteceu — a nota digitada
+          // agora vira o registro de verdade, não só uma data confirmada.
+          description: trimmedNote || 'Conversa recente confirmada a partir de uma recomendação em "Hoje".',
           sentiment: "positivo",
           tags: [],
           value_generated: false,
@@ -1226,15 +1283,21 @@ const HomeToday = ({
               animation: "conexiaPulse 1.4s ease-in-out infinite",  // pulsação contínua, fora da escala fast/base/slow (não é reação a evento)
             }}
           />
-        ) : mainRecommendation ? (
-          <PriorityCard
-            action={mainRecommendation}
-            busy={busyId === mainRecommendation.recommendationId}
-            onAccept={handleAccept}
-            onDismiss={handleDismiss}
-            onLogRecent={handleLogRecent}
-            onSnooze={handleSnooze}
-          />
+        ) : priorityCards.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {priorityCards.map((card) => (
+              <PriorityCard
+                key={card.recommendationId}
+                action={card}
+                busy={busyId === card.recommendationId}
+                historyLabel={historyLabelFor(card.relationshipId)}
+                onAccept={handleAccept}
+                onDismiss={handleDismiss}
+                onLogRecent={handleLogRecent}
+                onSnooze={handleSnooze}
+              />
+            ))}
+          </div>
         ) : (
           <div
             style={{
