@@ -490,6 +490,7 @@ function Onboard({ onDone, initialKey = "" }) {
 // existindo — como um link secundário que não bloqueia o próximo passo.
 function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, onSave, userId }) {
   const [showFull, setShowFull] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -507,6 +508,8 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
+      {showHelp && <TourModal onClose={() => setShowHelp(false)} onFinish={() => setShowHelp(false)} steps={getHelpSteps("assessResult")} />}
+      <HelpButton onClick={() => setShowHelp(true)} />
       <div style={{ maxWidth: 480, width: "100%" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>{prof.emoji}</div>
@@ -574,6 +577,7 @@ function Assess({ profile, onDone }) {
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [showHelp, setShowHelp] = useState(false);
   // Guard síncrono: useRef não depende de re-render, então cobre o caso de
   // duplo-clique disparando dois eventos antes do React aplicar `disabled`.
   // O useState continua existindo só para controlar o texto/estado visual do botão.
@@ -649,6 +653,8 @@ function Assess({ profile, onDone }) {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
+      {showHelp && <TourModal onClose={() => setShowHelp(false)} onFinish={() => setShowHelp(false)} steps={getHelpSteps("assess")} />}
+      <HelpButton onClick={() => setShowHelp(true)} />
       <div style={{ maxWidth: 520, width: "100%" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <Tag color={DIMS[q.dim].color}>{DIMS[q.dim].label}</Tag>
@@ -1235,21 +1241,47 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   );
 }
 
-/* ═══ TOUR DE USO (primeira vez + lâmpada de dicas) ═════════ */
-const TOUR_STEPS = [
-  { icon: "✨", title: `Bem-vindo(a) ao ${BRAND.name}`, desc: "Isso aqui não é um CRM tradicional. É um sistema pra cultivar relacionamentos estratégicos de forma intencional — com diagnóstico, plano de ação e IA te ajudando no caminho. Vamos te mostrar rapidinho cada parte." },
-  { icon: "📈", title: "Analytics", desc: "Evolução das suas métricas de rede ao longo do tempo." },
-  { icon: "◎", title: "Dashboard", desc: "Seu painel principal: Health Score, alertas de contatos esfriando e as próximas ações recomendadas." },
-  { icon: "◈", title: "Contatos", desc: "Sua rede cadastrada. Registre toda interação relevante aqui — quanto mais você registra, mais preciso fica o seu diagnóstico." },
-  { icon: "⊛", title: "Teia", desc: "Um mapa visual da sua rede: veja rápido quem está próximo, distante ou esquecido." },
-  { icon: "🗺️", title: "Plano", desc: "Seu plano de ativação de 90 dias, com metas semanais baseadas no seu perfil relacional." },
-  { icon: "🧠", title: "IA", desc: "Seu coach de relacionamento particular. Peça sugestões, análises e próximos passos personalizados." },
-  { icon: "📊", title: "Relatório", desc: "Seu diagnóstico relacional completo, pronto pra baixar em PDF." },
-  { icon: "👤", title: "Perfil", desc: "Seus dados, plano PRO e chave de acesso ficam aqui." },
-];
+/* ═══ AJUDA CONTEXTUAL (primeira vez + lâmpada de dicas) ═════════
+   Antes disso era um tour fixo com 9 passos descrevendo abas que não
+   existem mais ("Analytics", "Dashboard" separado, "IA" como aba própria).
+   Agora o conteúdo muda de acordo com onde a pessoa está — incluindo
+   dentro do assessment e do cadastro guiado, que antes não tinham nenhum
+   tipo de ajuda. */
+const WELCOME_STEP = { icon: "✨", title: `Bem-vindo(a) ao ${BRAND.name}`, desc: "Isso aqui não é um CRM tradicional. É um assistente que te ajuda a cuidar das pessoas importantes, sem transformar relações em tarefas." };
 
-function TourModal({ onClose, onFinish }) {
+const HELP_STEPS = {
+  // Onboarding e assessment — telas que hoje não tinham ajuda nenhuma.
+  onboard: [WELCOME_STEP, { icon: "📝", title: "Cadastro inicial", desc: "Só o essencial pra começar. O resto você completa depois, com calma, dentro de \"Eu\"." }],
+  assess: [{ icon: "🧭", title: "Diagnóstico relacional", desc: "12 perguntas rápidas. Suas respostas são salvas automaticamente a cada uma — pode fechar e voltar quando quiser, sem perder nada." }],
+  assessResult: [{ icon: "🎯", title: "Seu resultado", desc: "Esse é só o resumo. Se quiser o diagnóstico completo (gráfico, todas as dimensões), tem um link \"Ver diagnóstico completo\" logo abaixo do botão principal." }],
+  startNetwork: [{ icon: "🫂", title: "Cadastro guiado", desc: "Uma pessoa de cada vez, só o essencial. Você pode pular a qualquer momento — nada aqui é obrigatório, e dá pra completar o resto depois no perfil de cada pessoa." }],
+  // App principal, já com as 3 âncoras atuais.
+  dash: [WELCOME_STEP, { icon: "◎", title: "Hoje", desc: "A recomendação mais importante do momento — no máximo 1 principal + 2 secundárias. Sem lista acumulada, sem pressão." }],
+  contacts: [{ icon: "⊛", title: "Rede", desc: "Suas pessoas e a Teia (mapa visual da sua rede) ficam juntas aqui — use o alternador \"Pessoas / Teia\" no topo pra trocar de visão." }],
+  perfil: [{ icon: "👤", title: "Eu", desc: "Perfil, plano de ativação, relatório em PDF e os insights da IA ficam todos aqui, num só lugar — use as abas no topo pra navegar entre eles." }],
+};
+
+function getHelpSteps(context) {
+  return HELP_STEPS[context] || [WELCOME_STEP];
+}
+
+// Botão flutuante reutilizável — usado dentro do app (CRM), do assessment
+// e do cadastro guiado, sempre com o conteúdo certo pra onde a pessoa está.
+function HelpButton({ onClick, bottom = 20 }) {
+  return (
+    <button
+      onClick={onClick}
+      title="Dicas desta tela"
+      aria-label="Dicas desta tela"
+      style={{ position: "fixed", bottom, right: 20, width: 44, height: 44, borderRadius: "50%", background: C.gold, border: "none", boxShadow: "0 4px 14px #00000040", fontSize: 20, cursor: "pointer", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }}
+    >💡</button>
+  );
+}
+
+
+function TourModal({ onClose, onFinish, steps }) {
   const [step, setStep] = useState(0);
+  const TOUR_STEPS = steps && steps.length ? steps : [WELCOME_STEP];
   const total = TOUR_STEPS.length;
   const s = TOUR_STEPS[step];
   const isLast = step === total - 1;
@@ -3314,14 +3346,10 @@ ${MENTORIA_LINK || true ? `
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
-      {/* Tour de uso: automático na 1ª vez, e reaberto a qualquer momento pela lâmpada */}
-      {showTour && <TourModal onClose={closeTour} onFinish={closeTour} />}
-      <button
-        onClick={() => setShowTour(true)}
-        title="Dicas de uso"
-        aria-label="Dicas de uso"
-        style={{ position: "fixed", bottom: isMobile ? 78 : 20, right: 20, width: 44, height: 44, borderRadius: "50%", background: C.gold, border: "none", boxShadow: "0 4px 14px #00000040", fontSize: 20, cursor: "pointer", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }}
-      >💡</button>
+      {/* Ajuda: automática na 1ª vez (boas-vindas), depois sempre contextual
+          ao que a pessoa está vendo — não é mais um tour fixo do app inteiro. */}
+      {showTour && <TourModal onClose={closeTour} onFinish={closeTour} steps={getHelpSteps(["dash", "contacts", "perfil", "startNetwork"].includes(view) ? view : "dash")} />}
+      <HelpButton onClick={() => setShowTour(true)} bottom={isMobile ? 78 : 20} />
       {/* PRO Activation Toast */}
       {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
       {!isMobile && (
