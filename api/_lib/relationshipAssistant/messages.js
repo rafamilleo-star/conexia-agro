@@ -49,10 +49,12 @@ export function weeklySummaryBodyMessage({ firstName, weekInteractionsCount, ite
   return `${intro}Para esta semana:\n\n${lista}${sugestao}`;
 }
 
-// reason/suggestedMessage vêm do actionEngine e NUNCA devem conter
-// relationshipContext/notes cru — só texto seguro e genérico.
+// reason vem do priorityEngine (shared/priorityEngine.js, via actionEngine.js)
+// e NUNCA deve conter relationshipContext/notes cru — só texto seguro e
+// genérico. O `reason` já vem formulado com contexto próprio, então a
+// mensagem não repete informação — só apresenta quem é.
 export function relationshipAttentionMessage({ firstName, contactName, reason }) {
-  return `Separei uma relação que está próxima da frequência que você definiu: *${contactName}*.\n\n${reason}\n\nTalvez seja um bom momento para falar com ${contactName}.`;
+  return `Separei uma pessoa que talvez mereça sua atenção: *${contactName}*.\n\n${reason}`;
 }
 
 export function nextBestActionMessage({ contactName, title, reason }) {
@@ -63,10 +65,15 @@ export const CTAS = {
   onboarding: ['Continuar cadastro', 'Retomar no CONÉXIA'],
   inactivity: ['Ver minha próxima ação', 'Quem merece atenção?', 'Cadastrar alguém importante', 'Abrir o CONÉXIA'],
   weeklySummary: ['Ver minha semana no CONÉXIA'],
+  // Respostas humanas ao RELATIONSHIP_ATTENTION — cada uma ensina o motor de
+  // prioridade (ver shared/alertsFeedback.js). Reconhecer essas frases no
+  // classificador de intenção do webhook segue sendo um passo seguinte,
+  // ainda não conectado.
+  relationshipAttention: ['Vale retomar', 'Está tudo bem assim', 'Conversamos recentemente', 'Lembrar depois'],
 };
 
 // Frases proibidas — usado em testes e como checagem defensiva antes de enviar
-// (nunca deixar passar tom de cobrança acidental).
+// (nunca deixar passar tom de cobrança ou linguagem técnica de CRM/scoring).
 export const FORBIDDEN_PHRASES = [
   'você está há',
   'sem acessar',
@@ -74,6 +81,17 @@ export const FORBIDDEN_PHRASES = [
   'não perder seu progresso',
   'você está atrasado',
   'não cumpriu sua meta',
+  'você sumiu',
+  'você ignorou',
+  'você precisa',
+  'deveria ter feito',
+  'vínculo inativo',
+  'relação fria',
+  'reciprocidade caiu',
+  'health score',
+  'engajamento',
+  'centralidade',
+  'nó crítico',
 ];
 
 export function containsForbiddenTone(text) {
