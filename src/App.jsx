@@ -7,6 +7,7 @@ import { supabase } from "./utils/supabase";
 import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { BRAND } from "./config/brand";
 import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
+import { buildTaskMicroresponse, buildMetaMicroresponse } from "./lib/evolutionCopy";
 import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
 import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
 import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transparente.webp";
@@ -1001,6 +1002,14 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [realProgress, setRealProgress] = useState(null); // atividade real (interactions/contacts) vinda do banco
   const [loaded, setLoaded] = useState(false);
+  // Microrresposta contextual ao concluir tarefa/meta — some sozinha, não
+  // fica acumulando (nada de log de "conquistas"). Ver src/lib/evolutionCopy.js.
+  const [microMsg, setMicroMsg] = useState(null);
+  useEffect(() => {
+    if (!microMsg) return;
+    const t = setTimeout(() => setMicroMsg(null), 6000);
+    return () => clearTimeout(t);
+  }, [microMsg]);
 
   // Carrega estado real do Supabase: checklist (plan_step_completion), metas de IA
   // com progresso calculado (ai_goals_progress) e atividade real registrada (plan_progress).
@@ -1037,6 +1046,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         .upsert({ user_id: userId, phase: 1, week: weekNum, step_number: taskIdx, completed_at: new Date().toISOString() },
           { onConflict: 'user_id,phase,week,step_number' });
       if (error) { console.error('[Plano] falha ao salvar tarefa:', error); setDone(d => ({ ...d, [key]: wasDone })); }
+      else setMicroMsg(buildTaskMicroresponse(realProgress));
     }
   };
 
@@ -1051,6 +1061,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         .upsert({ user_id: userId, phase: 1, week: weekNum, step_number: -1, completed_at: new Date().toISOString() },
           { onConflict: 'user_id,phase,week,step_number' });
       if (error) { console.error('[Plano] falha ao salvar meta:', error); setMetaDone(m => ({ ...m, [weekNum]: wasDone })); }
+      else setMicroMsg(buildMetaMicroresponse(realProgress));
     }
   };
 
@@ -1156,6 +1167,13 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
           );
         })}
       </div>
+
+      {/* Microrresposta contextual — aparece ao concluir tarefa/meta, some sozinha */}
+      {microMsg && (
+        <div style={{ background: `${C.gold}0d`, border: `1px solid ${C.gL}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontFamily: "'DM Sans'", fontSize: 12.5, color: C.txt, lineHeight: 1.5 }}>
+          {microMsg}
+        </div>
+      )}
 
       {/* Semanas do plano */}
       {PLAN.map((w, i) => {
@@ -1374,6 +1392,25 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
   const [justActivatedTrial, setJustActivatedTrial] = useState(false);
   const sp = (k) => (v) => setPf(p => ({ ...p, [k]: v }));
 
+  // Carta de Evolução: último snapshot semanal calculado pelo cron
+  // (relationship-weekly-summary-cron.js -> plan_insights, insight_type
+  // 'weekly_evolution'). Não recalcula nada aqui — só lê o que já foi
+  // computado, mantendo o recompute semanal (não em tempo real).
+  const [evolucao, setEvolucao] = useState(null);
+  useEffect(() => {
+    if (!userId || !isPro) return;
+    supabase.from('plan_insights')
+      .select('title, description, metric, created_at')
+      .eq('user_id', userId)
+      .eq('insight_type', 'weekly_evolution')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (error) { console.error('[PerfilForm] falha ao carregar evolução:', error); return; }
+        if (data?.[0]) setEvolucao(data[0]);
+      });
+  }, [userId, isPro]);
+
   // Estado do trial gratuito do Assistente de WhatsApp (10 dias, contados a
   // partir do primeiro cadastro do número — não da criação da conta).
   const trialStartedAt = profile?.whatsapp_trial_started_at || null;
@@ -1435,6 +1472,19 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.gold }}>{archetype.name}</div>
             {archetype.tagline && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginTop: 2, fontStyle: "italic" }}>{archetype.tagline}</div>}
           </div>
+        </div>
+      )}
+      {isPro && evolucao && (
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 24 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
+            Sua evolução esta semana
+          </div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, color: C.txt, marginBottom: 6 }}>
+            {evolucao.title}
+          </div>
+          <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: 0 }}>
+            {evolucao.description}
+          </p>
         </div>
       )}
       {isPro ? (
