@@ -14,8 +14,81 @@ import { sendProactiveNotification } from './_lib/relationshipAssistant/sendProa
 import { weeklySummaryOpeningMessage, weeklySummaryBodyMessage } from './_lib/relationshipAssistant/messages.js';
 import { computeWeeklyAttentionItems, computeNextBestActions } from './_lib/relationshipAssistant/actionEngine.js';
 import { isMonday, localDateISO } from './_lib/relationshipAssistant/timeWindow.js';
+import { computeWeeklyEvolution } from './_lib/relationshipAssistant/explainabilityEngine.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
+
+// Janela de sinais para a Carta de Evolução ("Meu Perfil"). Independente do
+// envio de WhatsApp acima — roda para todo usuário com assessment concluído,
+// tenha ou não WhatsApp configurado, porque é uma feature do app, não do
+// canal de notificação.
+async function computeSignalsForWindow(userId, contactIds, startISO, endISO) {
+  const [weekInteractions, newContacts, stepsCompleted] = await Promise.all([
+    sb(`interactions?user_id=eq.${userId}&created_at=gte.${startISO}&created_at=lt.${endISO}&select=id,contact_id,created_at`),
+    sb(`contacts?user_id=eq.${userId}&created_at=gte.${startISO}&created_at=lt.${endISO}&select=id`),
+    sb(`plan_step_completion?user_id=eq.${userId}&completed_at=gte.${startISO}&completed_at=lt.${endISO}&select=id`),
+  ]);
+
+  const touchedIds = [...new Set((weekInteractions || []).map(i => i.contact_id).filter(Boolean))];
+  let retomadas = 0;
+  if (touchedIds.length) {
+    const priorInteractions = await sb(
+      `interactions?user_id=eq.${userId}&contact_id=in.(${touchedIds.join(',')})&created_at=lt.${startISO}&select=contact_id,created_at&order=created_at.desc`
+    );
+    const lastPriorByContact = {};
+    for (const row of priorInteractions || []) {
+      if (!lastPriorByContact[row.contact_id]) lastPriorByContact[row.contact_id] = row.created_at;
+    }
+    for (const cid of touchedIds) {
+      const contact = (contactIds || []).find(c => c.id === cid);
+      const priorAt = lastPriorByContact[cid];
+      if (!contact || !priorAt) continue;
+      const gapDays = (new Date(startISO) - new Date(priorAt)) / 86400000;
+      if (gapDays > (contact.ideal_frequency_days || 30)) retomadas++;
+    }
+  }
+
+  return {
+    interactionsCount: weekInteractions?.length || 0,
+    contactsEngaged: touchedIds.length,
+    retomadas,
+    novasConexoes: newContacts?.length || 0,
+    metasConcluidas: stepsCompleted?.length || 0,
+  };
+}
+
+async function persistWeeklyEvolution(profile) {
+  const now = new Date();
+  const weekStartISO = new Date(now.getTime() - 7 * 86400000).toISOString();
+  const weekEndISO = now.toISOString();
+  const prevWeekStartISO = new Date(now.getTime() - 14 * 86400000).toISOString();
+
+  const contacts = await sb(`contacts?user_id=eq.${profile.id}&select=id,ideal_frequency_days`);
+  const [currentSignals, previousSignals] = await Promise.all([
+    computeSignalsForWindow(profile.id, contacts, weekStartISO, weekEndISO),
+    computeSignalsForWindow(profile.id, contacts, prevWeekStartISO, weekStartISO),
+  ]);
+
+  const evolution = computeWeeklyEvolution({ currentSignals, previousSignals, events: [] });
+
+  // week: número ISO da semana — só para referência/orderação, não usado como
+  // "fase do plano" (esse conceito já existe em plan_progress/plan_phases e
+  // não é o mesmo campo).
+  const isoWeek = Math.ceil((now - new Date(now.getFullYear(), 0, 1)) / (7 * 86400000));
+
+  await sb('plan_insights', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: profile.id,
+      week: isoWeek,
+      insight_type: 'weekly_evolution',
+      title: evolution.trendLabel,
+      description: evolution.explanation,
+      metric: JSON.stringify(currentSignals),
+      recommendation: null,
+    }),
+  });
+}
 
 export default async function handler(req, res) {
   try {
@@ -67,7 +140,27 @@ export default async function handler(req, res) {
       if (result.sent) enviados++; else pulados++;
     }
 
-    return res.status(200).json({ ok: true, elegiveis: elegiveis.length, enviados, pulados });
+    // --- Carta de Evolução (Meu Perfil) ---------------------------------
+    // Loop independente do envio de WhatsApp acima: roda para qualquer
+    // usuário com assessment concluído, com ou sem WhatsApp configurado.
+    // Erro aqui nunca deve afetar o envio de WhatsApp (já rodou acima) nem
+    // derrubar o cron inteiro — por isso try/catch por usuário.
+    let evolucoesCalculadas = 0, evolucoesComErro = 0;
+    const perfisEvolucao = await sb(
+      `profiles?select=id,timezone&assessment_completed=eq.true`
+    );
+    const elegiveisEvolucao = (perfisEvolucao || []).filter(p => isMonday(p.timezone));
+    for (const profile of elegiveisEvolucao) {
+      try {
+        await persistWeeklyEvolution(profile);
+        evolucoesCalculadas++;
+      } catch (err) {
+        console.error('[relationship-weekly-summary-cron] evolução falhou para', profile.id, err);
+        evolucoesComErro++;
+      }
+    }
+
+    return res.status(200).json({ ok: true, elegiveis: elegiveis.length, enviados, pulados, evolucoesCalculadas, evolucoesComErro });
   } catch (err) {
     console.error('[relationship-weekly-summary-cron] erro:', err);
     return res.status(200).json({ ok: false, error: err.message });
