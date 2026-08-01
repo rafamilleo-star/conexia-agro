@@ -744,6 +744,7 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
   const cacheKey = `${BRAND.storagePrefix}_ai_insights_${userId}`;
 
   const generateInsights = async () => {
+    if (contacts.length < 3) return;
     setLoading(true);
     setErrMsg(null);
     try {
@@ -950,8 +951,9 @@ Sem texto extra.`;
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>🧠 Inteligência da sua rede</div>
           {lastRefresh && <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 2 }}>Atualizado {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>}
         </div>
-        <button onClick={generateInsights} disabled={loading}
-          style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '5px 12px', fontFamily: "'DM Sans'", fontSize: 11, color: C.gold, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+        <button onClick={generateInsights} disabled={loading || contacts.length < 3}
+          title={contacts.length < 3 ? 'Cadastre pelo menos 3 contatos pra habilitar' : undefined}
+          style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '5px 12px', fontFamily: "'DM Sans'", fontSize: 11, color: C.gold, cursor: (loading || contacts.length < 3) ? 'default' : 'pointer', opacity: (loading || contacts.length < 3) ? 0.6 : 1 }}>
           {loading ? 'Analisando...' : '🔄 Atualizar'}
         </button>
       </div>
@@ -968,8 +970,10 @@ Sem texto extra.`;
         </div>
       )}
       {!loading && !insights && (
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
-          Clique em Atualizar para gerar insights personalizados da sua rede.
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, lineHeight: 1.5 }}>
+          {contacts.length < 3
+            ? `✨ Cadastre pelo menos 3 contatos (você tem ${contacts.length}) pra eu começar a analisar sua rede e trazer recomendações personalizadas aqui.`
+            : 'Clique em Atualizar para gerar insights personalizados da sua rede.'}
         </div>
       )}
 
