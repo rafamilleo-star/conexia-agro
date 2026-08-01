@@ -71,13 +71,33 @@ async function logDebug(payload) {
   }
 }
 
+// ── Monta um bloco de texto com os dados reais dos contatos, pra usar como
+// contexto grounded em prompts de consulta (evita a IA inventar informação
+// que não está cadastrada) ──
+function buildContactsDataBlock(contacts) {
+  return (contacts || []).map(c => {
+    const partes = [
+      `Nome: ${c.name}`,
+      c.category ? `categoria: ${c.category}` : null,
+      c.company ? `empresa: ${c.company}` : null,
+      c.role ? `cargo: ${c.role}` : null,
+      c.how_met ? `como conheceu: ${c.how_met}` : null,
+      c.hobbies ? `hobby: ${c.hobbies}` : null,
+      c.birthday ? `aniversário: ${new Date(c.birthday + 'T00:00:00').toLocaleDateString('pt-BR')}` : null,
+      c.last_interaction_at ? `última interação: ${new Date(c.last_interaction_at).toLocaleDateString('pt-BR')}` : 'última interação: nenhuma registrada',
+      c.next_action ? `próxima ação: ${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : null,
+    ].filter(Boolean).join(', ');
+    return `- ${partes}`;
+  }).join('\n');
+}
+
 async function analyzeIntent(message, contacts, focusContact) {
   const contactList = contacts.map(c => `- ${c.name}`).join('\n') || '(nenhum contato ainda)';
   const now = new Date();
   const hojeISO = now.toISOString().slice(0, 10);
   const diaSemana = now.toLocaleDateString('pt-BR', { weekday: 'long' });
   const contextoFoco = focusContact
-    ? `\nCONTEXTO DA CONVERSA: nas últimas mensagens o usuário estava falando sobre "${focusContact.name}". Se a mensagem atual não citar nenhum nome mas continuar claramente no mesmo assunto (pronomes como "ele"/"ela", ou perguntas de acompanhamento tipo "como devo agir", "que assunto eu puxo", "como continuo essa conversa"), assuma que contact_name = "${focusContact.name}". Se a mensagem citar outro nome ou mudar de assunto, ignore este contexto.\n`
+    ? `\nCONTEXTO DA CONVERSA: nas últimas mensagens o usuário estava falando sobre "${focusContact.name}". Se a mensagem atual não citar nenhum nome mas continuar claramente no mesmo assunto (pronomes como "ele"/"ela", ou perguntas de acompanhamento tipo "como devo agir", "que assunto eu puxo", "como continuo essa conversa", "qual foi o assunto da última interação", "sobre o que foi"), assuma que contact_name = "${focusContact.name}". Se a mensagem citar outro nome ou mudar de assunto, ignore este contexto.\n`
     : '';
   const prompt = `Você é o assistente do Conéxia, um CRM de inteligência relacional via WhatsApp.
 
@@ -104,6 +124,9 @@ entendimento tem que funcionar mesmo pra frases que não estão aqui):
 - "Tenho reunião amanhã com o Carlos." → briefing
 - "Me prepara pra falar com a Ana." → briefing
 - "Como devo agir com o Caio?" / "Como puxo essa conversa?" → contact_coaching
+- "Qual foi o assunto da última interação com o Caio?" / "Sobre o que a gente conversou da última vez?" → query_last_interaction
+- "Quantos contatos eu tenho que são aliados e pontes?" / "Quem trabalha na Bayer?" → query_data_simple
+- "Quais contatos eu deveria priorizar essa semana?" → query_data_analysis
 - "Quem faz tempo que não vejo?" / "Quem faz tempo que não converso?" → query_health
 - "O que tenho para fazer hoje?" → query_next_actions
 - "Me ajuda." → help
@@ -163,14 +186,37 @@ regra do briefing) e, se der pra identificar, fields.note com
 o ângulo específico da dúvida (ex.: "quer saber que assunto puxar", "quer saber se deve pedir apresentação
 pra outra pessoa") — deixe null se a pergunta for genérica tipo "como devo agir".
 
-Diferença prática entre os dois: "me prepara pra falar com o Caio" / "resumo da interação com o Caio" =
+Diferença prática entre os dois: "me prepara pra falar com o Caio" =
 briefing. "como devo agir com o Caio" / "como puxo a conversa" = contact_coaching.
 
+QUERY_LAST_INTERACTION — o usuário quer saber O CONTEÚDO/ASSUNTO de uma interação específica já registrada
+com um contato (o que foi conversado), não os dados cadastrais nem a data. Sinais: "qual foi o assunto da
+última interação", "sobre o que foi a última conversa com...", "o que eu falei com ele da última vez", "do
+que a gente tratou". Diferente de briefing, que só informa "há X dias" sem dizer do que se tratou — se o
+usuário está pedindo pra saber DO QUE se tratou, é query_last_interaction, mesmo que a frase mencione a
+palavra "interação" (o que normalmente confundiria com briefing). Preencha fields.contact_name (mesma regra
+do briefing).
+
+QUERY_DATA_SIMPLE — o usuário pede um FATO OBJETIVO sobre os dados já cadastrados na rede dele: contagem,
+filtro ou lista, sem precisar de interpretação/opinião. Cobre qualquer campo cadastrado (categoria, empresa,
+cargo, como conheceu, hobby, aniversário, próxima ação) que NÃO seja "quem não fala há tempo" (isso continua
+sendo query_contacts) nem a saúde geral da rede (isso continua sendo query_health). Sinais: "quantos
+contatos eu tenho que são X", "quem trabalha na empresa Y", "quantos aliados eu tenho", "lista meus
+mentores", "quem faz aniversário em março". Preencha fields.note com a pergunta original, resumida, pra o
+sistema usar como base da resposta.
+
+QUERY_DATA_ANALYSIS — o usuário pede uma INTERPRETAÇÃO ou RACIOCÍNIO sobre os dados cadastrados — não um
+fato pronto, mas uma conclusão que exige analisar/comparar/priorizar os dados. Diferente de contact_coaching
+(que é sobre 1 contato específico nomeado) e de query_insights (pedido aberto de dica sem uma pergunta
+específica) — aqui o usuário faz uma PERGUNTA ANALÍTICA CONCRETA sobre o conjunto de dados. Sinais: "quais
+contatos eu deveria priorizar", "por que minha rede está esfriando", "quais categorias eu tenho descuidado".
+Preencha fields.note com a pergunta original, resumida.
+
 Outras intenções:
-- query_contacts: perguntas sobre quem ele não fala há tempo, lista de contatos, etc.
+- query_contacts: especificamente "quem ele não fala há tempo" ou pedido de lista geral de contatos sem nenhum filtro específico. Qualquer filtro por categoria, empresa, cargo, hobby ou aniversário é query_data_simple, não query_contacts.
 - query_next_actions: perguntas sobre tarefas/próximos passos pendentes já cadastrados.
-- query_health: perguntas sobre a saúde geral da rede (incluindo "quem eu não vejo há tempo" — isso é sobre a rede como um todo, não sobre 1 contato específico, então é query_health e não briefing).
-- query_insights: pedidos de insight, dica, análise geral SOBRE A REDE COMO UM TODO, sem nomear um contato específico. Se o usuário nomear um contato (ex.: "me dá um insight sobre a Ana", "insight do contato Caio"), a intenção é contact_coaching, não query_insights — mesmo que a palavra usada seja "insight" e não "como agir".
+- query_health: especificamente sobre a saúde/estatística geral da rede como um todo (total de contatos, quantos esfriando) — não sobre um filtro específico como categoria (isso é query_data_simple).
+- query_insights: pedidos ABERTOS de insight, dica, análise geral SOBRE A REDE COMO UM TODO, sem uma pergunta analítica concreta e sem nomear um contato específico (ex.: "me dê insights", "alguma dica pra essa semana"). Se o usuário nomear um contato, é contact_coaching. Se o usuário fizer uma pergunta analítica concreta sobre os dados (não um pedido aberto), é query_data_analysis.
 - help: pede ajuda, não sabe o que o assistente faz.
 - unknown: só use se a mensagem realmente não tiver relação nenhuma com networking/contatos (ex: só "oi", saudação vazia sem contexto) — nunca use unknown só porque faltou um dado, veja a regra do register_contact acima.
 
@@ -182,7 +228,7 @@ Retorne APENAS JSON, sem markdown, sem texto fora do JSON, em UM dos dois format
 
 FORMATO 1 — uma intenção só:
 {
-  "intent": "register_interaction" | "schedule_action" | "register_contact" | "briefing" | "contact_coaching" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
+  "intent": "register_interaction" | "schedule_action" | "register_contact" | "briefing" | "contact_coaching" | "query_last_interaction" | "query_data_simple" | "query_data_analysis" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
   "confidence": 0.0 a 1.0,
   "fields": {
     "contact_name": string ou null,
@@ -614,7 +660,7 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
   }
 
   // 2. Busca os contatos do usuário
-  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,company,role,category,how_met,last_interaction_at,next_action,next_action_date`);
+  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,company,role,category,how_met,last_interaction_at,next_action,next_action_date,hobbies,birthday`);
 
   // 2.1 Contato "em foco" na conversa — se o usuário falou de alguém há pouco
   // (últimos 30 min) e a próxima mensagem não repete o nome, é provável que
@@ -746,6 +792,81 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
     ].filter(Boolean);
     await sendReply(number, linhas.join('\n'));
     await setFocusContact(userIdProfile, match.id);
+    return;
+  }
+
+  if (intentData.intent === 'query_last_interaction') {
+    if (!isPro) {
+      await sendReply(number, `🔒 Histórico de interações é um recurso PRO.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      return;
+    }
+    const match = (contacts || []).find(c =>
+      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
+    );
+    if (!match) {
+      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
+      return;
+    }
+    const last = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.desc&limit=1&select=type,description,sentiment,created_at`);
+    const i = last?.[0];
+    if (!i) {
+      await sendReply(number, `Ainda não tenho nenhuma interação registrada com *${match.name}*.`);
+      await setFocusContact(userIdProfile, match.id);
+      return;
+    }
+    const diasAtras = Math.floor((Date.now() - new Date(i.created_at).getTime()) / 86400000);
+    await sendReply(number, `💬 *Última interação com ${match.name}* (há ${diasAtras} dia(s), ${i.type}):\n\n${i.description || 'Sem detalhes registrados.'}`);
+    await setFocusContact(userIdProfile, match.id);
+    return;
+  }
+
+  if (intentData.intent === 'query_data_simple') {
+    if (!(contacts || []).length) {
+      await sendReply(number, 'Você ainda não tem contatos cadastrados.');
+      return;
+    }
+    const pergunta = intentData.note || text;
+    const dataPrompt = `Você é um assistente de consulta de dados do CRM Conéxia. Responda a pergunta do
+usuário usando EXCLUSIVAMENTE os dados cadastrados abaixo — nunca invente, deduza ou complete informação
+que não está explícita neles.
+
+Dados cadastrados (${contacts.length} contato(s)):
+${buildContactsDataBlock(contacts)}
+
+Pergunta do usuário: "${pergunta}"
+
+Responda de forma objetiva: se for contagem, dê o número exato e liste os nomes correspondentes. Se for
+lista/filtro, liste só os nomes que atendem ao critério. Se a pergunta pedir algo que não está nos dados
+acima, diga claramente que essa informação não está cadastrada — não invente. Não dê conselhos, opiniões
+nem interpretações, só o fato. Responda em português, direto, sem preâmbulo.`;
+    const resposta = await geminiText(dataPrompt, 500);
+    await sendReply(number, resposta || 'Não consegui consultar seus dados agora. Tenta de novo em instantes.');
+    return;
+  }
+
+  if (intentData.intent === 'query_data_analysis') {
+    if (!isPro) {
+      await sendReply(number, `🔒 Análises sobre sua rede são um recurso PRO.\n\nNo Free você já consulta contagens e filtros objetivos sobre seus contatos. No PRO, a IA interpreta os dados e te ajuda a decidir.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      return;
+    }
+    if (!(contacts || []).length) {
+      await sendReply(number, 'Você ainda não tem contatos cadastrados pra eu analisar.');
+      return;
+    }
+    const pergunta = intentData.note || text;
+    const analysisPrompt = `Você é um mentor estratégico de networking ajudando ${firstName || 'o usuário'} a
+interpretar a rede de contatos dele no agronegócio.
+
+Dados cadastrados (${contacts.length} contato(s)):
+${buildContactsDataBlock(contacts)}
+
+Pergunta do usuário: "${pergunta}"
+
+Responda de forma direta e acionável (máximo 5 frases), baseando-se SOMENTE nos dados acima — nunca invente
+informação que não está lá. Se os dados não forem suficientes pra responder com segurança, diga isso e
+explique o que falta.`;
+    const resposta = await geminiText(analysisPrompt, 400);
+    await sendReply(number, `🧠 ${resposta || 'Não consegui analisar agora. Tenta de novo em instantes.'}`);
     return;
   }
 
@@ -903,7 +1024,7 @@ acima sempre que possível, não conselho genérico que serviria pra qualquer co
 
   if (intentData.intent === 'help') {
     await sendReply(number,
-      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n👤 *Cadastrar contato*: "Cadastra a Maria, gerente comercial da Bayer"\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n\n🔒 *No PRO*:\n🧭 *Briefing antes de uma conversa*: "Me prepara pra falar com a Ana"\n🎯 *Como agir com alguém*: "Como devo puxar a conversa com o Caio?"\n🧠 *Insights e recomendações*: "Me dê insights"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
+      `👋 Oi${firstName ? ', ' + firstName : ''}! Aqui está o que eu faço:\n\n👤 *Cadastrar contato*: "Cadastra a Maria, gerente comercial da Bayer"\n📝 *Registrar interação*: "Liguei para o André hoje, foi positivo"\n🗓️ *Agendar ação futura*: "Preciso enviar a proposta pro André até sexta" (te lembro no dia)\n👥 *Consultar contatos*: "Quem eu não contato há mais tempo?"\n📋 *Próximas ações*: "Minhas próximas ações"\n💚 *Saúde da rede*: "Saúde da minha rede"\n📊 *Perguntas sobre seus dados*: "Quantos contatos são aliados e pontes?", "Quem trabalha na Bayer?"\n\n🔒 *No PRO*:\n🧭 *Briefing antes de uma conversa*: "Me prepara pra falar com a Ana"\n💬 *Assunto da última interação*: "Sobre o que foi minha última conversa com o Caio?"\n🎯 *Como agir com alguém*: "Como devo puxar a conversa com o Caio?"\n🧠 *Insights e recomendações*: "Me dê insights"\n🔍 *Análises sobre sua rede*: "Quais contatos eu deveria priorizar essa semana?"\n\n🎙️ Pode mandar tudo isso por áudio também, funciona igual.`);
     return;
   }
 
