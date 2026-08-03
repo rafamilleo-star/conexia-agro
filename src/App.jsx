@@ -1633,7 +1633,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [savingContact, setSavingContact] = useState(false);
   const [savingInteraction, setSavingInteraction] = useState(false);
   const [schedOpenId, setSchedOpenId] = useState(null); // id do contato com o form de agendamento aberto inline
-  const [schedForm, setSchedForm] = useState({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "" });
+  const [schedForm, setSchedForm] = useState({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "", topic: "" });
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [its, setIts] = useState([]);
   const [selId, setSelId] = useState(null);
@@ -1887,7 +1887,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const { error } = await supabase.from("scheduled_events").insert({
         user_id: user.id, contact_id: contactId, type: schedForm.type,
         scheduled_at: scheduledAt, duration_minutes: parseInt(schedForm.duration) || 30,
-        location: schedForm.location.trim() || null, source: "app",
+        location: schedForm.location.trim() || null, notes: schedForm.topic.trim() || null, source: "app",
       });
       if (error) { setDbgMsg("❌ Erro ao agendar: " + error.message); return; }
       // Espelha em contacts.next_action/next_action_date para não quebrar nada que já
@@ -1895,8 +1895,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       // schedule_action do bot). A tabela scheduled_events é a fonte de verdade nova;
       // isso aqui é só compatibilidade com o que já roda em produção.
       const tp = ITYPES.find(t => t.value === schedForm.type);
+      const topic = schedForm.topic.trim();
       await supabase.from("contacts").update({
-        next_action: `${tp?.icon || "📋"} ${tp?.label || "Agendamento"}${schedForm.location.trim() ? ` · ${schedForm.location.trim()}` : ""}`,
+        next_action: `${tp?.icon || "📋"} ${topic || tp?.label || "Agendamento"}${schedForm.location.trim() ? ` · ${schedForm.location.trim()}` : ""}`,
         next_action_date: schedForm.date,
       }).eq("id", contactId).eq("user_id", user.id);
       trackEvent("scheduled_event_created", "contacts", { contactId, type: schedForm.type });
@@ -1904,14 +1905,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       // cair na agenda de verdade do usuário (Outlook, Google ou Apple), sem OAuth.
       const contactName = cts.find(c => c.id === contactId)?.name || "contato";
       const ics = buildICS({
-        title: `${tp?.icon || "📋"} ${tp?.label || "Agendamento"} · ${contactName}`,
-        description: "Agendado via CONÉXIA",
+        title: `${tp?.icon || "📋"} ${topic || tp?.label || "Agendamento"} · ${contactName}`,
+        description: topic ? `${topic}\n\nAgendado via CONÉXIA` : "Agendado via CONÉXIA",
         location: schedForm.location.trim(),
         start: scheduledAt,
         durationMinutes: parseInt(schedForm.duration) || 30,
       });
       downloadICS(ics, `conexia-${contactName.replace(/\s+/g, "_").toLowerCase()}.ics`);
-      setSchedForm({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "" });
+      setSchedForm({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "", topic: "" });
       setSchedOpenId(null);
       await load();
     } finally {
@@ -2363,6 +2364,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   <option value="60">1 hora</option><option value="90">1h30</option>
                 </select>
               </div>
+              <textarea rows={3} placeholder="Tema (opcional): o que vai ser tratado nessa reunião..." value={schedForm.topic}
+                onChange={e => setSchedForm({ ...schedForm, topic: e.target.value })}
+                style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, marginBottom: 8, resize: "vertical" }} />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                 <input type="date" value={schedForm.date} onChange={e => setSchedForm({ ...schedForm, date: e.target.value })}
                   style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }} />
@@ -2373,7 +2377,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                 onChange={e => setSchedForm({ ...schedForm, location: e.target.value })}
                 style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, marginBottom: 10 }} />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <Btn variant="ghost" small onClick={() => { setSchedOpenId(null); setSchedForm({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "" }); }}>Cancelar</Btn>
+                <Btn variant="ghost" small onClick={() => { setSchedOpenId(null); setSchedForm({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "", topic: "" }); }}>Cancelar</Btn>
                 <Btn small onClick={() => saveSchedule(sel.id)} disabled={!schedForm.date || savingSchedule}>{savingSchedule ? "Agendando..." : "Salvar"}</Btn>
               </div>
             </div>
