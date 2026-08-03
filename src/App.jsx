@@ -70,6 +70,35 @@ const MAIN_CULTURES = [
 const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999;
 const hScore = (last, freq) => { const d = dSince(last); if (!last || d > freq * 3) return 0; return Math.max(0, Math.round((1 - d / (freq * 1.5)) * 100)); };
 const fD = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—";
+// Gera um arquivo .ics padrão (RFC 5545) — funciona igual em Outlook, Google Calendar
+// e Apple Calendar, sem precisar de OAuth nem integração com nenhuma API externa.
+const buildICS = ({ title, description, location, start, durationMinutes }) => {
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+  const dtStart = new Date(start);
+  const dtEnd = new Date(dtStart.getTime() + (durationMinutes || 30) * 60000);
+  const esc = (s = "") => String(s).replace(/[\\;,]/g, (m) => "\\" + m).replace(/\n/g, "\\n");
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CONEXIA//Agendamento//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${Date.now()}-${Math.round(Math.random() * 1e6)}@conexia-agro`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(dtStart)}`,
+    `DTEND:${fmt(dtEnd)}`,
+    `SUMMARY:${esc(title)}`,
+    description ? `DESCRIPTION:${esc(description)}` : null,
+    location ? `LOCATION:${esc(location)}` : null,
+    "END:VEVENT", "END:VCALENDAR",
+  ].filter(Boolean).join("\r\n");
+};
+const downloadICS = (ics, filename) => {
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 // Normaliza WhatsApp para sempre incluir o código do país 55 — formato que o bot do WhatsApp espera
 const normalizeWhatsapp = (raw) => {
   if (!raw) return null;
@@ -1603,6 +1632,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [cts, setCts] = useState([]);
   const [savingContact, setSavingContact] = useState(false);
   const [savingInteraction, setSavingInteraction] = useState(false);
+  const [schedOpenId, setSchedOpenId] = useState(null); // id do contato com o form de agendamento aberto inline
+  const [schedForm, setSchedForm] = useState({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "" });
+  const [savingSchedule, setSavingSchedule] = useState(false);
   const [its, setIts] = useState([]);
   const [selId, setSelId] = useState(null);
   const [editId, setEditId] = useState(null);
@@ -1843,6 +1875,47 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     await load();
     } finally {
       setSavingInteraction(false);
+    }
+  };
+
+  const saveSchedule = async (contactId) => {
+    if (!schedForm.date || !contactId || !user?.id) return;
+    if (savingSchedule) return; // trava contra duplo clique / duplo submit
+    setSavingSchedule(true);
+    try {
+      const scheduledAt = new Date(`${schedForm.date}T${schedForm.time || "09:00"}:00`).toISOString();
+      const { error } = await supabase.from("scheduled_events").insert({
+        user_id: user.id, contact_id: contactId, type: schedForm.type,
+        scheduled_at: scheduledAt, duration_minutes: parseInt(schedForm.duration) || 30,
+        location: schedForm.location.trim() || null, source: "app",
+      });
+      if (error) { setDbgMsg("❌ Erro ao agendar: " + error.message); return; }
+      // Espelha em contacts.next_action/next_action_date para não quebrar nada que já
+      // depende desses campos hoje (lembrete automático do WhatsApp, HomeToday, intent
+      // schedule_action do bot). A tabela scheduled_events é a fonte de verdade nova;
+      // isso aqui é só compatibilidade com o que já roda em produção.
+      const tp = ITYPES.find(t => t.value === schedForm.type);
+      await supabase.from("contacts").update({
+        next_action: `${tp?.icon || "📋"} ${tp?.label || "Agendamento"}${schedForm.location.trim() ? ` · ${schedForm.location.trim()}` : ""}`,
+        next_action_date: schedForm.date,
+      }).eq("id", contactId).eq("user_id", user.id);
+      trackEvent("scheduled_event_created", "contacts", { contactId, type: schedForm.type });
+      // Gera e baixa o convite .ics na hora — é o motivo de existir o agendamento:
+      // cair na agenda de verdade do usuário (Outlook, Google ou Apple), sem OAuth.
+      const contactName = cts.find(c => c.id === contactId)?.name || "contato";
+      const ics = buildICS({
+        title: `${tp?.icon || "📋"} ${tp?.label || "Agendamento"} · ${contactName}`,
+        description: "Agendado via CONÉXIA",
+        location: schedForm.location.trim(),
+        start: scheduledAt,
+        durationMinutes: parseInt(schedForm.duration) || 30,
+      });
+      downloadICS(ics, `conexia-${contactName.replace(/\s+/g, "_").toLowerCase()}.ics`);
+      setSchedForm({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "" });
+      setSchedOpenId(null);
+      await load();
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -2253,11 +2326,58 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             {(sel.city || sel.stateCode) && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, marginBottom: 2 }}>📍 Localização</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{[sel.city, sel.stateCode].filter(Boolean).join(", ")}</div></div>}
           </div>
           {sel.hobbies && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 12, marginBottom: 10 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.amb }}>🎯 Hobbies: </span><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>{sel.hobbies}</span></div>}
-          {sel.nextAction && <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: 12, marginBottom: 10 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 4 }}>📋 Próxima ação{sel.nextActionDate ? ` · ${fD(sel.nextActionDate)}` : ""}</div><div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{sel.nextAction}</div></div>}
+          {sel.nextAction && (
+            <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: 12, marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                <div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 4 }}>📋 Próxima ação{sel.nextActionDate ? ` · ${fD(sel.nextActionDate)}` : ""}</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{sel.nextAction}</div>
+                </div>
+                {sel.nextActionDate && (
+                  <button onClick={() => {
+                    const ics = buildICS({ title: `📋 ${sel.nextAction} · ${sel.name}`, description: "Agendado via CONÉXIA", start: `${sel.nextActionDate}T09:00:00`, durationMinutes: 30 });
+                    downloadICS(ics, `conexia-${sel.name.replace(/\s+/g, "_").toLowerCase()}.ics`);
+                  }} style={{ background: "none", border: `1px solid ${C.gL}`, borderRadius: 6, padding: "4px 8px", fontFamily: "'DM Sans'", fontSize: 10, color: C.gold, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>📅 Calendário</button>
+                )}
+              </div>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase" }}>Timeline ({cI.length})</span>
-            <Btn variant="success" small onClick={() => { setIntCid(sel.id); setModal("addI"); }}>+ Interação</Btn>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn small onClick={() => setSchedOpenId(schedOpenId === sel.id ? null : sel.id)}>📅 Agendar</Btn>
+              <Btn variant="success" small onClick={() => { setIntCid(sel.id); setModal("addI"); }}>+ Interação</Btn>
+            </div>
           </div>
+          {schedOpenId === sel.id && (
+            <div style={{ background: C.card, border: `1px solid ${C.gL}`, borderRadius: 8, padding: 14, marginBottom: 12 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, marginBottom: 10, textTransform: "uppercase" }}>Agendar com {sel.name}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <select value={schedForm.type} onChange={e => setSchedForm({ ...schedForm, type: e.target.value })}
+                  style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>
+                  {ITYPES.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
+                </select>
+                <select value={schedForm.duration} onChange={e => setSchedForm({ ...schedForm, duration: e.target.value })}
+                  style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>
+                  <option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option>
+                  <option value="60">1 hora</option><option value="90">1h30</option>
+                </select>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <input type="date" value={schedForm.date} onChange={e => setSchedForm({ ...schedForm, date: e.target.value })}
+                  style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }} />
+                <input type="time" value={schedForm.time} onChange={e => setSchedForm({ ...schedForm, time: e.target.value })}
+                  style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }} />
+              </div>
+              <input type="text" placeholder="Local (opcional): escritório, Google Meet, WhatsApp..." value={schedForm.location}
+                onChange={e => setSchedForm({ ...schedForm, location: e.target.value })}
+                style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, marginBottom: 10 }} />
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <Btn variant="ghost" small onClick={() => { setSchedOpenId(null); setSchedForm({ type: "reuniao", date: "", time: "09:00", duration: "30", location: "" }); }}>Cancelar</Btn>
+                <Btn small onClick={() => saveSchedule(sel.id)} disabled={!schedForm.date || savingSchedule}>{savingSchedule ? "Agendando..." : "Salvar"}</Btn>
+              </div>
+            </div>
+          )}
           {cI.length === 0 ? <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 28, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 13, color: C.txL }}>Registre a primeira interação.</div>
           : cI.map((r, i) => { const tp = ITYPES.find(t => t.value === r.type); const se = SENTS.find(s => s.value === r.sentiment); return (
             <div key={i} style={{ display: "flex", gap: 12, marginBottom: 2 }}>
