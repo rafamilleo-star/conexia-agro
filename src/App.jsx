@@ -2169,7 +2169,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           interactions={its}
           assessmentCompleted={assessmentCompleted}
           firstName={profile?.first_name || profile?.name || ""}
-          onOpenContact={(cid) => { setSelId(cid); setView("contacts"); }}
+          onOpenContact={(cid) => { setSelId(cid); setRedeSubTab("pessoas"); setView("contacts"); }}
           onStartAssessment={() => { setView("perfil"); setSelId(null); }}
           onStartNetwork={() => setView("startNetwork")}
           onQuickLogInteraction={(cid) => { setSelId(cid); setIntCid(cid); setModal("addI"); }}
@@ -2660,7 +2660,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                     padding:"8px 0", fontFamily:"'DM Sans'", fontSize:11, cursor:"pointer" }}>
                     ✏️ Editar
                   </button>
-                  <button onClick={() => { setSelId(selContact.id); setView("contacts"); }}
+                  <button onClick={() => { setSelId(selContact.id); setRedeSubTab("pessoas"); setView("contacts"); }}
                     style={{ background:C.sf, border:`1px solid ${C.brd}`, color:C.txM, borderRadius:8,
                     padding:"8px 0", fontFamily:"'DM Sans'", fontSize:11, cursor:"pointer" }}>
                     📋 Histórico
