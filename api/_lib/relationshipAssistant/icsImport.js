@@ -35,6 +35,11 @@ function extractName(line) {
   return null;
 }
 
+function extractEmail(line) {
+  const m = line.match(/mailto:([^;:\s]+@[^;:\s]+)/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
 // DTSTART pode vir como "20260807T140000Z" (UTC), "20260807T140000" (local,
 // sem timezone confiável) ou "20260807" (dia inteiro). Retorna ISO string ou
 // null se não der pra interpretar.
@@ -51,7 +56,7 @@ function parseDtstart(line) {
 
 /**
  * @param {string} icsText
- * @returns {Array<{ uid: string|null, summary: string|null, startISO: string|null, attendeeNames: string[] }>}
+ * @returns {Array<{ uid: string|null, summary: string|null, startISO: string|null, attendeeNames: string[], attendees: Array<{name:string|null, email:string|null}>, organizer: {name:string|null, email:string|null}|null }>}
  */
 export function parseICSEvents(icsText) {
   const lines = unfold(icsText);
@@ -60,7 +65,7 @@ export function parseICSEvents(icsText) {
 
   for (const line of lines) {
     if (line.startsWith('BEGIN:VEVENT')) {
-      current = { uid: null, summary: null, startISO: null, attendeeNames: [] };
+      current = { uid: null, summary: null, startISO: null, attendeeNames: [], attendees: [], organizer: null };
       continue;
     }
     if (line.startsWith('END:VEVENT')) {
@@ -76,9 +81,16 @@ export function parseICSEvents(icsText) {
       current.summary = line.split(':').slice(1).join(':').trim() || null;
     } else if (line.startsWith('DTSTART')) {
       current.startISO = parseDtstart(line);
-    } else if (line.startsWith('ATTENDEE') || line.startsWith('ORGANIZER')) {
+    } else if (line.startsWith('ORGANIZER')) {
       const name = extractName(line);
+      const email = extractEmail(line);
+      current.organizer = { name, email };
       if (name && !current.attendeeNames.includes(name)) current.attendeeNames.push(name);
+    } else if (line.startsWith('ATTENDEE')) {
+      const name = extractName(line);
+      const email = extractEmail(line);
+      if (name && !current.attendeeNames.includes(name)) current.attendeeNames.push(name);
+      if (name || email) current.attendees.push({ name, email });
     }
   }
 
@@ -133,4 +145,40 @@ export function eventsInWindow(events, sinceISO, untilISO) {
     const t = new Date(e.startISO).getTime();
     return t >= since && t < until;
   });
+}
+
+// E-mails de sistema/automação — nunca sugerir como contato novo.
+const AUTOMATED_EMAIL_PATTERNS = [
+  /^no-?reply@/i,
+  /^notifications?@/i,
+  /calendar-notification@/i,
+  /resource\.calendar\.google\.com$/i,
+  /@group\.calendar\.google\.com$/i,
+];
+
+function isAutomatedEmail(email) {
+  return !!email && AUTOMATED_EMAIL_PATTERNS.some((re) => re.test(email));
+}
+
+// Sugere UM convidado como "contato novo encontrado no calendário" — só
+// quando o evento parece uma reunião real (poucos convidados, nome
+// completo, e-mail não-automático), nunca pra webinar/palestra/lista de
+// distribuição. Não considera o próprio dono do calendário (selfNameHints).
+// Retorna { name, email } ou null.
+export function suggestNewContactFromEvent(event, { selfNameHints = [] } = {}) {
+  const hints = (selfNameHints || []).map(normalize).filter(Boolean);
+  const candidatos = (event.attendees || []).filter((a) => {
+    if (!a.name) return false;
+    const n = normalize(a.name);
+    if (n.split(' ').length < 2) return false; // exige nome completo
+    if (isAutomatedEmail(a.email)) return false;
+    if (hints.some((h) => n.includes(h))) return false; // é o próprio usuário
+    return true;
+  });
+
+  // Só reunião pequena (1 a 4 convidados de verdade) — acima disso é sinal
+  // de webinar/palestra/lista, não encontro individual.
+  if (candidatos.length < 1 || candidatos.length > 4) return null;
+
+  return candidatos[0];
 }
