@@ -1,21 +1,29 @@
 // api/relationship-calendar-sync-cron.js
 // Job: sync-calendar-ics
 //
-// Captura Passiva via Calendário (Bloco 2). Roda 1x/dia. Para cada usuário
-// PRO com `calendar_ics_url` cadastrado, busca o .ics público (endereço
-// secreto do Google Calendar, sem OAuth), extrai eventos das últimas 24h,
-// tenta casar o nome do convidado com um contato existente e, se achar,
-// pergunta via WhatsApp se deve registrar como interação — a resposta
-// (sim/não) é tratada em whatsapp-webhook.js via whatsapp_pending_actions
-// (mesmo mecanismo já usado por register_contact_missing_name).
+// Captura Passiva via Calendário (Bloco 2 + extensão de contato novo). Roda
+// 1x/dia. Para cada usuário PRO com `calendar_ics_url` cadastrado, busca o
+// .ics público (endereço secreto do Google Calendar, sem OAuth), extrai
+// eventos das últimas 24h:
+//
+//   - se o convidado casa com um contato existente -> pergunta se registra
+//     a interação (CALENDAR_INTERACTION_SUGGESTION);
+//   - se não casa com ninguém, mas o evento parece uma reunião real
+//     (poucos convidados, nome completo, e-mail não-automático) -> pergunta
+//     se cadastra a pessoa E já registra a conversa, numa única pergunta
+//     (CALENDAR_NEW_CONTACT_SUGGESTION) — sem criar tela de cadastro nova.
+//
+// As duas respostas (sim/não) são tratadas em whatsapp-webhook.js via
+// whatsapp_pending_actions (mesmo mecanismo já usado por
+// register_contact_missing_name).
 //
 // Feature PRO — mesmo gate de is_pro=true já usado em
 // relationship-attention-cron.js.
 
 import { supabaseRest as sb } from './_lib/relationshipAssistant/notificationLog.js';
 import { sendProactiveNotification } from './_lib/relationshipAssistant/sendProactiveNotification.js';
-import { calendarInteractionSuggestionMessage } from './_lib/relationshipAssistant/messages.js';
-import { parseICSEvents, eventsInWindow, matchContactToEvent } from './_lib/relationshipAssistant/icsImport.js';
+import { calendarInteractionSuggestionMessage, calendarNewContactSuggestionMessage } from './_lib/relationshipAssistant/messages.js';
+import { parseICSEvents, eventsInWindow, matchContactToEvent, suggestNewContactFromEvent } from './_lib/relationshipAssistant/icsImport.js';
 import { localDateISO } from './_lib/relationshipAssistant/timeWindow.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
@@ -72,48 +80,77 @@ export default async function handler(req, res) {
         if (!recentEvents.length) { semEvento++; continue; }
 
         const contacts = await sb(`contacts?user_id=eq.${profile.id}&select=id,name`);
-        if (!contacts?.length) { semMatch++; continue; }
 
         // Só a primeira sugestão do dia por usuário — sendProactiveNotification
-        // já limita a 1 msg automática/dia, então parar no primeiro match
-        // encontrado evita gastar chamadas à toa tentando os demais eventos.
+        // já limita a 1 msg automática/dia, então parar na primeira sugestão
+        // enviada evita gastar chamadas à toa tentando os demais eventos.
         let enviouAlgo = false;
+        const todayISO = localDateISO(profile.timezone);
+
         for (const event of recentEvents) {
-          const match = matchContactToEvent(event, contacts);
-          if (!match) continue;
+          const match = matchContactToEvent(event, contacts || []);
 
-          // Já existe interação registrada com esse contato hoje? Não
-          // sugere de novo — evita pergunta redundante se o usuário já
-          // registrou manualmente ou por outra via.
-          const todayISO = localDateISO(profile.timezone);
-          const jaRegistrada = await sb(
-            `interactions?user_id=eq.${profile.id}&contact_id=eq.${match.id}&created_at=gte.${todayISO}T00:00:00&select=id&limit=1`
-          );
-          if (jaRegistrada?.length) continue;
+          if (match) {
+            // Já existe interação registrada com esse contato hoje? Não
+            // sugere de novo — evita pergunta redundante se o usuário já
+            // registrou manualmente ou por outra via.
+            const jaRegistrada = await sb(
+              `interactions?user_id=eq.${profile.id}&contact_id=eq.${match.id}&created_at=gte.${todayISO}T00:00:00&select=id&limit=1`
+            );
+            if (jaRegistrada?.length) continue;
 
-          const text = calendarInteractionSuggestionMessage({
+            const text = calendarInteractionSuggestionMessage({
+              firstName: profile.first_name,
+              contactName: match.name,
+              eventSummary: event.summary,
+            });
+            const result = await sendProactiveNotification({
+              profile,
+              notificationType: 'CALENDAR_INTERACTION_SUGGESTION',
+              scopeKey: event.uid || `${match.id}:${todayISO}`,
+              text,
+            });
+            if (result.sent) {
+              await setPendingAction(profile.id, 'calendar_interaction_suggestion', {
+                contact_id: match.id,
+                contact_name: match.name,
+                event_summary: event.summary || null,
+              });
+              sugestoesEnviadas++;
+              enviouAlgo = true;
+              break; // 1 sugestão por usuário por execução
+            }
+            continue;
+          }
+
+          // Sem match — tenta sugerir CONTATO NOVO (convidado real, reunião
+          // pequena, e-mail não-automático; nunca o próprio dono do calendário).
+          const candidato = suggestNewContactFromEvent(event, {
+            selfNameHints: [profile.first_name].filter(Boolean),
+          });
+          if (!candidato) continue;
+
+          const text = calendarNewContactSuggestionMessage({
             firstName: profile.first_name,
-            contactName: match.name,
+            contactName: candidato.name,
             eventSummary: event.summary,
           });
-
           const result = await sendProactiveNotification({
             profile,
-            notificationType: 'CALENDAR_INTERACTION_SUGGESTION',
-            scopeKey: event.uid || `${match.id}:${todayISO}`,
+            notificationType: 'CALENDAR_NEW_CONTACT_SUGGESTION',
+            scopeKey: event.uid || `${candidato.email || candidato.name}:${todayISO}`,
             text,
           });
-
           if (result.sent) {
-            await setPendingAction(profile.id, 'calendar_interaction_suggestion', {
-              contact_id: match.id,
-              contact_name: match.name,
+            await setPendingAction(profile.id, 'calendar_new_contact_suggestion', {
+              contact_name: candidato.name,
+              contact_email: candidato.email || null,
               event_summary: event.summary || null,
             });
             sugestoesEnviadas++;
             enviouAlgo = true;
+            break; // 1 sugestão por usuário por execução
           }
-          break; // 1 sugestão por usuário por execução
         }
         if (!enviouAlgo) semMatch++;
       } catch (err) {
