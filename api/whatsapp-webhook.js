@@ -581,7 +581,7 @@ async function handleSharedContact(number, mediaUrl, sendReply) {
 
 // Cria o contato de fato — reaproveitado tanto no cadastro direto (1 mensagem
 // com dados suficientes) quanto no fluxo de esclarecimento (nome veio depois).
-async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met, hobbies, birthday }) {
+async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met, hobbies, birthday, contact_email }) {
   const contact = await sb('contacts', {
     method: 'POST',
     body: JSON.stringify({
@@ -595,6 +595,7 @@ async function createContactFromWhatsapp(userId, { contact_name, company, role, 
       how_met: how_met || 'Cadastrado via WhatsApp',
       hobbies: hobbies || null,
       birthday: birthday || null,
+      contact_email: contact_email || null,
     }),
   });
   return contact?.[0] || null;
@@ -738,6 +739,53 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
     // Resposta ambígua: não limpa a pending action, mas também não trava o
     // resto do fluxo — deixa cair no analyzeIntent normal (a pessoa pode ter
     // ignorado a pergunta e mandado outra coisa completamente diferente).
+  }
+
+  // 2.7 Sugestão de CONTATO NOVO encontrado no calendário (convidado sem
+  // match em nenhum contato existente). "Sim" cria o contato e já registra
+  // a interação — mesma função de criação usada pelo cadastro por texto.
+  if (pending?.intent === 'calendar_new_contact_suggestion') {
+    const resposta = text.trim().toLowerCase();
+    const afirmativo = /^(sim|s|yes|claro|pode|ok|isso)\b/.test(resposta);
+    const negativo = /^(n[aã]o|n|nunca|not)\b/.test(resposta);
+
+    if (afirmativo) {
+      const created = await createContactFromWhatsapp(userIdProfile, {
+        contact_name: pending.data.contact_name,
+        contact_email: pending.data.contact_email || null,
+        how_met: 'Encontrado via sincronização de calendário',
+      });
+      if (!created) {
+        await clearPendingAction(userIdProfile);
+        await sendReply(number, 'Deu um problema cadastrando. Tenta de novo em instantes, ou cadastra pelo app.');
+        return;
+      }
+      await sb('interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userIdProfile,
+          contact_id: created.id,
+          type: 'reuniao',
+          description: pending.data.event_summary || 'Reunião registrada via calendário',
+          sentiment: 'positivo',
+          value_generated: false,
+        }),
+      });
+      await sb(`contacts?id=eq.${created.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ last_interaction_at: new Date().toISOString() }),
+      });
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, `✅ *${created.name}* cadastrado na sua rede e a conversa de hoje já foi registrada!${APP_ENRICHMENT_NUDGE}`);
+      await setFocusContact(userIdProfile, created.id);
+      return;
+    }
+    if (negativo) {
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, 'Combinado, não cadastrei. 👍');
+      return;
+    }
+    // Ambíguo: mesma lógica do bloco anterior, cai no fluxo normal.
   }
 
   // 3. Entende a intenção da mensagem (pode haver mais de uma ação na mesma mensagem)
