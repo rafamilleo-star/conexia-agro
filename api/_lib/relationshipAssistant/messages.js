@@ -61,6 +61,14 @@ export function nextBestActionMessage({ contactName, title, reason }) {
   return `${title}\n\n${reason}`;
 }
 
+// eventSummary vem direto do título do evento no calendário do usuário — não
+// filtrado por IA, então mantém o texto original entre aspas em vez de
+// tentar reformular (evita inventar contexto que não está no evento).
+export function calendarInteractionSuggestionMessage({ firstName, contactName, eventSummary }) {
+  const evento = eventSummary ? ` "${eventSummary}"` : '';
+  return `Oi${greet(firstName)}! Vi no seu calendário${evento} com *${contactName}* hoje.\n\nQuer que eu registre isso como uma interação? Responde *sim* ou *não*.`;
+}
+
 export const CTAS = {
   onboarding: ['Continuar cadastro', 'Retomar no CONÉXIA'],
   inactivity: ['Ver minha próxima ação', 'Quem merece atenção?', 'Cadastrar alguém importante', 'Abrir o CONÉXIA'],
