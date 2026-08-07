@@ -69,6 +69,13 @@ export function calendarInteractionSuggestionMessage({ firstName, contactName, e
   return `Oi${greet(firstName)}! Vi no seu calendário${evento} com *${contactName}* hoje.\n\nQuer que eu registre isso como uma interação? Responde *sim* ou *não*.`;
 }
 
+// Convidado sem match em nenhum contato existente — sugere cadastrar E
+// registrar a interação em uma única pergunta (sem criar tela nova).
+export function calendarNewContactSuggestionMessage({ firstName, contactName, eventSummary }) {
+  const evento = eventSummary ? ` "${eventSummary}"` : '';
+  return `Oi${greet(firstName)}! Você teve uma reunião${evento} com *${contactName}* hoje, mas não encontrei essa pessoa na sua rede.\n\nQuer que eu já cadastre e registre essa conversa? Responde *sim* ou *não*.`;
+}
+
 export const CTAS = {
   onboarding: ['Continuar cadastro', 'Retomar no CONÉXIA'],
   inactivity: ['Ver minha próxima ação', 'Quem merece atenção?', 'Cadastrar alguém importante', 'Abrir o CONÉXIA'],
