@@ -701,6 +701,45 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
     return;
   }
 
+  // 2.6 Havia uma sugestão de calendário em aberto (Bloco 2 — Captura
+  // Passiva)? Reconhece sim/não por palavra-chave, sem precisar do Gemini —
+  // mais rápido e mais confiável pra uma resposta binária simples.
+  if (pending?.intent === 'calendar_interaction_suggestion') {
+    const resposta = text.trim().toLowerCase();
+    const afirmativo = /^(sim|s|yes|claro|pode|ok|isso)\b/.test(resposta);
+    const negativo = /^(n[aã]o|n|nunca|not)\b/.test(resposta);
+
+    if (afirmativo) {
+      await sb('interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userIdProfile,
+          contact_id: pending.data.contact_id,
+          type: 'reuniao',
+          description: pending.data.event_summary || 'Reunião registrada via calendário',
+          sentiment: 'positivo',
+          value_generated: false,
+        }),
+      });
+      await sb(`contacts?id=eq.${pending.data.contact_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ last_interaction_at: new Date().toISOString(), next_action_reminded_at: null }),
+      });
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, `✅ Registrado! Interação com *${pending.data.contact_name}* salva na sua rede.`);
+      await setFocusContact(userIdProfile, pending.data.contact_id);
+      return;
+    }
+    if (negativo) {
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, 'Combinado, não registrei. 👍');
+      return;
+    }
+    // Resposta ambígua: não limpa a pending action, mas também não trava o
+    // resto do fluxo — deixa cair no analyzeIntent normal (a pessoa pode ter
+    // ignorado a pergunta e mandado outra coisa completamente diferente).
+  }
+
   // 3. Entende a intenção da mensagem (pode haver mais de uma ação na mesma mensagem)
   const intentDataList = await analyzeIntent(text, contacts || [], focusContact);
 
