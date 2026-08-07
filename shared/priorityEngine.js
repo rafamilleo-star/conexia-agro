@@ -116,10 +116,10 @@ function birthdayDaysAway(birthday, referenceDate) {
  */
 function calculateRelevance(contact) {
   const rawFields = [
-    contact?.influenciaPessoas,
-    contact?.geraOportunidade,
-    contact?.abrePortas,
-    contact?.momentoAtual,
+    contact?.influenciaPessoas ?? contact?.influencia_pessoas,
+    contact?.geraOportunidade ?? contact?.gera_oportunidade,
+    contact?.abrePortas ?? contact?.abre_portas,
+    contact?.momentoAtual ?? contact?.momento_atual,
   ];
 
   const values = rawFields.map((value) => {
