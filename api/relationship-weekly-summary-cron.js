@@ -126,7 +126,7 @@ export default async function handler(req, res) {
       const weekAgoISO = new Date(Date.now() - 7 * 86400000).toISOString();
 
       const [contacts, interactions] = await Promise.all([
-        sb(`contacts?user_id=eq.${profile.id}&select=id,name,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday`),
+        sb(`contacts?user_id=eq.${profile.id}&select=id,name,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`),
         sb(`interactions?user_id=eq.${profile.id}&created_at=gte.${weekAgoISO}&select=id`),
       ]);
 
