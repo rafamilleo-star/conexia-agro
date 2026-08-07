@@ -1433,7 +1433,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
   useEffect(() => {
     if (!userId || !isPro) return;
     supabase.from('plan_insights')
-      .select('title, description, metric, created_at')
+      .select('title, description, recommendation, metric, created_at')
       .eq('user_id', userId)
       .eq('insight_type', 'weekly_evolution')
       .order('created_at', { ascending: false })
@@ -1518,6 +1518,11 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
           <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: 0 }}>
             {evolucao.description}
           </p>
+          {evolucao.recommendation && (
+            <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.6, margin: "10px 0 0", paddingTop: 10, borderTop: `1px solid ${C.brd}` }}>
+              {evolucao.recommendation}
+            </p>
+          )}
         </div>
       )}
       {isPro ? (
