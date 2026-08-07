@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     let enviados = 0, pulados = 0, semAcao = 0;
     for (const profile of perfis || []) {
       const contacts = await sb(
-        `contacts?user_id=eq.${profile.id}&select=id,name,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday`
+        `contacts?user_id=eq.${profile.id}&select=id,name,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`
       );
       const [top] = computeNextBestActions(contacts);
       if (!top || top.priority < MIN_PRIORITY_TO_NOTIFY) { semAcao++; continue; }
