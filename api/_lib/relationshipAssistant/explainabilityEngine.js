@@ -111,12 +111,33 @@ export function buildTimeline(events) {
     .slice(0, 4);
 }
 
+// Frase independente da tendência — não entra no composite score nem afeta
+// Evoluindo/Estável/Perdendo. É só prova de resultado (elo relação →
+// oportunidade), por isso fica separada da explicação de tendência.
+// Retorna null quando não há dado, nunca "0 interações geraram valor".
+function buildValueHighlight(signals) {
+  const { interacoesComValor = 0, retomadasComValor = 0 } = signals || {};
+  if (retomadasComValor > 0) {
+    return retomadasComValor === 1
+      ? 'Uma relação que você retomou esta semana já teve desdobramento comercial — o Radar de Silêncio funcionando na prática.'
+      : `${retomadasComValor} relações que você retomou esta semana já tiveram desdobramento comercial.`;
+  }
+  if (interacoesComValor > 0) {
+    return interacoesComValor === 1
+      ? 'Você registrou desdobramento comercial em uma interação esta semana.'
+      : `Você registrou desdobramento comercial em ${interacoesComValor} interações esta semana.`;
+  }
+  return null;
+}
+
 export function computeWeeklyEvolution({ currentSignals, previousSignals, events }) {
   const trend = classifyTrend(currentSignals, previousSignals);
+  const highlight = buildValueHighlight(currentSignals);
   return {
     trend,
     trendLabel: TREND_LABELS[trend],
     explanation: buildExplanation(currentSignals, trend),
+    valueHighlight: highlight && containsForbiddenTone(highlight) ? null : highlight,
     timeline: buildTimeline(events),
   };
 }
