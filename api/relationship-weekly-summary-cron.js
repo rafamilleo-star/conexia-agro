@@ -24,13 +24,20 @@ const CRON_SECRET = process.env.CRON_SECRET || '';
 // canal de notificação.
 async function computeSignalsForWindow(userId, contactIds, startISO, endISO) {
   const [weekInteractions, newContacts, stepsCompleted] = await Promise.all([
-    sb(`interactions?user_id=eq.${userId}&created_at=gte.${startISO}&created_at=lt.${endISO}&select=id,contact_id,created_at`),
+    sb(`interactions?user_id=eq.${userId}&created_at=gte.${startISO}&created_at=lt.${endISO}&select=id,contact_id,created_at,value_generated`),
     sb(`contacts?user_id=eq.${userId}&created_at=gte.${startISO}&created_at=lt.${endISO}&select=id`),
     sb(`plan_step_completion?user_id=eq.${userId}&completed_at=gte.${startISO}&completed_at=lt.${endISO}&select=id`),
   ]);
 
+  // Contatos com pelo menos uma interação com value_generated=true nesta
+  // janela — usado abaixo para checar sobreposição com retomadas.
+  const contactsComValor = new Set(
+    (weekInteractions || []).filter(i => i.value_generated).map(i => i.contact_id)
+  );
+
   const touchedIds = [...new Set((weekInteractions || []).map(i => i.contact_id).filter(Boolean))];
   let retomadas = 0;
+  let retomadasComValor = 0;
   if (touchedIds.length) {
     const priorInteractions = await sb(
       `interactions?user_id=eq.${userId}&contact_id=in.(${touchedIds.join(',')})&created_at=lt.${startISO}&select=contact_id,created_at&order=created_at.desc`
@@ -44,7 +51,10 @@ async function computeSignalsForWindow(userId, contactIds, startISO, endISO) {
       const priorAt = lastPriorByContact[cid];
       if (!contact || !priorAt) continue;
       const gapDays = (new Date(startISO) - new Date(priorAt)) / 86400000;
-      if (gapDays > (contact.ideal_frequency_days || 30)) retomadas++;
+      if (gapDays > (contact.ideal_frequency_days || 30)) {
+        retomadas++;
+        if (contactsComValor.has(cid)) retomadasComValor++;
+      }
     }
   }
 
@@ -54,6 +64,8 @@ async function computeSignalsForWindow(userId, contactIds, startISO, endISO) {
     retomadas,
     novasConexoes: newContacts?.length || 0,
     metasConcluidas: stepsCompleted?.length || 0,
+    interacoesComValor: (weekInteractions || []).filter(i => i.value_generated).length,
+    retomadasComValor,
   };
 }
 
@@ -85,7 +97,9 @@ async function persistWeeklyEvolution(profile) {
       title: evolution.trendLabel,
       description: evolution.explanation,
       metric: JSON.stringify(currentSignals),
-      recommendation: null,
+      // Reaproveita a coluna já existente (antes sempre null) — elo
+      // relação→oportunidade (Bloco 1), sem migration.
+      recommendation: evolution.valueHighlight,
     }),
   });
 }
