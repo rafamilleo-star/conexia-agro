@@ -1392,6 +1392,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
     birthday:     profile?.birthday || "",
     network_size: profile?.network_size || "",
     challenges:   profile?.challenge ? profile.challenge.split(",").map(s => s.trim()).filter(Boolean) : [],
+    calendarIcsUrl: profile?.calendar_ics_url || "",
   });
   // Ressincronizar quando o profile chega do Supabase (carregamento assíncrono)
   useEffect(() => {
@@ -1410,6 +1411,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
       birthday:     profile.birthday || "",
       network_size: profile.network_size || "",
       challenges:   profile.challenge ? profile.challenge.split(",").map(s => s.trim()).filter(Boolean) : [],
+      calendarIcsUrl: profile.calendar_ics_url || "",
     });
   }, [profile]);
 
@@ -1454,6 +1456,12 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
 
   const handleSave = async () => {
     setSaving(true); setErr(""); setSaved(false); setJustActivatedTrial(false);
+    const calendarIcsUrlTrimmed = (pf.calendarIcsUrl || "").trim();
+    if (calendarIcsUrlTrimmed && !/^https?:\/\//i.test(calendarIcsUrlTrimmed)) {
+      setErr("O link do calendário precisa começar com http:// ou https://");
+      setSaving(false);
+      return;
+    }
     const whatsappNormalizado = normalizeWhatsapp(pf.whatsapp);
     // Primeira vez que este usuário Free cadastra um WhatsApp: inicia o
     // relógio do trial de 10 dias. Nunca reinicia se já existir uma data.
@@ -1473,6 +1481,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
       birthday:     pf.birthday || null,
       network_size: pf.network_size || null,
       challenge:    pf.challenges.length > 0 ? pf.challenges.join(",") : null,
+      calendar_ics_url: calendarIcsUrlTrimmed || null,
       ...(primeiroCadastro ? { whatsapp_trial_started_at: new Date().toISOString() } : {}),
     };
     try {
@@ -1587,6 +1596,25 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
           <Inp label="LinkedIn" value={pf.linkedin} onChange={sp('linkedin')} placeholder="linkedin.com/in/voce" />
         </div>
       </div>
+      {isPro && (
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 6 }}>Captura Passiva via Calendário</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 14 }}>
+            Cole o link secreto do seu Google Calendar e, quando você tiver uma reunião com alguém da sua rede, o assistente {BRAND.name} te pergunta pelo WhatsApp se quer registrar como interação — sem precisar abrir o app.
+          </div>
+          <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>Link .ics do calendário</label>
+          <input
+            type="url"
+            value={pf.calendarIcsUrl || ""}
+            onChange={e => sp('calendarIcsUrl')(e.target.value)}
+            placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
+            style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, outline: "none" }}
+          />
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, lineHeight: 1.5, marginTop: 8 }}>
+            No Google Calendar: Configurações → seu calendário → "Integrar calendário" → copie o "Endereço secreto no formato iCal". Não usamos login nem senha, só esse link público de leitura.
+          </div>
+        </div>
+      )}
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Contexto Profissional</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
