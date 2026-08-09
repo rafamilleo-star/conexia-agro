@@ -2,6 +2,8 @@
 // Recebe mensagens do WhatsApp via webhook (Evolution API ou Twilio)
 // Analisa intenção com Gemini, grava no Supabase, responde via Twilio
 
+import { relationshipMomentum } from '../shared/priorityEngine.js';
+
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
@@ -865,16 +867,31 @@ async function executeIntent(intentData, { userIdProfile, contacts, number, send
       await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
       return;
     }
-    const full = await sb(`contacts?id=eq.${match.id}&select=name,company,role,category,how_met,last_interaction_at,next_action,next_action_date`);
+    const full = await sb(`contacts?id=eq.${match.id}&select=id,name,company,role,category,how_met,last_interaction_at,ideal_frequency_days,next_action,next_action_date`);
     const c = full?.[0];
     if (!c) { await sendReply(number, `Não encontrei os detalhes de "${match.name}".`); return; }
     const diasSemContato = c.last_interaction_at ? Math.floor((Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000) : null;
+
+    // Momentum (mesmo motor da Home/Perfil — shared/priorityEngine.js) —
+    // "o que mudou" do briefing, seção 9 do prompt mestre. Silencioso
+    // quando não há base pra afirmar nada (insufficient_data/new), igual
+    // em qualquer outro lugar que usa momentum.
+    const contactHistory = await sb(`interactions?contact_id=eq.${c.id}&select=created_at&order=created_at.asc`);
+    const momentum = relationshipMomentum(c, contactHistory, new Date());
+    const MOMENTUM_BRIEFING_LINES = {
+      cooling: 'O ritmo de contato com essa relação caiu em relação ao histórico de vocês.',
+      strengthening: 'Vocês têm se falado com mais frequência que o normal ultimamente.',
+      reactivated: 'Você está retomando essa relação depois de um tempo sem contato.',
+    };
+    const momentumLine = MOMENTUM_BRIEFING_LINES[momentum] || null;
+
     const linhas = [
       `📋 *Briefing — ${c.name}*`,
       c.role || c.company ? `${[c.role, c.company].filter(Boolean).join(' na ')}` : null,
       c.category ? `Categoria: ${c.category}` : null,
       c.how_met ? `Como conheceu: ${c.how_met}` : null,
       diasSemContato !== null ? `Última interação: há ${diasSemContato} dia(s)` : 'Última interação: nenhuma registrada ainda',
+      momentumLine,
       c.next_action ? `Próxima ação: ${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'Sem próxima ação definida',
     ].filter(Boolean);
     await sendReply(number, linhas.join('\n'));
