@@ -15,6 +15,7 @@ import { weeklySummaryOpeningMessage, weeklySummaryBodyMessage } from './_lib/re
 import { computeWeeklyAttentionItems, computeNextBestActions } from './_lib/relationshipAssistant/actionEngine.js';
 import { isMonday, localDateISO } from './_lib/relationshipAssistant/timeWindow.js';
 import { computeWeeklyEvolution } from './_lib/relationshipAssistant/explainabilityEngine.js';
+import { detectPatterns } from '../shared/relationshipPatternDetector.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
@@ -75,13 +76,22 @@ async function persistWeeklyEvolution(profile) {
   const weekEndISO = now.toISOString();
   const prevWeekStartISO = new Date(now.getTime() - 14 * 86400000).toISOString();
 
-  const contacts = await sb(`contacts?user_id=eq.${profile.id}&select=id,ideal_frequency_days`);
+  // Busca os campos completos (não só id/ideal_frequency_days) porque o
+  // pattern detector (Fase 5) precisa de proximity, relevância estratégica
+  // e created_at — os mesmos campos que priorityEngine.js já usa.
+  const [contacts, allInteractions] = await Promise.all([
+    sb(`contacts?user_id=eq.${profile.id}&select=id,name,created_at,proximity,ideal_frequency_days,last_interaction_at,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`),
+    sb(`interactions?user_id=eq.${profile.id}&select=contact_id,created_at,tags`),
+  ]);
+
   const [currentSignals, previousSignals] = await Promise.all([
     computeSignalsForWindow(profile.id, contacts, weekStartISO, weekEndISO),
     computeSignalsForWindow(profile.id, contacts, prevWeekStartISO, weekStartISO),
   ]);
 
-  const evolution = computeWeeklyEvolution({ currentSignals, previousSignals, events: [] });
+  const patterns = detectPatterns(contacts, allInteractions, now);
+
+  const evolution = computeWeeklyEvolution({ currentSignals, previousSignals, events: [], patterns });
 
   // week: número ISO da semana — só para referência/orderação, não usado como
   // "fase do plano" (esse conceito já existe em plan_progress/plan_phases e
@@ -96,7 +106,11 @@ async function persistWeeklyEvolution(profile) {
       insight_type: 'weekly_evolution',
       title: evolution.trendLabel,
       description: evolution.explanation,
-      metric: JSON.stringify(currentSignals),
+      // Diagnóstico: sinais brutos + padrões que influenciaram a tendência
+      // desta semana. Não é exibido na UI hoje (Perfil só lê title/
+      // description/recommendation), mas fica disponível pra auditar por
+      // que uma semana foi classificada de um jeito.
+      metric: JSON.stringify({ ...currentSignals, patterns: patterns.map(p => ({ type: p.type, confidence: p.confidence })) }),
       // Reaproveita a coluna já existente (antes sempre null) — elo
       // relação→oportunidade (Bloco 1), sem migration.
       recommendation: evolution.valueHighlight,
