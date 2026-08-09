@@ -24,6 +24,7 @@
     { "path": "/api/relationship-inactivity-cron", "schedule": "0 12 * * *" },
     { "path": "/api/relationship-weekly-summary-cron", "schedule": "0 11 * * *" },
     { "path": "/api/relationship-attention-cron", "schedule": "0 13 * * *" },
-    { "path": "/api/relationship-calendar-sync-cron", "schedule": "0 14 * * *" }
+    { "path": "/api/relationship-calendar-sync-cron", "schedule": "0 14 * * *" },
+    { "path": "/api/interaction-intent-classifier-cron", "schedule": "0 9 * * *" }
   ]
 }
