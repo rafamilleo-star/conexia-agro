@@ -12,6 +12,7 @@
 // - Sem dado suficiente => estado neutro "sem_dados", nunca "perdendo".
 
 import { containsForbiddenTone } from './messages.js';
+import { PATTERN_NOTES } from '../../../shared/relationshipPatternDetector.js';
 
 const DIMENSION_LABELS = {
   intencao_estrategica: 'Estratégia',
@@ -61,16 +62,8 @@ const PATTERN_DIRECTION = {
 // linguagem tentativa de propósito: a confiança desse padrão específico
 // tem teto de 0.6 (é inferência de IA, não fato direto — ver
 // relationshipPatternDetector.js), então a frase nunca afirma com certeza.
-const PATTERN_NOTES = {
-  NETWORK_CONCENTRATION_INCREASING: 'Sua rede ficou mais concentrada nas últimas semanas — boa parte das suas interações está com um grupo pequeno de pessoas.',
-  NETWORK_EXPANSION_DECREASING: 'Você tem criado menos conexões novas do que no período anterior.',
-  NEW_CONTACTS_WITHOUT_CONTINUITY: 'A maioria dos contatos que você adicionou recentemente ainda não teve uma segunda conversa registrada.',
-  STRATEGIC_RELATIONSHIPS_COOLING: 'Algumas relações relevantes pro seu momento estão esfriando.',
-  RELATIONSHIPS_ONLY_WHEN_NEEDED: 'Percebi um possível padrão: boa parte das vezes que você retoma contato com alguém, parece vir de algo que a pessoa trouxe primeiro. Vale observar se é isso mesmo.',
-  CORE_RELATIONSHIPS_STRENGTHENING: 'Seu núcleo de relações mais próximas está mais consistente que o normal.',
-  REACTIVATION_IMPROVING: 'Você tem retomado relações que esfriaram com mais frequência do que antes.',
-  RELATIONSHIP_CONSISTENCY_IMPROVING: 'Sua regularidade com relações importantes melhorou em relação às semanas anteriores.',
-};
+// Mapa em si vive em shared/relationshipPatternDetector.js (PATTERN_NOTES)
+// — mesma fonte usada pela Home ("O que percebi"), pra nunca divergir.
 
 // Peso pequeno de propósito: padrões de rede complementam a leitura da
 // semana, nunca dominam sobre a atividade real registrada. Um padrão de
