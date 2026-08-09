@@ -14,6 +14,7 @@
  * - pessoa importante sem interação;
  * - frequência ideal ultrapassada;
  * - relevância estratégica;
+ * - proximidade declarada (ajusta peso, não decide sozinha);
  * - respostas anteriores do usuário.
  */
 
@@ -151,6 +152,26 @@ export function calculateRelevance(contact) {
     normalized.reduce((sum, value) => sum + value, 0) /
       normalized.length
   );
+}
+
+/**
+ * Converte a proximidade declarada do contato (1 = muito próximo,
+ * 5 = distante) em um bônus de 0 a 4 para as regras que já existem.
+ *
+ * Não gera candidato sozinha e não decide prioridade — apenas ajusta
+ * o peso de regras existentes: uma relação próxima esfriando ou
+ * ultrapassando a frequência ideal merece mais atenção do que uma
+ * relação distante nas mesmas condições.
+ *
+ * @param {object} contact
+ * @returns {number|null}
+ */
+function proximityCloseness(contact) {
+  const raw = Number(contact?.proximity);
+
+  if (!Number.isFinite(raw) || raw < 1 || raw > 5) return null;
+
+  return 5 - raw;
 }
 
 /**
@@ -324,13 +345,15 @@ function buildContactCandidates(contact, referenceDate) {
    * 3. Pessoa importante sem nenhuma interação registrada.
    */
   if (!lastInteraction && relevance !== null && relevance >= 60) {
+    const closeness = proximityCloseness(contact) || 0;
+
     candidates.push(
       createCandidate(
         contact,
         "important_without_history",
         `Comece a cuidar da relação com ${contact.name}`,
         `${contact.name} parece importante para o seu momento, mas ainda não há nenhuma conversa registrada.`,
-        82 + Math.round((relevance - 60) / 5)
+        82 + Math.round((relevance - 60) / 5) + closeness
       )
     );
   }
@@ -349,6 +372,8 @@ function buildContactCandidates(contact, referenceDate) {
         ? Math.round(relevance / 10)
         : 0;
 
+    const closeness = proximityCloseness(contact) || 0;
+
     candidates.push(
       createCandidate(
         contact,
@@ -357,7 +382,8 @@ function buildContactCandidates(contact, referenceDate) {
         `Faz ${daysWithoutContact} dias desde o último registro. O ritmo que você definiu para essa relação era de aproximadamente ${idealFrequency} dias.`,
         65 +
           Math.min(excessDays, 20) +
-          strategicBonus
+          strategicBonus +
+          closeness
       )
     );
   }
@@ -376,6 +402,8 @@ function buildContactCandidates(contact, referenceDate) {
     relevance !== null &&
     relevance >= 70
   ) {
+    const closeness = proximityCloseness(contact) || 0;
+
     candidates.push(
       createCandidate(
         contact,
@@ -384,7 +412,8 @@ function buildContactCandidates(contact, referenceDate) {
         "É uma relação relevante para o seu momento e há pouco registro recente de presença.",
         76 +
           Math.round((relevance - 70) / 5) +
-          Math.round((55 - health) / 10)
+          Math.round((55 - health) / 10) +
+          closeness
       )
     );
   }
