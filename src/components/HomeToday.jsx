@@ -970,8 +970,8 @@ const HomeToday = ({
   }, [alertRows, loadingAlerts, loadError]);
 
   const priorities = useMemo(() => {
-    return computePriorities(contacts, feedbackMap, todayISO());
-  }, [contacts, feedbackMap]);
+    return computePriorities(contacts, feedbackMap, todayISO(), interactions);
+  }, [contacts, feedbackMap, interactions]);
 
   const mainRecommendation = priorities?.main || null;
   // Até 3 cartões, nunca um número fixo — só os que realmente existem hoje.
