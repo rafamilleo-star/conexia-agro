@@ -15,6 +15,8 @@
  * - frequência ideal ultrapassada;
  * - relevância estratégica;
  * - proximidade declarada (ajusta peso, não decide sozinha);
+ * - momentum da relação, calculado do histórico real de interações
+ *   (ajusta peso, não decide sozinho);
  * - respostas anteriores do usuário.
  */
 
@@ -175,6 +177,118 @@ function proximityCloseness(contact) {
 }
 
 /**
+ * Filtra e ordena (mais antiga primeiro) as interações de um contato
+ * específico a partir da lista completa do usuário.
+ *
+ * Aceita tanto o formato do frontend (contactId/createdAt) quanto o
+ * formato cru do Supabase (contact_id/created_at).
+ *
+ * @param {Array<object>} interactions
+ * @param {string} contactId
+ * @returns {Array<Date>}
+ */
+function contactInteractionDates(interactions, contactId) {
+  if (!Array.isArray(interactions) || !contactId) return [];
+
+  return interactions
+    .filter((i) => (i?.contactId ?? i?.contact_id) === contactId)
+    .map((i) => parseDate(i?.createdAt ?? i?.created_at))
+    .filter(Boolean)
+    .sort((a, b) => a.getTime() - b.getTime());
+}
+
+/**
+ * Interpreta a tendência de uma relação a partir do histórico real de
+ * interações, em vez de depender só de "dias desde o último contato".
+ *
+ * Exemplo do problema que isso resolve: alguém pode estar há 30 dias
+ * sem contato e continuar estável, se o ritmo histórico real dessa
+ * relação é a cada 45 dias — mesmo que o campo de frequência ideal
+ * cadastrado esteja desatualizado.
+ *
+ * Estados possíveis:
+ * - insufficient_data: histórico curto demais para afirmar qualquer coisa;
+ * - new: contato recém-criado, ainda sem ritmo estabelecido;
+ * - reactivated: silêncio longo seguido de retomada recente;
+ * - strengthening: ritmo atual mais frequente que o histórico;
+ * - stable: dentro da variação normal do ritmo histórico;
+ * - cooling: intervalo atual bem acima do ritmo histórico.
+ *
+ * Exige no mínimo 2 interações para calcular ritmo — nunca afirma
+ * tendência com base em 1 único ponto de dado.
+ *
+ * @param {object} contact
+ * @param {Array<object>} interactions
+ * @param {Date} referenceDate
+ * @returns {string}
+ */
+function relationshipMomentum(contact, interactions, referenceDate) {
+  const contactId = contact?.id;
+  if (!contactId) return "insufficient_data";
+
+  const history = contactInteractionDates(interactions, contactId);
+  const createdAt = parseDate(contact?.created_at ?? contact?.createdAt);
+  const contactAgeDays = createdAt ? daysSince(createdAt, referenceDate) : null;
+  const RECENT_CONTACT_WINDOW = 21;
+
+  if (history.length === 0) {
+    if (contactAgeDays !== null && contactAgeDays <= RECENT_CONTACT_WINDOW) {
+      return "new";
+    }
+    return "insufficient_data";
+  }
+
+  if (history.length === 1) {
+    if (contactAgeDays !== null && contactAgeDays <= RECENT_CONTACT_WINDOW) {
+      return "new";
+    }
+    return "insufficient_data";
+  }
+
+  const intervals = [];
+  for (let i = 1; i < history.length; i++) {
+    intervals.push(
+      (history[i].getTime() - history[i - 1].getTime()) / DAY_MS
+    );
+  }
+
+  const lastInteraction = history[history.length - 1];
+  const daysSinceLast = daysSince(lastInteraction, referenceDate);
+
+  if (daysSinceLast === null) return "insufficient_data";
+
+  /*
+   * Reativação: exige pelo menos 3 interações pra ter uma base de
+   * comparação (o intervalo "normal" entre as interações mais antigas)
+   * antes de afirmar que houve um silêncio longo seguido de retomada.
+   */
+  if (intervals.length >= 2) {
+    const priorIntervals = intervals.slice(0, -1);
+    const avgPriorInterval =
+      priorIntervals.reduce((a, b) => a + b, 0) / priorIntervals.length;
+    const lastGap = intervals[intervals.length - 1];
+
+    const hadDormantGap = lastGap >= Math.max(avgPriorInterval * 2, 45);
+    const resumedRecently = daysSinceLast <= 14;
+
+    if (hadDormantGap && resumedRecently) {
+      return "reactivated";
+    }
+  }
+
+  const avgInterval =
+    intervals.reduce((a, b) => a + b, 0) / intervals.length;
+
+  if (avgInterval <= 0) return "insufficient_data";
+
+  const ratio = daysSinceLast / avgInterval;
+
+  if (ratio <= 0.7) return "strengthening";
+  if (ratio <= 1.4) return "stable";
+  return "cooling";
+}
+
+/**
  * Identificador estável da recomendação.
  *
  * @param {string} contactId
@@ -193,6 +307,7 @@ function recommendationId(contactId, actionType) {
  * @param {string} title
  * @param {string} reason
  * @param {number} score
+ * @param {string} [momentum]
  * @returns {object}
  */
 function createCandidate(
@@ -200,7 +315,8 @@ function createCandidate(
   actionType,
   title,
   reason,
-  score
+  score,
+  momentum
 ) {
   return {
     recommendationId: recommendationId(contact.id, actionType),
@@ -211,6 +327,7 @@ function createCandidate(
     title,
     reason,
     score,
+    momentum: momentum || "insufficient_data",
   };
 }
 
@@ -237,13 +354,36 @@ function overdueDays(value, referenceDate) {
 }
 
 /**
+ * Converte o estado de momentum em um ajuste de pontuação para as
+ * regras que dependem de "tempo sem contato". Mesma filosofia da
+ * proximidade: sinal que ajusta peso, nunca cria ou remove candidato
+ * sozinho.
+ *
+ * cooling reforça o alerta; stable/strengthening o atenua, porque
+ * sugere que o intervalo atual é normal para o ritmo real dessa
+ * relação (mesmo que o campo de frequência ideal cadastrado esteja
+ * desatualizado). new/reactivated/insufficient_data não alteram nada
+ * — não há evidência suficiente para puxar o placar em nenhuma direção.
+ *
+ * @param {string} momentum
+ * @returns {number}
+ */
+function momentumAdjustment(momentum) {
+  if (momentum === "cooling") return 4;
+  if (momentum === "stable" || momentum === "strengthening") return -6;
+  return 0;
+}
+
+/**
  * Cria candidatos para um contato.
  *
  * @param {object} contact
  * @param {Date} referenceDate
+ * @param {Array<object>} interactions Histórico completo do usuário (todos
+ *   os contatos) — a função filtra internamente pelo contato atual.
  * @returns {Array<object>}
  */
-function buildContactCandidates(contact, referenceDate) {
+function buildContactCandidates(contact, referenceDate, interactions) {
   const candidates = [];
 
   if (!contact?.id || !contact?.name) {
@@ -251,6 +391,7 @@ function buildContactCandidates(contact, referenceDate) {
   }
 
   const relevance = calculateRelevance(contact);
+  const momentum = relationshipMomentum(contact, interactions, referenceDate);
   const lastInteraction =
     contact.lastInteraction ||
     contact.last_interaction_at ||
@@ -300,7 +441,8 @@ function buildContactCandidates(contact, referenceDate) {
         actionText
           ? `${reason} Próximo passo registrado: ${actionText}.`
           : reason,
-        100 + Math.min(daysOverdue, 30)
+        100 + Math.min(daysOverdue, 30),
+        momentum
       )
     );
   }
@@ -336,7 +478,8 @@ function buildContactCandidates(contact, referenceDate) {
         "birthday",
         title,
         reason,
-        birthdayDistance === 0 ? 96 : 88 - birthdayDistance
+        birthdayDistance === 0 ? 96 : 88 - birthdayDistance,
+        momentum
       )
     );
   }
@@ -353,7 +496,8 @@ function buildContactCandidates(contact, referenceDate) {
         "important_without_history",
         `Comece a cuidar da relação com ${contact.name}`,
         `${contact.name} parece importante para o seu momento, mas ainda não há nenhuma conversa registrada.`,
-        82 + Math.round((relevance - 60) / 5) + closeness
+        82 + Math.round((relevance - 60) / 5) + closeness,
+        momentum
       )
     );
   }
@@ -373,6 +517,7 @@ function buildContactCandidates(contact, referenceDate) {
         : 0;
 
     const closeness = proximityCloseness(contact) || 0;
+    const momentumBonus = momentumAdjustment(momentum);
 
     candidates.push(
       createCandidate(
@@ -383,7 +528,9 @@ function buildContactCandidates(contact, referenceDate) {
         65 +
           Math.min(excessDays, 20) +
           strategicBonus +
-          closeness
+          closeness +
+          momentumBonus,
+        momentum
       )
     );
   }
@@ -413,7 +560,9 @@ function buildContactCandidates(contact, referenceDate) {
         76 +
           Math.round((relevance - 70) / 5) +
           Math.round((55 - health) / 10) +
-          closeness
+          closeness +
+          momentumAdjustment(momentum),
+        momentum
       )
     );
   }
@@ -448,12 +597,17 @@ function keepBestCandidatePerContact(candidates) {
  * @param {Array<object>} contacts
  * @param {Record<string, object>} feedbackMap
  * @param {Date|string} referenceDate
+ * @param {Array<object>} [interactions] Histórico completo de interações
+ *   do usuário. Opcional — quando omitido, o momentum de cada contato
+ *   cai em "insufficient_data" e nenhuma regra é afetada (mesmo
+ *   comportamento de antes desta mudança).
  * @returns {{main: object|null, secondary: Array<object>}}
  */
 export function computePriorities(
   contacts = [],
   feedbackMap = {},
-  referenceDate = new Date()
+  referenceDate = new Date(),
+  interactions = []
 ) {
   const today =
     parseDate(referenceDate) ||
@@ -463,7 +617,7 @@ export function computePriorities(
 
   for (const contact of Array.isArray(contacts) ? contacts : []) {
     const feedback = feedbackMap?.[contact.id] || null;
-    const candidates = buildContactCandidates(contact, today);
+    const candidates = buildContactCandidates(contact, today, interactions);
 
     for (const candidate of candidates) {
       const suppressed = isRecommendationSuppressed(
