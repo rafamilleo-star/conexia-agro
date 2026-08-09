@@ -125,13 +125,18 @@ export default async function handler(req, res) {
       const todayISO = localDateISO(profile.timezone);
       const weekAgoISO = new Date(Date.now() - 7 * 86400000).toISOString();
 
-      const [contacts, interactions] = await Promise.all([
-        sb(`contacts?user_id=eq.${profile.id}&select=id,name,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`),
+      const [contacts, interactions, fullInteractions] = await Promise.all([
+        sb(`contacts?user_id=eq.${profile.id}&select=id,name,created_at,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`),
         sb(`interactions?user_id=eq.${profile.id}&created_at=gte.${weekAgoISO}&select=id`),
+        // Histórico completo (sem filtro de data) — é o que o momentum
+        // precisa pra calcular o ritmo real de cada relação. Separado da
+        // busca acima porque aquela é só a contagem da semana, usada no
+        // texto do resumo.
+        sb(`interactions?user_id=eq.${profile.id}&select=contact_id,created_at`),
       ]);
 
-      const items = computeWeeklyAttentionItems(contacts, todayISO);
-      const actions = computeNextBestActions(contacts);
+      const items = computeWeeklyAttentionItems(contacts, fullInteractions);
+      const actions = computeNextBestActions(contacts, fullInteractions);
       const suggestion = actions[0]?.suggestedMessage
         ? `mande uma mensagem simples para ${actions[0].contactName} perguntando como ${actions[0].contactName ? 'ele/ela' : 'a pessoa'} está.`
         : null;
