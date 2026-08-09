@@ -114,7 +114,7 @@ function birthdayDaysAway(birthday, referenceDate) {
  * @param {object} contact
  * @returns {number|null}
  */
-function calculateRelevance(contact) {
+export function calculateRelevance(contact) {
   const rawFields = [
     contact?.influenciaPessoas ?? contact?.influencia_pessoas,
     contact?.geraOportunidade ?? contact?.gera_oportunidade,
