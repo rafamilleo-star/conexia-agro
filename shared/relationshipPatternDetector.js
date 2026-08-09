@@ -552,3 +552,61 @@ export function detectPatterns(contacts = [], interactions = [], referenceDate =
 }
 
 export default detectPatterns;
+
+/**
+ * ------------------------------------------------------------------
+ * Frases — fonte única, reaproveitada por Perfil (Carta de Evolução) e
+ * Home ("O que percebi"). Nunca escrever a frase de um padrão em mais
+ * de um lugar do código — sempre importar daqui.
+ * ------------------------------------------------------------------
+ */
+export const PATTERN_NOTES = {
+  NETWORK_CONCENTRATION_INCREASING:
+    "Sua rede ficou mais concentrada nas últimas semanas — boa parte das suas interações está com um grupo pequeno de pessoas.",
+  NETWORK_EXPANSION_DECREASING:
+    "Você tem criado menos conexões novas do que no período anterior.",
+  NEW_CONTACTS_WITHOUT_CONTINUITY:
+    "A maioria dos contatos que você adicionou recentemente ainda não teve uma segunda conversa registrada.",
+  STRATEGIC_RELATIONSHIPS_COOLING:
+    "Algumas relações relevantes pro seu momento estão esfriando.",
+  RELATIONSHIPS_ONLY_WHEN_NEEDED:
+    "Percebi um possível padrão: boa parte das vezes que você retoma contato com alguém, parece vir de algo que a pessoa trouxe primeiro. Vale observar se é isso mesmo.",
+  CORE_RELATIONSHIPS_STRENGTHENING:
+    "Seu núcleo de relações mais próximas está mais consistente que o normal.",
+  REACTIVATION_IMPROVING:
+    "Você tem retomado relações que esfriaram com mais frequência do que antes.",
+  RELATIONSHIP_CONSISTENCY_IMPROVING:
+    "Sua regularidade com relações importantes melhorou em relação às semanas anteriores.",
+};
+
+/**
+ * Linha curta com os números por trás da frase — usada atrás de "Ver
+ * evidências", nunca exibida por padrão. Formato deliberadamente simples
+ * (sem fórmula, sem score) — só o que embasa a observação.
+ *
+ * @param {object} pattern
+ * @returns {string}
+ */
+export function evidenceLabel(pattern) {
+  const e = pattern?.evidence || {};
+  switch (pattern?.type) {
+    case "NETWORK_CONCENTRATION_INCREASING":
+      return `${Math.round(e.currentTopShare * 100)}% das interações recentes foram com poucas pessoas (era ${Math.round(e.previousTopShare * 100)}% no período anterior).`;
+    case "NETWORK_EXPANSION_DECREASING":
+      return `${e.currentNewContacts} conexão(ões) nova(s) recentemente, contra ${e.previousNewContacts} no período anterior.`;
+    case "NEW_CONTACTS_WITHOUT_CONTINUITY":
+      return `${e.withoutContinuity} de ${e.totalNewContacts} contatos novos ainda não tiveram uma segunda conversa.`;
+    case "STRATEGIC_RELATIONSHIPS_COOLING":
+      return `${e.coolingCount} de ${e.strategicContactsEvaluated} relações relevantes avaliadas estão esfriando.`;
+    case "RELATIONSHIPS_ONLY_WHEN_NEEDED":
+      return `${Math.round(e.reactiveShare * 100)}% das retomadas recentes (${e.resumptionEventsEvaluated} avaliadas) pareceram reativas.`;
+    case "CORE_RELATIONSHIPS_STRENGTHENING":
+      return `${e.strengtheningCount} de ${e.coreContactsEvaluated} relações do seu núcleo estão fortalecendo.`;
+    case "REACTIVATION_IMPROVING":
+      return `${e.currentReactivations} retomada(s) recente(s), contra ${e.previousReactivations} no período anterior.`;
+    case "RELATIONSHIP_CONSISTENCY_IMPROVING":
+      return `${Math.round(e.currentOnTimeRate * 100)}% das relações em dia recentemente, contra ${Math.round(e.previousOnTimeRate * 100)}% antes.`;
+    default:
+      return "";
+  }
+}
