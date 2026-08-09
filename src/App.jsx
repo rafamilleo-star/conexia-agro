@@ -2553,7 +2553,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     // diferentes". Usa feedbackMap vazio aqui (a Teia ainda não busca
     // `alerts`) — pode, por isso, destacar alguém que já foi dispensado na
     // Home; é uma simplificação assumida, não um bug.
-    const homePriority = computePriorities(cts, {}, new Date());
+    const homePriority = computePriorities(cts, {}, new Date(), its);
     const homePriorityIds = new Set(
       [homePriority.main, ...(homePriority.secondary || [])].filter(Boolean).map(a => a.relationshipId)
     );
