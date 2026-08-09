@@ -1,7 +1,7 @@
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
 import GuidedNetworkStart from './components/GuidedNetworkStart';
-import { computePriorities } from '../shared/priorityEngine.js';
+import { computePriorities, calculateRelevance as calculateRelevanceCanonical } from '../shared/priorityEngine.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "./utils/supabase";
 import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
@@ -111,12 +111,16 @@ const normalizeWhatsapp = (raw) => {
 
 // ── RELEVANCE SCORE utils ──────────────────────────────────
 const calculateRelevanceScore = (c) => {
+  // Cálculo delegado a shared/priorityEngine.js (fonte única de verdade para
+  // relevância). Mantemos aqui apenas a regra de exibição: só mostrar um
+  // valor quando os 4 campos estratégicos estiverem completos — do
+  // contrário, a UI cai em "Dados incompletos", como sempre se comportou.
   const fields = [c.influenciaPessoas, c.geraOportunidade, c.abrePortas, c.momentoAtual];
   const valid = fields.filter(v => v !== null && v !== undefined && v !== "");
   if (valid.length < 4) return null;
   const nums = valid.map(Number);
   if (nums.some(isNaN)) return null;
-  return Math.round((nums.reduce((a,b)=>a+b,0) / 4) * 10);
+  return calculateRelevanceCanonical(c);
 };
 
 const getRelevanceLabel = (rs) => {
@@ -161,43 +165,6 @@ const getContactPriorityStatus = (health, rs) => {
     msg: "Nada que precise da sua atenção nesta relação agora.",
     color: "#6a6460"
   };
-};
-
-const generateWeeklyMoves = (contacts, interactions) => {
-  const today = new Date(); const moves = []; const used = new Set();
-  const addMove = (c, priorityLevel, reason, suggestedAction, suggestedDeadline) => {
-    if (used.has(c.id) || moves.length >= 5) return;
-    used.add(c.id);
-    const ci = interactions ? interactions.filter(i => i.contactId === c.id) : [];
-    const cat = c.category || "";
-    moves.push({ contactId: c.id, contactName: c.name, companyOrCategory: c.company || cat, reason, suggestedAction, suggestedDeadline, priorityLevel, health: c.health });
-  };
-  // 1. Alta relevância + health baixo
-  contacts.filter(c => { const rs = calculateRelevanceScore(c); return rs !== null && rs >= 70 && c.health < 70; })
-    .sort((a,b) => (calculateRelevanceScore(b)||0) - (calculateRelevanceScore(a)||0))
-    .forEach(c => addMove(c, 1, "Contato estratégico esfriando.", "Reative com uma mensagem genuína e específica.", "Próximas 48h"));
-  // 2. Próxima ação vencida
-  contacts.filter(c => c.nextActionDate && new Date(c.nextActionDate) < today)
-    .sort((a,b) => new Date(a.nextActionDate) - new Date(b.nextActionDate))
-    .forEach(c => addMove(c, 2, "Próxima ação vencida.", "Retome o combinado ou atualize o próximo passo.", "Hoje"));
-  // 3. Aniversário 7 dias
-  contacts.filter(c => { const d = birthdayDaysAway(c.birthday); return d !== null && d >= 0 && d <= 7; })
-    .sort((a,b) => (birthdayDaysAway(a.birthday)||99) - (birthdayDaysAway(b.birthday)||99))
-    .forEach(c => { const d = birthdayDaysAway(c.birthday); addMove(c, 3, `Aniversário em ${d === 0 ? "hoje" : d + " dia(s)"}.`, "Envie uma mensagem pessoal, sem pedido comercial.", d === 0 ? "Hoje" : `Até ${fD(c.birthday)}`); });
-  // 4. Alta relevância sem próxima ação
-  contacts.filter(c => { const rs = calculateRelevanceScore(c); return rs !== null && rs >= 70 && !c.nextAction; })
-    .sort((a,b) => (calculateRelevanceScore(b)||0) - (calculateRelevanceScore(a)||0))
-    .forEach(c => addMove(c, 4, "Contato estratégico sem próximo passo.", "Defina uma próxima ação clara.", "Esta semana"));
-  // 5. Muito tempo sem interação
-  contacts.filter(c => c.health < 60 && c.health > 0)
-    .sort((a,b) => a.health - b.health)
-    .forEach(c => addMove(c, 5, "Relação sem interação recente.", "Faça um contato leve para manter presença.", "Esta semana"));
-  // 6. Sem valor gerado recente
-  contacts.filter(c => { const rs = calculateRelevanceScore(c); if (!rs || rs < 60) return false;
-    const recent = interactions ? interactions.filter(i => i.contactId === c.id && i.valueGen && dSince(i.createdAt) <= 30) : [];
-    return recent.length === 0; })
-    .forEach(c => addMove(c, 6, "Contato relevante sem valor gerado recente.", "Compartilhe algo útil, faça uma indicação ou ofereça ajuda.", "Esta semana"));
-  return moves;
 };
 
 const generateImmediateActionPlan = (sc) => {
