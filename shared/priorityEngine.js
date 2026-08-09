@@ -187,7 +187,7 @@ function proximityCloseness(contact) {
  * @param {string} contactId
  * @returns {Array<Date>}
  */
-function contactInteractionDates(interactions, contactId) {
+export function contactInteractionDates(interactions, contactId) {
   if (!Array.isArray(interactions) || !contactId) return [];
 
   return interactions
@@ -222,7 +222,7 @@ function contactInteractionDates(interactions, contactId) {
  * @param {Date} referenceDate
  * @returns {string}
  */
-function relationshipMomentum(contact, interactions, referenceDate) {
+export function relationshipMomentum(contact, interactions, referenceDate) {
   const contactId = contact?.id;
   if (!contactId) return "insufficient_data";
 
