@@ -1395,24 +1395,10 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
   const [justActivatedTrial, setJustActivatedTrial] = useState(false);
   const sp = (k) => (v) => setPf(p => ({ ...p, [k]: v }));
 
-  // Carta de Evolução: último snapshot semanal calculado pelo cron
-  // (relationship-weekly-summary-cron.js -> plan_insights, insight_type
-  // 'weekly_evolution'). Não recalcula nada aqui — só lê o que já foi
-  // computado, mantendo o recompute semanal (não em tempo real).
-  const [evolucao, setEvolucao] = useState(null);
-  useEffect(() => {
-    if (!userId || !isPro) return;
-    supabase.from('plan_insights')
-      .select('title, description, recommendation, metric, created_at')
-      .eq('user_id', userId)
-      .eq('insight_type', 'weekly_evolution')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .then(({ data, error }) => {
-        if (error) { console.error('[PerfilForm] falha ao carregar evolução:', error); return; }
-        if (data?.[0]) setEvolucao(data[0]);
-      });
-  }, [userId, isPro]);
+  // Carta de Evolução e observação por dimensão: vivem em Insights →
+  // Trajetória (renderReport, componente CRM), não aqui. PerfilForm é só
+  // conta/dados pessoais — ver comentário acima de renderInsightsHub no
+  // componente CRM.
 
   // Estado do trial gratuito do Assistente de WhatsApp (10 dias, contados a
   // partir do primeiro cadastro do número — não da criação da conta).
@@ -1474,34 +1460,6 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Meu Perfil</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: 0 }}>Mantenha suas informações atualizadas para personalizar os insights da IA.</p>
       </div>
-      {archetype && (
-        <div style={{ background: `linear-gradient(135deg, ${C.gold}14, ${C.gold}03)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "20px 22px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ fontSize: 34, flexShrink: 0 }}>{archetype.emoji}</div>
-          <div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 3 }}>Seu perfil relacional</div>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.gold }}>{archetype.name}</div>
-            {archetype.tagline && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginTop: 2, fontStyle: "italic" }}>{archetype.tagline}</div>}
-          </div>
-        </div>
-      )}
-      {isPro && evolucao && (
-        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 24 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
-            Sua evolução esta semana
-          </div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 700, color: C.txt, marginBottom: 6 }}>
-            {evolucao.title}
-          </div>
-          <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: 0 }}>
-            {evolucao.description}
-          </p>
-          {evolucao.recommendation && (
-            <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.6, margin: "10px 0 0", paddingTop: 10, borderTop: `1px solid ${C.brd}` }}>
-              {evolucao.recommendation}
-            </p>
-          )}
-        </div>
-      )}
       {isPro ? (
         <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
           <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
@@ -1655,6 +1613,28 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const isPro         = isProUser(profile, user?.email);
   const planLabel     = getPlanLabel(profile, user?.email);
   const canAddContact = isPro || cts.length < FREE_CT_LIMIT;
+
+  // Observação comportamental por dimensão (declarado vs. observado) —
+  // consumida em renderReport (Insights → Trajetória). Ver
+  // shared/dimensionObservation.js pra fundamentação de cada dimensão.
+  const [dimObservation, setDimObservation] = useState(null);
+  useEffect(() => {
+    if (!user?.id || !isPro) return;
+    supabase.from('plan_insights')
+      .select('description, created_at')
+      .eq('user_id', user.id)
+      .eq('insight_type', 'dimension_observation')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (error) { console.error('[CRM] falha ao carregar observação por dimensão:', error); return; }
+        if (data?.[0]?.description) {
+          try { setDimObservation(JSON.parse(data[0].description)); }
+          catch (e) { console.error('[CRM] observação por dimensão em formato inesperado:', e); }
+        }
+      });
+  }, [user?.id, isPro]);
+
   // Trial grátis do Assistente de WhatsApp: 10 dias a partir do cadastro do
   // número (whatsapp_trial_started_at), independente de virar PRO depois.
   const diasDeTrialCrm    = profile?.whatsapp_trial_started_at ? (Date.now() - new Date(profile.whatsapp_trial_started_at).getTime()) / 86400000 : null;
@@ -3430,9 +3410,23 @@ ${MENTORIA_LINK || true ? `
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}><RadarChart scores={sc} /></div>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Suas 6 dimensões</div>
-          {DIMS.map((d, i) => { const v = sc[d.key] || 0; return (
+          {DIMS.map((d, i) => { const v = sc[d.key] || 0;
+            const obs = dimObservation?.[d.key];
+            const OBS_COLOR = { evoluindo: C.grn, estavel: C.amb, perdendo_intensidade: C.cor };
+            const OBS_LABEL = { evoluindo: 'Evoluindo', estavel: 'Estável', perdendo_intensidade: 'Perdendo intensidade' };
+            return (
             <div key={i} style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, color: d.color }}>{v}%</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{d.label}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {obs && obs.state !== 'sem_dados' && (
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, color: OBS_COLOR[obs.state], border: `1px solid ${OBS_COLOR[obs.state]}40`, borderRadius: 20, padding: "2px 8px" }}>
+                      Comportamento: {OBS_LABEL[obs.state]}
+                    </span>
+                  )}
+                  <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, color: d.color }}>{v}%</span>
+                </div>
+              </div>
               <div style={{ height: 7, borderRadius: 4, background: C.w06 }}><div style={{ height: 7, borderRadius: 4, background: d.color, width: `${v}%` }} /></div>
             </div>
           ); })}
@@ -3620,7 +3614,7 @@ ${MENTORIA_LINK || true ? `
   const INSIGHTS_TABS = [
     { id: "ia", label: "Insights" },
     { id: "plano", label: "Plano" },
-    { id: "report", label: "Relatório" },
+    { id: "report", label: "Trajetória" },
   ];
   const renderInsightsHub = () => (
     <div>
