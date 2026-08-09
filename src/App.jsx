@@ -1,7 +1,8 @@
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
 import GuidedNetworkStart from './components/GuidedNetworkStart';
-import { computePriorities, calculateRelevance as calculateRelevanceCanonical } from '../shared/priorityEngine.js';
+import { computePriorities, calculateRelevance as calculateRelevanceCanonical, relationshipMomentum } from '../shared/priorityEngine.js';
+import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "./utils/supabase";
 import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
@@ -2566,11 +2567,26 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const col = PRIO_COLORS[p.status] || C.txL;
       const nInt = its.filter(x => x.contactId === c.id).length;
       const nr  = Math.max(8, Math.min(22, 8 + nInt * 2.5));
+      const momentum = relationshipMomentum(c, its, new Date());
       return { c, x: CX + d * Math.cos(a), y: CY + d * Math.sin(a),
                lx: CX + (R + 32) * Math.cos(a), ly: CY + (R + 32) * Math.sin(a),
-               a, col, nr, p, rs, nInt };
+               a, col, nr, p, rs, nInt, momentum };
     });
     const wp = nodes.length >= 3 ? nodes.map((n,i) => `${i===0?"M":"L"} ${n.x} ${n.y}`).join(" ") + " Z" : "";
+
+    // Insight de rede (Fase 5, mesma fonte do card "O que percebi" na Home
+    // e da Carta de Evolução no Perfil) — no máximo 1, só o de maior
+    // confiança, nunca uma lista. Silencioso quando não há evidência.
+    const networkInsight = detectPatterns(cts, its, new Date())[0] || null;
+
+    const MOMENTUM_LABELS = {
+      strengthening: 'fortalecendo',
+      stable: 'estável',
+      cooling: 'esfriando',
+      reactivated: 'reativada',
+      new: 'nova',
+      insufficient_data: null,
+    };
 
     const FILTERS = [
       { key:"todos",        label:"Todos" },
@@ -2586,6 +2602,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     const selP   = selContact ? getContactPriorityStatus(selContact.health, selRS) : null;
     const selCat = selContact ? CATS.find(x => x.value === selContact.category) : null;
     const selInt = selContact ? its.filter(i => i.contactId === selContact.id) : [];
+    const selMomentum = selContact ? relationshipMomentum(selContact, its, new Date()) : null;
 
     return (
       <div>
@@ -2593,6 +2610,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:700, color:C.txt, margin:0 }}>Teia da Rede</h2>
           <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>{filtered.length} de {cts.length} contatos</div>
         </div>
+
+        {networkInsight && PATTERN_NOTES[networkInsight.type] && (
+          <div style={{ background:`${C.gold}0d`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 14px", marginBottom:14, fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.5 }}>
+            {PATTERN_NOTES[networkInsight.type]}
+          </div>
+        )}
 
         {/* Filtros */}
         <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
@@ -2642,7 +2665,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   const isHomePriority = homePriorityIds.has(n.c.id);
                   return (
                     <g key={i} onClick={() => setTeiaSel(teiaSel===n.c.id ? null : n.c.id)} style={{ cursor:"pointer" }}>
-                      <title>{`${n.c.name}\nPresença: ${n.c.health}%${n.rs !== null ? `\nRelevância: ${n.rs}%` : ''}\n${n.p.status}`}</title>
+                      <title>{`${n.c.name}\nPresença: ${n.c.health}%${n.rs !== null ? `\nRelevância: ${n.rs}%` : ''}${MOMENTUM_LABELS[n.momentum] ? `\nTendência: ${MOMENTUM_LABELS[n.momentum]}` : ''}\n${n.p.status}`}</title>
                       {/* Glow when selected */}
                       {isSel && <circle cx={n.x} cy={n.y} r={n.nr+6} fill={n.col} opacity={0.15} />}
                       {/* Anel pontilhado: também está entre as prioridades da Home agora */}
@@ -2754,6 +2777,13 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   color:PRIO_COLORS[selP?.status]||C.txL, marginBottom:3 }}>{selP?.status}</div>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, lineHeight:1.4 }}>{selP?.msg}</div>
               </div>
+
+              {MOMENTUM_LABELS[selMomentum] && (
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:12 }}>
+                  <span style={{ color:C.txM, fontWeight:500 }}>Tendência: </span>
+                  {MOMENTUM_LABELS[selMomentum]}
+                </div>
+              )}
 
               {/* Last interaction + next action */}
               {selContact.lastInteraction && (
