@@ -12,6 +12,11 @@ import { supabase } from "../utils/supabase";
 import { MOTION, TYPE } from "../utils/theme";
 import { computePriorities } from "../../shared/priorityEngine.js";
 import {
+  detectPatterns,
+  PATTERN_NOTES,
+  evidenceLabel,
+} from "../../shared/relationshipPatternDetector.js";
+import {
   addDays,
   buildFeedbackMap,
   nextDismissSuppressionDays,
@@ -339,6 +344,134 @@ function DateChoicePopover({ mode, onPick, onCancel, busy }) {
           Cancelar
         </button>
       </div>
+    </div>
+  );
+}
+
+function NetworkInsightCard({ pattern, busy, onFeedback }) {
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [pending, setPending] = useState(null);
+  const [confirmed, setConfirmed] = useState(null);
+
+  const note = PATTERN_NOTES[pattern.type];
+  if (!note) return null;
+
+  const respond = async (answer, confirmMessage) => {
+    setPending(answer);
+    await onFeedback(pattern, answer);
+    setPending(null);
+    setConfirmed(confirmMessage);
+  };
+
+  return (
+    <div
+      style={{
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderRadius: 12,
+        padding: 17,
+        marginBottom: 14,
+      }}
+    >
+      <div
+        style={{
+          color: C.muted,
+          fontFamily: fontSans,
+          fontSize: TYPE.micro,
+          fontWeight: 700,
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          marginBottom: 6,
+        }}
+      >
+        O que percebi
+      </div>
+
+      <div
+        style={{
+          color: C.text,
+          fontFamily: fontSans,
+          fontSize: TYPE.body,
+          lineHeight: 1.6,
+        }}
+      >
+        {note}
+      </div>
+
+      {confirmed ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            color: C.success,
+            fontFamily: fontSans,
+            fontSize: TYPE.caption,
+            fontWeight: 600,
+            marginTop: 12,
+            animation: `conexiaFadeIn ${MOTION.base}`,
+          }}
+        >
+          <span>✓</span> {confirmed}
+        </div>
+      ) : (
+        <>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginTop: 13,
+            }}
+          >
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => respond("makes_sense", "Obrigado — isso ajuda a refinar o que te mostro.")}
+              style={{
+                ...chipStyle,
+                opacity: pending === "makes_sense" ? 0.6 : 1,
+              }}
+            >
+              {pending === "makes_sense" ? "Um instante…" : "Faz sentido"}
+            </button>
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => respond("not_relevant", "Entendido — vou levar isso em conta.")}
+              style={{
+                ...chipStyle,
+                opacity: pending === "not_relevant" ? 0.6 : 1,
+              }}
+            >
+              {pending === "not_relevant" ? "Um instante…" : "Não faz sentido"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowEvidence((v) => !v)}
+              style={{ ...chipStyle, border: "none", color: C.light }}
+            >
+              {showEvidence ? "Ocultar evidência" : "Ver evidência"}
+            </button>
+          </div>
+
+          {showEvidence && (
+            <div
+              style={{
+                color: C.light,
+                fontFamily: fontSans,
+                fontSize: TYPE.micro,
+                marginTop: 9,
+                lineHeight: 1.5,
+              }}
+            >
+              {evidenceLabel(pattern)}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -973,6 +1106,34 @@ const HomeToday = ({
     return computePriorities(contacts, feedbackMap, todayISO(), interactions);
   }, [contacts, feedbackMap, interactions]);
 
+  // Padrões de rede (Fase 5) — nunca decidem prioridade, só alimentam o
+  // card "O que percebi" abaixo. Recalculado só quando contatos/interações
+  // mudam, mesma disciplina do computePriorities acima.
+  const networkPatterns = useMemo(() => {
+    return detectPatterns(contacts, interactions, new Date());
+  }, [contacts, interactions]);
+
+  // Não repete um padrão que o usuário já respondeu ("faz sentido" ou "não
+  // faz sentido") nos últimos 14 dias — mesmo espírito de supressão do
+  // priorityEngine, só que mais simples porque aqui não há escalonamento
+  // por repetição (padrão de rede é bem mais raro que recomendação de
+  // contato). alerts.contact_id fica null pra esse tipo de linha — não é
+  // sobre uma pessoa específica.
+  const topPattern = useMemo(() => {
+    const suppressedTypes = new Set(
+      alertRows
+        .filter((row) => {
+          if (row.contact_id !== null) return false;
+          const type = row.metadata?.patternType;
+          if (!type) return false;
+          const ageDays = (Date.now() - new Date(row.created_at).getTime()) / 86400000;
+          return ageDays <= 14;
+        })
+        .map((row) => row.metadata.patternType)
+    );
+    return networkPatterns.find((p) => !suppressedTypes.has(p.type)) || null;
+  }, [networkPatterns, alertRows]);
+
   const mainRecommendation = priorities?.main || null;
   // Até 3 cartões, nunca um número fixo — só os que realmente existem hoje.
   // Antes só o `main` aparecia; "às vezes vamos ter mais de 1 por dia".
@@ -1071,6 +1232,34 @@ const HomeToday = ({
       );
 
     return { error };
+  };
+
+  const handlePatternFeedback = async (pattern, answer) => {
+    const status = answer === "makes_sense" ? "accepted" : "dismissed";
+
+    await supabase.from("alerts").insert({
+      user_id: userId,
+      contact_id: null,
+      title: PATTERN_NOTES[pattern.type],
+      description: evidenceLabel(pattern),
+      status,
+      metadata: { patternType: pattern.type, origin: "network_insight" },
+    });
+
+    supabase
+      .from("page_events")
+      .insert({
+        user_id: userId,
+        event_type: `network_insight_${status}`,
+        tab_name: "dash",
+        metadata: { patternType: pattern.type },
+      })
+      .then(
+        () => {},
+        () => {}
+      );
+
+    await loadAlerts();
   };
 
   const handleAccept = (action) =>
@@ -1259,6 +1448,14 @@ const HomeToday = ({
         hasAssessmentEvidence={hasAssessmentEvidence}
         onStartAssessment={onStartAssessment}
       />
+
+      {!loadingAlerts && topPattern && (
+        <NetworkInsightCard
+          pattern={topPattern}
+          busy={!!busyId}
+          onFeedback={handlePatternFeedback}
+        />
+      )}
 
       <Section title="Para hoje" variant="action">
         {loadError && (
