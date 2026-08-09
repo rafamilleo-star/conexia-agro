@@ -2222,12 +2222,15 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           userId={user?.id}
           contacts={cts}
           interactions={its}
+          isPro={isPro}
           assessmentCompleted={assessmentCompleted}
           firstName={profile?.first_name || profile?.name || ""}
           onOpenContact={(cid) => { setSelId(cid); setRedeSubTab("pessoas"); setView("contacts"); }}
           onStartAssessment={() => { setView("perfil"); setSelId(null); }}
           onStartNetwork={() => setView("startNetwork")}
           onQuickLogInteraction={(cid) => { setSelId(cid); setIntCid(cid); setModal("addI"); }}
+          openAccessKey={openAccessKey}
+          stripeCheckoutUrl={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)}
         />
 
         {/* ── Áreas secundárias: nunca competem com a orientação principal acima ── */}
@@ -3407,7 +3410,16 @@ ${MENTORIA_LINK || true ? `
           )}
           {showUpgrade && <UpgradeModal />}
         </div>
-        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}><RadarChart scores={sc} /></div>
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}>{isPro && <RadarChart scores={sc} />}</div>
+        {!isPro && (
+          <ProLock
+            title="Sua Trajetória completa é PRO"
+            desc="Veja suas 6 dimensões com comportamento observado (não só o que você declarou), forças, riscos, análise profunda e suas 3 ações prioritárias."
+            onKey={openAccessKey}
+            user={user}
+          />
+        )}
+        {isPro && (<>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Suas 6 dimensões</div>
           {DIMS.map((d, i) => { const v = sc[d.key] || 0;
@@ -3449,8 +3461,6 @@ ${MENTORIA_LINK || true ? `
             </div>
           ))}
         </div>
-
-        {/* ══ Análise da Rede ══ */}
         {cts.length > 0 && (() => {
           // Distribuição por categoria
           const catCount = {};
@@ -3588,6 +3598,7 @@ ${MENTORIA_LINK || true ? `
             </>
           );
         })()}
+        </>)}
       </div>
     );
   };
