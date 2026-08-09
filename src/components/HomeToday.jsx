@@ -476,6 +476,86 @@ function NetworkInsightCard({ pattern, busy, onFeedback }) {
   );
 }
 
+function HomeProLock({ openAccessKey, stripeCheckoutUrl }) {
+  return (
+    <div
+      style={{
+        background: C.card,
+        border: `1px solid ${C.border}`,
+        borderRadius: 14,
+        padding: "34px 24px",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 28, marginBottom: 10 }}>🔒</div>
+      <div
+        style={{
+          fontFamily: fontSerif,
+          fontSize: 18,
+          fontWeight: 700,
+          color: C.text,
+          marginBottom: 8,
+        }}
+      >
+        Sua Home relacional é PRO
+      </div>
+      <p
+        style={{
+          fontFamily: fontSans,
+          fontSize: 13,
+          color: C.muted,
+          lineHeight: 1.6,
+          maxWidth: 360,
+          margin: "0 auto 18px",
+        }}
+      >
+        Recomendação do melhor movimento do dia, o que percebemos sobre sua
+        rede, e o resumo da sua semana — tudo isso é PRO.
+      </p>
+      {stripeCheckoutUrl && (
+        <a
+          href={stripeCheckoutUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "inline-block",
+            background: C.gold,
+            color: "#0D0D0D",
+            borderRadius: 8,
+            padding: "11px 22px",
+            fontFamily: fontSans,
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: "none",
+            marginBottom: 10,
+          }}
+        >
+          Assinar PRO — R$ 39,90/mês
+        </a>
+      )}
+      {openAccessKey && (
+        <button
+          type="button"
+          onClick={openAccessKey}
+          style={{
+            display: "block",
+            margin: "0 auto",
+            background: "none",
+            border: "none",
+            fontFamily: fontSans,
+            fontSize: 11,
+            color: C.light,
+            textDecoration: "underline",
+            cursor: "pointer",
+          }}
+        >
+          Tenho uma chave de acesso
+        </button>
+      )}
+    </div>
+  );
+}
+
 function PriorityCard({
   action,
   busy,
@@ -1018,12 +1098,15 @@ const HomeToday = ({
   userId,
   contacts = [],
   interactions = [],
+  isPro = false,
   assessmentCompleted,
   firstName,
   onOpenContact,
   onStartAssessment,
   onStartNetwork,
   onQuickLogInteraction,
+  openAccessKey,
+  stripeCheckoutUrl,
 }) => {
   const [alertRows, setAlertRows] = useState([]);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
@@ -1449,6 +1532,10 @@ const HomeToday = ({
         onStartAssessment={onStartAssessment}
       />
 
+      {!isPro ? (
+        <HomeProLock openAccessKey={openAccessKey} stripeCheckoutUrl={stripeCheckoutUrl} />
+      ) : (
+      <>
       {!loadingAlerts && topPattern && (
         <NetworkInsightCard
           pattern={topPattern}
@@ -1581,6 +1668,8 @@ const HomeToday = ({
           <Button onClick={onStartNetwork}>Adicionar pessoa</Button>
         </div>
       </Section>
+      </>
+      )}
     </div>
   );
 };
