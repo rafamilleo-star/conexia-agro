@@ -1977,7 +1977,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     { id: "dash", icon: "◎", label: "Hoje" },
     { id: "contacts", icon: "⊛", label: "Rede" },
     { id: "insights", icon: "🧠", label: "Insights" },
-    ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }, { id: "export", icon: "⬇", label: "Exportar" }] : []),
+    ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }] : []),
+    ...(admin || isPro ? [{ id: "export", icon: "⬇", label: "Exportar" }] : []),
     ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
   ];
 
@@ -2035,7 +2036,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Exportar dados</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Apenas o admin pode exportar. Testadores não veem esta tela.</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Baixe seus contatos e seu histórico completo quando quiser.</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
@@ -2052,10 +2053,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           </div>
         </div>
 
+        {admin && (
         <div style={{ background: C.ambD, border: `1px solid ${C.amb}28`, borderRadius: 10, padding: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, marginBottom: 6 }}>Google Drive · Em breve</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>No deploy com Supabase, este botão conectará ao Google Drive via OAuth exclusivo do admin. Relatórios, contatos e backups serão salvos automaticamente na pasta MILLÉO STRATEGIC HUB.</div>
         </div>
+        )}
       </div>
     );
   };
@@ -3747,7 +3750,7 @@ ${MENTORIA_LINK || true ? `
         {view === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
         {view === "report" && renderReport()}
         {view === "mentor" && admin && renderMentor()}
-        {view === "export" && admin && renderExport()}
+        {view === "export" && (admin || isPro) && renderExport()}
         {view === "metrics" && isMetricsAdmin && renderMetrics()}
         {view === "insights" && renderInsightsHub()}
         {view === "perfil" && renderPerfilForm()}
