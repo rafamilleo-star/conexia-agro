@@ -16,6 +16,7 @@ import { computeWeeklyAttentionItems, computeNextBestActions } from './_lib/rela
 import { isMonday, localDateISO } from './_lib/relationshipAssistant/timeWindow.js';
 import { computeWeeklyEvolution } from './_lib/relationshipAssistant/explainabilityEngine.js';
 import { detectPatterns } from '../shared/relationshipPatternDetector.js';
+import { computeObservedDimensions } from '../shared/dimensionObservation.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
@@ -90,6 +91,7 @@ async function persistWeeklyEvolution(profile) {
   ]);
 
   const patterns = detectPatterns(contacts, allInteractions, now);
+  const observedDimensions = computeObservedDimensions(contacts, allInteractions, now);
 
   const evolution = computeWeeklyEvolution({ currentSignals, previousSignals, events: [], patterns });
 
@@ -97,6 +99,21 @@ async function persistWeeklyEvolution(profile) {
   // "fase do plano" (esse conceito já existe em plan_progress/plan_phases e
   // não é o mesmo campo).
   const isoWeek = Math.ceil((now - new Date(now.getFullYear(), 0, 1)) / (7 * 86400000));
+
+  await sb('plan_insights', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: profile.id,
+      week: isoWeek,
+      // Linha separada da 'weekly_evolution' — Perfil lê cada insight_type
+      // pro seu próprio bloco (tendência geral vs. observação por
+      // dimensão). Mesmo padrão de reaproveitar plan_insights sem
+      // migration.
+      insight_type: 'dimension_observation',
+      title: 'Observação comportamental por dimensão',
+      description: JSON.stringify(observedDimensions),
+    }),
+  });
 
   await sb('plan_insights', {
     method: 'POST',
