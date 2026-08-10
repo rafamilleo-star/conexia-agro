@@ -1978,7 +1978,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     { id: "contacts", icon: "⊛", label: "Rede" },
     { id: "insights", icon: "🧠", label: "Insights" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }] : []),
-    ...(admin || isPro ? [{ id: "export", icon: "⬇", label: "Exportar" }] : []),
+    ...(admin ? [{ id: "export", icon: "⬇", label: "Exportar" }] : []),
     ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
   ];
 
@@ -2036,7 +2036,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Exportar dados</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Baixe seus contatos e seu histórico completo quando quiser.</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Apenas o admin pode exportar. Testadores não veem esta tela.</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
@@ -2875,7 +2875,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         </div>
         <div style={{ background:`${C.gold}08`, border:`1.5px solid ${C.gold}`, borderRadius:10, padding:14 }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>PRO — R$ 39,90/mês</div>
-          {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Insights ilimitados (IA)","Metas de 90 dias (IA)","Briefing pré-contato (IA)","Assistente por WhatsApp sem limite","Plano de 4 semanas completo","Teia avançada","Exportação"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>⭐ {f}</div>)}
+          {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Insights ilimitados (IA)","Metas de 90 dias (IA)","Briefing pré-contato (IA)","Assistente por WhatsApp sem limite","Plano de 4 semanas completo","Teia avançada"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>⭐ {f}</div>)}
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -3750,7 +3750,7 @@ ${MENTORIA_LINK || true ? `
         {view === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
         {view === "report" && renderReport()}
         {view === "mentor" && admin && renderMentor()}
-        {view === "export" && (admin || isPro) && renderExport()}
+        {view === "export" && admin && renderExport()}
         {view === "metrics" && isMetricsAdmin && renderMetrics()}
         {view === "insights" && renderInsightsHub()}
         {view === "perfil" && renderPerfilForm()}
