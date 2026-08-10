@@ -1331,6 +1331,129 @@ function TourModal({ onClose, onFinish, steps }) {
 }
 
 /* ═══ PERFIL FORM ════════════════════════════════════════ */
+// Captura Passiva via Calendário — conexão OAuth com Google Calendar (sem
+// copiar/colar link .ics). Outlook e Apple ainda não têm botão próprio;
+// entram aqui quando os endpoints api/calendar-oauth/outlook-* e o fluxo
+// CalDAV do Apple estiverem prontos.
+function CalendarConnectionCard({ pf, sp }) {
+  const [conn, setConn] = useState(null);       // linha de calendar_connections (provider=google) ou null
+  const [loadingConn, setLoadingConn] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [showLegacyIcs, setShowLegacyIcs] = useState(false);
+
+  const refreshConn = useCallback(async () => {
+    setLoadingConn(true);
+    const { data } = await supabase
+      .from('calendar_connections')
+      .select('provider,status,last_synced_at,last_error,created_at')
+      .eq('provider', 'google')
+      .maybeSingle();
+    setConn(data || null);
+    setLoadingConn(false);
+  }, []);
+
+  useEffect(() => { refreshConn(); }, [refreshConn]);
+
+  // Depois do redirect de volta do Google (?calendar=connected|error|denied)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('calendar');
+    if (!status) return;
+    refreshConn();
+    // Limpa a query string pra não reprocessar em refresh manual da página.
+    params.delete('calendar');
+    const rest = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''));
+  }, [refreshConn]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/calendar-oauth/google-start', {
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      });
+      const data = await res.json();
+      if (data.ok && data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        setConnecting(false);
+      }
+    } catch {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch('/api/calendar-oauth/google-disconnect', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      });
+      await refreshConn();
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const conectado = conn?.status === 'active';
+  const comErro = conn?.status === 'error';
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
+      <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 6 }}>Captura Passiva via Calendário</div>
+      <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 14 }}>
+        Conecte seu calendário e, quando você tiver uma reunião com alguém da sua rede, o assistente {BRAND.name} te pergunta pelo WhatsApp se quer registrar como interação — sem precisar abrir o app.
+      </div>
+
+      {!loadingConn && conectado && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: C.w06, border: `1px solid ${C.gold}30`, borderRadius: 8, padding: "12px 14px" }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>🟢 Google Calendar conectado</div>
+          <button onClick={handleDisconnect} disabled={disconnecting} style={{ background: "transparent", border: `1px solid ${C.brd}`, borderRadius: 6, padding: "6px 12px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, cursor: "pointer" }}>
+            {disconnecting ? "Desconectando..." : "Desconectar"}
+          </button>
+        </div>
+      )}
+
+      {!loadingConn && !conectado && (
+        <>
+          {comErro && (
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: "#D97757", marginBottom: 10 }}>
+              A conexão expirou ou foi revogada. Conecte novamente.
+            </div>
+          )}
+          <button onClick={handleConnect} disabled={connecting} style={{ display: "flex", alignItems: "center", gap: 8, background: C.gold, border: "none", borderRadius: 8, padding: "12px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: "#0D0D0D", cursor: "pointer" }}>
+            {connecting ? "Redirecionando..." : "Conectar Google Calendar"}
+          </button>
+        </>
+      )}
+
+      <button onClick={() => setShowLegacyIcs(v => !v)} style={{ display: "block", marginTop: 14, background: "none", border: "none", padding: 0, fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, textDecoration: "underline", cursor: "pointer" }}>
+        {showLegacyIcs ? "Ocultar opção avançada" : "Uso Outlook, Apple, ou quero colar um link .ics manualmente"}
+      </button>
+
+      {showLegacyIcs && (
+        <div style={{ marginTop: 12 }}>
+          <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>Link .ics do calendário</label>
+          <input
+            type="url"
+            value={pf.calendarIcsUrl || ""}
+            onChange={e => sp('calendarIcsUrl')(e.target.value)}
+            placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
+            style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, outline: "none" }}
+          />
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, lineHeight: 1.5, marginTop: 8 }}>
+            Funciona com qualquer calendário que gere um link público .ics (Google, Outlook, Apple). Salve o formulário depois de colar o link.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype }) {
   const NETWORK_SIZES = [
     { value: "1-20",   label: "1-20 contatos" },
@@ -1522,25 +1645,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
           <Inp label="LinkedIn" value={pf.linkedin} onChange={sp('linkedin')} placeholder="linkedin.com/in/voce" />
         </div>
       </div>
-      {isPro && (
-        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 6 }}>Captura Passiva via Calendário</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 14 }}>
-            Cole o link secreto do seu Google Calendar e, quando você tiver uma reunião com alguém da sua rede, o assistente {BRAND.name} te pergunta pelo WhatsApp se quer registrar como interação — sem precisar abrir o app.
-          </div>
-          <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>Link .ics do calendário</label>
-          <input
-            type="url"
-            value={pf.calendarIcsUrl || ""}
-            onChange={e => sp('calendarIcsUrl')(e.target.value)}
-            placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
-            style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, outline: "none" }}
-          />
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, lineHeight: 1.5, marginTop: 8 }}>
-            No Google Calendar: Configurações → seu calendário → "Integrar calendário" → copie o "Endereço secreto no formato iCal". Não usamos login nem senha, só esse link público de leitura.
-          </div>
-        </div>
-      )}
+      {isPro && <CalendarConnectionCard pf={pf} sp={sp} />}
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 16 }}>Contexto Profissional</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
