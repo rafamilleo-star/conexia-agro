@@ -30,10 +30,18 @@
 
 import { supabaseRest as sb } from './_lib/relationshipAssistant/notificationLog.js';
 import { sendProactiveNotification } from './_lib/relationshipAssistant/sendProactiveNotification.js';
-import { calendarInteractionSuggestionMessage, calendarNewContactSuggestionMessage } from './_lib/relationshipAssistant/messages.js';
+import { calendarInteractionSuggestionMessage, calendarNewContactSuggestionMessage, preMeetingBriefingMessage } from './_lib/relationshipAssistant/messages.js';
 import { parseICSEvents, eventsInWindow, matchContactToEvent, suggestNewContactFromEvent } from './_lib/relationshipAssistant/icsImport.js';
-import { localDateISO } from './_lib/relationshipAssistant/timeWindow.js';
+import { localDateISO, localDateISOFor } from './_lib/relationshipAssistant/timeWindow.js';
 import { listGoogleEvents, refreshGoogleAccessToken } from './_lib/relationshipAssistant/googleCalendar.js';
+import { buildContextCard } from '../shared/contextCard.js';
+
+// Janela de olhar PRA FRENTE (Fase 1, item 6 — briefing automático). O cron
+// roda 1x/dia; 36h de janela garante que um compromisso de amanhã (em
+// qualquer horário do dia) seja pego mesmo que o cron rode de manhã cedo.
+// Não sobrepõe com a janela retroativa abaixo (que olha as últimas 24h) —
+// são dois sentidos diferentes do mesmo calendário, tratados separadamente.
+const LOOKAHEAD_HOURS = 36;
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
@@ -134,6 +142,62 @@ async function processRecentEvents({ profile, recentEvents, todayISO }) {
   return { sent: false, hadEvents: true };
 }
 
+// ── Briefing automático pré-encontro (Fase 1, item 6) ────────────────────
+//
+// Olha PRA FRENTE (LOOKAHEAD_HOURS), não pra trás. Só age quando o evento
+// casa com um contato JÁ existente (mesmo matchContactToEvent conservador
+// de icsImport.js — nunca sugere contato novo aqui, isso é papel do fluxo
+// retroativo acima). Manda no máximo 1 briefing por evento (idempotência via
+// scopeKey=event.uid, dentro de sendProactiveNotification) e respeita o
+// limite geral de 1 mensagem automática/dia — se o usuário já recebeu
+// RELATIONSHIP_ATTENTION ou outra notificação hoje, o briefing simplesmente
+// não sai hoje e tenta de novo amanhã (mesma disciplina de todo o resto do
+// sistema, nada de fila paralela).
+//
+// NUNCA envia nada para o contato — só para o dono da conta, via
+// sendProactiveNotification (que só fala com profile.whatsapp).
+async function processUpcomingEvents({ profile, upcomingEvents }) {
+  if (!upcomingEvents.length) return { sent: false, hadEvents: false };
+
+  const contacts = await sb(`contacts?user_id=eq.${profile.id}&select=id,name,ideal_frequency_days,last_interaction_at,next_action,next_action_date,created_at`);
+
+  for (const event of upcomingEvents) {
+    const match = matchContactToEvent(event, contacts || []);
+    if (!match) continue; // sem match = sem briefing; não é papel deste fluxo sugerir contato novo
+
+    const interactions = await sb(`interactions?user_id=eq.${profile.id}&contact_id=eq.${match.id}&select=contact_id,created_at,description`);
+    const card = buildContextCard(match, interactions || [], new Date());
+
+    const eventDateLocal = localDateISOFor(new Date(event.startISO), profile.timezone);
+    const todayLocal = localDateISO(profile.timezone);
+    const tomorrowLocal = localDateISOFor(new Date(Date.now() + 24 * 3600 * 1000), profile.timezone);
+    const eventWhen =
+      eventDateLocal === todayLocal ? 'hoje' :
+      eventDateLocal === tomorrowLocal ? 'amanhã' :
+      null; // fora de hoje/amanhã: omite o advérbio em vez de arriscar uma data errada por fuso
+
+    const text = preMeetingBriefingMessage({
+      firstName: profile.first_name,
+      contactName: match.name,
+      eventSummary: event.summary,
+      eventWhen,
+      card,
+    });
+
+    const result = await sendProactiveNotification({
+      profile,
+      notificationType: 'PRE_MEETING_BRIEFING',
+      relationshipId: match.id,
+      scopeKey: event.uid || `${match.id}:${eventDateLocal}`,
+      text,
+    });
+
+    if (result.sent) return { sent: true, hadEvents: true };
+  }
+
+  return { sent: false, hadEvents: true };
+}
+
 export default async function handler(req, res) {
   try {
     if (CRON_SECRET) {
@@ -146,8 +210,9 @@ export default async function handler(req, res) {
 
     const untilISO = new Date().toISOString();
     const sinceISO = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const lookaheadUntilISO = new Date(Date.now() + LOOKAHEAD_HOURS * 3600 * 1000).toISOString();
 
-    let sugestoesEnviadas = 0, semMatch = 0, semEvento = 0, comErro = 0, avaliados = 0;
+    let sugestoesEnviadas = 0, semMatch = 0, semEvento = 0, comErro = 0, avaliados = 0, briefingsEnviados = 0;
 
     // ── Canal 1: legado .ics ────────────────────────────────────────────
     const perfisIcs = await sb(
@@ -162,11 +227,17 @@ export default async function handler(req, res) {
 
         const allEvents = parseICSEvents(icsText);
         const recentEvents = eventsInWindow(allEvents, sinceISO, untilISO);
+        const upcomingEvents = eventsInWindow(allEvents, new Date().toISOString(), lookaheadUntilISO);
         const todayISO = localDateISO(profile.timezone);
 
         const result = await processRecentEvents({ profile, recentEvents, todayISO });
-        if (!result.hadEvents) { semEvento++; continue; }
-        if (result.sent) sugestoesEnviadas++; else semMatch++;
+        if (!result.hadEvents) { semEvento++; }
+        if (result.sent) sugestoesEnviadas++; else if (result.hadEvents) semMatch++;
+
+        // Briefing pré-encontro é independente do fluxo retroativo acima —
+        // roda mesmo quando não houve evento passado, e vice-versa.
+        const briefingResult = await processUpcomingEvents({ profile, upcomingEvents });
+        if (briefingResult.sent) briefingsEnviados++;
       } catch (err) {
         console.error('[relationship-calendar-sync-cron] erro no usuário (.ics)', profile.id, err);
         comErro++;
@@ -200,11 +271,15 @@ export default async function handler(req, res) {
         }
 
         const recentEvents = await listGoogleEvents(accessToken, sinceISO, untilISO);
+        const upcomingEvents = await listGoogleEvents(accessToken, new Date().toISOString(), lookaheadUntilISO);
         const todayISO = localDateISO(profile.timezone);
 
         const result = await processRecentEvents({ profile, recentEvents, todayISO });
-        if (!result.hadEvents) { semEvento++; continue; }
-        if (result.sent) sugestoesEnviadas++; else semMatch++;
+        if (!result.hadEvents) { semEvento++; }
+        if (result.sent) sugestoesEnviadas++; else if (result.hadEvents) semMatch++;
+
+        const briefingResult = await processUpcomingEvents({ profile, upcomingEvents });
+        if (briefingResult.sent) briefingsEnviados++;
       } catch (err) {
         console.error('[relationship-calendar-sync-cron] erro no usuário (google)', conn.user_id, err.message);
         comErro++;
@@ -220,7 +295,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ ok: true, avaliados, sugestoesEnviadas, semMatch, semEvento, comErro });
+    return res.status(200).json({ ok: true, avaliados, sugestoesEnviadas, briefingsEnviados, semMatch, semEvento, comErro });
   } catch (err) {
     console.error('[relationship-calendar-sync-cron] erro:', err);
     return res.status(200).json({ ok: false, error: err.message });
