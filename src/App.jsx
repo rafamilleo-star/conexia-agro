@@ -1341,6 +1341,7 @@ function CalendarConnectionCard({ pf, sp }) {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [showLegacyIcs, setShowLegacyIcs] = useState(false);
+  const [connectError, setConnectError] = useState(null);
 
   const refreshConn = useCallback(async () => {
     setLoadingConn(true);
@@ -1369,18 +1370,33 @@ function CalendarConnectionCard({ pf, sp }) {
 
   const handleConnect = async () => {
     setConnecting(true);
+    setConnectError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setConnectError('Sessão não encontrada — saia e entre de novo no app.');
+        setConnecting(false);
+        return;
+      }
       const res = await fetch('/api/calendar-oauth/google-start', {
-        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setConnectError(`Resposta inesperada do servidor (status ${res.status}). O endpoint pode não existir ainda.`);
+        setConnecting(false);
+        return;
+      }
       if (data.ok && data.authUrl) {
         window.location.href = data.authUrl;
       } else {
+        setConnectError(data.error || `Erro desconhecido (status ${res.status}).`);
         setConnecting(false);
       }
-    } catch {
+    } catch (err) {
+      setConnectError(`Falha de rede: ${err.message}`);
       setConnecting(false);
     }
   };
@@ -1428,6 +1444,11 @@ function CalendarConnectionCard({ pf, sp }) {
           <button onClick={handleConnect} disabled={connecting} style={{ display: "flex", alignItems: "center", gap: 8, background: C.gold, border: "none", borderRadius: 8, padding: "12px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: "#0D0D0D", cursor: "pointer" }}>
             {connecting ? "Redirecionando..." : "Conectar Google Calendar"}
           </button>
+          {connectError && (
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: "#D97757", marginTop: 10, lineHeight: 1.5 }}>
+              {connectError}
+            </div>
+          )}
         </>
       )}
 
