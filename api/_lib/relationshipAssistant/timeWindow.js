@@ -28,9 +28,20 @@ export function isMonday(timezone) {
   return weekday === 'Mon';
 }
 
+// YYYY-MM-DD no fuso do usuário, para uma data qualquer — usado para
+// comparar "hoje"/"amanhã" em texto (ver preMeetingBriefingMessage) e como
+// base de localDateISO abaixo.
+export function localDateISOFor(date, timezone) {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone || 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(date).map(p => [p.type, p.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 // YYYY-MM-DD no fuso do usuário — usado como "scopeKey" de idempotência e
 // para filtrar dailyLimitReached corretamente por dia local, não UTC.
 export function localDateISO(timezone) {
-  const { year, month, day } = partsInTimezone(timezone);
-  return `${year}-${month}-${day}`;
+  return localDateISOFor(new Date(), timezone);
 }
