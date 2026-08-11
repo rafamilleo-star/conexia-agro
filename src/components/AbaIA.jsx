@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C } from "../utils/theme.js";
 import { BRAND } from "../config/brand";
+import { buildContextCard } from "../../shared/contextCard.js";
 
 export function AbaIA({ userId, contacts, interactions, assessment, profile, pf, isPro, openAccessKey }) {
   const [secao, setSecao] = useState("insights");
@@ -230,15 +231,27 @@ Sem texto extra.`;
     try {
       const cIts = interactions.filter(i => i.contactId === contact.id || i.contact_id === contact.id);
       const lastIt = [...cIts].sort((a,b) => new Date(b.createdAt||b.created_at) - new Date(a.createdAt||a.created_at))[0];
-      const diasSemContato = lastIt ? dSince(lastIt.createdAt || lastIt.created_at) : null;
+
+      // FASE 1: núcleo do contexto (pessoa/relação/momentum/memória recente/
+      // pendências/"por que agora") agora vem de shared/contextCard.js — a
+      // mesma estrutura reutilizada pelo briefing automático de calendário
+      // (api/relationship-calendar-sync-cron.js). O que segue abaixo só
+      // ACRESCENTA os campos que este briefing manual já usava e que ainda
+      // não fazem parte do Context Card genérico (categoria, saúde, como
+      // conheceu, notas, cidade, aniversário, contagens de sentimento) —
+      // nada foi removido do que a IA já recebia antes desta mudança.
+      const card = buildContextCard(contact, interactions, new Date(), {});
       const sc = assessment?.scores||{};
       const ctx = {
         contato: {
-          nome: contact.name, empresa: contact.company||'', cargo: contact.role||'',
-          categoria: contact.category||'', proximidade: contact.proximity||3,
+          nome: card.pessoa.nome, empresa: card.pessoa.empresa||'', cargo: card.pessoa.cargo||'',
+          categoria: contact.category||'', proximidade: card.relacao.proximidade||3,
+          relevancia: card.relacao.relevancia,
+          momentum: card.momentum,
           saudeRelacional: contact.health||0,
-          proximaAcao: contact.nextAction||contact.next_action||null,
-          proximaAcaoData: contact.nextActionDate||contact.next_action_date||null,
+          proximaAcao: card.pendencias.proximaAcao,
+          proximaAcaoData: card.pendencias.proximaAcaoData,
+          porQueAgora: card.porQueAgora?.reason || null,
           comoConheceu: contact.howMet||contact.how_met||null,
           notas: contact.notes||null, cidade: contact.city||null,
           aniversario: contact.birthday||null,
@@ -250,11 +263,11 @@ Sem texto extra.`;
           interacoesPositivas: cIts.filter(i=>i.sentiment==='positivo'||i.sentiment==='positive').length,
           interacoesNegativas: cIts.filter(i=>i.sentiment==='negativo'||i.sentiment==='negative').length,
           vezesMandouValor: cIts.filter(i=>i.valueGen||i.value_gen).length,
-          diasSemContato,
+          diasSemContato: card.relacao.diasSemContato,
           ultimaInteracaoTipo: lastIt?.type||null,
           ultimaInteracaoSentimento: lastIt?.sentiment||null,
           ultimaInteracaoNota: lastIt?.notes||lastIt?.note||null,
-          historico: cIts.slice(0,5).map(i=>({ tipo: i.type, sentimento: i.sentiment, nota: i.notes||i.note||'', data: i.createdAt||i.created_at })),
+          historico: card.memoria.ultimasInteracoes.map(i => ({ tipo: i.tipo, sentimento: i.sentimento, nota: i.descricao||'', data: i.data })),
         },
         usuario: {
           perfil: assessment?.profileName||assessment?.profileKey||'',
