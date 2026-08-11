@@ -156,6 +156,22 @@ Regra de desambiguação: algo que JÁ ACONTECEU ou é um fato já conhecido →
 ainda VAI acontecer (data futura, compromisso, tarefa a fazer) → schedule_action, mesmo que a frase comece
 com um verbo de comando como "agenda", "cadastra" ou "marca".
 
+RELATIONSHIP_NARRATIVE — use SÓ quando a mensagem, além de contar algo que já aconteceu com um contato,
+também propõe CONECTAR/APRESENTAR/INDICAR esse contato para OUTRA PESSOA (uma terceira pessoa diferente,
+que ainda não é o contato principal da mensagem). Não é o mesmo que só mencionar duas pessoas na mesma
+frase — o sinal específico é a intenção de ligar as duas pontas ("apresentar X pra Y", "conectar X com Y",
+"indicar Y pro X", "falar de Y pro X"). Exemplo: "Encontrei o Pedro. Ele assumiu a área comercial. Falamos
+sobre o projeto X. Combinei de apresentar o João pra ele semana que vem." → contact_name: "Pedro",
+role_change: "assumiu a área comercial", topics: ["projeto X"], next_action: "Apresentar o João pro Pedro",
+next_action_date calculado a partir de "semana que vem", possible_person_relationship: { with_person: "João",
+note: "Pedro conheceria João, indicação de Rafael" }. Se a mensagem contar um fato normal sobre um contato
+SEM propor conectar com um terceiro, é register_interaction normal, não relationship_narrative — não force
+esta intenção à toa. fields.topics é um array de até 4 assuntos curtos (2-4 palavras cada), só o que foi
+dito explicitamente — nunca invente assunto que não está no texto. fields.role_change só quando houver uma
+mudança de cargo/posição/empresa explícita — null caso contrário (isso NUNCA sobrescreve o campo de cargo
+já cadastrado automaticamente; fica só registrado como contexto da interação, pra reduzir risco de o
+sistema corrigir um dado cadastral estruturado com base numa inferência de texto livre).
+
 REGISTER_CONTACT — use quando o usuário quer adicionar uma pessoa NOVA à rede dele, mesmo sem dizer
 explicitamente "cadastra" ou "contato" — o sinal é ele mencionar ter conhecido, ganho o contato de, ou
 recebido a indicação de alguém que ainda não está na lista de contatos já cadastrados acima. Preencha o
@@ -230,7 +246,7 @@ Retorne APENAS JSON, sem markdown, sem texto fora do JSON, em UM dos dois format
 
 FORMATO 1 — uma intenção só:
 {
-  "intent": "register_interaction" | "schedule_action" | "register_contact" | "briefing" | "contact_coaching" | "query_last_interaction" | "query_data_simple" | "query_data_analysis" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
+  "intent": "register_interaction" | "schedule_action" | "relationship_narrative" | "register_contact" | "briefing" | "contact_coaching" | "query_last_interaction" | "query_data_simple" | "query_data_analysis" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
   "confidence": 0.0 a 1.0,
   "fields": {
     "contact_name": string ou null,
@@ -244,7 +260,10 @@ FORMATO 1 — uma intenção só:
     "category": "mentor" | "aliado" | "ponte" | "potencial" | "dormindo" | null,
     "how_met": string ou null,
     "hobbies": string ou null,
-    "birthday": "YYYY-MM-DD ou null (use 1900 como ano se não foi informado)"
+    "birthday": "YYYY-MM-DD ou null (use 1900 como ano se não foi informado)",
+    "role_change": string ou null,
+    "topics": ["assunto 1", "assunto 2"] ou null,
+    "possible_person_relationship": { "with_person": string, "note": string } ou null
   },
   "missing_fields": ["nome dos campos de fields que faltam e são necessários pra essa intenção, ou array vazio"],
   "reasoning": "1 frase curta explicando por que você entendeu essa intenção"
@@ -605,7 +624,7 @@ async function createContactFromWhatsapp(userId, { contact_name, company, role, 
 
 // ── Lógica de negócio compartilhada ───────────────────────────
 // Usada tanto pelo Twilio quanto pela Evolution API — só muda a função de envio.
-async function handleIncomingMessage(number, text, sendReply, messageId) {
+export async function handleIncomingMessage(number, text, sendReply, messageId) {
   if (!SUPABASE_SERVICE_KEY) {
     await sendReply(number, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
     return;
@@ -790,6 +809,63 @@ async function handleIncomingMessage(number, text, sendReply, messageId) {
     // Ambíguo: mesma lógica do bloco anterior, cai no fluxo normal.
   }
 
+  // 2.8 Confirmação pendente de uma narrativa pós-interação (Fase 1, item 7)
+  // — mensagem que trazia fato(s) + possível conexão pessoa-pessoa. Só grava
+  // depois do "sim" explícito; nunca a partir da extração sozinha.
+  if (pending?.intent === 'confirm_relationship_narrative') {
+    const resposta = text.trim().toLowerCase();
+    const afirmativo = /^(sim|s|yes|claro|pode|ok|isso)\b/.test(resposta);
+    const negativo = /^(n[aã]o|n|nunca|not)\b/.test(resposta);
+
+    if (afirmativo) {
+      const d = pending.data;
+      const notePartes = [d.role_change, ...(d.topics || [])].filter(Boolean);
+      const description = notePartes.length ? notePartes.join(' — ') : d.original_text;
+
+      // Tags: assuntos como tags "normais" (mesmo campo que o usuário já
+      // pode editar, hoje só ainda não renderizado de volta em tela nenhuma)
+      // + uma tag interna "_relates_to:" só quando há possível conexão
+      // pessoa-pessoa — mesma convenção de prefixo "_" já usada por
+      // api/interaction-intent-classifier-cron.js. Não cria tabela nova;
+      // isso é só uma pista, não uma aresta de grafo (ver seção 10/19 da
+      // vistoria — Teia continua fora de escopo aqui).
+      const tags = [...(d.topics || [])];
+      if (d.possible_person_relationship?.with_person) {
+        tags.push(`_relates_to:${d.possible_person_relationship.with_person}`);
+      }
+
+      await sb('interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userIdProfile, contact_id: d.contact_id, type: 'mensagem',
+          description, sentiment: 'neutro', tags, value_generated: false,
+        }),
+      });
+      await sb(`contacts?id=eq.${d.contact_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          last_interaction_at: new Date().toISOString(),
+          next_action: d.next_action || null,
+          next_action_date: d.next_action_date || null,
+          next_action_reminded_at: null,
+        }),
+      });
+      await clearPendingAction(userIdProfile);
+      const notaConexao = d.possible_person_relationship?.with_person
+        ? `\n\nGuardei a pista de que isso pode envolver *${d.possible_person_relationship.with_person}* também — ainda não crio conexões automáticas na Teia, mas isso fica registrado pra quando essa parte existir.`
+        : '';
+      await sendReply(number, `✅ Registrado! Interação com *${d.contact_name}* salva na sua rede.${notaConexao}`);
+      await setFocusContact(userIdProfile, d.contact_id);
+      return;
+    }
+    if (negativo) {
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, 'Combinado, não registrei. 👍');
+      return;
+    }
+    // Ambíguo: mesma lógica dos blocos de calendário acima, cai no fluxo normal.
+  }
+
   // 3. Entende a intenção da mensagem (pode haver mais de uma ação na mesma mensagem)
   const intentDataList = await analyzeIntent(text, contacts || [], focusContact);
 
@@ -818,7 +894,7 @@ async function setFocusContact(userIdProfile, contactId) {
 // várias (chamado uma vez por ação, na ordem). O corpo de cada `if` abaixo é
 // EXATAMENTE o mesmo que já existia — só foi movido pra uma função separada
 // pra poder ser chamado em loop sem duplicar nenhuma lógica de handler.
-async function executeIntent(intentData, { userIdProfile, contacts, number, sendReply, text, firstName, isPro }) {
+export async function executeIntent(intentData, { userIdProfile, contacts, number, sendReply, text, firstName, isPro }) {
   if (intentData.intent === 'register_contact') {
     if (!intentData.contact_name) {
       await setPendingAction(userIdProfile, 'register_contact_missing_name', {
@@ -1085,6 +1161,62 @@ acima sempre que possível, não conselho genérico que serviria pra qualquer co
       : '';
     await sendReply(number, `🗓️ Anotado! Próxima ação com *${match.name}*: ${intentData.next_action}${prazo}.${intentData.next_action_date ? '\n\nTe aviso por aqui quando chegar o dia.' : ''}`);
     await setFocusContact(userIdProfile, match.id);
+    return;
+  }
+
+  if (intentData.intent === 'relationship_narrative') {
+    const match = (contacts || []).find(c =>
+      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
+    );
+    if (!match) {
+      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
+      return;
+    }
+
+    // FASE 1, item 7: mensagem narra vários fatos de uma vez, incluindo uma
+    // possível conexão com um terceiro (pessoa-pessoa) — território novo,
+    // sem modelo de dado próprio ainda (ver vistoria: Teia é só visual hoje,
+    // sem arestas). Por isso NUNCA grava direto: sempre confirma antes,
+    // igual ao padrão já usado pra sugestão de calendário.
+    const bullets = [];
+    if (intentData.role_change) bullets.push(`${match.name}: ${intentData.role_change}`);
+    for (const t of (intentData.topics || []).slice(0, 4)) bullets.push(`Assunto: ${t}`);
+    if (intentData.possible_person_relationship?.with_person) {
+      bullets.push(`Possível conexão: ${match.name} ↔ ${intentData.possible_person_relationship.with_person}`);
+    }
+    if (intentData.next_action) {
+      const prazo = intentData.next_action_date ? ` (${new Date(intentData.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : '';
+      bullets.push(`Combinado: ${intentData.next_action}${prazo}`);
+    }
+
+    if (!bullets.length) {
+      // Sem nada de concreto pra confirmar (extração fraca) — não trava o
+      // usuário numa confirmação vazia, cai pro registro simples de sempre.
+      await sb('interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userIdProfile, contact_id: match.id, type: 'mensagem',
+          description: intentData.note || text, sentiment: intentData.sentiment || 'neutro',
+          value_generated: false,
+        }),
+      });
+      await sb(`contacts?id=eq.${match.id}`, { method: 'PATCH', body: JSON.stringify({ last_interaction_at: new Date().toISOString() }) });
+      await sendReply(number, `✅ Registrado! Interação com *${match.name}* salva na sua rede.`);
+      await setFocusContact(userIdProfile, match.id);
+      return;
+    }
+
+    await setPendingAction(userIdProfile, 'confirm_relationship_narrative', {
+      contact_id: match.id,
+      contact_name: match.name,
+      original_text: text,
+      role_change: intentData.role_change || null,
+      topics: (intentData.topics || []).slice(0, 4),
+      next_action: intentData.next_action || null,
+      next_action_date: intentData.next_action_date || null,
+      possible_person_relationship: intentData.possible_person_relationship || null,
+    });
+    await sendReply(number, `Entendi isso:\n${bullets.map(b => `• ${b}`).join('\n')}\n\nRegistrar? Responde *sim* ou *não*.`);
     return;
   }
 
