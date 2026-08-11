@@ -17,6 +17,7 @@ import { isMonday, localDateISO } from './_lib/relationshipAssistant/timeWindow.
 import { computeWeeklyEvolution } from './_lib/relationshipAssistant/explainabilityEngine.js';
 import { detectPatterns } from '../shared/relationshipPatternDetector.js';
 import { computeObservedDimensions } from '../shared/dimensionObservation.js';
+import { buildFeedbackMap } from '../shared/alertsFeedback.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
@@ -156,7 +157,7 @@ export default async function handler(req, res) {
       const todayISO = localDateISO(profile.timezone);
       const weekAgoISO = new Date(Date.now() - 7 * 86400000).toISOString();
 
-      const [contacts, interactions, fullInteractions] = await Promise.all([
+      const [contacts, interactions, fullInteractions, alerts] = await Promise.all([
         sb(`contacts?user_id=eq.${profile.id}&select=id,name,created_at,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`),
         sb(`interactions?user_id=eq.${profile.id}&created_at=gte.${weekAgoISO}&select=id`),
         // Histórico completo (sem filtro de data) — é o que o momentum
@@ -164,10 +165,13 @@ export default async function handler(req, res) {
         // busca acima porque aquela é só a contagem da semana, usada no
         // texto do resumo.
         sb(`interactions?user_id=eq.${profile.id}&select=contact_id,created_at`),
+        // FASE 0: mesma fonte de supressão que Home e painel usam.
+        sb(`alerts?user_id=eq.${profile.id}&select=contact_id,status,created_at,metadata`),
       ]);
 
-      const items = computeWeeklyAttentionItems(contacts, fullInteractions);
-      const actions = computeNextBestActions(contacts, fullInteractions);
+      const feedbackMap = buildFeedbackMap(alerts || []);
+      const items = computeWeeklyAttentionItems(contacts, fullInteractions, feedbackMap);
+      const actions = computeNextBestActions(contacts, fullInteractions, feedbackMap);
       const suggestion = actions[0]?.suggestedMessage
         ? `mande uma mensagem simples para ${actions[0].contactName} perguntando como ${actions[0].contactName ? 'ele/ela' : 'a pessoa'} está.`
         : null;
