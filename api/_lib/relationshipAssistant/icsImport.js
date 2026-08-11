@@ -97,15 +97,8 @@ export function parseICSEvents(icsText) {
   return events;
 }
 
-// Normaliza pra comparação: minúsculas, sem acento, espaços colapsados.
-function normalize(str) {
-  return String(str || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+import { normalize } from "../../../shared/textNormalize.js";
+export { normalize };
 
 // Match conservador por design (ver risco 2.3 do spec): só casa se o nome
 // completo do contato aparecer inteiro no nome do convidado, ou vice-versa —
