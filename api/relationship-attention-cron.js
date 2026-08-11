@@ -13,6 +13,7 @@ import { sendProactiveNotification } from './_lib/relationshipAssistant/sendProa
 import { relationshipAttentionMessage } from './_lib/relationshipAssistant/messages.js';
 import { computeNextBestActions } from './_lib/relationshipAssistant/actionEngine.js';
 import { localDateISO } from './_lib/relationshipAssistant/timeWindow.js';
+import { buildFeedbackMap } from '../shared/alertsFeedback.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 // Só dispara mensagem proativa quando a prioridade calculada é alta o
@@ -35,15 +36,22 @@ export default async function handler(req, res) {
 
     let enviados = 0, pulados = 0, semAcao = 0;
     for (const profile of perfis || []) {
-      const [contacts, interactions] = await Promise.all([
+      const [contacts, interactions, alerts] = await Promise.all([
         sb(
           `contacts?user_id=eq.${profile.id}&select=id,name,created_at,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`
         ),
         sb(
           `interactions?user_id=eq.${profile.id}&select=contact_id,created_at`
         ),
+        // FASE 0: mesma tabela e mesmo buildFeedbackMap que HomeToday.jsx usa
+        // — uma recomendação já dispensada/aceita/adiada na Home ou no
+        // painel do app não deve virar mensagem proativa de WhatsApp.
+        sb(
+          `alerts?user_id=eq.${profile.id}&select=contact_id,status,created_at,metadata`
+        ),
       ]);
-      const [top] = computeNextBestActions(contacts, interactions);
+      const feedbackMap = buildFeedbackMap(alerts || []);
+      const [top] = computeNextBestActions(contacts, interactions, feedbackMap);
       if (!top || top.priority < MIN_PRIORITY_TO_NOTIFY) { semAcao++; continue; }
 
       const todayISO = localDateISO(profile.timezone);
