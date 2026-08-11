@@ -76,6 +76,63 @@ export function calendarNewContactSuggestionMessage({ firstName, contactName, ev
   return `Oi${greet(firstName)}! Você teve uma reunião${evento} com *${contactName}* hoje, mas não encontrei essa pessoa na sua rede.\n\nQuer que eu já cadastre e registre essa conversa? Responde *sim* ou *não*.`;
 }
 
+// Fonte única da frase de momentum em linguagem natural — antes desta
+// mudança existia só dentro de api/whatsapp-webhook.js (intent "briefing").
+// Reaproveitada agora também pelo briefing automático de calendário
+// (relationship-calendar-sync-cron.js), pelo mesmo motivo de
+// shared/relationshipPatternDetector.js::PATTERN_NOTES: nunca escrever a
+// mesma frase em dois lugares. Estados sem entrada aqui (new/insufficient_data)
+// não têm frase — silêncio é o comportamento correto quando não há base pra
+// afirmar nada sobre o ritmo da relação.
+const MOMENTUM_BRIEFING_LINES = {
+  cooling: 'O ritmo de contato com essa relação caiu em relação ao histórico de vocês.',
+  strengthening: 'Vocês têm se falado com mais frequência que o normal ultimamente.',
+  reactivated: 'Você está retomando essa relação depois de um tempo sem contato.',
+  stable: 'O ritmo de contato com essa relação está dentro do normal para vocês.',
+};
+
+export function momentumBriefingLine(momentum) {
+  return MOMENTUM_BRIEFING_LINES[momentum] || null;
+}
+
+// Briefing automático pré-encontro (Fase 1, item 6). Só usa dado real vindo
+// do Context Card (shared/contextCard.js) — nunca inventa "assunto" que não
+// esteja em description de uma interação real. Formato pensado pra WhatsApp:
+// texto curto, sem tabela, sem link externo. Nunca envia nada ao contato —
+// esta mensagem vai só para o dono da conta (ver sendProactiveNotification).
+export function preMeetingBriefingMessage({ firstName, contactName, eventSummary, eventWhen, card }) {
+  const linhas = [
+    `📅 Você encontra *${contactName}*${eventWhen ? ` ${eventWhen}` : ''}${eventSummary ? ` — "${eventSummary}"` : ''}.`,
+    '',
+  ];
+
+  linhas.push(
+    card.relacao.diasSemContato !== null
+      ? `Última conversa: ${card.relacao.diasSemContato === 0 ? 'hoje' : `${card.relacao.diasSemContato} dia(s) atrás`}.`
+      : 'Ainda não há interação registrada com essa pessoa.'
+  );
+
+  const assuntos = (card.memoria.ultimasInteracoes || [])
+    .map((i) => i.descricao)
+    .filter(Boolean)
+    .slice(0, 2);
+  if (assuntos.length) {
+    linhas.push('', 'Vocês falaram sobre:');
+    for (const a of assuntos) linhas.push(`• ${a.length > 90 ? a.slice(0, 90) + '…' : a}`);
+  }
+
+  if (card.pendencias.proximaAcao) {
+    linhas.push('', 'Ficou combinado:', `• ${card.pendencias.proximaAcao}`);
+  }
+
+  const momentumLine = momentumBriefingLine(card.momentum);
+  if (momentumLine) linhas.push('', `Vale lembrar: ${momentumLine}`);
+
+  linhas.push('', `Responde *briefing ${contactName}* se quiser o contexto completo antes de ir.`);
+
+  return `Bom dia${greet(firstName)}!\n\n${linhas.join('\n')}`;
+}
+
 export const CTAS = {
   onboarding: ['Continuar cadastro', 'Retomar no CONÉXIA'],
   inactivity: ['Ver minha próxima ação', 'Quem merece atenção?', 'Cadastrar alguém importante', 'Abrir o CONÉXIA'],
