@@ -531,7 +531,7 @@ function parseVCard(raw) {
 // Fluxo completo pra quando alguém compartilha um contato da agenda pelo
 // WhatsApp: identifica o usuário, baixa o vCard, extrai os dados e cadastra
 // direto na rede — mesmo caminho de dados do register_contact por texto.
-async function handleSharedContact(number, mediaUrl, sendReply) {
+export async function handleSharedContact(number, mediaUrl, sendReply) {
   if (!SUPABASE_SERVICE_KEY) {
     await sendReply(number, '⚠️ Assistente ainda não configurado (falta chave do servidor). Avise o admin do CONÉXIA.');
     return;
@@ -591,6 +591,10 @@ async function handleSharedContact(number, mediaUrl, sendReply) {
     role: null,
     category: null,
     how_met: 'Contato compartilhado via WhatsApp',
+    // normalizePhone() é a mesma régua usada pro número do próprio usuário
+    // (profiles.whatsapp) — evita salvar aqui num formato diferente (com
+    // "+", com espaço) do resto do sistema.
+    whatsapp: normalizePhone(phone),
   });
   if (!created) {
     await sendReply(number, 'Deu um problema salvando o contato. Tenta de novo em instantes, ou cadastra pelo app.');
@@ -602,7 +606,7 @@ async function handleSharedContact(number, mediaUrl, sendReply) {
 
 // Cria o contato de fato — reaproveitado tanto no cadastro direto (1 mensagem
 // com dados suficientes) quanto no fluxo de esclarecimento (nome veio depois).
-async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met, hobbies, birthday, contact_email }) {
+async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met, hobbies, birthday, contact_email, whatsapp }) {
   const contact = await sb('contacts', {
     method: 'POST',
     body: JSON.stringify({
@@ -617,6 +621,14 @@ async function createContactFromWhatsapp(userId, { contact_name, company, role, 
       hobbies: hobbies || null,
       birthday: birthday || null,
       contact_email: contact_email || null,
+      // Correção (ago/2026): contato compartilhado por vCard tinha o
+      // telefone extraído certo por parseVCard() e até mostrado na
+      // mensagem de confirmação ("📞 ..."), mas nunca era passado pra cá —
+      // ficava sempre null no banco. Os outros dois chamadores desta
+      // função (register_contact por texto, sugestão de calendário) nunca
+      // têm telefone disponível, então simplesmente não passam este campo
+      // — comportamento deles não muda.
+      whatsapp: whatsapp || null,
     }),
   });
   return contact?.[0] || null;
