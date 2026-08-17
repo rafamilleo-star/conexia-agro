@@ -677,8 +677,12 @@ function Assess({ profile, onDone }) {
   );
 }
 
-/* ═══ MAKE WEBHOOK ════════════════════════════════════════ */
-const MAKE_WEBHOOK = "https://hook.us2.make.com/ao22pba9b6y41uuxnj50hev7m1oq790r";
+/* ═══ MAKE WEBHOOK ════════════════════════════════════════
+   A URL real do webhook Make NUNCA fica no frontend (era um segredo exposto
+   no bundle público, acionável por qualquer pessoa via DevTools). O push
+   agora passa por /api/track-crm-event, que lê MAKE_WEBHOOK_URL do ambiente
+   Vercel e repassa no servidor. */
+const MAKE_WEBHOOK = "/api/track-crm-event";
 const MENTORIA_LINK = ""; // Preencher com link WhatsApp/Calendly
 
 /* ═══ STRIPE — CONFIGURAÇÃO CENTRALIZADA ═══════════════════
