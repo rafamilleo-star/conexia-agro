@@ -153,12 +153,12 @@ function isAutomatedEmail(email) {
   return !!email && AUTOMATED_EMAIL_PATTERNS.some((re) => re.test(email));
 }
 
-// Sugere UM convidado como "contato novo encontrado no calendário" — só
-// quando o evento parece uma reunião real (poucos convidados, nome
-// completo, e-mail não-automático), nunca pra webinar/palestra/lista de
-// distribuição. Não considera o próprio dono do calendário (selfNameHints).
-// Retorna { name, email } ou null.
-export function suggestNewContactFromEvent(event, { selfNameHints = [] } = {}) {
+// Lista completa de convidados elegíveis de um evento (nome completo,
+// e-mail não-automático, não é o próprio dono do calendário) — só quando
+// o evento parece reunião real (1 a 4 convidados). Única fonte dessa
+// regra: tanto o cron (que usa só candidatos[0]) quanto a tela de
+// "Convidados sem match" (Insights → Agenda) chamam esta função.
+export function suggestNewContactCandidatesFromEvent(event, { selfNameHints = [] } = {}) {
   const hints = (selfNameHints || []).map(normalize).filter(Boolean);
   const candidatos = (event.attendees || []).filter((a) => {
     if (!a.name) return false;
@@ -169,9 +169,16 @@ export function suggestNewContactFromEvent(event, { selfNameHints = [] } = {}) {
     return true;
   });
 
-  // Só reunião pequena (1 a 4 convidados de verdade) — acima disso é sinal
-  // de webinar/palestra/lista, não encontro individual.
-  if (candidatos.length < 1 || candidatos.length > 4) return null;
+  if (candidatos.length < 1 || candidatos.length > 4) return [];
+  return candidatos;
+}
 
-  return candidatos[0];
+// Sugere UM convidado como "contato novo encontrado no calendário" — só
+// quando o evento parece uma reunião real (poucos convidados, nome
+// completo, e-mail não-automático), nunca pra webinar/palestra/lista de
+// distribuição. Não considera o próprio dono do calendário (selfNameHints).
+// Retorna { name, email } ou null.
+export function suggestNewContactFromEvent(event, { selfNameHints = [] } = {}) {
+  const candidatos = suggestNewContactCandidatesFromEvent(event, { selfNameHints });
+  return candidatos[0] || null;
 }
