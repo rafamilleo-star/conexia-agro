@@ -2,10 +2,57 @@ import { useState, useEffect } from "react";
 import { C } from "../utils/theme.js";
 import { BRAND } from "../config/brand";
 import { buildContextCard } from "../../shared/contextCard.js";
+import { supabase } from "../utils/supabase";
 
 export function AbaIA({ userId, contacts, interactions, assessment, profile, pf, isPro, openAccessKey }) {
   const [secao, setSecao] = useState("insights");
   const [selContact, setSelContact] = useState(null);
+
+  // ── Agenda: convidados de reunião sem match na rede ──
+  const [agendaCandidates, setAgendaCandidates] = useState(null);
+  const [agendaConnected, setAgendaConnected] = useState(null);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [agendaErr, setAgendaErr] = useState(null);
+  const [addingKey, setAddingKey] = useState(null);
+  const [addedKeys, setAddedKeys] = useState({});
+  const [dismissedKeys, setDismissedKeys] = useState({});
+
+  const loadAgendaCandidates = async () => {
+    setAgendaLoading(true);
+    setAgendaErr(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) { setAgendaErr('Sessão não encontrada — saia e entre de novo no app.'); setAgendaLoading(false); return; }
+      const res = await fetch('/api/calendar-meeting-attendees', { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const data = await res.json();
+      if (!data.ok) { setAgendaErr(data.error || 'Erro ao buscar convidados da agenda.'); setAgendaLoading(false); return; }
+      setAgendaConnected(!!data.connected);
+      setAgendaCandidates(data.candidates || []);
+    } catch (e) {
+      setAgendaErr(e.message);
+    }
+    setAgendaLoading(false);
+  };
+
+  useEffect(() => { if (secao === 'agenda' && agendaCandidates === null && isPro) loadAgendaCandidates(); }, [secao, isPro]);
+
+  const addCandidateAsContact = async (candidate, key) => {
+    if (!userId) return;
+    setAddingKey(key);
+    try {
+      const { error } = await supabase.from('contacts').insert({
+        user_id: userId,
+        name: candidate.name,
+        contact_email: candidate.email || null,
+        how_met: candidate.meetings[0]?.summary ? `Reunião: ${candidate.meetings[0].summary}` : 'Encontrado na agenda (Google Calendar)',
+      });
+      if (error) throw error;
+      setAddedKeys(a => ({ ...a, [key]: true }));
+    } catch (e) {
+      setAgendaErr('Falha ao cadastrar: ' + e.message);
+    }
+    setAddingKey(null);
+  };
 
   // ── Insights ──
   const [insights, setInsights] = useState(null);
@@ -355,6 +402,7 @@ Sem texto extra. Seja específico e use os dados reais.`;
           { id: 'insights', label: '🧠 Insights' },
           { id: 'metas', label: '🎯 Metas 90 dias' },
           { id: 'briefing', label: '📋 Análise de Contato' },
+          { id: 'agenda', label: '📅 Agenda' },
         ].map(t => (
           <button key={t.id} onClick={() => setSecao(t.id)}
             style={{ background: secao === t.id ? C.gD : 'transparent', border: `1px solid ${secao === t.id ? C.gL : C.brd}`, borderRadius: 8, padding: '7px 14px', fontFamily: "'DM Sans'", fontSize: 12, fontWeight: secao === t.id ? 600 : 400, color: secao === t.id ? C.gold : C.txM, cursor: 'pointer', transition: 'all .2s' }}>
@@ -570,6 +618,78 @@ Sem texto extra. Seja específico e use os dados reais.`;
               )}
             </div>
           )}
+        </div>
+      )}
+      {/* ── SEÇÃO: AGENDA (PRO) — convidados de reunião sem match na rede ── */}
+      {secao === 'agenda' && !isPro && (
+        <AiProLock
+          title="Análise de agenda — recurso PRO"
+          desc="Conecta seu Google Calendar e mostra quem apareceu nas suas reuniões recentes mas ainda não está na sua rede — sem depender de mensagem no WhatsApp."
+        />
+      )}
+      {secao === 'agenda' && isPro && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt }}>Convidados sem match na sua rede</div>
+            <button onClick={loadAgendaCandidates} disabled={agendaLoading}
+              style={{ background: 'transparent', border: 'none', fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, cursor: agendaLoading ? 'default' : 'pointer', textDecoration: 'underline' }}>
+              {agendaLoading ? '...' : 'Atualizar'}
+            </button>
+          </div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 16 }}>Pessoas que apareceram em reuniões dos últimos 14 dias ou dos próximos 7, e que ainda não estão cadastradas.</div>
+
+          {agendaLoading && <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, textAlign: 'center', padding: '32px 0' }}>Buscando na sua agenda...</div>}
+
+          {agendaErr && (
+            <div style={{ background: `${C.cor}10`, border: `1px solid ${C.cor}30`, borderRadius: 10, padding: 12, fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, marginBottom: 12 }}>⚠️ {agendaErr}</div>
+          )}
+
+          {!agendaLoading && agendaConnected === false && (
+            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: 'center' }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 8 }}>Seu Google Calendar ainda não está conectado.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Conecte em Perfil → Calendário pra essa análise funcionar.</div>
+            </div>
+          )}
+
+          {!agendaLoading && agendaConnected && agendaCandidates?.length === 0 && (
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txL, textAlign: 'center', padding: '24px 0' }}>
+              Nenhum convidado novo encontrado nessa janela — ou todo mundo já está na sua rede, ou as reuniões recentes já foram registradas.
+            </div>
+          )}
+
+          {!agendaLoading && agendaCandidates?.filter(c => !dismissedKeys[c.email || c.name]).map((c) => {
+            const key = c.email || c.name;
+            const added = addedKeys[key];
+            return (
+              <div key={key} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: '14px 16px', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: `${C.gold}20`, border: `1px solid ${C.gL}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.gold, flexShrink: 0 }}>
+                    {c.name?.charAt(0)?.toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt }}>{c.name}</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>
+                      {c.meetings.length === 1 ? c.meetings[0].summary || 'Reunião' : `${c.meetings.length} reuniões · ${c.meetings[0].summary || ''}`}
+                    </div>
+                  </div>
+                  {added ? (
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.grn, fontWeight: 600 }}>✓ Cadastrado</span>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setDismissedKeys(d => ({ ...d, [key]: true }))}
+                        style={{ background: 'transparent', border: `1px solid ${C.brd}`, borderRadius: 8, padding: '6px 10px', fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, cursor: 'pointer' }}>
+                        Não relevante
+                      </button>
+                      <button onClick={() => addCandidateAsContact(c, key)} disabled={addingKey === key}
+                        style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '6px 12px', fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, cursor: addingKey === key ? 'default' : 'pointer' }}>
+                        {addingKey === key ? '...' : '+ Cadastrar'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
