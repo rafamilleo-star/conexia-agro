@@ -250,4 +250,93 @@ export function computeObservedDimensions(contacts = [], interactions = [], refe
   };
 }
 
+/**
+ * Diagnóstico + ação sugerida por dimensão, a partir da MESMA evidence já
+ * calculada acima — nunca um texto genérico solto, e nunca uma dimensão
+ * "achando" algo sem dado (NO_DATA sempre cai no fallback honesto).
+ * Usado no clique de uma dimensão em "Suas 6 dimensões" (aba Trajetória).
+ */
+export function buildDimensionInsight(dimKey, obs) {
+  const ev = obs?.evidence || {};
+  const pct = (r) => Math.round((r ?? 0) * 100);
+
+  if (!obs || obs.state === NO_DATA) {
+    return {
+      diagnosis: "Ainda não há interações registradas suficientes nessa dimensão pra avaliar com segurança — sem dado, sem palpite.",
+      action: "Registre suas próximas conversas relevantes na aba Contatos. Em algumas semanas isso fica visível aqui.",
+    };
+  }
+
+  switch (dimKey) {
+    case "presenca_mercado": {
+      const { currentInteractions, previousInteractions } = ev;
+      if (obs.state === PERDENDO) return {
+        diagnosis: `Você registrou ${currentInteractions} interações nas últimas 6 semanas, contra ${previousInteractions} no período anterior — o ritmo caiu.`,
+        action: "Escolha 2 contatos relevantes que esfriaram e marque uma conversa essa semana, mesmo sem pauta.",
+      };
+      if (obs.state === EVOLUINDO) return {
+        diagnosis: `${currentInteractions} interações nas últimas 6 semanas, contra ${previousInteractions} antes — presença crescendo.`,
+        action: "Mantenha o ritmo. Vale registrar também as interações informais (evento, corredor, WhatsApp), não só reuniões marcadas.",
+      };
+      return { diagnosis: `${currentInteractions} interações nas últimas 6 semanas, ritmo estável em relação às ${previousInteractions} anteriores.`, action: "Pra sair do platô, adicione 1 contato novo relevante à rede este mês." };
+    }
+    case "ritual_consistencia": {
+      if (obs.state === EVOLUINDO) return {
+        diagnosis: `Suas interações estão respeitando a frequência ideal combinada por contato em ${pct(ev.currentOnTimeRate)}% dos casos (era ${pct(ev.previousOnTimeRate)}%).`,
+        action: "Continue com o ritual — considere revisar se a frequência ideal de cada contato ainda faz sentido.",
+      };
+      if (obs.state === PERDENDO) return {
+        diagnosis: `${ev.coolingCount} de ${ev.strategicContactsEvaluated} relações estratégicas estão esfriando em relação ao ritmo esperado.`,
+        action: "Abra a aba Rede, filtre por relevância alta e veja quem está sem contato há mais tempo que o ideal.",
+      };
+      return { diagnosis: "Sem tendência clara de melhora ou piora na regularidade dos contatos ainda.", action: "Defina (ou revise) a frequência ideal dos seus contatos mais importantes em cada perfil." };
+    }
+    case "intencao_estrategica": {
+      const { currentRate, previousRate } = ev;
+      if (obs.state === PERDENDO) return {
+        diagnosis: `Só ${pct(currentRate)}% das suas interações recentes foram com contatos de alta relevância estratégica (era ${pct(previousRate)}%) — a atenção está se dispersando.`,
+        action: "Antes da próxima conversa, pergunte: essa pessoa está entre as mais estratégicas da minha rede agora?",
+      };
+      if (obs.state === EVOLUINDO) return {
+        diagnosis: `${pct(currentRate)}% das interações recentes foram com contatos estratégicos, contra ${pct(previousRate)}% antes — foco aumentando.`,
+        action: "Bom sinal. Cuidado só pra não deixar relações fora do círculo estratégico esfriarem de vez.",
+      };
+      return { diagnosis: `Proporção estável (${pct(currentRate)}%) de atenção pros contatos mais estratégicos.`, action: "Revise sua lista de contatos de alta relevância — ela ainda reflete suas prioridades atuais?" };
+    }
+    case "reciprocidade_ativa": {
+      if (obs.state === PERDENDO) return {
+        diagnosis: `Em ${ev.resumptionEventsEvaluated} retomadas de contato recentes, ${pct(ev.reactiveShare)}% aconteceram porque a outra pessoa te procurou primeiro — não o contrário.`,
+        action: "Escolha 1 contato que esfriou e seja você quem retoma essa semana, sem estar pedindo nada.",
+      };
+      return { diagnosis: "Sem sinal de que suas relações só se movem quando a outra pessoa procura — o que já é positivo.", action: "Mantenha o hábito de puxar você algumas das retomadas, não só reagir." };
+    }
+    case "confianca_autentica": {
+      const { currentRate, previousRate } = ev;
+      if (obs.state === PERDENDO) return {
+        diagnosis: `${pct(currentRate)}% das suas interações recentes tiveram você oferecendo algo sem pedir nada em troca (era ${pct(previousRate)}%) — a proporção caiu.`,
+        action: "Na próxima interação, ofereça uma indicação, conteúdo ou ajuda concreta, sem pedir nada de volta.",
+      };
+      if (obs.state === EVOLUINDO) return {
+        diagnosis: `${pct(currentRate)}% das interações recentes foram você dando algo sem pedir nada em troca, contra ${pct(previousRate)}% antes.`,
+        action: "Continue — esse é o padrão que mais constrói confiança de longo prazo (Adam Grant, \"Give and Take\").",
+      };
+      return { diagnosis: `Proporção estável (${pct(currentRate)}%) de interações em que você oferece algo sem pedir nada em troca.`, action: "Pra evoluir, escolha 1 relação onde você mais recebe do que dá e inverta a mão essa semana." };
+    }
+    case "escuta_relacional": {
+      const { currentRate, previousRate } = ev;
+      if (obs.state === PERDENDO) return {
+        diagnosis: `Só ${pct(currentRate)}% das suas interações recentes trouxeram algo pessoal sobre a outra pessoa, não só assunto de negócio (era ${pct(previousRate)}%).`,
+        action: "Na próxima conversa, pergunte e registre algo pessoal — família, hobby, um momento específico que a pessoa comentou.",
+      };
+      if (obs.state === EVOLUINDO) return {
+        diagnosis: `${pct(currentRate)}% das interações recentes trouxeram algo pessoal sobre a pessoa, contra ${pct(previousRate)}% antes.`,
+        action: "Continue registrando esses detalhes — retomar o que a pessoa compartilhou é o que mais demonstra escuta real.",
+      };
+      return { diagnosis: `Proporção estável (${pct(currentRate)}%) de interações com conteúdo pessoal, não só de negócio.`, action: "Escolha 1 contato próximo e, na próxima conversa, pergunte sobre algo fora do trabalho." };
+    }
+    default:
+      return { diagnosis: "Sem diagnóstico específico disponível pra essa dimensão ainda.", action: "" };
+  }
+}
+
 export default computeObservedDimensions;
