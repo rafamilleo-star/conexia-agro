@@ -256,12 +256,39 @@ export function computeObservedDimensions(contacts = [], interactions = [], refe
  * "achando" algo sem dado (NO_DATA sempre cai no fallback honesto).
  * Usado no clique de uma dimensão em "Suas 6 dimensões" (aba Trajetória).
  */
+const NO_DATA_FALLBACK = {
+  presenca_mercado: {
+    diagnosis: "Ainda não há interações suficientes nas últimas semanas pra medir sua presença com segurança — precisa de um volume mínimo em 2 janelas de 6 semanas pra comparar.",
+    action: "Registre toda interação relevante na aba Contatos, mesmo as informais. Ex: uma mensagem de WhatsApp trocada num evento também conta.",
+  },
+  ritual_consistencia: {
+    diagnosis: "Ainda não há intervalos suficientes entre interações pra comparar sua regularidade com o ritmo ideal de cada contato.",
+    action: "No perfil de pelo menos alguns contatos importantes, defina a frequência ideal de contato (ex: a cada 30 dias) e registre as interações conforme acontecem — a consistência é medida comparando intervalo real com o combinado.",
+  },
+  intencao_estrategica: {
+    diagnosis: "Ainda não há contatos marcados como alta relevância estratégica, ou interações suficientes com eles, pra medir o foco da sua atenção.",
+    action: "Marque a relevância estratégica de pelo menos alguns contatos-chave no perfil deles, e registre suas conversas com essas pessoas.",
+  },
+  reciprocidade_ativa: {
+    diagnosis: "Ainda não há retomadas de contato suficientes classificadas pra saber se costuma ser você ou a outra pessoa quem puxa a conversa depois de um tempo parado.",
+    action: "Isso é calculado automaticamente pela IA a partir da descrição que você escreve ao registrar cada interação — não precisa marcar nada manualmente. Ex: em vez de \"conversamos\", escreva \"ela me procurou depois de meses sumida, pedindo uma indicação\" — quanto mais contexto, melhor a leitura.",
+  },
+  confianca_autentica: {
+    diagnosis: "Ainda não há interações suficientes com descrição detalhada o bastante pra saber se você costuma oferecer algo sem pedir nada em troca.",
+    action: "Ao registrar uma interação, descreva o que de fato aconteceu. Ex: \"indiquei ela pra uma vaga\" (dando) vs \"pedi uma apresentação pra um cliente dela\" (pedindo) — a IA usa esse texto pra identificar o padrão.",
+  },
+  escuta_relacional: {
+    diagnosis: "Ainda não há interações suficientes com conteúdo pessoal registrado pra medir sua escuta.",
+    action: "Ao anotar uma interação, inclua o que for pessoal que a pessoa compartilhou. Ex: \"ela comentou que o filho começou a faculdade\" — isso é o que a IA usa pra identificar escuta genuína, não só assunto de negócio.",
+  },
+};
+
 export function buildDimensionInsight(dimKey, obs) {
   const ev = obs?.evidence || {};
   const pct = (r) => Math.round((r ?? 0) * 100);
 
   if (!obs || obs.state === NO_DATA) {
-    return {
+    return NO_DATA_FALLBACK[dimKey] || {
       diagnosis: "Ainda não há interações registradas suficientes nessa dimensão pra avaliar com segurança — sem dado, sem palpite.",
       action: "Registre suas próximas conversas relevantes na aba Contatos. Em algumas semanas isso fica visível aqui.",
     };
