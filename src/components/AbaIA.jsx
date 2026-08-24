@@ -667,7 +667,12 @@ Sem texto extra. Seja específico e use os dados reais.`;
                     {c.name?.charAt(0)?.toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt }}>{c.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt }}>{c.name}</div>
+                      {c.source === 'titulo_ia' && (
+                        <span title="Nome extraído do título do evento pela IA — não veio como convidado confirmado no Google Calendar" style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.amb, border: `1px solid ${C.amb}40`, borderRadius: 20, padding: '1px 6px' }}>extraído do título</span>
+                      )}
+                    </div>
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>
                       {c.meetings.length === 1 ? c.meetings[0].summary || 'Reunião' : `${c.meetings.length} reuniões · ${c.meetings[0].summary || ''}`}
                     </div>
