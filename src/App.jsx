@@ -4,6 +4,7 @@ import GuidedNetworkStart from './components/GuidedNetworkStart';
 import { computePriorities, calculateRelevance as calculateRelevanceCanonical, relationshipMomentum } from '../shared/priorityEngine.js';
 import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { buildDimensionInsight } from "../shared/dimensionObservation.js";
 import { supabase } from "./utils/supabase";
 import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { BRAND } from "./config/brand";
@@ -999,11 +1000,64 @@ Sem texto extra.`;
   );
 }
 
+/* ═══ AÇÕES DO ARQUÉTIPO (compartilhado entre Plano e Trajetória) ═══
+   Antes existiam 2 blocos estáticos idênticos e desconectados — um em
+   "Plano de Ativação" (PlanInterativo) e outro em "Trajetória"
+   (renderReport). Nenhum dos dois era clicável. Agora é 1 componente só,
+   com estado próprio salvo em plan_step_completion (phase=0), usado nos
+   dois lugares — marcar numa aba reflete na outra. */
+function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
+  const [archetypeDone, setArchetypeDone] = useState({});
+  const [loaded, setLoaded] = useState(false);
+
+  const load = async () => {
+    if (!userId) return;
+    const { data } = await supabase.from('plan_step_completion').select('step_number').eq('user_id', userId).eq('phase', 0);
+    const next = {};
+    (data || []).forEach(s => { next[s.step_number] = true; });
+    setArchetypeDone(next);
+    setLoaded(true);
+  };
+  useEffect(() => { load(); }, [userId]);
+
+  const toggle = async (idx) => {
+    const wasDone = !!archetypeDone[idx];
+    setArchetypeDone(a => ({ ...a, [idx]: !wasDone }));
+    if (wasDone) {
+      await supabase.from('plan_step_completion').delete()
+        .eq('user_id', userId).eq('phase', 0).eq('week', 0).eq('step_number', idx);
+    } else {
+      const { error } = await supabase.from('plan_step_completion')
+        .upsert({ user_id: userId, phase: 0, week: 0, step_number: idx, completed_at: new Date().toISOString() },
+          { onConflict: 'user_id,phase,week,step_number' });
+      if (error) { console.error('[AçõesArquétipo] falha ao salvar:', error); setArchetypeDone(a => ({ ...a, [idx]: wasDone })); }
+    }
+  };
+
+  if (!pf || !pf.actions?.length) return null;
+  return (
+    <div style={hideHeader ? {} : { background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      {!hideHeader && <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 ações como {pf.name}</div>}
+      {pf.actions.map((a, i) => {
+        const checked = loaded && !!archetypeDone[i];
+        return (
+          <div key={i} onClick={() => toggle(i)}
+            style={{ display: "flex", gap: 10, marginBottom: 6, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: `all ${MOTION.base}` }}>
+            <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? C.grn : C.gL}`, background: checked ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+              {checked && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+            </div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: checked ? C.txL : C.txM, lineHeight: 1.5, textDecoration: checked ? 'line-through' : 'none' }}>{a}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ═══ PLANO INTERATIVO ══════════════════════════════════ */
 function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   const [done, setDone] = useState({});
   const [metaDone, setMetaDone] = useState({});
-  const [archetypeDone, setArchetypeDone] = useState({}); // "Suas 3 ações" — phase=0 em plan_step_completion
   const [aiGoals, setAiGoals] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [regeneratingGoalId, setRegeneratingGoalId] = useState(null);
@@ -1023,9 +1077,8 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   // com progresso calculado (ai_goals_progress) e atividade real registrada (plan_progress).
   const loadAll = async () => {
     if (!userId) return;
-    const [{ data: steps }, { data: archSteps }, { data: goals }, { data: progress }] = await Promise.all([
+    const [{ data: steps }, { data: goals }, { data: progress }] = await Promise.all([
       supabase.from('plan_step_completion').select('week, step_number').eq('user_id', userId).eq('phase', 1),
-      supabase.from('plan_step_completion').select('step_number').eq('user_id', userId).eq('phase', 0),
       supabase.from('ai_goals_progress').select('*').eq('user_id', userId).eq('archived', false).order('created_at', { ascending: false }),
       supabase.from('plan_progress').select('*').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1),
     ]);
@@ -1036,9 +1089,6 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     });
     setDone(newDone);
     setMetaDone(newMeta);
-    const newArch = {};
-    (archSteps || []).forEach(s => { newArch[s.step_number] = true; });
-    setArchetypeDone(newArch);
     setRealProgress(progress?.[0] || null);
 
     // Meta de 90 dias batida (100%) não fecha sozinha — sem isso ela fica
@@ -1069,21 +1119,6 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   };
 
   useEffect(() => { loadAll(); }, [userId]);
-
-  const toggleArchetypeAction = async (idx) => {
-    const wasDone = !!archetypeDone[idx];
-    setArchetypeDone(a => ({ ...a, [idx]: !wasDone }));
-    if (wasDone) {
-      await supabase.from('plan_step_completion').delete()
-        .eq('user_id', userId).eq('phase', 0).eq('week', 0).eq('step_number', idx);
-    } else {
-      const { error } = await supabase.from('plan_step_completion')
-        .upsert({ user_id: userId, phase: 0, week: 0, step_number: idx, completed_at: new Date().toISOString() },
-          { onConflict: 'user_id,phase,week,step_number' });
-      if (error) { console.error('[Plano] falha ao salvar ação do arquétipo:', error); setArchetypeDone(a => ({ ...a, [idx]: wasDone })); }
-      else setMicroMsg(buildTaskMicroresponse(realProgress));
-    }
-  };
 
   // Troca só esta meta (arquiva 1, gera 1 nova), diferente de "Regenerar"
   // que substitui as 3 de uma vez — evita perder progresso de metas ainda
@@ -1208,24 +1243,8 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         </div>
       )}
 
-      {/* Suas 3 ações do perfil — antes era texto estático sem interação nenhuma */}
-      {pf && pf.actions?.length > 0 && (
-        <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 ações como {pf.name}</div>
-          {pf.actions.map((a, i) => {
-            const checked = !!archetypeDone[i];
-            return (
-              <div key={i} onClick={() => toggleArchetypeAction(i)}
-                style={{ display: "flex", gap: 10, marginBottom: 6, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: `all ${MOTION.base}` }}>
-                <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? C.grn : C.gL}`, background: checked ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                  {checked && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
-                </div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: checked ? C.txL : C.txM, lineHeight: 1.5, textDecoration: checked ? 'line-through' : 'none' }}>{a}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Suas 3 ações do perfil — componente compartilhado com a aba Trajetória (mesmo estado real) */}
+      <ArchetypeActionsChecklist userId={userId} pf={pf} />
 
       {/* Metas de IA — mensuráveis, com progresso calculado a partir do uso real */}
       <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
@@ -1872,6 +1891,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   // consumida em renderReport (Insights → Trajetória). Ver
   // shared/dimensionObservation.js pra fundamentação de cada dimensão.
   const [dimObservation, setDimObservation] = useState(null);
+  const [expandedDim, setExpandedDim] = useState(null); // dimensão aberta em "Suas 6 dimensões" (Trajetória)
   useEffect(() => {
     if (!user?.id || !isPro) return;
     supabase.from('plan_insights')
@@ -3668,25 +3688,41 @@ ${MENTORIA_LINK || true ? `
         )}
         {isPro && (<>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Suas 6 dimensões</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Suas 6 dimensões</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 12 }}>Toque numa dimensão pra ver o porquê e uma sugestão concreta.</div>
           {DIMS.map((d, i) => { const v = sc[d.key] || 0;
             const obs = dimObservation?.[d.key];
             const OBS_COLOR = { evoluindo: C.grn, estavel: C.amb, perdendo_intensidade: C.cor };
             const OBS_LABEL = { evoluindo: 'Evoluindo', estavel: 'Estável', perdendo_intensidade: 'Perdendo intensidade' };
+            const isOpen = expandedDim === d.key;
+            const insight = isOpen ? buildDimensionInsight(d.key, obs) : null;
             return (
             <div key={i} style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{d.label}</span>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {obs && obs.state !== 'sem_dados' && (
-                    <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, color: OBS_COLOR[obs.state], border: `1px solid ${OBS_COLOR[obs.state]}40`, borderRadius: 20, padding: "2px 8px" }}>
-                      Comportamento: {OBS_LABEL[obs.state]}
-                    </span>
-                  )}
-                  <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, color: d.color }}>{v}%</span>
+              <div onClick={() => setExpandedDim(isOpen ? null : d.key)} style={{ cursor: 'pointer' }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{d.label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {obs && obs.state !== 'sem_dados' && (
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, color: OBS_COLOR[obs.state], border: `1px solid ${OBS_COLOR[obs.state]}40`, borderRadius: 20, padding: "2px 8px" }}>
+                        Comportamento: {OBS_LABEL[obs.state]}
+                      </span>
+                    )}
+                    <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, color: d.color }}>{v}%</span>
+                  </div>
                 </div>
+                <div style={{ height: 7, borderRadius: 4, background: C.w06 }}><div style={{ height: 7, borderRadius: 4, background: d.color, width: `${v}%` }} /></div>
               </div>
-              <div style={{ height: 7, borderRadius: 4, background: C.w06 }}><div style={{ height: 7, borderRadius: 4, background: d.color, width: `${v}%` }} /></div>
+              {isOpen && insight && (
+                <div style={{ marginTop: 8, background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: insight.action ? 8 : 0 }}>{insight.diagnosis}</div>
+                  {insight.action && (
+                    <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 6, padding: '7px 10px' }}>
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.06em' }}>→ Ação: </span>
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{insight.action}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ); })}
         </div>
@@ -3701,12 +3737,7 @@ ${MENTORIA_LINK || true ? `
         <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 24 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 4 }}>Você é {pf?.name}.</div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 14 }}>Suas 3 ações prioritárias:</div>
-          {(pf?.actions || []).map((a, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 7, background: C.gD, border: `1px solid ${C.gL}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 600, color: C.gold, flexShrink: 0 }}>{i + 1}</div>
-              <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5, margin: 0 }}>{a}</p>
-            </div>
-          ))}
+          <ArchetypeActionsChecklist userId={user?.id} pf={pf} hideHeader />
         </div>
         {cts.length > 0 && (() => {
           // Distribuição por categoria
