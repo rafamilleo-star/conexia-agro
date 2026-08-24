@@ -1003,8 +1003,11 @@ Sem texto extra.`;
 function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   const [done, setDone] = useState({});
   const [metaDone, setMetaDone] = useState({});
+  const [archetypeDone, setArchetypeDone] = useState({}); // "Suas 3 ações" — phase=0 em plan_step_completion
   const [aiGoals, setAiGoals] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [regeneratingGoalId, setRegeneratingGoalId] = useState(null);
+  const [expandedWeeks, setExpandedWeeks] = useState({}); // semanas concluídas que o usuário abriu manualmente
   const [realProgress, setRealProgress] = useState(null); // atividade real (interactions/contacts) vinda do banco
   const [loaded, setLoaded] = useState(false);
   // Microrresposta contextual ao concluir tarefa/meta — some sozinha, não
@@ -1020,8 +1023,9 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   // com progresso calculado (ai_goals_progress) e atividade real registrada (plan_progress).
   const loadAll = async () => {
     if (!userId) return;
-    const [{ data: steps }, { data: goals }, { data: progress }] = await Promise.all([
+    const [{ data: steps }, { data: archSteps }, { data: goals }, { data: progress }] = await Promise.all([
       supabase.from('plan_step_completion').select('week, step_number').eq('user_id', userId).eq('phase', 1),
+      supabase.from('plan_step_completion').select('step_number').eq('user_id', userId).eq('phase', 0),
       supabase.from('ai_goals_progress').select('*').eq('user_id', userId).eq('archived', false).order('created_at', { ascending: false }),
       supabase.from('plan_progress').select('*').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1),
     ]);
@@ -1032,12 +1036,87 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     });
     setDone(newDone);
     setMetaDone(newMeta);
-    setAiGoals(goals || []);
+    const newArch = {};
+    (archSteps || []).forEach(s => { newArch[s.step_number] = true; });
+    setArchetypeDone(newArch);
     setRealProgress(progress?.[0] || null);
+
+    // Meta de 90 dias batida (100%) não fecha sozinha — sem isso ela fica
+    // "somando pra sempre" na tela mesmo já concluída. Aqui, ao carregar,
+    // qualquer meta com progress_percentage >= 100 é arquivada como
+    // "achieved" e substituída por uma nova, com o mesmo salto (target -
+    // baseline) a partir do valor atual — sem IA, sem mexer nas outras
+    // metas que ainda estão em andamento (diferente do botão "Regenerar").
+    const achieved = (goals || []).filter(g => (g.progress_percentage ?? 0) >= 100 && g.status !== 'achieved');
+    if (achieved.length) {
+      for (const g of achieved) {
+        await supabase.from('ai_goals').update({ status: 'achieved', archived: true }).eq('id', g.id);
+        const delta = Math.max(1, Number(g.target_value) - Number(g.baseline_value));
+        await supabase.from('ai_goals').insert({
+          user_id: userId,
+          goal_text: g.goal_text,
+          metric_type: g.metric_type,
+          baseline_value: g.current_value,
+          target_value: Number(g.current_value) + delta,
+        });
+      }
+      const { data: freshGoals } = await supabase.from('ai_goals_progress').select('*').eq('user_id', userId).eq('archived', false).order('created_at', { ascending: false });
+      setAiGoals(freshGoals || []);
+    } else {
+      setAiGoals(goals || []);
+    }
     setLoaded(true);
   };
 
   useEffect(() => { loadAll(); }, [userId]);
+
+  const toggleArchetypeAction = async (idx) => {
+    const wasDone = !!archetypeDone[idx];
+    setArchetypeDone(a => ({ ...a, [idx]: !wasDone }));
+    if (wasDone) {
+      await supabase.from('plan_step_completion').delete()
+        .eq('user_id', userId).eq('phase', 0).eq('week', 0).eq('step_number', idx);
+    } else {
+      const { error } = await supabase.from('plan_step_completion')
+        .upsert({ user_id: userId, phase: 0, week: 0, step_number: idx, completed_at: new Date().toISOString() },
+          { onConflict: 'user_id,phase,week,step_number' });
+      if (error) { console.error('[Plano] falha ao salvar ação do arquétipo:', error); setArchetypeDone(a => ({ ...a, [idx]: wasDone })); }
+      else setMicroMsg(buildTaskMicroresponse(realProgress));
+    }
+  };
+
+  // Troca só esta meta (arquiva 1, gera 1 nova), diferente de "Regenerar"
+  // que substitui as 3 de uma vez — evita perder progresso de metas ainda
+  // em andamento quando o usuário só quer trocar uma específica.
+  const regenerateSingleGoal = async (goal) => {
+    if (!pf) return;
+    setRegeneratingGoalId(goal.id);
+    try {
+      const prompt = `Você é um coach de networking estratégico. O usuário tem o perfil relacional "${pf.name}" (${pf.tagline}). A meta atual dele é "${goal.goal_text}" (métrica: ${goal.metric_type}), e ele quer trocá-la por outra. Hoje ele tem ${goal.current_value ?? 0} nessa métrica. Gere exatamente 1 meta mensurável nova e diferente da atual para os próximos 90 dias, medida por "interactions_count" ou "contacts_engaged", com alvo numérico realista acima do valor atual. Responda APENAS com JSON: {"goal_text": "...", "metric_type": "interactions_count", "target_value": 40}. Sem texto extra.`;
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, maxTokens: 300 })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '';
+      const g = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      if (g.goal_text) {
+        await supabase.from('ai_goals').update({ archived: true }).eq('id', goal.id);
+        await supabase.from('ai_goals').insert({
+          user_id: userId,
+          goal_text: g.goal_text,
+          metric_type: g.metric_type === 'contacts_engaged' ? 'contacts_engaged' : 'interactions_count',
+          baseline_value: goal.current_value ?? 0,
+          target_value: Number(g.target_value) || (goal.current_value ?? 0) + 10,
+        });
+        await loadAll();
+      }
+    } catch (e) {
+      console.error('regenerateSingleGoal error:', e);
+    }
+    setRegeneratingGoalId(null);
+  };
 
   const toggleTask = async (weekNum, taskIdx) => {
     const key = `${weekNum}_${taskIdx}`;
@@ -1129,6 +1208,25 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         </div>
       )}
 
+      {/* Suas 3 ações do perfil — antes era texto estático sem interação nenhuma */}
+      {pf && pf.actions?.length > 0 && (
+        <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 ações como {pf.name}</div>
+          {pf.actions.map((a, i) => {
+            const checked = !!archetypeDone[i];
+            return (
+              <div key={i} onClick={() => toggleArchetypeAction(i)}
+                style={{ display: "flex", gap: 10, marginBottom: 6, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: `all ${MOTION.base}` }}>
+                <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? C.grn : C.gL}`, background: checked ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                  {checked && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                </div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: checked ? C.txL : C.txM, lineHeight: 1.5, textDecoration: checked ? 'line-through' : 'none' }}>{a}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Metas de IA — mensuráveis, com progresso calculado a partir do uso real */}
       <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -1160,7 +1258,14 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
             <div key={g.id} style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 8, background: achieved ? C.grnD : C.w06, border: `1px solid ${achieved ? C.grn + '40' : C.brd}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                 <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.4 }}>{achieved ? '✅ ' : ''}{g.goal_text}</span>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, flexShrink: 0 }}>{daysLeft}d restantes</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{daysLeft}d restantes</span>
+                  <button onClick={() => regenerateSingleGoal(g)} disabled={regeneratingGoalId === g.id}
+                    title="Trocar só esta meta, sem mexer nas outras"
+                    style={{ background: 'transparent', border: 'none', fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, cursor: regeneratingGoalId === g.id ? 'default' : 'pointer', textDecoration: 'underline' }}>
+                    {regeneratingGoalId === g.id ? '...' : 'Trocar'}
+                  </button>
+                </div>
               </div>
               <div style={{ height: 6, borderRadius: 3, background: C.brd, overflow: 'hidden', marginBottom: 4 }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: achieved ? C.grn : C.gold, transition: `width ${MOTION.slow}` }} />
@@ -1199,6 +1304,21 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
           </div>
         );
 
+        // Semana já concluída (e não é a atual) fica colapsada por padrão —
+        // antes ficava sempre expandida com o mesmo tamanho de uma semana
+        // ativa, empurrando tudo pra baixo mesmo depois de feita.
+        const isCollapsible = !isCurrent && allTasksDone;
+        const isExpanded = !isCollapsible || !!expandedWeeks[w.week];
+
+        if (isCollapsible && !isExpanded) return (
+          <div key={i} onClick={() => setExpandedWeeks(e => ({ ...e, [w.week]: true }))}
+            style={{ background: C.grnD, border: `1px solid ${C.grn}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <span style={{ fontSize: 16 }}>✅</span>
+            <span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, flex: 1 }}>Semana {w.week} · {w.title}</span>
+            <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>ver detalhes</span>
+          </div>
+        );
+
         return (
           <div key={i} style={{ background: isCurrent ? `${C.gold}06` : C.card, border: `1px solid ${isCurrent ? C.gL : C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -1213,6 +1333,10 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
                 </div>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 600, color: C.txt, marginTop: 3 }}>{w.title}</div>
               </div>
+              {isCollapsible && isExpanded && (
+                <button onClick={() => setExpandedWeeks(e => ({ ...e, [w.week]: false }))}
+                  style={{ background: 'none', border: 'none', fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, cursor: 'pointer', textDecoration: 'underline' }}>recolher</button>
+              )}
             </div>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, margin: '0 0 10px', fontStyle: 'italic' }}>{w.goal}</p>
 
@@ -2262,20 +2386,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
     const renderPlan = () => {
     const week = Math.min(4, Math.max(1, Math.ceil(dSince(assessment?.createdAt) / 7) || 1));
-    const profileActions = pf?.actions || [];
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Plano de Ativação</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Seu guia de 4 semanas para transformar networking em hábito.</p>
-        {pf && <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 ações como {pf.name}</div>
-          {profileActions.map((a, i) => (
-            <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-              <div style={{ width: 22, height: 22, borderRadius: 6, background: C.gD, border: `1px solid ${C.gL}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono'", fontSize: 11, fontWeight: 700, color: C.gold, flexShrink: 0 }}>{i + 1}</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{a}</div>
-            </div>
-          ))}
-        </div>}
         <PlanInterativo userId={user?.id} week={week} isPro={isPro} openAccessKey={openAccessKey} pf={pf} />
       </div>
     );
@@ -4523,8 +4637,13 @@ function App() {
       // Contas criadas antes da correção do registro de consentimento LGPD
       // não têm esse aceite gravado. Verifica e pede pra confirmar agora.
       try {
-        const { data: consent } = await supabase.from("consent_logs").select("id").eq("user_id", userId).maybeSingle();
-        if (!consent) setNeedsConsent(true);
+        // Nunca usar .maybeSingle() aqui: se existir mais de uma linha de
+        // consentimento pro mesmo usuário (aceite antigo + reaceite), o
+        // Postgrest lança erro de "multiple rows", cai no catch abaixo e
+        // reabre o modal — isso é o que fazia o aviso de LGPD voltar a
+        // cada troca de aba/navegação, mesmo já tendo sido aceito.
+        const { data: consent } = await supabase.from("consent_logs").select("id").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
+        if (!consent || consent.length === 0) setNeedsConsent(true);
       } catch { setNeedsConsent(true); }
 
       const { data: a } = await supabase.from("assessments").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
