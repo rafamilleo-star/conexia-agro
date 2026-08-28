@@ -1858,7 +1858,13 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
+  const [orgInfo, setOrgInfo] = useState(null);
+  const [orgCodeBusy, setOrgCodeBusy] = useState(false);
+  const [orgCodeCopied, setOrgCodeCopied] = useState(false);
   const [orgConsentBusy, setOrgConsentBusy] = useState(false);
+  const [joinOrgCode, setJoinOrgCode] = useState("");
+  const [joinOrgBusy, setJoinOrgBusy] = useState(false);
+  const [joinOrgMsg, setJoinOrgMsg] = useState("");
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [akCode, setAkCode]   = useState("");
   const [akMsg, setAkMsg]     = useState("");
@@ -2274,14 +2280,41 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     if (orgOverview || orgOverviewLoading) return;
     setOrgOverviewLoading(true);
     setOrgOverviewError("");
-    supabase.rpc("get_org_team_overview", { p_organization_id: profile.organization_id })
-      .then(({ data, error }) => {
-        if (error) { setOrgOverviewError(error.message || "Não foi possível carregar a visão da equipe."); return; }
-        setOrgOverview(data || []);
+    Promise.all([
+      supabase.rpc("get_org_team_overview", { p_organization_id: profile.organization_id }),
+      supabase.from("organizations").select("name,invite_code").eq("id", profile.organization_id).maybeSingle(),
+    ])
+      .then(([overviewRes, orgRes]) => {
+        if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "Não foi possível carregar a visão da equipe."); return; }
+        setOrgOverview(overviewRes.data || []);
+        if (orgRes.data) setOrgInfo(orgRes.data);
       })
       .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
       .finally(() => setOrgOverviewLoading(false));
   }, [view, profile?.organization_id, profile?.org_role, orgOverview, orgOverviewLoading]);
+
+  const regenerateOrgCode = async () => {
+    if (!profile?.organization_id) return;
+    setOrgCodeBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("regenerate_org_invite_code", { p_organization_id: profile.organization_id });
+      if (error) { console.error("[OrgCode]", error); return; }
+      setOrgInfo((prev) => ({ ...(prev || {}), invite_code: data }));
+    } catch (e) {
+      console.error("[OrgCode]", e);
+    } finally {
+      setOrgCodeBusy(false);
+    }
+  };
+
+  const copyOrgCode = async () => {
+    if (!orgInfo?.invite_code) return;
+    try {
+      await navigator.clipboard.writeText(orgInfo.invite_code);
+      setOrgCodeCopied(true);
+      setTimeout(() => setOrgCodeCopied(false), 1800);
+    } catch (e) { /* clipboard indisponível — botão só não confirma visualmente */ }
+  };
 
   // Guardrail de consentimento: vínculo a organização nunca é silencioso.
   // respond_to_org_invite() é a única via de escrita nesses campos vinda
@@ -2314,6 +2347,36 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       console.error("[OrgConsent]", e);
     } finally {
       setOrgConsentBusy(false);
+    }
+  };
+
+  // Auto-declaração: pessoa digita o código da própria empresa e entra
+  // sozinha. join_organization_by_code() já bloqueia quem já está em uma
+  // organização, e o trigger do banco já força org_consent_status de
+  // volta pra 'pending' — o modal de consentimento assume dali em diante.
+  const joinOrganization = async () => {
+    const code = joinOrgCode.trim();
+    if (!code) return;
+    setJoinOrgBusy(true);
+    setJoinOrgMsg("");
+    try {
+      const { data, error } = await supabase.rpc("join_organization_by_code", { p_code: code });
+      if (error) {
+        setJoinOrgMsg(
+          error.message?.includes("invalid_code") ? "Código inválido." :
+          error.message?.includes("already_in_organization") ? "Você já está em uma organização — saia dela antes de entrar em outra." :
+          "Não foi possível entrar. Confira o código e tente de novo."
+        );
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      onProfileUpdate?.({ organization_id: row?.organization_id, org_role: "membro", org_consent_status: "pending" });
+      setJoinOrgCode("");
+      setJoinOrgMsg("");
+    } catch (e) {
+      setJoinOrgMsg("Não foi possível entrar. Tente de novo.");
+    } finally {
+      setJoinOrgBusy(false);
     }
   };
 
@@ -2367,6 +2430,20 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px", maxWidth: 560 }}>
           Estado comportamental semanal da sua equipe, por dimensão — categórico, nunca numérico. Contatos, interações e conteúdo de conversas de cada pessoa continuam privados e não aparecem aqui.
         </p>
+
+        {orgInfo?.invite_code && (
+          <div style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Código de convite — {orgInfo.name}</div>
+              <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 18, fontWeight: 700, color: C.txt, letterSpacing: ".08em" }}>{orgInfo.invite_code}</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginTop: 4 }}>Compartilhe com a equipe. Cada pessoa digita esse código em Perfil → "Tem um código de empresa?" e passa pelo consentimento antes de qualquer dado aparecer aqui.</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <Btn small variant="ghost" onClick={copyOrgCode}>{orgCodeCopied ? "Copiado!" : "Copiar"}</Btn>
+              <Btn small variant="ghost" onClick={regenerateOrgCode} disabled={orgCodeBusy}>Gerar novo código</Btn>
+            </div>
+          </div>
+        )}
 
         {orgOverviewLoading && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando…</div>
@@ -4042,6 +4119,25 @@ ${MENTORIA_LINK || true ? `
             Seu admin vê um resumo categórico da sua tendência semanal por dimensão. Seus contatos, interações e conteúdo de conversas continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
           </div>
           <Btn variant="ghost" small onClick={leaveOrganization} disabled={orgConsentBusy}>Sair da organização</Btn>
+        </div>
+      )}
+      {!profile?.organization_id && (
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Tem um código de empresa?</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14, lineHeight: 1.55 }}>
+            Se sua empresa usa o {BRAND.name}, digite o código que ela te passou. Antes de qualquer coisa aparecer pro admin, você ainda vai confirmar o que fica visível.
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input
+              value={joinOrgCode}
+              onChange={(e) => setJoinOrgCode(e.target.value.toUpperCase())}
+              placeholder="Ex: A1B2C3D4"
+              maxLength={8}
+              style={{ flex: "1 1 160px", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.txt, letterSpacing: ".05em" }}
+            />
+            <Btn small onClick={joinOrganization} disabled={joinOrgBusy || !joinOrgCode.trim()}>Entrar</Btn>
+          </div>
+          {joinOrgMsg && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, marginTop: 8 }}>{joinOrgMsg}</div>}
         </div>
       )}
     </div>
