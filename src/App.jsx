@@ -1855,6 +1855,9 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [view, setView] = useState("dash");
+  const [orgOverview, setOrgOverview] = useState(null);
+  const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
+  const [orgOverviewError, setOrgOverviewError] = useState("");
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [akCode, setAkCode]   = useState("");
   const [akMsg, setAkMsg]     = useState("");
@@ -2254,11 +2257,30 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }] : []),
     ...(admin ? [{ id: "export", icon: "⬇", label: "Exportar" }] : []),
     ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
+    ...(profile?.organization_id && profile?.org_role === "admin" ? [{ id: "empresa", icon: "🏢", label: "Empresa" }] : []),
   ];
 
   useEffect(() => {
     if (view === "metrics" && isMetricsAdmin && !metrics && !metricsLoading) loadMetrics();
   }, [view, isMetricsAdmin, metrics, metricsLoading, loadMetrics]);
+
+  // CONÉXIA B2B (piloto) — visão agregada da equipe, só para org_role
+  // 'admin'. Lê exclusivamente get_org_team_overview() (SECURITY DEFINER),
+  // que nunca expõe contacts/interactions/email — só arquétipo e o estado
+  // categórico semanal já computado por relationship-weekly-summary-cron.js.
+  useEffect(() => {
+    if (view !== "empresa" || !profile?.organization_id || profile?.org_role !== "admin") return;
+    if (orgOverview || orgOverviewLoading) return;
+    setOrgOverviewLoading(true);
+    setOrgOverviewError("");
+    supabase.rpc("get_org_team_overview", { p_organization_id: profile.organization_id })
+      .then(({ data, error }) => {
+        if (error) { setOrgOverviewError(error.message || "Não foi possível carregar a visão da equipe."); return; }
+        setOrgOverview(data || []);
+      })
+      .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
+      .finally(() => setOrgOverviewLoading(false));
+  }, [view, profile?.organization_id, profile?.org_role, orgOverview, orgOverviewLoading]);
 
   const renderMentor = () => {
     // In localStorage mode, mentor sees shared data. In Supabase mode, RLS handles cross-user reads.
@@ -2279,6 +2301,83 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, marginBottom: 8 }}>Quando migrar para Supabase</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>Este painel mostrará todos os mentorados, seus assessments, contatos e interações. A RLS do Supabase garante que só o mentor (is_mentor=true) consegue leitura cross-user.</div>
         </div>
+      </div>
+    );
+  };
+
+  // Mesmos tokens de cor já usados para este estado em "Suas 6 dimensões"
+  // (Perfil) — evoluindo/estavel/perdendo_intensidade — para consistência
+  // visual entre a visão individual e a visão agregada da equipe.
+  const OBS_STATE_STYLE = {
+    evoluindo: { label: "Evoluindo", bg: `${C.grn}18`, fg: C.grn },
+    estavel: { label: "Estável", bg: `${C.amb}18`, fg: C.amb },
+    perdendo_intensidade: { label: "Perdendo intensidade", bg: `${C.cor}18`, fg: C.cor },
+    sem_dados: { label: "Sem dados suficientes", bg: C.w06, fg: C.txL },
+  };
+  const DIMENSION_LABELS = {
+    intencao_estrategica: "Estratégia",
+    escuta_relacional: "Empatia",
+    presenca_mercado: "Presença",
+    reciprocidade_ativa: "Reciprocidade",
+    ritual_consistencia: "Consistência",
+    confianca_autentica: "Autenticidade",
+  };
+
+  // Visão Empresa — piloto B2B (Fase 0). Só categórico, só arquétipo.
+  // Nunca lista contatos, interações ou conteúdo de mensagens de ninguém.
+  const renderEmpresa = () => {
+    return (
+      <div>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Visão Empresa</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px", maxWidth: 560 }}>
+          Estado comportamental semanal da sua equipe, por dimensão — categórico, nunca numérico. Contatos, interações e conteúdo de conversas de cada pessoa continuam privados e não aparecem aqui.
+        </p>
+
+        {orgOverviewLoading && (
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando…</div>
+        )}
+
+        {!orgOverviewLoading && orgOverviewError && (
+          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
+            {orgOverviewError}
+          </div>
+        )}
+
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length === 0 && (
+          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
+            Nenhum membro vinculado a esta organização ainda.
+          </div>
+        )}
+
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {orgOverview.map((m) => (
+              <div key={m.member_id} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "—"}</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{m.profile_name || "Arquétipo pendente"}</div>
+                </div>
+                {!m.onboarding_completed ? (
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding não concluído</div>
+                ) : !m.dimension_observation ? (
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {Object.entries(m.dimension_observation).map(([dim, state]) => {
+                      const s = OBS_STATE_STYLE[state] || OBS_STATE_STYLE.sem_dados;
+                      return (
+                        <div key={dim} style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-start" }}>
+                          <span style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>{DIMENSION_LABELS[dim] || dim}</span>
+                          <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: s.bg, color: s.fg }}>{s.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -2433,6 +2532,15 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
     return (
       <div>
+        {/* Transparência LGPD: piloto B2B — o membro precisa saber que o
+            estado categórico semanal (nunca contatos/interações/conteúdo)
+            fica visível ao admin da organização. */}
+        {profile?.organization_id && profile?.org_role === "membro" && (
+          <div style={{ background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
+            Sua organização tem acesso a um resumo categórico da sua tendência comportamental semanal (ex.: "Presença: Evoluindo"). Seus contatos, interações e conteúdo de conversas continuam privados.
+          </div>
+        )}
+
         {/* Removido: "{pf.emoji} {pf.name}" ocupava a posição mais nobre da
             página (antes até do card do WhatsApp) pra mostrar algo puramente
             decorativo, não acionável. O arquétipo continua visível em "Eu". */}
@@ -4023,6 +4131,7 @@ ${MENTORIA_LINK || true ? `
         {view === "teia" && renderTeia()}
         {view === "plano" && renderPlan()}
         {view === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
+        {view === "empresa" && profile?.organization_id && profile?.org_role === "admin" && renderEmpresa()}
         {view === "report" && renderReport()}
         {view === "mentor" && admin && renderMentor()}
         {view === "export" && admin && renderExport()}
