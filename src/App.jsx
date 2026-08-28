@@ -4204,7 +4204,7 @@ ${MENTORIA_LINK || true ? `
           silencioso. Sem X, sem clique-fora: só decide clicando num dos
           dois botões. Enquanto pending, o admin não vê nada desta pessoa
           (get_org_team_overview exige org_consent_status='accepted'). */}
-      {profile?.organization_id && profile?.org_consent_status === "pending" && (
+      {profile?.organization_id && profile?.org_consent_status === "pending" && profile?.org_role !== "admin" && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brdH}`, borderRadius: 16, width: "100%", maxWidth: 440, padding: 28 }}>
             <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>Sua organização convidou você</h3>
