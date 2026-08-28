@@ -1858,6 +1858,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
+  const [orgConsentBusy, setOrgConsentBusy] = useState(false);
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [akCode, setAkCode]   = useState("");
   const [akMsg, setAkMsg]     = useState("");
@@ -2281,6 +2282,40 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
       .finally(() => setOrgOverviewLoading(false));
   }, [view, profile?.organization_id, profile?.org_role, orgOverview, orgOverviewLoading]);
+
+  // Guardrail de consentimento: vínculo a organização nunca é silencioso.
+  // respond_to_org_invite() é a única via de escrita nesses campos vinda
+  // do client — aceitar seta org_consent_status='accepted'; recusar limpa
+  // organization_id por completo (a pessoa sai, dados individuais intactos).
+  const respondOrgInvite = async (accept) => {
+    setOrgConsentBusy(true);
+    try {
+      const { error } = await supabase.rpc("respond_to_org_invite", { p_accept: accept });
+      if (error) { console.error("[OrgConsent]", error); return; }
+      if (accept) {
+        onProfileUpdate?.({ org_consent_status: "accepted", org_consent_at: new Date().toISOString() });
+      } else {
+        onProfileUpdate?.({ organization_id: null, org_role: null, org_consent_status: null, org_consent_at: null });
+      }
+    } catch (e) {
+      console.error("[OrgConsent]", e);
+    } finally {
+      setOrgConsentBusy(false);
+    }
+  };
+
+  const leaveOrganization = async () => {
+    setOrgConsentBusy(true);
+    try {
+      const { error } = await supabase.rpc("leave_organization");
+      if (error) { console.error("[OrgConsent]", error); return; }
+      onProfileUpdate?.({ organization_id: null, org_role: null, org_consent_status: null, org_consent_at: null });
+    } catch (e) {
+      console.error("[OrgConsent]", e);
+    } finally {
+      setOrgConsentBusy(false);
+    }
+  };
 
   const renderMentor = () => {
     // In localStorage mode, mentor sees shared data. In Supabase mode, RLS handles cross-user reads.
@@ -3991,14 +4026,25 @@ ${MENTORIA_LINK || true ? `
 
   // ── Aba Perfil ────────────────────────────────────────────
   const renderPerfilForm = () => (
-    <PerfilForm
-      profile={profile}
-      userId={user?.id}
-      onSaved={(updated) => onProfileUpdate?.(updated)}
-      isPro={isPro}
-      openAccessKey={openAccessKey}
-      archetype={pf}
-    />
+    <div>
+      <PerfilForm
+        profile={profile}
+        userId={user?.id}
+        onSaved={(updated) => onProfileUpdate?.(updated)}
+        isPro={isPro}
+        openAccessKey={openAccessKey}
+        archetype={pf}
+      />
+      {profile?.organization_id && profile?.org_role === "membro" && profile?.org_consent_status === "accepted" && (
+        <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Organização</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14, lineHeight: 1.55 }}>
+            Seu admin vê um resumo categórico da sua tendência semanal por dimensão. Seus contatos, interações e conteúdo de conversas continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
+          </div>
+          <Btn variant="ghost" small onClick={leaveOrganization} disabled={orgConsentBusy}>Sair da organização</Btn>
+        </div>
+      )}
+    </div>
   );
 
   // ── "Insights" (âncora principal, coluna lateral) = IA + Plano + Relatório ──
@@ -4058,6 +4104,27 @@ ${MENTORIA_LINK || true ? `
       {/* Ajuda: automática na 1ª vez (boas-vindas), depois sempre contextual
           ao que a pessoa está vendo — não é mais um tour fixo do app inteiro. */}
       {showTour && <TourModal onClose={closeTour} onFinish={closeTour} steps={getHelpSteps(["dash", "contacts", "perfil", "insights", "startNetwork"].includes(view) ? view : "dash")} />}
+      {/* Guardrail de consentimento — vínculo a organização nunca é
+          silencioso. Sem X, sem clique-fora: só decide clicando num dos
+          dois botões. Enquanto pending, o admin não vê nada desta pessoa
+          (get_org_team_overview exige org_consent_status='accepted'). */}
+      {profile?.organization_id && profile?.org_consent_status === "pending" && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: C.card, border: `1px solid ${C.brdH}`, borderRadius: 16, width: "100%", maxWidth: 440, padding: 28 }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>Sua organização convidou você</h3>
+            <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 10px" }}>
+              Se você aceitar, o admin da sua organização passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") — nunca números, nunca conteúdo.
+            </p>
+            <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 20px" }}>
+              Seus contatos, interações e o conteúdo de qualquer conversa continuam 100% privados em qualquer um dos dois casos. Você pode sair da organização quando quiser, sem perder nada do seu {BRAND.name}.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn small onClick={() => respondOrgInvite(true)} disabled={orgConsentBusy}>Aceitar</Btn>
+              <Btn variant="ghost" small onClick={() => respondOrgInvite(false)} disabled={orgConsentBusy}>Recusar</Btn>
+            </div>
+          </div>
+        </div>
+      )}
       <HelpButton onClick={() => setShowTour(true)} bottom={isMobile ? 78 : 20} />
       {/* PRO Activation Toast */}
       {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
