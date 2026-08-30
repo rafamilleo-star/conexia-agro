@@ -1868,6 +1868,16 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [joinOrgCode, setJoinOrgCode] = useState("");
   const [joinOrgBusy, setJoinOrgBusy] = useState(false);
   const [joinOrgMsg, setJoinOrgMsg] = useState("");
+  const [createOrgMode, setCreateOrgMode] = useState(null); // null | "cpf" | "cnpj"
+  const [createOrgName, setCreateOrgName] = useState("");
+  const [createOrgCnpj, setCreateOrgCnpj] = useState("");
+  const [createOrgRazaoSocial, setCreateOrgRazaoSocial] = useState("");
+  const [createOrgCnpjLookup, setCreateOrgCnpjLookup] = useState(null); // { situacao, cidade, uf } | null
+  const [createOrgCnpjLoading, setCreateOrgCnpjLoading] = useState(false);
+  const [createOrgBusy, setCreateOrgBusy] = useState(false);
+  const [createOrgMsg, setCreateOrgMsg] = useState("");
+  const [createOrgSuccessCode, setCreateOrgSuccessCode] = useState("");
+  const [orgAdminInfo, setOrgAdminInfo] = useState(null); // { organization_name, admin_first_name } | null
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [akCode, setAkCode]   = useState("");
   const [akMsg, setAkMsg]     = useState("");
@@ -2332,6 +2342,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         onProfileUpdate?.({ org_consent_status: "accepted", org_consent_at: new Date().toISOString() });
       } else {
         onProfileUpdate?.({ organization_id: null, org_role: null, org_consent_status: null, org_consent_at: null });
+        setOrgAdminInfo(null);
       }
     } catch (e) {
       console.error("[OrgConsent]", e);
@@ -2346,6 +2357,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const { error } = await supabase.rpc("leave_organization");
       if (error) { console.error("[OrgConsent]", error); return; }
       onProfileUpdate?.({ organization_id: null, org_role: null, org_consent_status: null, org_consent_at: null });
+      setOrgAdminInfo(null);
     } catch (e) {
       console.error("[OrgConsent]", e);
     } finally {
@@ -2382,6 +2394,83 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       setJoinOrgBusy(false);
     }
   };
+
+  // Consulta pública da Receita Federal (via BrasilAPI, sem chave, sem
+  // custo) — só pra pré-preencher razão social e avisar se o CNPJ não está
+  // ativo. Nunca bloqueia o cadastro sozinho: quem decide é a pessoa.
+  const lookupCnpj = async (rawCnpj) => {
+    const digits = (rawCnpj || "").replace(/\D/g, "");
+    if (digits.length !== 14) { setCreateOrgCnpjLookup(null); return; }
+    setCreateOrgCnpjLoading(true);
+    setCreateOrgMsg("");
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
+      if (!res.ok) {
+        setCreateOrgCnpjLookup(null);
+        setCreateOrgMsg("Não encontrei esse CNPJ na Receita Federal — confira os números ou preencha manualmente.");
+        return;
+      }
+      const info = await res.json();
+      const razao = info.razao_social || "";
+      const fantasia = info.nome_fantasia || "";
+      setCreateOrgRazaoSocial(razao);
+      if (!createOrgName) setCreateOrgName(fantasia || razao);
+      setCreateOrgCnpjLookup({
+        situacao: info.descricao_situacao_cadastral || "",
+        cidade: info.municipio || "",
+        uf: info.uf || "",
+      });
+    } catch (e) {
+      setCreateOrgCnpjLookup(null);
+      // Falha de rede/consulta não bloqueia — a pessoa preenche o nome à mão.
+    } finally {
+      setCreateOrgCnpjLoading(false);
+    }
+  };
+
+  const createOrganization = async () => {
+    const name = createOrgName.trim();
+    if (!name) { setCreateOrgMsg("Dê um nome pra sua organização."); return; }
+    setCreateOrgBusy(true);
+    setCreateOrgMsg("");
+    try {
+      const { data, error } = await supabase.rpc("create_organization", {
+        p_name: name,
+        p_cnpj: createOrgMode === "cnpj" ? createOrgCnpj.replace(/\D/g, "") : null,
+        p_razao_social: createOrgMode === "cnpj" ? createOrgRazaoSocial.trim() : null,
+      });
+      if (error) {
+        setCreateOrgMsg(
+          error.message?.includes("already_in_organization") ? "Você já está em uma organização — saia dela antes de criar outra." :
+          error.message?.includes("invalid_cnpj") ? "CNPJ inválido — precisa ter 14 dígitos." :
+          error.message?.includes("cnpj_already_registered") ? "Esse CNPJ já tem uma organização cadastrada no CONÉXIA." :
+          "Não foi possível criar a organização. Tente de novo."
+        );
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      onProfileUpdate?.({ organization_id: row?.organization_id, org_role: "admin", org_consent_status: "accepted", org_consent_at: new Date().toISOString() });
+      setCreateOrgSuccessCode(row?.invite_code || "");
+      setOrgAdminInfo({ organization_name: name, admin_first_name: profile?.first_name || profile?.name });
+    } catch (e) {
+      setCreateOrgMsg("Não foi possível criar a organização. Tente de novo.");
+    } finally {
+      setCreateOrgBusy(false);
+    }
+  };
+
+  // Nome da empresa + nome do admin — usado no modal de consentimento e no
+  // card "Organização" do Perfil. Sem isso, quem entra numa organização não
+  // sabe QUEM especificamente vai ver o resumo categórico dela.
+  useEffect(() => {
+    if (!profile?.organization_id || orgAdminInfo) return;
+    supabase.rpc("get_org_admin_info", { p_organization_id: profile.organization_id })
+      .then(({ data, error }) => {
+        if (error) { console.error("[OrgAdminInfo]", error); return; }
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) setOrgAdminInfo(row);
+      });
+  }, [profile?.organization_id, orgAdminInfo]);
 
   const renderMentor = () => {
     // In localStorage mode, mentor sees shared data. In Supabase mode, RLS handles cross-user reads.
@@ -4264,9 +4353,11 @@ ${MENTORIA_LINK || true ? `
       />
       {profile?.organization_id && profile?.org_role === "membro" && profile?.org_consent_status === "accepted" && (
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Organização</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
+            Organização{orgAdminInfo?.organization_name ? ` — ${orgAdminInfo.organization_name}` : ""}
+          </div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14, lineHeight: 1.55 }}>
-            Seu admin vê um resumo categórico da sua tendência semanal por dimensão. Seus contatos, interações e conteúdo de conversas continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
+            {orgAdminInfo?.admin_first_name ? <><strong style={{ color: C.txt }}>{orgAdminInfo.admin_first_name}</strong> vê</> : "Seu admin vê"} um resumo categórico da sua tendência semanal por dimensão. Seus contatos, interações e conteúdo de conversas continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
           </div>
           <Btn variant="ghost" small onClick={leaveOrganization} disabled={orgConsentBusy}>Sair da organização</Btn>
         </div>
@@ -4288,6 +4379,76 @@ ${MENTORIA_LINK || true ? `
             <Btn small onClick={joinOrganization} disabled={joinOrgBusy || !joinOrgCode.trim()}>Entrar</Btn>
           </div>
           {joinOrgMsg && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, marginTop: 8 }}>{joinOrgMsg}</div>}
+
+          <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 18, paddingTop: 18 }}>
+            {createOrgSuccessCode ? (
+              <div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, marginBottom: 8 }}>Organização criada! Compartilhe este código com sua equipe:</div>
+                <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 18, fontWeight: 700, color: C.gold, letterSpacing: ".08em", background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: "9px 14px", display: "inline-block" }}>{createOrgSuccessCode}</div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, marginTop: 8 }}>Você já pode ver a aba "Empresa" no menu.</div>
+              </div>
+            ) : !createOrgMode ? (
+              <>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 10 }}>Você é quem organiza o time? Crie sua organização:</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Btn small variant="ghost" onClick={() => setCreateOrgMode("cpf")}>Sou autônomo / MEI (CPF)</Btn>
+                  <Btn small variant="ghost" onClick={() => setCreateOrgMode("cnpj")}>Minha empresa tem CNPJ</Btn>
+                </div>
+              </>
+            ) : createOrgMode === "cpf" ? (
+              <div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 10, lineHeight: 1.5 }}>
+                  Sem CNPJ ainda? Sem problema — só o nome que você quer usar pra sua organização/time dentro do {BRAND.name}.
+                </div>
+                <input
+                  value={createOrgName}
+                  onChange={(e) => setCreateOrgName(e.target.value)}
+                  placeholder="Ex: Fazenda Silva, ou Equipe Comercial"
+                  style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, marginBottom: 10 }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn small onClick={createOrganization} disabled={createOrgBusy || !createOrgName.trim()}>Criar organização</Btn>
+                  <Btn small variant="ghost" onClick={() => { setCreateOrgMode(null); setCreateOrgMsg(""); }}>Voltar</Btn>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 10, lineHeight: 1.5 }}>
+                  Digite o CNPJ — a gente busca os dados na Receita Federal pra você não ter que digitar de novo.
+                </div>
+                <input
+                  value={createOrgCnpj}
+                  onChange={(e) => setCreateOrgCnpj(e.target.value)}
+                  onBlur={(e) => lookupCnpj(e.target.value)}
+                  placeholder="00.000.000/0001-00"
+                  maxLength={18}
+                  style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.txt, marginBottom: 10 }}
+                />
+                {createOrgCnpjLoading && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, marginBottom: 10 }}>Consultando Receita Federal…</div>}
+                {createOrgCnpjLookup && (
+                  <div style={{ background: createOrgCnpjLookup.situacao && createOrgCnpjLookup.situacao.toUpperCase() !== "ATIVA" ? C.corD : C.grnD, border: `1px solid ${createOrgCnpjLookup.situacao && createOrgCnpjLookup.situacao.toUpperCase() !== "ATIVA" ? C.cor : C.grn}40`, borderRadius: 8, padding: 10, marginBottom: 10, fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>
+                    Situação cadastral: <strong>{createOrgCnpjLookup.situacao || "desconhecida"}</strong>
+                    {createOrgCnpjLookup.cidade && ` · ${createOrgCnpjLookup.cidade}/${createOrgCnpjLookup.uf}`}
+                    {createOrgCnpjLookup.situacao && createOrgCnpjLookup.situacao.toUpperCase() !== "ATIVA" && (
+                      <div style={{ marginTop: 4, color: C.cor }}>Esse CNPJ não está ativo na Receita — confira antes de continuar.</div>
+                    )}
+                  </div>
+                )}
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Nome de exibição</div>
+                <input
+                  value={createOrgName}
+                  onChange={(e) => setCreateOrgName(e.target.value)}
+                  placeholder="Nome fantasia ou razão social"
+                  style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, marginBottom: 10 }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn small onClick={createOrganization} disabled={createOrgBusy || !createOrgName.trim() || createOrgCnpj.replace(/\D/g, "").length !== 14}>Criar organização</Btn>
+                  <Btn small variant="ghost" onClick={() => { setCreateOrgMode(null); setCreateOrgMsg(""); setCreateOrgCnpjLookup(null); }}>Voltar</Btn>
+                </div>
+              </div>
+            )}
+            {createOrgMsg && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, marginTop: 8 }}>{createOrgMsg}</div>}
+          </div>
         </div>
       )}
     </div>
@@ -4357,9 +4518,11 @@ ${MENTORIA_LINK || true ? `
       {profile?.organization_id && profile?.org_consent_status === "pending" && profile?.org_role !== "admin" && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brdH}`, borderRadius: 16, width: "100%", maxWidth: 440, padding: 28 }}>
-            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>Sua organização convidou você</h3>
+            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>
+              {orgAdminInfo?.organization_name ? `${orgAdminInfo.organization_name} convidou você` : "Sua organização convidou você"}
+            </h3>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 10px" }}>
-              Se você aceitar, o admin da sua organização passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") — nunca números, nunca conteúdo.
+              Se você aceitar, {orgAdminInfo?.admin_first_name ? <strong style={{ color: C.txt }}>{orgAdminInfo.admin_first_name}</strong> : "o admin da sua organização"} passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") — nunca números, nunca conteúdo.
             </p>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 20px" }}>
               Seus contatos, interações e o conteúdo de qualquer conversa continuam 100% privados em qualquer um dos dois casos. Você pode sair da organização quando quiser, sem perder nada do seu {BRAND.name}.
