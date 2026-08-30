@@ -18,6 +18,7 @@ import { computeWeeklyEvolution } from './_lib/relationshipAssistant/explainabil
 import { detectPatterns } from '../shared/relationshipPatternDetector.js';
 import { computeObservedDimensions } from '../shared/dimensionObservation.js';
 import { buildFeedbackMap } from '../shared/alertsFeedback.js';
+import { computeTeamStats, computeTeamAlerts } from '../shared/orgTeamStats.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
@@ -136,6 +137,72 @@ async function persistWeeklyEvolution(profile) {
   });
 }
 
+// Monta a mesma forma de dado que get_org_team_overview() devolve pro front
+// (id, first_name, onboarding_completed, dimension_observation, observation_history),
+// mas direto via service key — a RPC não dá pra chamar daqui porque ela
+// valida auth.uid() = admin, e o cron não tem sessão de usuário.
+async function fetchOrgMembersOverview(organizationId) {
+  const members = await sb(
+    `profiles?organization_id=eq.${organizationId}&org_role=eq.membro&org_consent_status=eq.accepted&select=id,first_name,onboarding_completed`
+  );
+  if (!members || members.length === 0) return [];
+
+  const ids = members.map((m) => m.id);
+  const insights = await sb(
+    `plan_insights?user_id=in.(${ids.join(',')})&insight_type=eq.dimension_observation&select=user_id,week,description&order=week.desc,created_at.desc`
+  );
+
+  const byUser = {};
+  for (const row of insights || []) {
+    if (!byUser[row.user_id]) byUser[row.user_id] = [];
+    // order já vem desc por created_at — a primeira ocorrência de cada
+    // semana é a mais recente, então ignora duplicatas da mesma semana.
+    if (!byUser[row.user_id].some((r) => r.week === row.week)) {
+      byUser[row.user_id].push({ week: row.week, description: row.description });
+    }
+  }
+
+  return members.map((m) => {
+    const rows = (byUser[m.id] || []).sort((a, b) => a.week - b.week);
+    const last6 = rows.slice(-6);
+    const latest = rows[rows.length - 1];
+    return {
+      id: m.id,
+      first_name: m.first_name,
+      onboarding_completed: m.onboarding_completed,
+      dimension_observation: latest ? JSON.parse(latest.description) : null,
+      observation_history: last6.map((r) => ({ week: r.week, observation: JSON.parse(r.description) })),
+    };
+  });
+}
+
+// Texto anexado ao resumo semanal do admin — mesma lógica de agregação da
+// aba Empresa (shared/orgTeamStats.js), nunca lista contato/interação/
+// conteúdo de conversa de ninguém, só o categórico já visível no app.
+async function buildOrgTeamSummarySection(organizationId) {
+  const members = await fetchOrgMembersOverview(organizationId);
+  if (members.length === 0) return null;
+
+  const stats = computeTeamStats(members);
+  const alerts = computeTeamAlerts(members, stats);
+
+  const lines = [
+    '',
+    '',
+    `🏢 *Sua equipe* — ${stats.total} ${stats.total === 1 ? 'pessoa' : 'pessoas'}`,
+    `Onboarding: ${stats.onboardingDone}/${stats.total} · Observação computada: ${stats.withObservation}/${stats.total}`,
+  ];
+  if (alerts.length > 0) {
+    lines.push('Pontos de atenção:');
+    alerts.forEach((a) => lines.push(`• ${a.text}`));
+  } else {
+    lines.push('Nenhum ponto de atenção agregado esta semana.');
+  }
+  lines.push('Abra o app pra ver o detalhe por pessoa.');
+
+  return lines.join('\n');
+}
+
 export default async function handler(req, res) {
   try {
     if (CRON_SECRET) {
@@ -147,7 +214,7 @@ export default async function handler(req, res) {
     }
 
     const perfis = await sb(
-      `profiles?select=id,first_name,whatsapp,timezone,notifications_enabled,weekly_summary_enabled,whatsapp_opt_in&onboarding_completed=eq.true&whatsapp=not.is.null&weekly_summary_enabled=eq.true`
+      `profiles?select=id,first_name,whatsapp,timezone,notifications_enabled,weekly_summary_enabled,whatsapp_opt_in,organization_id,org_role&onboarding_completed=eq.true&whatsapp=not.is.null&weekly_summary_enabled=eq.true`
     );
 
     const elegiveis = (perfis || []).filter(p => isMonday(p.timezone));
@@ -183,7 +250,20 @@ export default async function handler(req, res) {
         items,
         suggestion,
       });
-      const text = `${abertura}\n\n${corpo}`;
+      let text = `${abertura}\n\n${corpo}`;
+
+      // Seção de equipe pro admin de organização — anexada na MESMA mensagem
+      // (nunca um segundo envio), porque sendProactiveNotification só permite
+      // 1 mensagem automática por dia por pessoa. Um cron separado pra isso
+      // colidiria com esse limite e às vezes nem sairia.
+      if (profile.org_role === 'admin' && profile.organization_id) {
+        try {
+          const orgSection = await buildOrgTeamSummarySection(profile.organization_id);
+          if (orgSection) text += orgSection;
+        } catch (err) {
+          console.error('[relationship-weekly-summary-cron] resumo de equipe falhou para admin', profile.id, err);
+        }
+      }
 
       const result = await sendProactiveNotification({
         profile,
