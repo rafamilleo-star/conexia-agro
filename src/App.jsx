@@ -5,8 +5,6 @@ import { computePriorities, calculateRelevance as calculateRelevanceCanonical, r
 import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { buildDimensionInsight } from "../shared/dimensionObservation.js";
-import { computeTeamStats, computeTeamAlerts, matchesFilter, attentionScore, computeTeamWeeklyTrend, computeArchetypeRiskFlags, computeSystemicDropPatterns, computeTeamContactFrequencyStats, DIMENSION_LABELS as ORG_DIM_LABELS, DIM_KEYS as ORG_DIM_KEYS, STATE_KEYS as ORG_STATE_KEYS } from "../shared/orgTeamStats.js";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { supabase } from "./utils/supabase";
 import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { BRAND } from "./config/brand";
@@ -1860,24 +1858,16 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
-  const [empresaFilter, setEmpresaFilter] = useState(null);
   const [orgInfo, setOrgInfo] = useState(null);
   const [orgCodeBusy, setOrgCodeBusy] = useState(false);
   const [orgCodeCopied, setOrgCodeCopied] = useState(false);
+  const [orgNameDraft, setOrgNameDraft] = useState("");
+  const [orgNameBusy, setOrgNameBusy] = useState(false);
+  const [orgNameEditing, setOrgNameEditing] = useState(false);
   const [orgConsentBusy, setOrgConsentBusy] = useState(false);
   const [joinOrgCode, setJoinOrgCode] = useState("");
   const [joinOrgBusy, setJoinOrgBusy] = useState(false);
   const [joinOrgMsg, setJoinOrgMsg] = useState("");
-  const [createOrgMode, setCreateOrgMode] = useState(null); // null | "cpf" | "cnpj"
-  const [createOrgName, setCreateOrgName] = useState("");
-  const [createOrgCnpj, setCreateOrgCnpj] = useState("");
-  const [createOrgRazaoSocial, setCreateOrgRazaoSocial] = useState("");
-  const [createOrgCnpjLookup, setCreateOrgCnpjLookup] = useState(null); // { situacao, cidade, uf } | null
-  const [createOrgCnpjLoading, setCreateOrgCnpjLoading] = useState(false);
-  const [createOrgBusy, setCreateOrgBusy] = useState(false);
-  const [createOrgMsg, setCreateOrgMsg] = useState("");
-  const [createOrgSuccessCode, setCreateOrgSuccessCode] = useState("");
-  const [orgAdminInfo, setOrgAdminInfo] = useState(null); // { organization_name, admin_first_name } | null
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [akCode, setAkCode]   = useState("");
   const [akMsg, setAkMsg]     = useState("");
@@ -2284,7 +2274,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     if (view === "metrics" && isMetricsAdmin && !metrics && !metricsLoading) loadMetrics();
   }, [view, isMetricsAdmin, metrics, metricsLoading, loadMetrics]);
 
-  // CONÉXIA B2B (piloto) — visão agregada da equipe, só para org_role
+  // CONÉXIA B2B — visão agregada da equipe, só para org_role
   // 'admin'. Lê exclusivamente get_org_team_overview() (SECURITY DEFINER),
   // que nunca expõe contacts/interactions/email — só arquétipo e o estado
   // categórico semanal já computado por relationship-weekly-summary-cron.js.
@@ -2300,7 +2290,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       .then(([overviewRes, orgRes]) => {
         if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "Não foi possível carregar a visão da equipe."); return; }
         setOrgOverview(overviewRes.data || []);
-        if (orgRes.data) setOrgInfo(orgRes.data);
+        if (orgRes.data) { setOrgInfo(orgRes.data); setOrgNameDraft(orgRes.data.name || ""); }
       })
       .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
       .finally(() => setOrgOverviewLoading(false));
@@ -2329,6 +2319,22 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     } catch (e) { /* clipboard indisponível — botão só não confirma visualmente */ }
   };
 
+  const saveOrgName = async () => {
+    const name = orgNameDraft.trim();
+    if (!name || !profile?.organization_id) return;
+    setOrgNameBusy(true);
+    try {
+      const { error } = await supabase.from("organizations").update({ name }).eq("id", profile.organization_id);
+      if (error) { console.error("[OrgName]", error); return; }
+      setOrgInfo((prev) => ({ ...(prev || {}), name }));
+      setOrgNameEditing(false);
+    } catch (e) {
+      console.error("[OrgName]", e);
+    } finally {
+      setOrgNameBusy(false);
+    }
+  };
+
   // Guardrail de consentimento: vínculo a organização nunca é silencioso.
   // respond_to_org_invite() é a única via de escrita nesses campos vinda
   // do client — aceitar seta org_consent_status='accepted'; recusar limpa
@@ -2342,7 +2348,6 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         onProfileUpdate?.({ org_consent_status: "accepted", org_consent_at: new Date().toISOString() });
       } else {
         onProfileUpdate?.({ organization_id: null, org_role: null, org_consent_status: null, org_consent_at: null });
-        setOrgAdminInfo(null);
       }
     } catch (e) {
       console.error("[OrgConsent]", e);
@@ -2357,7 +2362,6 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const { error } = await supabase.rpc("leave_organization");
       if (error) { console.error("[OrgConsent]", error); return; }
       onProfileUpdate?.({ organization_id: null, org_role: null, org_consent_status: null, org_consent_at: null });
-      setOrgAdminInfo(null);
     } catch (e) {
       console.error("[OrgConsent]", e);
     } finally {
@@ -2395,83 +2399,6 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     }
   };
 
-  // Consulta pública da Receita Federal (via BrasilAPI, sem chave, sem
-  // custo) — só pra pré-preencher razão social e avisar se o CNPJ não está
-  // ativo. Nunca bloqueia o cadastro sozinho: quem decide é a pessoa.
-  const lookupCnpj = async (rawCnpj) => {
-    const digits = (rawCnpj || "").replace(/\D/g, "");
-    if (digits.length !== 14) { setCreateOrgCnpjLookup(null); return; }
-    setCreateOrgCnpjLoading(true);
-    setCreateOrgMsg("");
-    try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
-      if (!res.ok) {
-        setCreateOrgCnpjLookup(null);
-        setCreateOrgMsg("Não encontrei esse CNPJ na Receita Federal — confira os números ou preencha manualmente.");
-        return;
-      }
-      const info = await res.json();
-      const razao = info.razao_social || "";
-      const fantasia = info.nome_fantasia || "";
-      setCreateOrgRazaoSocial(razao);
-      if (!createOrgName) setCreateOrgName(fantasia || razao);
-      setCreateOrgCnpjLookup({
-        situacao: info.descricao_situacao_cadastral || "",
-        cidade: info.municipio || "",
-        uf: info.uf || "",
-      });
-    } catch (e) {
-      setCreateOrgCnpjLookup(null);
-      // Falha de rede/consulta não bloqueia — a pessoa preenche o nome à mão.
-    } finally {
-      setCreateOrgCnpjLoading(false);
-    }
-  };
-
-  const createOrganization = async () => {
-    const name = createOrgName.trim();
-    if (!name) { setCreateOrgMsg("Dê um nome pra sua organização."); return; }
-    setCreateOrgBusy(true);
-    setCreateOrgMsg("");
-    try {
-      const { data, error } = await supabase.rpc("create_organization", {
-        p_name: name,
-        p_cnpj: createOrgMode === "cnpj" ? createOrgCnpj.replace(/\D/g, "") : null,
-        p_razao_social: createOrgMode === "cnpj" ? createOrgRazaoSocial.trim() : null,
-      });
-      if (error) {
-        setCreateOrgMsg(
-          error.message?.includes("already_in_organization") ? "Você já está em uma organização — saia dela antes de criar outra." :
-          error.message?.includes("invalid_cnpj") ? "CNPJ inválido — precisa ter 14 dígitos." :
-          error.message?.includes("cnpj_already_registered") ? "Esse CNPJ já tem uma organização cadastrada no CONÉXIA." :
-          "Não foi possível criar a organização. Tente de novo."
-        );
-        return;
-      }
-      const row = Array.isArray(data) ? data[0] : data;
-      onProfileUpdate?.({ organization_id: row?.organization_id, org_role: "admin", org_consent_status: "accepted", org_consent_at: new Date().toISOString() });
-      setCreateOrgSuccessCode(row?.invite_code || "");
-      setOrgAdminInfo({ organization_name: name, admin_first_name: profile?.first_name || profile?.name });
-    } catch (e) {
-      setCreateOrgMsg("Não foi possível criar a organização. Tente de novo.");
-    } finally {
-      setCreateOrgBusy(false);
-    }
-  };
-
-  // Nome da empresa + nome do admin — usado no modal de consentimento e no
-  // card "Organização" do Perfil. Sem isso, quem entra numa organização não
-  // sabe QUEM especificamente vai ver o resumo categórico dela.
-  useEffect(() => {
-    if (!profile?.organization_id || orgAdminInfo) return;
-    supabase.rpc("get_org_admin_info", { p_organization_id: profile.organization_id })
-      .then(({ data, error }) => {
-        if (error) { console.error("[OrgAdminInfo]", error); return; }
-        const row = Array.isArray(data) ? data[0] : data;
-        if (row) setOrgAdminInfo(row);
-      });
-  }, [profile?.organization_id, orgAdminInfo]);
-
   const renderMentor = () => {
     // In localStorage mode, mentor sees shared data. In Supabase mode, RLS handles cross-user reads.
     return (
@@ -2504,61 +2431,81 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     perdendo_intensidade: { label: "Perdendo intensidade", bg: `${C.cor}18`, fg: C.cor },
     sem_dados: { label: "Sem dados suficientes", bg: C.w06, fg: C.txL },
   };
-  const DIMENSION_LABELS = ORG_DIM_LABELS;
+  const DIMENSION_LABELS = {
+    intencao_estrategica: "Estratégia",
+    escuta_relacional: "Empatia",
+    presenca_mercado: "Presença",
+    reciprocidade_ativa: "Reciprocidade",
+    ritual_consistencia: "Consistência",
+    confianca_autentica: "Autenticidade",
+  };
 
-  // Visão Empresa — piloto B2B (Fase 0). Só categórico, só arquétipo.
+  // Resumo agregado de equipe — estatística do time, nunca de uma pessoa.
+  // Só calcula/mostra com >=3 membros consentidos com dado, senão o
+  // "agregado" vira o dado individual disfarçado (n=1 ou n=2 identifica).
+  const orgTeamStats = useMemo(() => {
+    const withData = (orgOverview || []).filter((m) => m.dimension_observation);
+    if (withData.length < 3) return null;
+    const perDim = {};
+    withData.forEach((m) => {
+      Object.entries(m.dimension_observation).forEach(([dim, state]) => {
+        if (!perDim[dim]) perDim[dim] = { evoluindo: 0, estavel: 0, perdendo_intensidade: 0, total: 0 };
+        if (perDim[dim][state] !== undefined) perDim[dim][state] += 1;
+        perDim[dim].total += 1;
+      });
+    });
+    let totalEvoluindo = 0, totalPairs = 0;
+    let bestDim = null, bestPct = -1, attentionDim = null, attentionPct = -1;
+    Object.entries(perDim).forEach(([dim, c]) => {
+      totalEvoluindo += c.evoluindo;
+      totalPairs += c.total;
+      const evolPct = c.total ? c.evoluindo / c.total : 0;
+      const perdPct = c.total ? c.perdendo_intensidade / c.total : 0;
+      if (evolPct > bestPct) { bestPct = evolPct; bestDim = dim; }
+      if (perdPct > attentionPct) { attentionPct = perdPct; attentionDim = dim; }
+    });
+    return {
+      memberCount: withData.length,
+      pctEvoluindo: totalPairs ? Math.round((totalEvoluindo / totalPairs) * 100) : 0,
+      bestDim, bestPct: Math.round(bestPct * 100),
+      attentionDim, attentionPct: Math.round(attentionPct * 100),
+    };
+  }, [orgOverview]);
+
+  const renderTeamStatCard = (label, value, sub, accent) => (
+    <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "16px 18px", flex: "1 1 160px", minWidth: 160 }}>
+      <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: "'DM Sans'", fontSize: 26, fontWeight: 700, color: accent || C.txt, lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+
+  // Visão Empresa. Só categórico, só arquétipo.
   // Nunca lista contatos, interações ou conteúdo de mensagens de ninguém.
-  // Cálculos de agregação vêm de shared/orgTeamStats.js — mesma fonte usada
-  // pelo cron de resumo semanal (seção de equipe no WhatsApp do admin).
   const renderEmpresa = () => {
-    const DIM_KEYS = ORG_DIM_KEYS;
-    const STATE_KEYS = ORG_STATE_KEYS;
-
-    const teamStats = computeTeamStats(orgOverview || []);
-    const alerts = computeTeamAlerts(orgOverview || [], teamStats);
-    const weeklyTrend = computeTeamWeeklyTrend(orgOverview || []);
-    const archetypeRiskFlags = computeArchetypeRiskFlags(orgOverview || []);
-    const systemicPatterns = computeSystemicDropPatterns(orgOverview || []);
-    const teamFreq = computeTeamContactFrequencyStats(orgOverview || []);
-
-    // Traduz a evidência bruta (números reais) em frase, em vez de repetir
-    // texto fixo — cada pessoa tem números diferentes.
-    const describeEvidence = (ev) => {
-      if (!ev) return "";
-      if (ev.currentInteractions !== undefined) return `de ${ev.previousInteractions} para ${ev.currentInteractions} interações na janela mais recente`;
-      if (ev.currentRate !== undefined) return `de ${Math.round(ev.previousRate * 100)}% para ${Math.round(ev.currentRate * 100)}%`;
-      return "";
-    };
-
-    // Frase sobre frequência de contato — só entra quando há de fato
-    // contato esfriando/frio, nunca cita qual contato é.
-    const describeFrequency = (freq) => {
-      if (!freq || freq.total === 0) return "";
-      const troubled = (freq.esfriando || 0) + (freq.frio || 0);
-      if (troubled === 0) return "";
-      return `${troubled} de ${freq.total} contatos dela já passaram do prazo ideal de contato`;
-    };
-
-    // Clicar de novo no mesmo filtro limpa — clicar em outro troca.
-    const toggleFilter = (f) => {
-      setEmpresaFilter((prev) => (prev && JSON.stringify(prev) === JSON.stringify(f) ? null : f));
-    };
-
-    const sortedFiltered = [...(orgOverview || [])]
-      .sort((a, b) => attentionScore(b) - attentionScore(a))
-      .filter((m) => matchesFilter(m, empresaFilter));
-
-    const filterLabel = (f) => {
-      if (!f) return "";
-      if (f.kind === "onboarding_incomplete") return "Onboarding incompleto";
-      if (f.kind === "no_observation") return "Sem observação computada";
-      if (f.kind === "dimension") return `${DIMENSION_LABELS[f.dim]}: ${OBS_STATE_STYLE[f.state]?.label || f.state}`;
-      return "";
-    };
-
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Visão Empresa</h2>
+        {orgInfo && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            {orgNameEditing ? (
+              <>
+                <input
+                  value={orgNameDraft}
+                  onChange={(e) => setOrgNameDraft(e.target.value)}
+                  style={{ background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "5px 10px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}
+                />
+                <Btn small onClick={saveOrgName} disabled={orgNameBusy || !orgNameDraft.trim()}>Salvar</Btn>
+                <Btn small variant="ghost" onClick={() => { setOrgNameEditing(false); setOrgNameDraft(orgInfo.name || ""); }}>Cancelar</Btn>
+              </>
+            ) : (
+              <>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>{orgInfo.name}</span>
+                <button onClick={() => setOrgNameEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 11, color: C.gold }}>Renomear</button>
+              </>
+            )}
+          </div>
+        )}
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px", maxWidth: 560 }}>
           Estado comportamental semanal da sua equipe, por dimensão — categórico, nunca numérico. Contatos, interações e conteúdo de conversas de cada pessoa continuam privados e não aparecem aqui.
         </p>
@@ -2577,144 +2524,6 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           </div>
         )}
 
-        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
-          <>
-            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>
-                Resumo do time — {teamStats.total} {teamStats.total === 1 ? "pessoa" : "pessoas"}
-              </div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 14 }}>
-                Onboarding concluído: {teamStats.onboardingDone}/{teamStats.total} · Observação semanal computada: {teamStats.withObservation}/{teamStats.total}
-                {teamFreq.total > 0 && (
-                  <> · Contatos do time: {teamFreq.ativo} em dia{teamFreq.esfriando > 0 ? `, ${teamFreq.esfriando} esfriando` : ""}{teamFreq.frio > 0 ? `, ${teamFreq.frio} frios` : ""}</>
-                )}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {DIM_KEYS.map((d) => {
-                  const dd = teamStats.dims[d];
-                  const totalDim = dd.evoluindo + dd.estavel + dd.perdendo_intensidade + dd.sem_dados;
-                  if (totalDim === 0) return null;
-                  return (
-                    <div key={d}>
-                      <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>{DIMENSION_LABELS[d]}</div>
-                      <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: C.w06, cursor: "pointer" }}>
-                        {STATE_KEYS.map((st) => dd[st] > 0 && (
-                          <div
-                            key={st}
-                            title={`${OBS_STATE_STYLE[st].label}: ${dd[st]} — clique para filtrar`}
-                            onClick={() => toggleFilter({ kind: "dimension", dim: d, state: st })}
-                            style={{
-                              width: `${(dd[st] / totalDim) * 100}%`,
-                              background: OBS_STATE_STYLE[st].fg,
-                              opacity: empresaFilter && !(empresaFilter.kind === "dimension" && empresaFilter.dim === d && empresaFilter.state === st) ? 0.35 : 1,
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 3 }}>
-                        {STATE_KEYS.filter((st) => dd[st] > 0).map((st) => `${dd[st]} ${OBS_STATE_STYLE[st].label.toLowerCase()}`).join(" · ")}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {weeklyTrend.length > 1 && (
-              <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>
-                  Tendência do time — últimas {weeklyTrend.length} semanas
-                </div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <LineChart data={weeklyTrend.map((w) => ({ ...w, name: `Sem ${w.week}` }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={C.brd} />
-                    <XAxis dataKey="name" tick={{ fill: C.txM, fontSize: 11, fontFamily: "'DM Sans'" }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fill: C.txL, fontSize: 10 }} axisLine={false} tickLine={false} unit="%" />
-                    <Tooltip contentStyle={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 8, fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }} />
-                    <Legend wrapperStyle={{ fontFamily: "'DM Sans'", fontSize: 11 }} />
-                    <Line type="monotone" dataKey="pctEvoluindo" name="Evoluindo" stroke={C.grn} strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="pctEstavel" name="Estável" stroke={C.amb} strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="pctPerdendo" name="Perdendo intensidade" stroke={C.cor} strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="pctSemDados" name="Sem dados" stroke={C.txL} strokeWidth={1} strokeDasharray="4 3" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 8 }}>
-                  % de observações (pessoa × dimensão) em cada estado, por semana — não é média de pessoas, é o pulso geral do time.
-                </div>
-              </div>
-            )}
-
-            {alerts.length > 0 ? (
-              <div style={{ background: C.corD, border: `1px solid ${C.cor}40`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Pontos de atenção</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {alerts.map((a, i) => (
-                    <div
-                      key={i}
-                      onClick={a.filter ? () => toggleFilter(a.filter) : undefined}
-                      style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, cursor: a.filter ? "pointer" : "default", textDecoration: a.filter ? "underline" : "none", textDecorationColor: `${C.cor}60` }}
-                    >
-                      • {a.text}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ background: C.grnD, border: `1px solid ${C.grn}40`, borderRadius: 12, padding: 16, marginBottom: 20, fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>
-                Nenhum ponto de atenção agregado esta semana.
-              </div>
-            )}
-
-            {archetypeRiskFlags.length > 0 && (
-              <div style={{ background: C.card, border: `1px solid ${C.vio}40`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.vio, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>🔮 Padrão de risco do arquétipo se manifestando</div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 12, lineHeight: 1.5 }}>
-                  A dimensão que mais pesa no risco estrutural do arquétipo de cada pessoa está caindo de fato — com os números reais dela, cruzados com a frequência ideal de cada contato.
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {archetypeRiskFlags.map((f) => {
-                    const arch = PROFILES[f.profileKey];
-                    if (!arch) return null;
-                    const evText = describeEvidence(f.evidence);
-                    const freqText = describeFrequency(f.contactFrequency);
-                    return (
-                      <div key={f.memberId} style={{ background: C.w06, borderRadius: 8, padding: 12 }}>
-                        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.5 }}>
-                          <strong>{f.firstName}</strong> ({arch.emoji} {arch.name}) está{f.streakWeeks > 1 ? ` há ${f.streakWeeks} semanas seguidas` : ""} caindo em {DIMENSION_LABELS[f.dim]}{evText ? `, ${evText}` : ""}{freqText ? ` — e ${freqText}` : ""}. Nesse arquétipo, isso costuma significar: {arch.risks?.[0]?.toLowerCase()}.
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {systemicPatterns.length > 0 && (
-              <div style={{ background: C.card, border: `1px solid ${C.blu}40`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.blu, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>🌊 Padrão sistêmico da semana</div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 12, lineHeight: 1.5 }}>
-                  Quando a mesma dimensão cai pra várias pessoas ao mesmo tempo, é mais provável ser causa externa (safra, evento do setor) do que falha individual de cada uma.
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {systemicPatterns.map((p) => (
-                    <div key={p.dim} style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>
-                      <strong>{DIMENSION_LABELS[p.dim]}</strong> caiu junto pra {p.people.map((x) => x.firstName).join(", ")} nesta semana.
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {empresaFilter && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>Filtro ativo:</span>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 20, padding: "3px 10px" }}>{filterLabel(empresaFilter)}</span>
-                <Btn small variant="ghost" onClick={() => setEmpresaFilter(null)}>Limpar filtro</Btn>
-              </div>
-            )}
-          </>
-        )}
-
         {orgOverviewLoading && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando…</div>
         )}
@@ -2731,70 +2540,43 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           </div>
         )}
 
-        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && sortedFiltered.length === 0 && (
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
-            Nenhuma pessoa corresponde a esse filtro.
+        {!orgOverviewLoading && !orgOverviewError && orgTeamStats && (
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+            {renderTeamStatCard("Evoluindo no geral", `${orgTeamStats.pctEvoluindo}%`, `${orgTeamStats.memberCount} pessoas com dado`, C.grn)}
+            {orgTeamStats.bestDim && renderTeamStatCard("Ponto forte da equipe", DIMENSION_LABELS[orgTeamStats.bestDim] || orgTeamStats.bestDim, `${orgTeamStats.bestPct}% evoluindo nessa dimensão`, C.gold)}
+            {orgTeamStats.attentionDim && renderTeamStatCard("Merece atenção", DIMENSION_LABELS[orgTeamStats.attentionDim] || orgTeamStats.attentionDim, `${orgTeamStats.attentionPct}% perdendo intensidade`, C.cor)}
+          </div>
+        )}
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && !orgTeamStats && (
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, marginBottom: 20 }}>
+            O resumo agregado da equipe aparece a partir de 3 pessoas com dado semanal computado — preserva o anonimato de quem já entrou.
           </div>
         )}
 
-        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && sortedFiltered.length > 0 && (
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {sortedFiltered.map((m) => (
+            {orgOverview.map((m) => (
               <div key={m.member_id} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18 }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "—"}</div>
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{m.profile_name || "Arquétipo pendente"}</div>
                 </div>
-                {m.contact_frequency && m.contact_frequency.total > 0 && (
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 10 }}>
-                    {m.contact_frequency.total} contatos · {m.contact_frequency.ativo} em dia
-                    {m.contact_frequency.esfriando > 0 && `, ${m.contact_frequency.esfriando} esfriando`}
-                    {m.contact_frequency.frio > 0 && `, ${m.contact_frequency.frio} frios`}
-                  </div>
-                )}
                 {!m.onboarding_completed ? (
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding não concluído</div>
                 ) : !m.dimension_observation ? (
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
                 ) : (
-                  <>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {Object.entries(m.dimension_observation).map(([dim, obs]) => {
-                        const s = OBS_STATE_STYLE[obs?.state] || OBS_STATE_STYLE.sem_dados;
-                        const trend = (m.observation_history || []).map((h) => h.observation?.[dim]?.state);
-                        return (
-                          <div key={dim} style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-start" }}>
-                            <span style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>{DIMENSION_LABELS[dim] || dim}</span>
-                            <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: s.bg, color: s.fg }}>{s.label}</span>
-                            {trend.length > 1 && (
-                              <div style={{ display: "flex", gap: 3, marginTop: 2 }} title={`Últimas ${trend.length} semanas`}>
-                                {trend.map((st, i) => (
-                                  <span
-                                    key={i}
-                                    title={(OBS_STATE_STYLE[st] || OBS_STATE_STYLE.sem_dados).label}
-                                    style={{ width: 6, height: 6, borderRadius: "50%", background: (OBS_STATE_STYLE[st] || OBS_STATE_STYLE.sem_dados).fg, opacity: i === trend.length - 1 ? 1 : 0.4 }}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {Object.entries(m.dimension_observation).some(([, o]) => o?.state === "perdendo_intensidade") && (
-                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 6 }}>
-                        <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>Sugestão para o 1:1</div>
-                        {Object.entries(m.dimension_observation).filter(([, o]) => o?.state === "perdendo_intensidade").map(([dim, o]) => {
-                          const insight = buildDimensionInsight(dim, o);
-                          return (
-                            <div key={dim} style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
-                              <strong style={{ color: C.txt }}>{DIMENSION_LABELS[dim]}:</strong> {insight.action}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {Object.entries(m.dimension_observation).map(([dim, state]) => {
+                      const s = OBS_STATE_STYLE[state] || OBS_STATE_STYLE.sem_dados;
+                      return (
+                        <div key={dim} style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-start" }}>
+                          <span style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>{DIMENSION_LABELS[dim] || dim}</span>
+                          <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: s.bg, color: s.fg }}>{s.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             ))}
@@ -2954,7 +2736,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
     return (
       <div>
-        {/* Transparência LGPD: piloto B2B — o membro precisa saber que o
+        {/* Transparência LGPD: o membro precisa saber que o
             estado categórico semanal (nunca contatos/interações/conteúdo)
             fica visível ao admin da organização. */}
         {profile?.organization_id && profile?.org_role === "membro" && (
@@ -4424,11 +4206,9 @@ ${MENTORIA_LINK || true ? `
       />
       {profile?.organization_id && profile?.org_role === "membro" && profile?.org_consent_status === "accepted" && (
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
-            Organização{orgAdminInfo?.organization_name ? ` — ${orgAdminInfo.organization_name}` : ""}
-          </div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Organização</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14, lineHeight: 1.55 }}>
-            {orgAdminInfo?.admin_first_name ? <><strong style={{ color: C.txt }}>{orgAdminInfo.admin_first_name}</strong> vê</> : "Seu admin vê"} um resumo categórico da sua tendência semanal por dimensão. Seus contatos, interações e conteúdo de conversas continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
+            Seu admin vê um resumo categórico da sua tendência semanal por dimensão. Seus contatos, interações e conteúdo de conversas continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
           </div>
           <Btn variant="ghost" small onClick={leaveOrganization} disabled={orgConsentBusy}>Sair da organização</Btn>
         </div>
@@ -4450,76 +4230,6 @@ ${MENTORIA_LINK || true ? `
             <Btn small onClick={joinOrganization} disabled={joinOrgBusy || !joinOrgCode.trim()}>Entrar</Btn>
           </div>
           {joinOrgMsg && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, marginTop: 8 }}>{joinOrgMsg}</div>}
-
-          <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 18, paddingTop: 18 }}>
-            {createOrgSuccessCode ? (
-              <div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, marginBottom: 8 }}>Organização criada! Compartilhe este código com sua equipe:</div>
-                <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 18, fontWeight: 700, color: C.gold, letterSpacing: ".08em", background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: "9px 14px", display: "inline-block" }}>{createOrgSuccessCode}</div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, marginTop: 8 }}>Você já pode ver a aba "Empresa" no menu.</div>
-              </div>
-            ) : !createOrgMode ? (
-              <>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 10 }}>Você é quem organiza o time? Crie sua organização:</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Btn small variant="ghost" onClick={() => setCreateOrgMode("cpf")}>Sou autônomo / MEI (CPF)</Btn>
-                  <Btn small variant="ghost" onClick={() => setCreateOrgMode("cnpj")}>Minha empresa tem CNPJ</Btn>
-                </div>
-              </>
-            ) : createOrgMode === "cpf" ? (
-              <div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 10, lineHeight: 1.5 }}>
-                  Sem CNPJ ainda? Sem problema — só o nome que você quer usar pra sua organização/time dentro do {BRAND.name}.
-                </div>
-                <input
-                  value={createOrgName}
-                  onChange={(e) => setCreateOrgName(e.target.value)}
-                  placeholder="Ex: Fazenda Silva, ou Equipe Comercial"
-                  style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, marginBottom: 10 }}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn small onClick={createOrganization} disabled={createOrgBusy || !createOrgName.trim()}>Criar organização</Btn>
-                  <Btn small variant="ghost" onClick={() => { setCreateOrgMode(null); setCreateOrgMsg(""); }}>Voltar</Btn>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 10, lineHeight: 1.5 }}>
-                  Digite o CNPJ — a gente busca os dados na Receita Federal pra você não ter que digitar de novo.
-                </div>
-                <input
-                  value={createOrgCnpj}
-                  onChange={(e) => setCreateOrgCnpj(e.target.value)}
-                  onBlur={(e) => lookupCnpj(e.target.value)}
-                  placeholder="00.000.000/0001-00"
-                  maxLength={18}
-                  style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.txt, marginBottom: 10 }}
-                />
-                {createOrgCnpjLoading && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, marginBottom: 10 }}>Consultando Receita Federal…</div>}
-                {createOrgCnpjLookup && (
-                  <div style={{ background: createOrgCnpjLookup.situacao && createOrgCnpjLookup.situacao.toUpperCase() !== "ATIVA" ? C.corD : C.grnD, border: `1px solid ${createOrgCnpjLookup.situacao && createOrgCnpjLookup.situacao.toUpperCase() !== "ATIVA" ? C.cor : C.grn}40`, borderRadius: 8, padding: 10, marginBottom: 10, fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>
-                    Situação cadastral: <strong>{createOrgCnpjLookup.situacao || "desconhecida"}</strong>
-                    {createOrgCnpjLookup.cidade && ` · ${createOrgCnpjLookup.cidade}/${createOrgCnpjLookup.uf}`}
-                    {createOrgCnpjLookup.situacao && createOrgCnpjLookup.situacao.toUpperCase() !== "ATIVA" && (
-                      <div style={{ marginTop: 4, color: C.cor }}>Esse CNPJ não está ativo na Receita — confira antes de continuar.</div>
-                    )}
-                  </div>
-                )}
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Nome de exibição</div>
-                <input
-                  value={createOrgName}
-                  onChange={(e) => setCreateOrgName(e.target.value)}
-                  placeholder="Nome fantasia ou razão social"
-                  style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, marginBottom: 10 }}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn small onClick={createOrganization} disabled={createOrgBusy || !createOrgName.trim() || createOrgCnpj.replace(/\D/g, "").length !== 14}>Criar organização</Btn>
-                  <Btn small variant="ghost" onClick={() => { setCreateOrgMode(null); setCreateOrgMsg(""); setCreateOrgCnpjLookup(null); }}>Voltar</Btn>
-                </div>
-              </div>
-            )}
-            {createOrgMsg && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, marginTop: 8 }}>{createOrgMsg}</div>}
-          </div>
         </div>
       )}
     </div>
@@ -4589,11 +4299,9 @@ ${MENTORIA_LINK || true ? `
       {profile?.organization_id && profile?.org_consent_status === "pending" && profile?.org_role !== "admin" && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brdH}`, borderRadius: 16, width: "100%", maxWidth: 440, padding: 28 }}>
-            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>
-              {orgAdminInfo?.organization_name ? `${orgAdminInfo.organization_name} convidou você` : "Sua organização convidou você"}
-            </h3>
+            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>Sua organização convidou você</h3>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 10px" }}>
-              Se você aceitar, {orgAdminInfo?.admin_first_name ? <strong style={{ color: C.txt }}>{orgAdminInfo.admin_first_name}</strong> : "o admin da sua organização"} passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") — nunca números, nunca conteúdo.
+              Se você aceitar, o admin da sua organização passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") — nunca números, nunca conteúdo.
             </p>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 20px" }}>
               Seus contatos, interações e o conteúdo de qualquer conversa continuam 100% privados em qualquer um dos dois casos. Você pode sair da organização quando quiser, sem perder nada do seu {BRAND.name}.
