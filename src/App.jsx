@@ -349,6 +349,31 @@ function RadarChart({ scores, size = 260 }) {
   );
 }
 
+/* ═══ RADAR CATEGÓRICO DE EQUIPE ══════════════════════════════
+   Mesma geometria hexagonal do RadarChart acima, mas sem número de
+   desempenho: cada eixo vai pra 1 de 3 raios fixos conforme o estado
+   categórico (Evoluindo/Estável/Perdendo/Sem dados). Cor por ESTADO
+   (verde/âmbar/vermelho/cinza), não por dimensão — o que importa aqui é
+   "onde a equipe está indo bem ou mal", não a identidade da dimensão. */
+const TEAM_STATE_RADIUS = { evoluindo: 100, estavel: 60, perdendo_intensidade: 30 };
+const TEAM_STATE_COLOR = { evoluindo: C.grn, estavel: C.amb, perdendo_intensidade: C.cor };
+function TeamDimensionRadar({ observation, size = 128 }) {
+  const cx = size / 2, cy = size / 2, r = size / 2 - 22;
+  const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI / 6) * i; const d = r * (v / 100); return [cx + d * Math.cos(a), cy + d * Math.sin(a)]; };
+  const states = DIMS.map(d => observation?.[d.key]?.state);
+  const vals = states.map(s => TEAM_STATE_RADIUS[s] ?? 6);
+  const poly = vals.map((v, i) => pt(i, v).join(",")).join(" ");
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} style={{ width: "100%", maxWidth: size, flexShrink: 0 }}>
+      {[33, 66, 100].map(v => <polygon key={v} points={Array.from({ length: 6 }, (_, i) => pt(i, v).join(",")).join(" ")} fill="none" stroke={C.brd} strokeWidth={0.5} opacity={0.5} />)}
+      {vals.map((_, i) => { const [x, y] = pt(i, 100); return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke={C.brd} strokeWidth={0.5} opacity={0.3} />; })}
+      <polygon points={poly} fill={`${C.gold}12`} stroke={C.gold} strokeWidth={1.5} />
+      {vals.map((v, i) => <circle key={i} cx={pt(i, v)[0]} cy={pt(i, v)[1]} r={3.5} fill={TEAM_STATE_COLOR[states[i]] || C.txL} stroke={C.bg} strokeWidth={1.5} />)}
+      {DIMS.map((d, i) => { const [x, y] = pt(i, 118); return <text key={`l${i}`} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fill={C.txL} fontSize={8} fontWeight={600} fontFamily="'DM Sans'">{d.short}</text>; })}
+    </svg>
+  );
+}
+
 /* ═══ WELCOME ═════════════════════════════════════════════ */
 /* ═══ ONBOARDING ══════════════════════════════════════════ */
 function Onboard({ onDone, initialKey = "" }) {
@@ -2422,15 +2447,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     );
   };
 
-  // Mesmos tokens de cor já usados para este estado em "Suas 6 dimensões"
-  // (Perfil) — evoluindo/estavel/perdendo_intensidade — para consistência
-  // visual entre a visão individual e a visão agregada da equipe.
-  const OBS_STATE_STYLE = {
-    evoluindo: { label: "Evoluindo", bg: `${C.grn}18`, fg: C.grn },
-    estavel: { label: "Estável", bg: `${C.amb}18`, fg: C.amb },
-    perdendo_intensidade: { label: "Perdendo intensidade", bg: `${C.cor}18`, fg: C.cor },
-    sem_dados: { label: "Sem dados suficientes", bg: C.w06, fg: C.txL },
-  };
+  // Rótulos legíveis das 6 dimensões, usados nos cards de resumo agregado.
   const DIMENSION_LABELS = {
     intencao_estrategica: "Estratégia",
     escuta_relacional: "Empatia",
@@ -2555,30 +2572,35 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         )}
 
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
+          <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>Legenda</span>
+            {[["evoluindo", "Evoluindo"], ["estavel", "Estável"], ["perdendo_intensidade", "Perdendo intensidade"]].map(([k, label]) => (
+              <span key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: TEAM_STATE_COLOR[k], display: "inline-block" }} />
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {orgOverview.map((m) => (
-              <div key={m.member_id} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18 }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "—"}</div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{m.profile_name || "Arquétipo pendente"}</div>
-                </div>
-                {!m.onboarding_completed ? (
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding não concluído</div>
-                ) : !m.dimension_observation ? (
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
-                ) : (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {Object.entries(m.dimension_observation).map(([dim, entry]) => {
-                      const s = OBS_STATE_STYLE[entry?.state] || OBS_STATE_STYLE.sem_dados;
-                      return (
-                        <div key={dim} style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-start" }}>
-                          <span style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>{DIMENSION_LABELS[dim] || dim}</span>
-                          <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: s.bg, color: s.fg }}>{s.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+              <div key={m.member_id} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+                {m.onboarding_completed && m.dimension_observation && (
+                  <TeamDimensionRadar observation={m.dimension_observation} />
                 )}
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "—"}</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{m.profile_name || "Arquétipo pendente"}</div>
+                  </div>
+                  {!m.onboarding_completed ? (
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding não concluído</div>
+                  ) : !m.dimension_observation ? (
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>
