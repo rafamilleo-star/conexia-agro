@@ -5,6 +5,8 @@ import { computePriorities, calculateRelevance as calculateRelevanceCanonical, r
 import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { buildDimensionInsight } from "../shared/dimensionObservation.js";
+import { computeTeamStats, computeTeamAlerts, matchesFilter, attentionScore, computeTeamWeeklyTrend, DIMENSION_LABELS as ORG_DIM_LABELS, DIM_KEYS as ORG_DIM_KEYS, STATE_KEYS as ORG_STATE_KEYS } from "../shared/orgTeamStats.js";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { supabase } from "./utils/supabase";
 import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
 import { BRAND } from "./config/brand";
@@ -1858,6 +1860,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
+  const [empresaFilter, setEmpresaFilter] = useState(null);
   const [orgInfo, setOrgInfo] = useState(null);
   const [orgCodeBusy, setOrgCodeBusy] = useState(false);
   const [orgCodeCopied, setOrgCodeCopied] = useState(false);
@@ -2412,54 +2415,36 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     perdendo_intensidade: { label: "Perdendo intensidade", bg: `${C.cor}18`, fg: C.cor },
     sem_dados: { label: "Sem dados suficientes", bg: C.w06, fg: C.txL },
   };
-  const DIMENSION_LABELS = {
-    intencao_estrategica: "Estratégia",
-    escuta_relacional: "Empatia",
-    presenca_mercado: "Presença",
-    reciprocidade_ativa: "Reciprocidade",
-    ritual_consistencia: "Consistência",
-    confianca_autentica: "Autenticidade",
-  };
+  const DIMENSION_LABELS = ORG_DIM_LABELS;
 
   // Visão Empresa — piloto B2B (Fase 0). Só categórico, só arquétipo.
   // Nunca lista contatos, interações ou conteúdo de mensagens de ninguém.
+  // Cálculos de agregação vêm de shared/orgTeamStats.js — mesma fonte usada
+  // pelo cron de resumo semanal (seção de equipe no WhatsApp do admin).
   const renderEmpresa = () => {
-    const DIM_KEYS = Object.keys(DIMENSION_LABELS);
-    const STATE_KEYS = ["evoluindo", "estavel", "perdendo_intensidade", "sem_dados"];
+    const DIM_KEYS = ORG_DIM_KEYS;
+    const STATE_KEYS = ORG_STATE_KEYS;
 
-    // Resumo agregado do time — só contagens, nunca aponta pessoa por número.
-    const teamStats = (() => {
-      const dims = {};
-      DIM_KEYS.forEach((d) => { dims[d] = { evoluindo: 0, estavel: 0, perdendo_intensidade: 0, sem_dados: 0 }; });
-      let onboardingDone = 0;
-      let withObservation = 0;
-      (orgOverview || []).forEach((m) => {
-        if (m.onboarding_completed) onboardingDone++;
-        if (m.dimension_observation) {
-          withObservation++;
-          DIM_KEYS.forEach((d) => {
-            const st = m.dimension_observation[d]?.state;
-            if (st && dims[d][st] !== undefined) dims[d][st]++;
-          });
-        }
-      });
-      return { total: (orgOverview || []).length, onboardingDone, withObservation, dims };
-    })();
+    const teamStats = computeTeamStats(orgOverview || []);
+    const alerts = computeTeamAlerts(orgOverview || [], teamStats);
+    const weeklyTrend = computeTeamWeeklyTrend(orgOverview || []);
 
-    // Alertas — agregados por dimensão/onboarding, nunca aponta quem é.
-    const alerts = (() => {
-      const list = [];
-      const total = (orgOverview || []).length;
-      const notOnboarded = total - teamStats.onboardingDone;
-      if (notOnboarded > 0) list.push(`${notOnboarded} ${notOnboarded === 1 ? "pessoa ainda não completou" : "pessoas ainda não completaram"} o onboarding.`);
-      const noObsCount = (orgOverview || []).filter((m) => m.onboarding_completed && !m.dimension_observation).length;
-      if (noObsCount > 0) list.push(`${noObsCount} ${noObsCount === 1 ? "pessoa" : "pessoas"} com onboarding concluído mas ainda sem observação semanal computada.`);
-      DIM_KEYS.forEach((d) => {
-        const c = teamStats.dims[d].perdendo_intensidade;
-        if (c > 0) list.push(`${DIMENSION_LABELS[d]}: ${c} ${c === 1 ? "pessoa" : "pessoas"} perdendo intensidade essa semana.`);
-      });
-      return list;
-    })();
+    // Clicar de novo no mesmo filtro limpa — clicar em outro troca.
+    const toggleFilter = (f) => {
+      setEmpresaFilter((prev) => (prev && JSON.stringify(prev) === JSON.stringify(f) ? null : f));
+    };
+
+    const sortedFiltered = [...(orgOverview || [])]
+      .sort((a, b) => attentionScore(b) - attentionScore(a))
+      .filter((m) => matchesFilter(m, empresaFilter));
+
+    const filterLabel = (f) => {
+      if (!f) return "";
+      if (f.kind === "onboarding_incomplete") return "Onboarding incompleto";
+      if (f.kind === "no_observation") return "Sem observação computada";
+      if (f.kind === "dimension") return `${DIMENSION_LABELS[f.dim]}: ${OBS_STATE_STYLE[f.state]?.label || f.state}`;
+      return "";
+    };
 
     return (
       <div>
@@ -2499,9 +2484,18 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   return (
                     <div key={d}>
                       <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>{DIMENSION_LABELS[d]}</div>
-                      <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: C.w06 }}>
+                      <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: C.w06, cursor: "pointer" }}>
                         {STATE_KEYS.map((st) => dd[st] > 0 && (
-                          <div key={st} title={`${OBS_STATE_STYLE[st].label}: ${dd[st]}`} style={{ width: `${(dd[st] / totalDim) * 100}%`, background: OBS_STATE_STYLE[st].fg }} />
+                          <div
+                            key={st}
+                            title={`${OBS_STATE_STYLE[st].label}: ${dd[st]} — clique para filtrar`}
+                            onClick={() => toggleFilter({ kind: "dimension", dim: d, state: st })}
+                            style={{
+                              width: `${(dd[st] / totalDim) * 100}%`,
+                              background: OBS_STATE_STYLE[st].fg,
+                              opacity: empresaFilter && !(empresaFilter.kind === "dimension" && empresaFilter.dim === d && empresaFilter.state === st) ? 0.35 : 1,
+                            }}
+                          />
                         ))}
                       </div>
                       <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 3 }}>
@@ -2513,18 +2507,56 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               </div>
             </div>
 
+            {weeklyTrend.length > 1 && (
+              <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>
+                  Tendência do time — últimas {weeklyTrend.length} semanas
+                </div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={weeklyTrend.map((w) => ({ ...w, name: `Sem ${w.week}` }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.brd} />
+                    <XAxis dataKey="name" tick={{ fill: C.txM, fontSize: 11, fontFamily: "'DM Sans'" }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: C.txL, fontSize: 10 }} axisLine={false} tickLine={false} unit="%" />
+                    <Tooltip contentStyle={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 8, fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }} />
+                    <Legend wrapperStyle={{ fontFamily: "'DM Sans'", fontSize: 11 }} />
+                    <Line type="monotone" dataKey="pctEvoluindo" name="Evoluindo" stroke={C.grn} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="pctEstavel" name="Estável" stroke={C.amb} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="pctPerdendo" name="Perdendo intensidade" stroke={C.cor} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="pctSemDados" name="Sem dados" stroke={C.txL} strokeWidth={1} strokeDasharray="4 3" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 8 }}>
+                  % de observações (pessoa × dimensão) em cada estado, por semana — não é média de pessoas, é o pulso geral do time.
+                </div>
+              </div>
+            )}
+
             {alerts.length > 0 ? (
               <div style={{ background: C.corD, border: `1px solid ${C.cor}40`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Pontos de atenção</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {alerts.map((a, i) => (
-                    <div key={i} style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>• {a}</div>
+                    <div
+                      key={i}
+                      onClick={a.filter ? () => toggleFilter(a.filter) : undefined}
+                      style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, cursor: a.filter ? "pointer" : "default", textDecoration: a.filter ? "underline" : "none", textDecorationColor: `${C.cor}60` }}
+                    >
+                      • {a.text}
+                    </div>
                   ))}
                 </div>
               </div>
             ) : (
               <div style={{ background: C.grnD, border: `1px solid ${C.grn}40`, borderRadius: 12, padding: 16, marginBottom: 20, fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>
                 Nenhum ponto de atenção agregado esta semana.
+              </div>
+            )}
+
+            {empresaFilter && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>Filtro ativo:</span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 20, padding: "3px 10px" }}>{filterLabel(empresaFilter)}</span>
+                <Btn small variant="ghost" onClick={() => setEmpresaFilter(null)}>Limpar filtro</Btn>
               </div>
             )}
           </>
@@ -2546,9 +2578,15 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
           </div>
         )}
 
-        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && sortedFiltered.length === 0 && (
+          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
+            Nenhuma pessoa corresponde a esse filtro.
+          </div>
+        )}
+
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && sortedFiltered.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {orgOverview.map((m) => (
+            {sortedFiltered.map((m) => (
               <div key={m.member_id} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18 }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "—"}</div>
