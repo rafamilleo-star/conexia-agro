@@ -17,6 +17,7 @@ import { isMonday, localDateISO } from './_lib/relationshipAssistant/timeWindow.
 import { computeWeeklyEvolution } from './_lib/relationshipAssistant/explainabilityEngine.js';
 import { detectPatterns } from '../shared/relationshipPatternDetector.js';
 import { computeObservedDimensions } from '../shared/dimensionObservation.js';
+import { computeContactFrequencyStats } from '../shared/contactHealth.js';
 import { buildFeedbackMap } from '../shared/alertsFeedback.js';
 import { computeTeamStats, computeTeamAlerts } from '../shared/orgTeamStats.js';
 
@@ -94,6 +95,7 @@ async function persistWeeklyEvolution(profile) {
 
   const patterns = detectPatterns(contacts, allInteractions, now);
   const observedDimensions = computeObservedDimensions(contacts, allInteractions, now);
+  const frequencyStats = computeContactFrequencyStats(contacts, now);
 
   const evolution = computeWeeklyEvolution({ currentSignals, previousSignals, events: [], patterns });
 
@@ -114,6 +116,20 @@ async function persistWeeklyEvolution(profile) {
       insight_type: 'dimension_observation',
       title: 'Observação comportamental por dimensão',
       description: JSON.stringify(observedDimensions),
+    }),
+  });
+
+  // Saúde de frequência por contato, agregada (nunca por contato
+  // individual) — base pro admin ver "quantos contatos estão em dia /
+  // esfriando / frios" sem nunca saber qual contato é.
+  await sb('plan_insights', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: profile.id,
+      week: isoWeek,
+      insight_type: 'contact_frequency_health',
+      title: 'Saúde de frequência de contato',
+      description: JSON.stringify(frequencyStats),
     }),
   });
 
