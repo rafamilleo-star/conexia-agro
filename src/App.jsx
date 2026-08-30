@@ -5,7 +5,7 @@ import { computePriorities, calculateRelevance as calculateRelevanceCanonical, r
 import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { buildDimensionInsight } from "../shared/dimensionObservation.js";
-import { computeTeamStats, computeTeamAlerts, matchesFilter, attentionScore, computeTeamWeeklyTrend, computeArchetypeRiskFlags, computeSynergyOpportunities, DIMENSION_LABELS as ORG_DIM_LABELS, DIM_KEYS as ORG_DIM_KEYS, STATE_KEYS as ORG_STATE_KEYS } from "../shared/orgTeamStats.js";
+import { computeTeamStats, computeTeamAlerts, matchesFilter, attentionScore, computeTeamWeeklyTrend, computeArchetypeRiskFlags, computeSystemicDropPatterns, computeTeamContactFrequencyStats, DIMENSION_LABELS as ORG_DIM_LABELS, DIM_KEYS as ORG_DIM_KEYS, STATE_KEYS as ORG_STATE_KEYS } from "../shared/orgTeamStats.js";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { supabase } from "./utils/supabase";
 import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
@@ -1860,7 +1860,6 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
-  const [orgCoverage, setOrgCoverage] = useState(null);
   const [empresaFilter, setEmpresaFilter] = useState(null);
   const [orgInfo, setOrgInfo] = useState(null);
   const [orgCodeBusy, setOrgCodeBusy] = useState(false);
@@ -2289,8 +2288,6 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   // 'admin'. Lê exclusivamente get_org_team_overview() (SECURITY DEFINER),
   // que nunca expõe contacts/interactions/email — só arquétipo e o estado
   // categórico semanal já computado por relationship-weekly-summary-cron.js.
-  // get_org_contact_coverage() é a mesma lógica de privacidade aplicada a
-  // cobertura: nunca uma linha de contato, só contagem por cultura/UF.
   useEffect(() => {
     if (view !== "empresa" || !profile?.organization_id || profile?.org_role !== "admin") return;
     if (orgOverview || orgOverviewLoading) return;
@@ -2299,13 +2296,11 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     Promise.all([
       supabase.rpc("get_org_team_overview", { p_organization_id: profile.organization_id }),
       supabase.from("organizations").select("name,invite_code").eq("id", profile.organization_id).maybeSingle(),
-      supabase.rpc("get_org_contact_coverage", { p_organization_id: profile.organization_id }),
     ])
-      .then(([overviewRes, orgRes, coverageRes]) => {
+      .then(([overviewRes, orgRes]) => {
         if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "Não foi possível carregar a visão da equipe."); return; }
         setOrgOverview(overviewRes.data || []);
         if (orgRes.data) setOrgInfo(orgRes.data);
-        if (!coverageRes.error) setOrgCoverage(coverageRes.data || []);
       })
       .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
       .finally(() => setOrgOverviewLoading(false));
@@ -2523,8 +2518,26 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     const alerts = computeTeamAlerts(orgOverview || [], teamStats);
     const weeklyTrend = computeTeamWeeklyTrend(orgOverview || []);
     const archetypeRiskFlags = computeArchetypeRiskFlags(orgOverview || []);
-    const synergyOpportunities = computeSynergyOpportunities(orgCoverage || []);
-    const cultureLabel = (v) => MAIN_CULTURES.find((m) => m.value === v)?.label || v;
+    const systemicPatterns = computeSystemicDropPatterns(orgOverview || []);
+    const teamFreq = computeTeamContactFrequencyStats(orgOverview || []);
+
+    // Traduz a evidência bruta (números reais) em frase, em vez de repetir
+    // texto fixo — cada pessoa tem números diferentes.
+    const describeEvidence = (ev) => {
+      if (!ev) return "";
+      if (ev.currentInteractions !== undefined) return `de ${ev.previousInteractions} para ${ev.currentInteractions} interações na janela mais recente`;
+      if (ev.currentRate !== undefined) return `de ${Math.round(ev.previousRate * 100)}% para ${Math.round(ev.currentRate * 100)}%`;
+      return "";
+    };
+
+    // Frase sobre frequência de contato — só entra quando há de fato
+    // contato esfriando/frio, nunca cita qual contato é.
+    const describeFrequency = (freq) => {
+      if (!freq || freq.total === 0) return "";
+      const troubled = (freq.esfriando || 0) + (freq.frio || 0);
+      if (troubled === 0) return "";
+      return `${troubled} de ${freq.total} contatos dela já passaram do prazo ideal de contato`;
+    };
 
     // Clicar de novo no mesmo filtro limpa — clicar em outro troca.
     const toggleFilter = (f) => {
@@ -2572,6 +2585,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               </div>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 14 }}>
                 Onboarding concluído: {teamStats.onboardingDone}/{teamStats.total} · Observação semanal computada: {teamStats.withObservation}/{teamStats.total}
+                {teamFreq.total > 0 && (
+                  <> · Contatos do time: {teamFreq.ativo} em dia{teamFreq.esfriando > 0 ? `, ${teamFreq.esfriando} esfriando` : ""}{teamFreq.frio > 0 ? `, ${teamFreq.frio} frios` : ""}</>
+                )}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {DIM_KEYS.map((d) => {
@@ -2653,19 +2669,18 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               <div style={{ background: C.card, border: `1px solid ${C.vio}40`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.vio, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>🔮 Padrão de risco do arquétipo se manifestando</div>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 12, lineHeight: 1.5 }}>
-                  Cruza o arquétipo relacional de cada pessoa com o comportamento observado agora — só aparece quando o risco descrito na teoria do próprio arquétipo está de fato acontecendo.
+                  A dimensão que mais pesa no risco estrutural do arquétipo de cada pessoa está caindo de fato — com os números reais dela, cruzados com a frequência ideal de cada contato.
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {archetypeRiskFlags.map((f) => {
                     const arch = PROFILES[f.profileKey];
                     if (!arch) return null;
+                    const evText = describeEvidence(f.evidence);
+                    const freqText = describeFrequency(f.contactFrequency);
                     return (
                       <div key={f.memberId} style={{ background: C.w06, borderRadius: 8, padding: 12 }}>
-                        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, marginBottom: 4 }}>
-                          <strong>{f.firstName}</strong> é {arch.emoji} <strong>{arch.name}</strong> — {DIMENSION_LABELS[f.dim]} caindo bate com o risco estrutural desse arquétipo.
-                        </div>
-                        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
-                          Risco descrito no arquétipo: "{arch.risks?.[0]}". Ação sugerida: {arch.actions?.[0]}
+                        <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.5 }}>
+                          <strong>{f.firstName}</strong> ({arch.emoji} {arch.name}) está{f.streakWeeks > 1 ? ` há ${f.streakWeeks} semanas seguidas` : ""} caindo em {DIMENSION_LABELS[f.dim]}{evText ? `, ${evText}` : ""}{freqText ? ` — e ${freqText}` : ""}. Nesse arquétipo, isso costuma significar: {arch.risks?.[0]?.toLowerCase()}.
                         </div>
                       </div>
                     );
@@ -2674,17 +2689,16 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               </div>
             )}
 
-            {synergyOpportunities.length > 0 && (
-              <div style={{ background: C.card, border: `1px solid ${C.teal}40`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.teal, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>🤝 Sinergia entre colaboradores</div>
+            {systemicPatterns.length > 0 && (
+              <div style={{ background: C.card, border: `1px solid ${C.blu}40`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.blu, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>🌊 Padrão sistêmico da semana</div>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 12, lineHeight: 1.5 }}>
-                  Cobertura em comum entre pessoas do time — nunca mostra qual contato é, só que há sobreposição de frente de atuação. Decidir se conecta é sempre seu.
+                  Quando a mesma dimensão cai pra várias pessoas ao mesmo tempo, é mais provável ser causa externa (safra, evento do setor) do que falha individual de cada uma.
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {synergyOpportunities.map((s, i) => (
-                    <div key={i} style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>
-                      <strong>{s.members.map((m) => m.firstName).join(" e ")}</strong> têm cobertura em comum em {cultureLabel(s.mainCulture)} · {s.stateCode}
-                      {s.cities.length > 0 && <span style={{ color: C.txL }}> ({s.cities.join(", ")})</span>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {systemicPatterns.map((p) => (
+                    <div key={p.dim} style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>
+                      <strong>{DIMENSION_LABELS[p.dim]}</strong> caiu junto pra {p.people.map((x) => x.firstName).join(", ")} nesta semana.
                     </div>
                   ))}
                 </div>
@@ -2731,6 +2745,13 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "—"}</div>
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{m.profile_name || "Arquétipo pendente"}</div>
                 </div>
+                {m.contact_frequency && m.contact_frequency.total > 0 && (
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 10 }}>
+                    {m.contact_frequency.total} contatos · {m.contact_frequency.ativo} em dia
+                    {m.contact_frequency.esfriando > 0 && `, ${m.contact_frequency.esfriando} esfriando`}
+                    {m.contact_frequency.frio > 0 && `, ${m.contact_frequency.frio} frios`}
+                  </div>
+                )}
                 {!m.onboarding_completed ? (
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding não concluído</div>
                 ) : !m.dimension_observation ? (
