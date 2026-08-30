@@ -155,3 +155,79 @@ export function computeTeamWeeklyTrend(members) {
       };
     });
 }
+
+/**
+ * Dimensão que representa o risco ESTRUTURAL de cada arquétipo — não uma
+ * dimensão qualquer, a mesma que o próprio texto do arquétipo (PROFILES,
+ * em src/App.jsx) já descreve como ponto fraco típico desse perfil. Fonte
+ * de cada mapeamento, lida direto da descrição de cada arquétipo:
+ *   estrategista            → "pode parecer transacional"            → reciprocidade
+ *   influenciador           → "pode se sobrecarregar" (perde ritmo)  → consistência
+ *   conector                → "falta de direcionamento estratégico" → estratégia
+ *   tecnico_invisivel       → "confiança alta, presença baixa"       → presença
+ *   relacional_intuitivo    → "networking inconsistente"             → consistência
+ *   ativador_intermitente   → "inconsistência crônica"               → consistência
+ *   construtor_confianca    → "rede pode ser pequena demais"         → presença
+ *   explorador_rede         → sem padrão dominante ainda              → (nenhuma)
+ */
+export const ARCHETYPE_RISK_DIMENSION = {
+  estrategista: "reciprocidade_ativa",
+  influenciador: "ritual_consistencia",
+  conector: "intencao_estrategica",
+  tecnico_invisivel: "presenca_mercado",
+  relacional_intuitivo: "ritual_consistencia",
+  ativador_intermitente: "ritual_consistencia",
+  construtor_confianca: "presenca_mercado",
+  explorador_rede: null,
+};
+
+/**
+ * Cruza o arquétipo relacional de cada pessoa com o estado observado AGORA
+ * na dimensão que é o ponto fraco estrutural desse arquétipo específico.
+ * Só sinaliza quando o padrão descrito na teoria está de fato se
+ * manifestando no comportamento real — nunca por suposição, e nunca numa
+ * dimensão genérica que não tenha a ver com o arquétipo da pessoa.
+ */
+export function computeArchetypeRiskFlags(members) {
+  const flags = [];
+  (members || []).forEach((m) => {
+    const dim = ARCHETYPE_RISK_DIMENSION[m.profile_key];
+    if (!dim) return;
+    const state = m.dimension_observation?.[dim]?.state;
+    if (state === "perdendo_intensidade") {
+      flags.push({ memberId: m.member_id || m.id, firstName: m.first_name, profileKey: m.profile_key, dim, state });
+    }
+  });
+  return flags;
+}
+
+/**
+ * Sinergia regional/setorial entre colaboradores — cruza cobertura
+ * agregada (cultura × UF) de contatos entre pessoas DIFERENTES do time.
+ * Nunca revela qual contato é, nem nome/empresa dele — só que duas ou mais
+ * pessoas do time têm presença na mesma frente. Decidir se conecta as
+ * pessoas é sempre do gestor, nunca automático.
+ */
+export function computeSynergyOpportunities(coverageRows) {
+  const groups = {};
+  (coverageRows || []).forEach((r) => {
+    if (!r.main_culture || !r.state_code) return;
+    const key = `${r.main_culture}|${r.state_code}`;
+    if (!groups[key]) groups[key] = { mainCulture: r.main_culture, stateCode: r.state_code, cities: new Set(), memberCounts: new Map() };
+    if (r.city) groups[key].cities.add(r.city);
+    const memberId = r.member_id;
+    const cur = groups[key].memberCounts.get(memberId) || { memberId, firstName: r.first_name, count: 0 };
+    cur.count += Number(r.contact_count || 0);
+    groups[key].memberCounts.set(memberId, cur);
+  });
+  return Object.values(groups)
+    .filter((g) => g.memberCounts.size >= 2)
+    .map((g) => ({
+      mainCulture: g.mainCulture,
+      stateCode: g.stateCode,
+      cities: Array.from(g.cities),
+      members: Array.from(g.memberCounts.values()),
+    }))
+    .sort((a, b) => b.members.length - a.members.length);
+}
+
