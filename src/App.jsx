@@ -349,6 +349,38 @@ function RadarChart({ scores, size = 260 }) {
   );
 }
 
+/* ═══ TENDÊNCIA DE EQUIPE (LINHA) ═════════════════════════════
+   % da equipe evoluindo, semana a semana. Já vem filtrado (>=3 pessoas
+   por semana) pela function get_org_team_trend — aqui é só desenhar. */
+function TeamTrendChart({ data, width = 640, height = 160 }) {
+  if (!data || data.length < 2) return null;
+  const pad = { l: 32, r: 16, t: 16, b: 24 };
+  const w = width - pad.l - pad.r, h = height - pad.t - pad.b;
+  const x = (i) => pad.l + (w * i) / (data.length - 1);
+  const y = (v) => pad.t + h - (h * v) / 100;
+  const linePts = data.map((d, i) => `${x(i)},${y(d.pct_evoluindo)}`).join(" ");
+  const areaPts = `${x(0)},${y(0)} ${linePts} ${x(data.length - 1)},${y(0)}`;
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "auto", display: "block" }}>
+      {[0, 50, 100].map((v) => (
+        <g key={v}>
+          <line x1={pad.l} y1={y(v)} x2={width - pad.r} y2={y(v)} stroke={C.brd} strokeWidth={0.5} opacity={0.5} />
+          <text x={pad.l - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" fill={C.txL} fontSize={9} fontFamily="'DM Sans'">{v}%</text>
+        </g>
+      ))}
+      <polygon points={areaPts} fill={`${C.grn}15`} />
+      <polyline points={linePts} fill="none" stroke={C.grn} strokeWidth={2} />
+      {data.map((d, i) => (
+        <g key={i}>
+          <circle cx={x(i)} cy={y(d.pct_evoluindo)} r={3.5} fill={C.grn} stroke={C.bg} strokeWidth={1.5} />
+          <text x={x(i)} y={y(d.pct_evoluindo) - 10} textAnchor="middle" fill={C.txt} fontSize={10} fontWeight={600} fontFamily="'DM Sans'">{d.pct_evoluindo}%</text>
+          <text x={x(i)} y={height - 6} textAnchor="middle" fill={C.txL} fontSize={9} fontFamily="'DM Sans'">Sem {d.week}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 /* ═══ RADAR CATEGÓRICO DE EQUIPE ══════════════════════════════
    Mesma geometria hexagonal do RadarChart acima, mas sem número de
    desempenho: cada eixo vai pra 1 de 3 raios fixos conforme o estado
@@ -1883,12 +1915,16 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
+  const [orgTrend, setOrgTrend] = useState(null);
   const [orgInfo, setOrgInfo] = useState(null);
   const [orgCodeBusy, setOrgCodeBusy] = useState(false);
   const [orgCodeCopied, setOrgCodeCopied] = useState(false);
   const [orgNameDraft, setOrgNameDraft] = useState("");
   const [orgNameBusy, setOrgNameBusy] = useState(false);
   const [orgNameEditing, setOrgNameEditing] = useState(false);
+  const [orgAnalysisText, setOrgAnalysisText] = useState("");
+  const [orgAnalysisLoading, setOrgAnalysisLoading] = useState(false);
+  const [orgAnalysisError, setOrgAnalysisError] = useState("");
   const [orgConsentBusy, setOrgConsentBusy] = useState(false);
   const [joinOrgCode, setJoinOrgCode] = useState("");
   const [joinOrgBusy, setJoinOrgBusy] = useState(false);
@@ -2311,11 +2347,13 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     Promise.all([
       supabase.rpc("get_org_team_overview", { p_organization_id: profile.organization_id }),
       supabase.from("organizations").select("name,invite_code").eq("id", profile.organization_id).maybeSingle(),
+      supabase.rpc("get_org_team_trend", { p_organization_id: profile.organization_id, p_weeks: 8 }),
     ])
-      .then(([overviewRes, orgRes]) => {
+      .then(([overviewRes, orgRes, trendRes]) => {
         if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "Não foi possível carregar a visão da equipe."); return; }
         setOrgOverview(overviewRes.data || []);
         if (orgRes.data) { setOrgInfo(orgRes.data); setOrgNameDraft(orgRes.data.name || ""); }
+        if (!trendRes.error) setOrgTrend(trendRes.data || []);
       })
       .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
       .finally(() => setOrgOverviewLoading(false));
@@ -2357,6 +2395,45 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       console.error("[OrgName]", e);
     } finally {
       setOrgNameBusy(false);
+    }
+  };
+
+  // Análise de IA da equipe — a IA só recebe percentuais agregados
+  // (nunca nome, nunca dado individual). Sob demanda (botão), não
+  // automática, pra não gerar custo/latência toda vez que o admin abre a
+  // aba. Não faz cache no banco na v1 — cada clique gera de novo.
+  const generateOrgAnalysis = async () => {
+    if (!orgTeamStats) return;
+    setOrgAnalysisLoading(true);
+    setOrgAnalysisError("");
+    setOrgAnalysisText("");
+    try {
+      const dimLines = Object.entries(orgTeamStats.perDimPct)
+        .map(([dim, p]) => `- ${DIMENSION_LABELS[dim] || dim}: ${p.evoluindo}% evoluindo, ${p.estavel}% estável, ${p.perdendo_intensidade}% perdendo intensidade`)
+        .join("\n");
+      const prompt = `Você é um consultor de inteligência relacional (metodologia CONÉXIA) analisando o estado agregado e ANÔNIMO de uma equipe comercial de agronegócio, medido em 6 dimensões relacionais. Você não recebe nome nem dado de nenhuma pessoa — só percentuais da equipe inteira.
+
+Dados desta semana (${orgTeamStats.memberCount} pessoas com dado computado):
+${dimLines}
+
+Escreva uma análise executiva curta para o gestor da equipe, em português, tom consultivo e direto, 3 a 5 frases corridas (sem bullet points, sem markdown):
+1. Qual é o padrão mais forte da equipe e o que isso indica sobre como ela constrói relações.
+2. Qual dimensão merece atenção e por que isso importa comercialmente (ex: contas paradas, falta de reciprocidade, etc).
+3. Uma recomendação prática e específica de ação para a próxima semana.
+Não invente números além dos fornecidos. Não mencione nomes — você não tem acesso a nenhum.`;
+      const res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, maxTokens: 500 }),
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text?.trim() || "";
+      if (!text) { setOrgAnalysisError("A IA não retornou análise. Tenta de novo."); return; }
+      setOrgAnalysisText(text);
+    } catch (e) {
+      setOrgAnalysisError("Não foi possível gerar a análise agora. Tenta de novo.");
+    } finally {
+      setOrgAnalysisLoading(false);
     }
   };
 
@@ -2474,11 +2551,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     });
     let totalEvoluindo = 0, totalPairs = 0;
     let bestDim = null, bestPct = -1, attentionDim = null, attentionPct = -1;
+    const perDimPct = {};
     Object.entries(perDim).forEach(([dim, c]) => {
       totalEvoluindo += c.evoluindo;
       totalPairs += c.total;
       const evolPct = c.total ? c.evoluindo / c.total : 0;
+      const estPct = c.total ? c.estavel / c.total : 0;
       const perdPct = c.total ? c.perdendo_intensidade / c.total : 0;
+      perDimPct[dim] = { evoluindo: Math.round(evolPct * 100), estavel: Math.round(estPct * 100), perdendo_intensidade: Math.round(perdPct * 100) };
       if (evolPct > bestPct) { bestPct = evolPct; bestDim = dim; }
       if (perdPct > attentionPct) { attentionPct = perdPct; attentionDim = dim; }
     });
@@ -2487,6 +2567,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       pctEvoluindo: totalPairs ? Math.round((totalEvoluindo / totalPairs) * 100) : 0,
       bestDim, bestPct: Math.round(bestPct * 100),
       attentionDim, attentionPct: Math.round(attentionPct * 100),
+      perDimPct,
     };
   }, [orgOverview]);
 
@@ -2568,6 +2649,24 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && !orgTeamStats && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, marginBottom: 20 }}>
             O resumo agregado da equipe aparece a partir de 3 pessoas com dado semanal computado — preserva o anonimato de quem já entrou.
+          </div>
+        )}
+
+        {orgTrend && orgTrend.length >= 2 && (
+          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Tendência — % da equipe evoluindo por semana</div>
+            <TeamTrendChart data={orgTrend} />
+          </div>
+        )}
+
+        {orgTeamStats && (
+          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: orgAnalysisText || orgAnalysisLoading || orgAnalysisError ? 12 : 0 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em" }}>Análise da equipe (IA)</div>
+              <Btn small onClick={generateOrgAnalysis} disabled={orgAnalysisLoading}>{orgAnalysisLoading ? "Gerando…" : orgAnalysisText ? "Gerar de novo" : "Gerar análise"}</Btn>
+            </div>
+            {orgAnalysisError && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor }}>{orgAnalysisError}</div>}
+            {orgAnalysisText && <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.65 }}>{orgAnalysisText}</div>}
           </div>
         )}
 
