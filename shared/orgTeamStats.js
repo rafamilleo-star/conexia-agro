@@ -181,53 +181,86 @@ export const ARCHETYPE_RISK_DIMENSION = {
   explorador_rede: null,
 };
 
+/** Quantas semanas seguidas (a partir da mais recente) uma dimensão está no mesmo estado. */
+function trailingStreak(history, dim, state) {
+  if (!history || history.length === 0) return 0;
+  let streak = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].observation?.[dim]?.state === state) streak++;
+    else break;
+  }
+  return streak;
+}
+
 /**
  * Cruza o arquétipo relacional de cada pessoa com o estado observado AGORA
- * na dimensão que é o ponto fraco estrutural desse arquétipo específico.
- * Só sinaliza quando o padrão descrito na teoria está de fato se
- * manifestando no comportamento real — nunca por suposição, e nunca numa
- * dimensão genérica que não tenha a ver com o arquétipo da pessoa.
+ * na dimensão que é o ponto fraco estrutural desse arquétipo específico —
+ * e traz junto a evidência bruta (números), há quantas semanas seguidas
+ * isso vem acontecendo, e a saúde de frequência de contato dela (quantos
+ * contatos já passaram do prazo ideal) — pra virar uma frase com dado
+ * real e comparável, não um texto fixo repetido pra qualquer pessoa
+ * daquele arquétipo.
  */
 export function computeArchetypeRiskFlags(members) {
   const flags = [];
   (members || []).forEach((m) => {
     const dim = ARCHETYPE_RISK_DIMENSION[m.profile_key];
     if (!dim) return;
-    const state = m.dimension_observation?.[dim]?.state;
-    if (state === "perdendo_intensidade") {
-      flags.push({ memberId: m.member_id || m.id, firstName: m.first_name, profileKey: m.profile_key, dim, state });
+    const obs = m.dimension_observation?.[dim];
+    if (obs?.state === "perdendo_intensidade") {
+      flags.push({
+        memberId: m.member_id || m.id,
+        firstName: m.first_name,
+        profileKey: m.profile_key,
+        dim,
+        evidence: obs.evidence || {},
+        streakWeeks: trailingStreak(m.observation_history, dim, "perdendo_intensidade"),
+        contactFrequency: m.contact_frequency || null,
+      });
     }
   });
   return flags;
 }
 
 /**
- * Sinergia regional/setorial entre colaboradores — cruza cobertura
- * agregada (cultura × UF) de contatos entre pessoas DIFERENTES do time.
- * Nunca revela qual contato é, nem nome/empresa dele — só que duas ou mais
- * pessoas do time têm presença na mesma frente. Decidir se conecta as
- * pessoas é sempre do gestor, nunca automático.
+ * Quando a MESMA dimensão cai (perdendo_intensidade) pra várias pessoas do
+ * time ao mesmo tempo, é mais provável ser causa externa (safra, evento do
+ * setor, sazonalidade) do que desempenho individual de cada uma — sinal
+ * estatístico real (correlação entre pessoas independentes), não coincidência
+ * de cadastro. Evita o gestor tratar como falha pessoal o que é padrão de
+ * time.
  */
-export function computeSynergyOpportunities(coverageRows) {
-  const groups = {};
-  (coverageRows || []).forEach((r) => {
-    if (!r.main_culture || !r.state_code) return;
-    const key = `${r.main_culture}|${r.state_code}`;
-    if (!groups[key]) groups[key] = { mainCulture: r.main_culture, stateCode: r.state_code, cities: new Set(), memberCounts: new Map() };
-    if (r.city) groups[key].cities.add(r.city);
-    const memberId = r.member_id;
-    const cur = groups[key].memberCounts.get(memberId) || { memberId, firstName: r.first_name, count: 0 };
-    cur.count += Number(r.contact_count || 0);
-    groups[key].memberCounts.set(memberId, cur);
+export function computeSystemicDropPatterns(members, minPeople = 2) {
+  const byDim = {};
+  DIM_KEYS.forEach((d) => { byDim[d] = []; });
+  (members || []).forEach((m) => {
+    DIM_KEYS.forEach((d) => {
+      if (m.dimension_observation?.[d]?.state === "perdendo_intensidade") {
+        byDim[d].push({ memberId: m.member_id || m.id, firstName: m.first_name });
+      }
+    });
   });
-  return Object.values(groups)
-    .filter((g) => g.memberCounts.size >= 2)
-    .map((g) => ({
-      mainCulture: g.mainCulture,
-      stateCode: g.stateCode,
-      cities: Array.from(g.cities),
-      members: Array.from(g.memberCounts.values()),
-    }))
-    .sort((a, b) => b.members.length - a.members.length);
+  return Object.entries(byDim)
+    .filter(([, people]) => people.length >= minPeople)
+    .map(([dim, people]) => ({ dim, people }));
 }
 
+/**
+ * Saúde de frequência de contato agregada do TIME inteiro — soma dos
+ * "ativo/esfriando/frio" (já calculados por pessoa no cron semanal via
+ * shared/contactHealth.js) entre todas as pessoas. Responde direto "quantos
+ * estão bem" e "quantos estão esfriando", sem nunca expor qual contato é.
+ */
+export function computeTeamContactFrequencyStats(members) {
+  const totals = { total: 0, ativo: 0, esfriando: 0, frio: 0, peopleWithData: 0 };
+  (members || []).forEach((m) => {
+    const f = m.contact_frequency;
+    if (!f) return;
+    totals.peopleWithData++;
+    totals.total += f.total || 0;
+    totals.ativo += f.ativo || 0;
+    totals.esfriando += f.esfriando || 0;
+    totals.frio += f.frio || 0;
+  });
+  return totals;
+}
