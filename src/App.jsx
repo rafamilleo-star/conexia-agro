@@ -388,7 +388,7 @@ function TeamTrendChart({ data, width = 640, height = 160 }) {
    (verde/âmbar/vermelho/cinza), não por dimensão — o que importa aqui é
    "onde a equipe está indo bem ou mal", não a identidade da dimensão. */
 const TEAM_STATE_RADIUS = { evoluindo: 100, estavel: 60, perdendo_intensidade: 30 };
-const TEAM_STATE_COLOR = { evoluindo: C.grn, estavel: C.amb, perdendo_intensidade: C.cor };
+const TEAM_STATE_COLOR = { evoluindo: C.grn, estavel: C.amb, perdendo_intensidade: C.cor, sem_dados: C.txL };
 function TeamDimensionRadar({ observation, size = 128 }) {
   const cx = size / 2, cy = size / 2, r = size / 2 - 22;
   const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI / 6) * i; const d = r * (v / 100); return [cx + d * Math.cos(a), cy + d * Math.sin(a)]; };
@@ -2411,15 +2411,20 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const dimLines = Object.entries(orgTeamStats.perDimPct)
         .map(([dim, p]) => `- ${DIMENSION_LABELS[dim] || dim}: ${p.evoluindo}% evoluindo, ${p.estavel}% estável, ${p.perdendo_intensidade}% perdendo intensidade`)
         .join("\n");
-      const prompt = `Você é um consultor de inteligência relacional (metodologia CONÉXIA) analisando o estado agregado e ANÔNIMO de uma equipe comercial de agronegócio, medido em 6 dimensões relacionais. Você não recebe nome nem dado de nenhuma pessoa — só percentuais da equipe inteira.
+      const activityLine = orgActivityStats
+        ? `\nAtividade da equipe: ${orgActivityStats.totalContacts} contatos na carteira somada, ${orgActivityStats.totalLast30d} interações nos últimos 30 dias (${orgActivityStats.totalInteractions} no histórico total), ${orgActivityStats.totalCooling} contas esfriando (60+ dias sem interação).`
+        : "";
+      const prompt = `Você é um consultor de inteligência relacional (metodologia CONÉXIA) analisando o estado agregado e ANÔNIMO de uma equipe comercial de agronegócio, medido em 6 dimensões relacionais e em volume de atividade. Você não recebe nome nem dado de nenhuma pessoa — só percentuais e totais da equipe inteira.
 
-Dados desta semana (${orgTeamStats.memberCount} pessoas com dado computado):
+Dados desta semana (${orgTeamStats.memberCount} pessoas com dado comportamental computado):
 ${dimLines}
+${activityLine}
 
-Escreva uma análise executiva curta para o gestor da equipe, em português, tom consultivo e direto, 3 a 5 frases corridas (sem bullet points, sem markdown):
+Escreva uma análise executiva curta para o gestor da equipe, em português, tom consultivo e direto, 4 a 6 frases corridas (sem bullet points, sem markdown):
 1. Qual é o padrão mais forte da equipe e o que isso indica sobre como ela constrói relações.
-2. Qual dimensão merece atenção e por que isso importa comercialmente (ex: contas paradas, falta de reciprocidade, etc).
-3. Uma recomendação prática e específica de ação para a próxima semana.
+2. Qual dimensão merece atenção e por que isso importa comercialmente.
+3. Cruze com a atividade: se há contas esfriando ou baixa atividade recente, comente o risco disso combinado com o padrão comportamental.
+4. Uma recomendação prática e específica de ação para a próxima semana.
 Não invente números além dos fornecidos. Não mencione nomes — você não tem acesso a nenhum.`;
       const res = await fetch("/api/claude", {
         method: "POST",
@@ -2571,6 +2576,21 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     };
   }, [orgOverview]);
 
+  // Atividade agregada — soma bruta de contatos/interações da equipe.
+  // Usa o mesmo piso de 3 pessoas que o resto do agregado, mesmo essa
+  // métrica não depender do cron semanal (existe assim que há contato
+  // cadastrado), pra manter uma única régua de anonimato em toda a tela.
+  const orgActivityStats = useMemo(() => {
+    const members = orgOverview || [];
+    if (members.length < 3) return null;
+    return {
+      totalContacts: members.reduce((s, m) => s + (m.contacts_count || 0), 0),
+      totalInteractions: members.reduce((s, m) => s + (m.interactions_count || 0), 0),
+      totalLast30d: members.reduce((s, m) => s + (m.interactions_last_30d || 0), 0),
+      totalCooling: members.reduce((s, m) => s + (m.contacts_cooling_count || 0), 0),
+    };
+  }, [orgOverview]);
+
   const renderTeamStatCard = (label, value, sub, accent) => (
     <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "16px 18px", flex: "1 1 160px", minWidth: 160 }}>
       <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{label}</div>
@@ -2606,7 +2626,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px", maxWidth: 560 }}>
-          Estado comportamental semanal da sua equipe, por dimensão — categórico, nunca numérico. Contatos, interações e conteúdo de conversas de cada pessoa continuam privados e não aparecem aqui.
+          Estado comportamental semanal e volume de atividade da sua equipe — categórico e quantitativo, nunca identidade ou conteúdo. Quem são os contatos de cada pessoa e o que foi dito em qualquer conversa nunca aparecem aqui.
         </p>
 
         {orgInfo?.invite_code && (
@@ -2640,10 +2660,17 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         )}
 
         {!orgOverviewLoading && !orgOverviewError && orgTeamStats && (
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
             {renderTeamStatCard("Evoluindo no geral", `${orgTeamStats.pctEvoluindo}%`, `${orgTeamStats.memberCount} pessoas com dado`, C.grn)}
             {orgTeamStats.bestDim && renderTeamStatCard("Ponto forte da equipe", DIMENSION_LABELS[orgTeamStats.bestDim] || orgTeamStats.bestDim, `${orgTeamStats.bestPct}% evoluindo nessa dimensão`, C.gold)}
             {orgTeamStats.attentionDim && renderTeamStatCard("Merece atenção", DIMENSION_LABELS[orgTeamStats.attentionDim] || orgTeamStats.attentionDim, `${orgTeamStats.attentionPct}% perdendo intensidade`, C.cor)}
+          </div>
+        )}
+        {!orgOverviewLoading && !orgOverviewError && orgActivityStats && (
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+            {renderTeamStatCard("Carteira total da equipe", orgActivityStats.totalContacts, "contatos cadastrados")}
+            {renderTeamStatCard("Interações (30 dias)", orgActivityStats.totalLast30d, `${orgActivityStats.totalInteractions} no histórico total`)}
+            {renderTeamStatCard("Contas esfriando", orgActivityStats.totalCooling, "60+ dias sem interação", orgActivityStats.totalCooling > 0 ? C.cor : undefined)}
           </div>
         )}
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && !orgTeamStats && (
@@ -2673,9 +2700,9 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
           <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>Legenda</span>
-            {[["evoluindo", "Evoluindo"], ["estavel", "Estável"], ["perdendo_intensidade", "Perdendo intensidade"]].map(([k, label]) => (
+            {[["evoluindo", "Evoluindo"], ["estavel", "Estável"], ["perdendo_intensidade", "Perdendo intensidade"], ["sem_dados", "Sem dados suficientes"]].map(([k, label]) => (
               <span key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: TEAM_STATE_COLOR[k], display: "inline-block" }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: TEAM_STATE_COLOR[k] || C.txL, display: "inline-block" }} />
                 {label}
               </span>
             ))}
@@ -2699,6 +2726,13 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                   ) : !m.dimension_observation ? (
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
                   ) : null}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 8 }}>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.contacts_count ?? 0}</strong> contatos</span>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.interactions_count ?? 0}</strong> interações <span style={{ color: C.txL }}>({m.interactions_last_30d ?? 0} nos últimos 30d)</span></span>
+                    {(m.contacts_cooling_count ?? 0) > 0 && (
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor }}>{m.contacts_cooling_count} esfriando (60d+)</span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -2863,7 +2897,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             fica visível ao admin da organização. */}
         {profile?.organization_id && profile?.org_role === "membro" && (
           <div style={{ background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
-            Sua organização tem acesso a um resumo categórico da sua tendência comportamental semanal (ex.: "Presença: Evoluindo"). Seus contatos, interações e conteúdo de conversas continuam privados.
+            Sua organização tem acesso a um resumo categórico da sua tendência comportamental semanal (ex.: "Presença: Evoluindo") e à quantidade de contatos e interações que você registra. A identidade dos seus contatos e o conteúdo de conversas continuam privados.
           </div>
         )}
 
@@ -4330,7 +4364,7 @@ ${MENTORIA_LINK || true ? `
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Organização</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14, lineHeight: 1.55 }}>
-            Seu admin vê um resumo categórico da sua tendência semanal por dimensão. Seus contatos, interações e conteúdo de conversas continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
+            Seu admin vê um resumo categórico da sua tendência semanal por dimensão e a quantidade de contatos e interações que você registra. A identidade dos seus contatos e o conteúdo de qualquer conversa continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
           </div>
           <Btn variant="ghost" small onClick={leaveOrganization} disabled={orgConsentBusy}>Sair da organização</Btn>
         </div>
@@ -4423,10 +4457,10 @@ ${MENTORIA_LINK || true ? `
           <div style={{ background: C.card, border: `1px solid ${C.brdH}`, borderRadius: 16, width: "100%", maxWidth: 440, padding: 28 }}>
             <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>Sua organização convidou você</h3>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 10px" }}>
-              Se você aceitar, o admin da sua organização passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") — nunca números, nunca conteúdo.
+              Se você aceitar, o admin da sua organização passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") e a <strong>quantidade</strong> de contatos e interações que você registra — nunca números de desempenho, nunca quem são seus contatos, nunca o conteúdo de nada.
             </p>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 20px" }}>
-              Seus contatos, interações e o conteúdo de qualquer conversa continuam 100% privados em qualquer um dos dois casos. Você pode sair da organização quando quiser, sem perder nada do seu {BRAND.name}.
+              A identidade dos seus contatos e o que foi dito em qualquer conversa continuam 100% privados em qualquer um dos dois casos. Você pode sair da organização quando quiser, sem perder nada do seu {BRAND.name}.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <Btn small onClick={() => respondOrgInvite(true)} disabled={orgConsentBusy}>Aceitar</Btn>
