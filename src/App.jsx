@@ -1925,6 +1925,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgAnalysisText, setOrgAnalysisText] = useState("");
   const [orgAnalysisLoading, setOrgAnalysisLoading] = useState(false);
   const [orgAnalysisError, setOrgAnalysisError] = useState("");
+  const [orgAnalysisGeneratedAt, setOrgAnalysisGeneratedAt] = useState(null);
   const [orgConsentBusy, setOrgConsentBusy] = useState(false);
   const [joinOrgCode, setJoinOrgCode] = useState("");
   const [joinOrgBusy, setJoinOrgBusy] = useState(false);
@@ -2348,12 +2349,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       supabase.rpc("get_org_team_overview", { p_organization_id: profile.organization_id }),
       supabase.from("organizations").select("name,invite_code").eq("id", profile.organization_id).maybeSingle(),
       supabase.rpc("get_org_team_trend", { p_organization_id: profile.organization_id, p_weeks: 8 }),
+      supabase.from("org_ai_insights").select("insight_text,generated_at,week").eq("organization_id", profile.organization_id).order("week", { ascending: false }).limit(1).maybeSingle(),
     ])
-      .then(([overviewRes, orgRes, trendRes]) => {
+      .then(([overviewRes, orgRes, trendRes, insightRes]) => {
         if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "Não foi possível carregar a visão da equipe."); return; }
         setOrgOverview(overviewRes.data || []);
         if (orgRes.data) { setOrgInfo(orgRes.data); setOrgNameDraft(orgRes.data.name || ""); }
         if (!trendRes.error) setOrgTrend(trendRes.data || []);
+        if (!insightRes.error && insightRes.data) { setOrgAnalysisText(insightRes.data.insight_text); setOrgAnalysisGeneratedAt(insightRes.data.generated_at); }
       })
       .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
       .finally(() => setOrgOverviewLoading(false));
@@ -2435,6 +2438,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       const text = data.content?.[0]?.text?.trim() || "";
       if (!text) { setOrgAnalysisError("A IA não retornou análise. Tenta de novo."); return; }
       setOrgAnalysisText(text);
+      setOrgAnalysisGeneratedAt(null);
     } catch (e) {
       setOrgAnalysisError("Não foi possível gerar a análise agora. Tenta de novo.");
     } finally {
@@ -2661,7 +2665,17 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
         {!orgOverviewLoading && !orgOverviewError && orgTeamStats && (
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-            {renderTeamStatCard("Evoluindo no geral", `${orgTeamStats.pctEvoluindo}%`, `${orgTeamStats.memberCount} pessoas com dado`, C.grn)}
+            {renderTeamStatCard(
+              "Evoluindo no geral",
+              `${orgTeamStats.pctEvoluindo}%`,
+              (() => {
+                if (!orgTrend || orgTrend.length < 2) return `${orgTeamStats.memberCount} pessoas com dado`;
+                const delta = orgTrend[orgTrend.length - 1].pct_evoluindo - orgTrend[orgTrend.length - 2].pct_evoluindo;
+                const arrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "＝";
+                return `${arrow} ${Math.abs(delta)} pts vs semana passada`;
+              })(),
+              C.grn
+            )}
             {orgTeamStats.bestDim && renderTeamStatCard("Ponto forte da equipe", DIMENSION_LABELS[orgTeamStats.bestDim] || orgTeamStats.bestDim, `${orgTeamStats.bestPct}% evoluindo nessa dimensão`, C.gold)}
             {orgTeamStats.attentionDim && renderTeamStatCard("Merece atenção", DIMENSION_LABELS[orgTeamStats.attentionDim] || orgTeamStats.attentionDim, `${orgTeamStats.attentionPct}% perdendo intensidade`, C.cor)}
           </div>
@@ -2689,7 +2703,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         {orgTeamStats && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: orgAnalysisText || orgAnalysisLoading || orgAnalysisError ? 12 : 0 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em" }}>Análise da equipe (IA)</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em" }}>
+                Análise da equipe (IA)
+                {orgAnalysisGeneratedAt && !orgAnalysisLoading && (
+                  <span style={{ textTransform: "none", fontWeight: 400, color: C.txL, marginLeft: 8 }}>· gerada automaticamente {new Date(orgAnalysisGeneratedAt).toLocaleDateString("pt-BR")}</span>
+                )}
+              </div>
               <Btn small onClick={generateOrgAnalysis} disabled={orgAnalysisLoading}>{orgAnalysisLoading ? "Gerando…" : orgAnalysisText ? "Gerar de novo" : "Gerar análise"}</Btn>
             </div>
             {orgAnalysisError && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor }}>{orgAnalysisError}</div>}
