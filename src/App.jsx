@@ -2424,6 +2424,43 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   // Visão Empresa — piloto B2B (Fase 0). Só categórico, só arquétipo.
   // Nunca lista contatos, interações ou conteúdo de mensagens de ninguém.
   const renderEmpresa = () => {
+    const DIM_KEYS = Object.keys(DIMENSION_LABELS);
+    const STATE_KEYS = ["evoluindo", "estavel", "perdendo_intensidade", "sem_dados"];
+
+    // Resumo agregado do time — só contagens, nunca aponta pessoa por número.
+    const teamStats = (() => {
+      const dims = {};
+      DIM_KEYS.forEach((d) => { dims[d] = { evoluindo: 0, estavel: 0, perdendo_intensidade: 0, sem_dados: 0 }; });
+      let onboardingDone = 0;
+      let withObservation = 0;
+      (orgOverview || []).forEach((m) => {
+        if (m.onboarding_completed) onboardingDone++;
+        if (m.dimension_observation) {
+          withObservation++;
+          DIM_KEYS.forEach((d) => {
+            const st = m.dimension_observation[d]?.state;
+            if (st && dims[d][st] !== undefined) dims[d][st]++;
+          });
+        }
+      });
+      return { total: (orgOverview || []).length, onboardingDone, withObservation, dims };
+    })();
+
+    // Alertas — agregados por dimensão/onboarding, nunca aponta quem é.
+    const alerts = (() => {
+      const list = [];
+      const total = (orgOverview || []).length;
+      const notOnboarded = total - teamStats.onboardingDone;
+      if (notOnboarded > 0) list.push(`${notOnboarded} ${notOnboarded === 1 ? "pessoa ainda não completou" : "pessoas ainda não completaram"} o onboarding.`);
+      const noObsCount = (orgOverview || []).filter((m) => m.onboarding_completed && !m.dimension_observation).length;
+      if (noObsCount > 0) list.push(`${noObsCount} ${noObsCount === 1 ? "pessoa" : "pessoas"} com onboarding concluído mas ainda sem observação semanal computada.`);
+      DIM_KEYS.forEach((d) => {
+        const c = teamStats.dims[d].perdendo_intensidade;
+        if (c > 0) list.push(`${DIMENSION_LABELS[d]}: ${c} ${c === 1 ? "pessoa" : "pessoas"} perdendo intensidade essa semana.`);
+      });
+      return list;
+    })();
+
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Visão Empresa</h2>
@@ -2443,6 +2480,54 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
               <Btn small variant="ghost" onClick={regenerateOrgCode} disabled={orgCodeBusy}>Gerar novo código</Btn>
             </div>
           </div>
+        )}
+
+        {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
+          <>
+            <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>
+                Resumo do time — {teamStats.total} {teamStats.total === 1 ? "pessoa" : "pessoas"}
+              </div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 14 }}>
+                Onboarding concluído: {teamStats.onboardingDone}/{teamStats.total} · Observação semanal computada: {teamStats.withObservation}/{teamStats.total}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {DIM_KEYS.map((d) => {
+                  const dd = teamStats.dims[d];
+                  const totalDim = dd.evoluindo + dd.estavel + dd.perdendo_intensidade + dd.sem_dados;
+                  if (totalDim === 0) return null;
+                  return (
+                    <div key={d}>
+                      <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>{DIMENSION_LABELS[d]}</div>
+                      <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: C.w06 }}>
+                        {STATE_KEYS.map((st) => dd[st] > 0 && (
+                          <div key={st} title={`${OBS_STATE_STYLE[st].label}: ${dd[st]}`} style={{ width: `${(dd[st] / totalDim) * 100}%`, background: OBS_STATE_STYLE[st].fg }} />
+                        ))}
+                      </div>
+                      <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 3 }}>
+                        {STATE_KEYS.filter((st) => dd[st] > 0).map((st) => `${dd[st]} ${OBS_STATE_STYLE[st].label.toLowerCase()}`).join(" · ")}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {alerts.length > 0 ? (
+              <div style={{ background: C.corD, border: `1px solid ${C.cor}40`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Pontos de atenção</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {alerts.map((a, i) => (
+                    <div key={i} style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>• {a}</div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: C.grnD, border: `1px solid ${C.grn}40`, borderRadius: 12, padding: 16, marginBottom: 20, fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>
+                Nenhum ponto de atenção agregado esta semana.
+              </div>
+            )}
+          </>
         )}
 
         {orgOverviewLoading && (
@@ -2474,17 +2559,44 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                 ) : !m.dimension_observation ? (
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
                 ) : (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {Object.entries(m.dimension_observation).map(([dim, obs]) => {
-                      const s = OBS_STATE_STYLE[obs?.state] || OBS_STATE_STYLE.sem_dados;
-                      return (
-                        <div key={dim} style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-start" }}>
-                          <span style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>{DIMENSION_LABELS[dim] || dim}</span>
-                          <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: s.bg, color: s.fg }}>{s.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {Object.entries(m.dimension_observation).map(([dim, obs]) => {
+                        const s = OBS_STATE_STYLE[obs?.state] || OBS_STATE_STYLE.sem_dados;
+                        const trend = (m.observation_history || []).map((h) => h.observation?.[dim]?.state);
+                        return (
+                          <div key={dim} style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-start" }}>
+                            <span style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>{DIMENSION_LABELS[dim] || dim}</span>
+                            <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: s.bg, color: s.fg }}>{s.label}</span>
+                            {trend.length > 1 && (
+                              <div style={{ display: "flex", gap: 3, marginTop: 2 }} title={`Últimas ${trend.length} semanas`}>
+                                {trend.map((st, i) => (
+                                  <span
+                                    key={i}
+                                    title={(OBS_STATE_STYLE[st] || OBS_STATE_STYLE.sem_dados).label}
+                                    style={{ width: 6, height: 6, borderRadius: "50%", background: (OBS_STATE_STYLE[st] || OBS_STATE_STYLE.sem_dados).fg, opacity: i === trend.length - 1 ? 1 : 0.4 }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {Object.entries(m.dimension_observation).some(([, o]) => o?.state === "perdendo_intensidade") && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>Sugestão para o 1:1</div>
+                        {Object.entries(m.dimension_observation).filter(([, o]) => o?.state === "perdendo_intensidade").map(([dim, o]) => {
+                          const insight = buildDimensionInsight(dim, o);
+                          return (
+                            <div key={dim} style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
+                              <strong style={{ color: C.txt }}>{DIMENSION_LABELS[dim]}:</strong> {insight.action}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}
