@@ -2475,8 +2475,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
                 ) : (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {Object.entries(m.dimension_observation).map(([dim, state]) => {
-                      const s = OBS_STATE_STYLE[state] || OBS_STATE_STYLE.sem_dados;
+                    {Object.entries(m.dimension_observation).map(([dim, obs]) => {
+                      const s = OBS_STATE_STYLE[obs?.state] || OBS_STATE_STYLE.sem_dados;
                       return (
                         <div key={dim} style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-start" }}>
                           <span style={{ fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>{DIMENSION_LABELS[dim] || dim}</span>
