@@ -1916,6 +1916,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
   const [orgTrend, setOrgTrend] = useState(null);
+  const [orgDeclineAlerts, setOrgDeclineAlerts] = useState(null);
   const [orgInfo, setOrgInfo] = useState(null);
   const [orgCodeBusy, setOrgCodeBusy] = useState(false);
   const [orgCodeCopied, setOrgCodeCopied] = useState(false);
@@ -2350,13 +2351,15 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       supabase.from("organizations").select("name,invite_code").eq("id", profile.organization_id).maybeSingle(),
       supabase.rpc("get_org_team_trend", { p_organization_id: profile.organization_id, p_weeks: 8 }),
       supabase.from("org_ai_insights").select("insight_text,generated_at,week").eq("organization_id", profile.organization_id).order("week", { ascending: false }).limit(1).maybeSingle(),
+      supabase.rpc("get_org_decline_alerts", { p_organization_id: profile.organization_id }),
     ])
-      .then(([overviewRes, orgRes, trendRes, insightRes]) => {
+      .then(([overviewRes, orgRes, trendRes, insightRes, alertsRes]) => {
         if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "Não foi possível carregar a visão da equipe."); return; }
         setOrgOverview(overviewRes.data || []);
         if (orgRes.data) { setOrgInfo(orgRes.data); setOrgNameDraft(orgRes.data.name || ""); }
         if (!trendRes.error) setOrgTrend(trendRes.data || []);
         if (!insightRes.error && insightRes.data) { setOrgAnalysisText(insightRes.data.insight_text); setOrgAnalysisGeneratedAt(insightRes.data.generated_at); }
+        if (!alertsRes.error) setOrgDeclineAlerts(alertsRes.data || []);
       })
       .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
       .finally(() => setOrgOverviewLoading(false));
@@ -2654,6 +2657,19 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         {!orgOverviewLoading && orgOverviewError && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
             {orgOverviewError}
+          </div>
+        )}
+
+        {orgDeclineAlerts && orgDeclineAlerts.length > 0 && (
+          <div style={{ background: `${C.cor}12`, border: `1px solid ${C.cor}50`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.cor, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>⚠ Queda consecutiva detectada</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {orgDeclineAlerts.map((a) => (
+                <div key={a.dimension} style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>
+                  <strong>{a.member_count}</strong> {a.member_count === 1 ? "pessoa" : "pessoas"} com <strong>{DIMENSION_LABELS[a.dimension] || a.dimension}</strong> perdendo intensidade há 2+ semanas seguidas
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
