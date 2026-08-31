@@ -351,8 +351,11 @@ function RadarChart({ scores, size = 260 }) {
 
 /* ═══ TENDÊNCIA DE EQUIPE (LINHA) ═════════════════════════════
    % da equipe evoluindo, semana a semana. Já vem filtrado (>=3 pessoas
-   por semana) pela function get_org_team_trend — aqui é só desenhar. */
-function TeamTrendChart({ data, width = 640, height = 160 }) {
+   por semana) pela function get_org_team_trend — aqui é só desenhar.
+   Tooltip no hover mostra o valor exato + quantas pessoas contribuíram
+   pro número daquela semana. */
+function TeamTrendChart({ data, width = 640, height = 170 }) {
+  const [hover, setHover] = useState(null);
   if (!data || data.length < 2) return null;
   const pad = { l: 32, r: 16, t: 16, b: 24 };
   const w = width - pad.l - pad.r, h = height - pad.t - pad.b;
@@ -360,24 +363,51 @@ function TeamTrendChart({ data, width = 640, height = 160 }) {
   const y = (v) => pad.t + h - (h * v) / 100;
   const linePts = data.map((d, i) => `${x(i)},${y(d.pct_evoluindo)}`).join(" ");
   const areaPts = `${x(0)},${y(0)} ${linePts} ${x(data.length - 1)},${y(0)}`;
+  const nearestIndex = (mouseX) => {
+    let best = 0, bestDist = Infinity;
+    data.forEach((_, i) => { const d = Math.abs(x(i) - mouseX); if (d < bestDist) { bestDist = d; best = i; } });
+    return best;
+  };
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "auto", display: "block" }}>
-      {[0, 50, 100].map((v) => (
-        <g key={v}>
-          <line x1={pad.l} y1={y(v)} x2={width - pad.r} y2={y(v)} stroke={C.brd} strokeWidth={0.5} opacity={0.5} />
-          <text x={pad.l - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" fill={C.txL} fontSize={9} fontFamily="'DM Sans'">{v}%</text>
-        </g>
-      ))}
-      <polygon points={areaPts} fill={`${C.grn}15`} />
-      <polyline points={linePts} fill="none" stroke={C.grn} strokeWidth={2} />
-      {data.map((d, i) => (
-        <g key={i}>
-          <circle cx={x(i)} cy={y(d.pct_evoluindo)} r={3.5} fill={C.grn} stroke={C.bg} strokeWidth={1.5} />
-          <text x={x(i)} y={y(d.pct_evoluindo) - 10} textAnchor="middle" fill={C.txt} fontSize={10} fontWeight={600} fontFamily="'DM Sans'">{d.pct_evoluindo}%</text>
-          <text x={x(i)} y={height - 6} textAnchor="middle" fill={C.txL} fontSize={9} fontFamily="'DM Sans'">Sem {d.week}</text>
-        </g>
-      ))}
-    </svg>
+    <div style={{ position: "relative" }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ width: "100%", height: "auto", display: "block", cursor: "crosshair" }}
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const mouseX = ((e.clientX - rect.left) / rect.width) * width;
+          setHover(nearestIndex(mouseX));
+        }}
+        onMouseLeave={() => setHover(null)}
+      >
+        {[0, 50, 100].map((v) => (
+          <g key={v}>
+            <line x1={pad.l} y1={y(v)} x2={width - pad.r} y2={y(v)} stroke={C.brd} strokeWidth={0.5} opacity={0.5} />
+            <text x={pad.l - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" fill={C.txL} fontSize={9} fontFamily="'DM Sans'">{v}%</text>
+          </g>
+        ))}
+        <polygon points={areaPts} fill={`${C.grn}15`} />
+        <polyline points={linePts} fill="none" stroke={C.grn} strokeWidth={2} />
+        {data.map((d, i) => (
+          <g key={i}>
+            {hover === i && <line x1={x(i)} y1={pad.t} x2={x(i)} y2={pad.t + h} stroke={C.txL} strokeWidth={1} strokeDasharray="3,3" opacity={0.6} />}
+            <circle cx={x(i)} cy={y(d.pct_evoluindo)} r={hover === i ? 5 : 3.5} fill={C.grn} stroke={C.bg} strokeWidth={1.5} />
+            {hover !== i && <text x={x(i)} y={y(d.pct_evoluindo) - 10} textAnchor="middle" fill={C.txt} fontSize={10} fontWeight={600} fontFamily="'DM Sans'">{d.pct_evoluindo}%</text>}
+            <text x={x(i)} y={height - 6} textAnchor="middle" fill={hover === i ? C.txt : C.txL} fontSize={9} fontFamily="'DM Sans'">Sem {d.week}</text>
+          </g>
+        ))}
+      </svg>
+      {hover !== null && (
+        <div style={{
+          position: "absolute", left: `${(x(hover) / width) * 100}%`, top: 4, transform: "translateX(-50%)",
+          background: C.bg, border: `1px solid ${C.brdH}`, borderRadius: 8, padding: "6px 10px", pointerEvents: "none",
+          fontFamily: "'DM Sans'", fontSize: 11, color: C.txt, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,.4)",
+        }}>
+          <div style={{ fontWeight: 700 }}>Semana {data[hover].week} · {data[hover].pct_evoluindo}% evoluindo</div>
+          <div style={{ color: C.txL, marginTop: 2 }}>{data[hover].member_count} pessoas com dado nessa semana</div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2761,12 +2791,29 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                   ) : !m.dimension_observation ? (
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
                   ) : null}
+                  {m.declining_dimensions && m.declining_dimensions.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                      {m.declining_dimensions.map((dim) => (
+                        <span key={dim} style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.cor, background: `${C.cor}15`, padding: "2px 8px", borderRadius: 20 }}>
+                          ⚠ {DIMENSION_LABELS[dim] || dim} em queda há 2+ semanas
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 8 }}>
                     <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.contacts_count ?? 0}</strong> contatos</span>
                     <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.interactions_count ?? 0}</strong> interações <span style={{ color: C.txL }}>({m.interactions_last_30d ?? 0} nos últimos 30d)</span></span>
                     {(m.contacts_cooling_count ?? 0) > 0 && (
                       <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor }}>{m.contacts_cooling_count} esfriando (60d+)</span>
                     )}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 4 }}>
+                    {(m.interactions_count ?? 0) > 0 && (
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.value_rate ?? 0}%</strong> das interações geraram valor</span>
+                    )}
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: (m.weeks_with_data ?? 0) <= 2 ? C.amb : C.txM }}>
+                      dado há <strong style={{ color: (m.weeks_with_data ?? 0) <= 2 ? C.amb : C.txt }}>{m.weeks_with_data ?? 0}</strong> {(m.weeks_with_data ?? 0) === 1 ? "semana" : "semanas"}
+                    </span>
                   </div>
                 </div>
               </div>
