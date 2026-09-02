@@ -127,6 +127,7 @@ entendimento tem que funcionar mesmo pra frases que não estão aqui):
 - "Me prepara pra falar com a Ana." → briefing
 - "Como devo agir com o Caio?" / "Como puxo essa conversa?" → contact_coaching
 - "Qual foi o assunto da última interação com o Caio?" / "Sobre o que a gente conversou da última vez?" → query_last_interaction
+- "Faça um resumo de tudo que a gente já falou com a Ana." / "Como está a história das nossas conversas com o Caio até hoje?" → relationship_history_summary
 - "Quantos contatos eu tenho que são aliados e pontes?" / "Quem trabalha na Bayer?" → query_data_simple
 - "Quais contatos eu deveria priorizar essa semana?" → query_data_analysis
 - "Quem faz tempo que não vejo?" / "Quem faz tempo que não converso?" → query_health
@@ -180,13 +181,21 @@ que conseguir em fields: contact_name, company, role, how_met, e category (chute
 nome da pessoa, contact_name fica ausente — NÃO responda unknown por causa disso, responda register_contact
 mesmo assim e liste "contact_name" em missing_fields. O sistema pergunta o nome depois.
 
+fields.how_met é SÓ a circunstância do encontro — onde/como/através de quem os dois se conheceram (ex.:
+"pedalando num grupo de ciclismo", "indicação do Carlos", "evento da Bayer em 2023"). NUNCA inclua nesse
+campo um hobby, interesse ou gosto pessoal da pessoa, mesmo que a mesma frase mencione os dois — isso é
+fields.hobbies (definido abaixo), campo separado. Exemplo: "conheci o Nahin pedalando, ele curte jogos tipo
+Legendários" → how_met: "Pedalando" (ou "Grupo de ciclismo"), hobbies: "Jogos tipo Legendários". Os dois
+campos NUNCA devem repetir a mesma palavra ou expressão.
+
 CAPTURA PASSIVA (hobbies e aniversário) — vale tanto pra register_contact quanto pra register_interaction.
 NUNCA pergunte ativamente por isso — só preencha fields.hobbies e/ou fields.birthday se o usuário JÁ
 mencionou espontaneamente algo do tipo (ex.: "ele pesca nos fins de semana", "gosta de corrida", "aniversário
-dele é dia 15/03", "faz aniversário mês que vem dia 4"). fields.hobbies é um texto curto livre. fields.birthday
-é "YYYY-MM-DD" — se o ano não for dado (o mais comum), use 1900 como ano-placeholder (ex.: "15/03" vira
-"1900-03-15"); nunca invente o ano. Se nada foi mencionado, deixe os dois de fora — não é obrigatório em
-nenhuma intenção.
+dele é dia 15/03", "faz aniversário mês que vem dia 4"). fields.hobbies é um texto curto livre descrevendo
+gosto/interesse pessoal — nunca a circunstância de como vocês se conheceram (isso é how_met, ver acima).
+fields.birthday é "YYYY-MM-DD" — se o ano não for dado (o mais comum), use 1900 como ano-placeholder (ex.:
+"15/03" vira "1900-03-15"); nunca invente o ano. Se nada foi mencionado, deixe os dois de fora — não é
+obrigatório em nenhuma intenção.
 
 BRIEFING — o usuário quer os DADOS objetivos que já estão cadastrados sobre alguém antes de falar com essa
 pessoa (empresa, cargo, categoria, como conheceu, última interação, próxima ação). É um pedido de "me
@@ -207,13 +216,21 @@ pra outra pessoa") — deixe null se a pergunta for genérica tipo "como devo ag
 Diferença prática entre os dois: "me prepara pra falar com o Caio" =
 briefing. "como devo agir com o Caio" / "como puxo a conversa" = contact_coaching.
 
-QUERY_LAST_INTERACTION — o usuário quer saber O CONTEÚDO/ASSUNTO de uma interação específica já registrada
-com um contato (o que foi conversado), não os dados cadastrais nem a data. Sinais: "qual foi o assunto da
-última interação", "sobre o que foi a última conversa com...", "o que eu falei com ele da última vez", "do
-que a gente tratou". Diferente de briefing, que só informa "há X dias" sem dizer do que se tratou — se o
-usuário está pedindo pra saber DO QUE se tratou, é query_last_interaction, mesmo que a frase mencione a
-palavra "interação" (o que normalmente confundiria com briefing). Preencha fields.contact_name (mesma regra
-do briefing).
+QUERY_LAST_INTERACTION — o usuário quer saber O CONTEÚDO/ASSUNTO da conversa MAIS RECENTE (singular) já
+registrada com um contato — não os dados cadastrais, não a data, e não a relação como um todo. Sinais:
+"qual foi o assunto da última interação", "sobre o que foi a última conversa com...", "o que eu falei com
+ele da última vez", "do que a gente tratou [na última vez]". O sinal chave é o pedido apontar pra UM
+momento específico (a última vez), não pro conjunto de toda a relação. Preencha fields.contact_name
+(mesma regra do briefing).
+
+RELATIONSHIP_HISTORY_SUMMARY — o usuário quer um RESUMO AGREGADO de TUDO (ou de boa parte) do que já
+aconteceu com um contato ao longo do tempo — a relação como um todo, não um momento específico. Sinais:
+"resumo de tudo que a gente já falou", "história das nossas conversas", "me atualiza sobre a relação com
+ele", "como está essa relação desde que a gente se conheceu", "resume o que já rolou com ela até hoje".
+A diferença pra query_last_interaction é escopo: se a pergunta aponta pra UMA conversa específica (a
+última), é query_last_interaction; se aponta pro HISTÓRICO INTEIRO ou usa palavras como "tudo", "toda a
+história", "desde o início", "até hoje" no sentido de somar o passado inteiro, é
+relationship_history_summary. Preencha fields.contact_name (mesma regra do briefing).
 
 QUERY_DATA_SIMPLE — o usuário pede um FATO OBJETIVO sobre os dados já cadastrados na rede dele: contagem,
 filtro ou lista, sem precisar de interpretação/opinião. Cobre qualquer campo cadastrado (categoria, empresa,
@@ -246,7 +263,7 @@ Retorne APENAS JSON, sem markdown, sem texto fora do JSON, em UM dos dois format
 
 FORMATO 1 — uma intenção só:
 {
-  "intent": "register_interaction" | "schedule_action" | "relationship_narrative" | "register_contact" | "briefing" | "contact_coaching" | "query_last_interaction" | "query_data_simple" | "query_data_analysis" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
+  "intent": "register_interaction" | "schedule_action" | "relationship_narrative" | "register_contact" | "briefing" | "contact_coaching" | "query_last_interaction" | "relationship_history_summary" | "query_data_simple" | "query_data_analysis" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
   "confidence": 0.0 a 1.0,
   "fields": {
     "contact_name": string ou null,
@@ -945,7 +962,7 @@ export async function executeIntent(intentData, { userIdProfile, contacts, numbe
 
   if (intentData.intent === 'briefing') {
     if (!isPro) {
-      await sendReply(number, `🔒 Briefing inteligente é um recurso PRO.\n\nNo PRO, antes de cada conversa você recebe o histórico completo, pontos de atenção e sugestão de próximo passo — não só os dados brutos.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      await sendReply(number, `🔒 Preparação de reunião com IA é um recurso PRO.\n\nNo PRO, antes de cada conversa você recebe uma leitura completa da relação — contexto, histórico e sugestão de abordagem — não só os dados brutos.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
       return;
     }
     const match = (contacts || []).find(c =>
@@ -955,7 +972,7 @@ export async function executeIntent(intentData, { userIdProfile, contacts, numbe
       await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
       return;
     }
-    const full = await sb(`contacts?id=eq.${match.id}&select=id,name,company,role,category,how_met,last_interaction_at,ideal_frequency_days,next_action,next_action_date`);
+    const full = await sb(`contacts?id=eq.${match.id}&select=id,name,company,role,category,how_met,hobbies,last_interaction_at,ideal_frequency_days,next_action,next_action_date`);
     const c = full?.[0];
     if (!c) { await sendReply(number, `Não encontrei os detalhes de "${match.name}".`); return; }
     const diasSemContato = c.last_interaction_at ? Math.floor((Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000) : null;
@@ -973,23 +990,69 @@ export async function executeIntent(intentData, { userIdProfile, contacts, numbe
     };
     const momentumLine = MOMENTUM_BRIEFING_LINES[momentum] || null;
 
-    const linhas = [
-      `📋 *Briefing — ${c.name}*`,
-      c.role || c.company ? `${[c.role, c.company].filter(Boolean).join(' na ')}` : null,
-      c.category ? `Categoria: ${c.category}` : null,
-      c.how_met ? `Como conheceu: ${c.how_met}` : null,
-      diasSemContato !== null ? `Última interação: há ${diasSemContato} dia(s)` : 'Última interação: nenhuma registrada ainda',
-      momentumLine,
-      c.next_action ? `Próxima ação: ${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'Sem próxima ação definida',
-    ].filter(Boolean);
-    await sendReply(number, linhas.join('\n'));
+    // Histórico real das últimas interações — sem isso a preparação de
+    // reunião vira ficha cadastral disfarçada, igual ao contact_coaching.
+    const recentInteractions = await sb(`interactions?contact_id=eq.${c.id}&order=created_at.desc&limit=5&select=type,description,sentiment,created_at`);
+    const historico = (recentInteractions || []).length
+      ? recentInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description || 'sem detalhes'}`).join('\n')
+      : 'Nenhuma interação registrada ainda.';
+
+    const briefingPrompt = `Você é o assessor pessoal de ${firstName || 'o usuário'}, ajudando ele a se
+preparar pra falar ou se reunir com um contato profissional da rede dele no agronegócio. Fale como um
+assessor experiente falaria com a pessoa que assessora — direto, natural, em português, sem listar campos
+de cadastro como se fosse uma ficha e sem usar marcadores ou títulos de seção.
+
+Dados do contato:
+- Nome: ${c.name}
+- Cargo/Empresa: ${[c.role, c.company].filter(Boolean).join(' na ') || 'não informado'}
+- Categoria da relação: ${c.category || 'não classificada'}
+- Como se conheceram: ${c.how_met || 'não informado'}
+- Hobbies/interesses pessoais conhecidos: ${c.hobbies || 'nenhum registrado'}
+- Última interação: ${diasSemContato !== null ? `há ${diasSemContato} dia(s)` : 'nenhuma registrada ainda'}
+${momentumLine ? `- Sinal de momentum: ${momentumLine}` : ''}
+- Próxima ação já planejada: ${c.next_action ? `${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'nenhuma'}
+
+Histórico das últimas interações registradas:
+${historico}
+
+Monte uma preparação de reunião curta (5 a 7 frases corridas, pode quebrar em 2 parágrafos, mas sem
+bullets nem rótulos de campo). Cubra de forma conectada: (1) quem é essa pessoa e o contexto da relação,
+puxando algo concreto do histórico quando houver; (2) onde a relação está agora, só se houver sinal de
+momentum que valha mencionar; (3) se houver próxima ação já combinada, lembre que ela precisa ser
+fechada nessa conversa. Se não houver histórico nenhum, diga isso com naturalidade e explique que a
+sugestão final vai ser sobre como abrir uma primeira conversa mais estruturada.
+
+Depois disso, feche SEMPRE com uma última frase separada, começando exatamente por "Minha sugestão:" — uma
+recomendação concreta e específica pra ESSA reunião (não um conselho genérico que serviria pra qualquer
+contato), amarrada a um fato real do histórico ou dos dados acima: o que levar, que pergunta fazer, ou que
+gancho puxar. Essa frase final é a parte mais importante da resposta — não pode faltar em nenhuma
+situação, mesmo sem histórico.
+
+Nunca invente fato que não esteja nos dados acima.`;
+
+    const resposta = await geminiText(briefingPrompt, 500);
+    if (resposta) {
+      await sendReply(number, `📋 *${c.name}*\n\n${resposta}`);
+    } else {
+      // Fallback estático — nunca deixa o usuário sem resposta se o Gemini falhar.
+      const linhas = [
+        `📋 *Briefing — ${c.name}*`,
+        c.role || c.company ? `${[c.role, c.company].filter(Boolean).join(' na ')}` : null,
+        c.category ? `Categoria: ${c.category}` : null,
+        c.how_met ? `Como conheceu: ${c.how_met}` : null,
+        diasSemContato !== null ? `Última interação: há ${diasSemContato} dia(s)` : 'Última interação: nenhuma registrada ainda',
+        momentumLine,
+        c.next_action ? `Próxima ação: ${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'Sem próxima ação definida',
+      ].filter(Boolean);
+      await sendReply(number, linhas.join('\n'));
+    }
     await setFocusContact(userIdProfile, match.id);
     return;
   }
 
   if (intentData.intent === 'query_last_interaction') {
     if (!isPro) {
-      await sendReply(number, `🔒 Histórico de interações é um recurso PRO.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      await sendReply(number, `🔒 Histórico de interações com leitura da IA é um recurso PRO.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
       return;
     }
     const match = (contacts || []).find(c =>
@@ -999,15 +1062,100 @@ export async function executeIntent(intentData, { userIdProfile, contacts, numbe
       await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
       return;
     }
-    const last = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.desc&limit=1&select=type,description,sentiment,created_at`);
-    const i = last?.[0];
-    if (!i) {
+    // Traz até 5 interações — cobre tanto "qual foi a última" quanto "faça
+    // um resumo"/"história das conversas", que caem na mesma intenção.
+    const recentInteractions = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.desc&limit=5&select=type,description,sentiment,created_at`);
+    if (!recentInteractions?.length) {
       await sendReply(number, `Ainda não tenho nenhuma interação registrada com *${match.name}*.`);
       await setFocusContact(userIdProfile, match.id);
       return;
     }
-    const diasAtras = Math.floor((Date.now() - new Date(i.created_at).getTime()) / 86400000);
-    await sendReply(number, `💬 *Última interação com ${match.name}* (há ${diasAtras} dia(s), ${i.type}):\n\n${i.description || 'Sem detalhes registrados.'}`);
+    const historico = recentInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description || 'sem detalhes'}`).join('\n');
+    const diasAtras = Math.floor((Date.now() - new Date(recentInteractions[0].created_at).getTime()) / 86400000);
+    const pergunta = intentData.note || text;
+
+    const historyPrompt = `Você é o assessor pessoal de ${firstName || 'o usuário'}, ajudando ele a lembrar
+do histórico de conversas com um contato profissional. Fale de forma natural, em português, como um
+assessor contando pra pessoa que assessora o que já aconteceu — nunca como uma lista de registros de
+sistema, sem bullets nem rótulos de campo.
+
+Pergunta de ${firstName || 'o usuário'}: "${pergunta}"
+
+Histórico registrado com ${match.name} (mais recente primeiro; a última interação foi há ${diasAtras}
+dia(s)):
+${historico}
+
+Responda de forma fluida (3 a 6 frases): comece pelo que foi tratado na conversa mais recente e conecte
+com o que veio antes quando ajudar a dar contexto de pra onde a relação está indo — conte como uma
+continuidade, não como itens separados. Se fizer sentido pela pergunta, feche com uma observação ou
+sugestão de próximo passo. Use só o que está no histórico acima — nunca invente detalhe que não esteja
+lá.`;
+
+    const resposta = await geminiText(historyPrompt, 450);
+    if (resposta) {
+      await sendReply(number, `💬 *${match.name}*\n\n${resposta}`);
+    } else {
+      // Fallback estático — nunca deixa o usuário sem resposta se o Gemini falhar.
+      const i = recentInteractions[0];
+      await sendReply(number, `💬 *Última interação com ${match.name}* (há ${diasAtras} dia(s), ${i.type}):\n\n${i.description || 'Sem detalhes registrados.'}`);
+    }
+    await setFocusContact(userIdProfile, match.id);
+    return;
+  }
+
+  if (intentData.intent === 'relationship_history_summary') {
+    if (!isPro) {
+      await sendReply(number, `🔒 Resumo completo da relação com IA é um recurso PRO.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
+      return;
+    }
+    const match = (contacts || []).find(c =>
+      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
+    );
+    if (!match) {
+      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
+      return;
+    }
+    const full = await sb(`contacts?id=eq.${match.id}&select=name,company,role,category,how_met,last_interaction_at`);
+    const c = full?.[0];
+    // Teto de 40 interações: cobre a esmagadora maioria das relações reais
+    // sem estourar o limite de tokens do prompt. Se um dia isso não for
+    // suficiente, o certo é resumir em blocos, não simplesmente subir o
+    // número — mas 40 já é mais histórico do que cabe numa memória humana
+    // de "resumo rápido" mesmo.
+    const allInteractions = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.asc&limit=40&select=type,description,sentiment,created_at`);
+    if (!allInteractions?.length) {
+      await sendReply(number, `Ainda não tenho nenhuma interação registrada com *${match.name}* pra te dar um resumo.`);
+      await setFocusContact(userIdProfile, match.id);
+      return;
+    }
+    const totalRegistrado = allInteractions.length;
+    const primeiraData = new Date(allInteractions[0].created_at).toLocaleDateString('pt-BR');
+    const historicoCompleto = allInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description || 'sem detalhes'}`).join('\n');
+
+    const summaryPrompt = `Você é o assessor pessoal de ${firstName || 'o usuário'}, ajudando ele a
+relembrar TODA a história de relação com um contato profissional no agronegócio — não só a conversa mais
+recente. Fale de forma natural, em português, como um assessor contando a trajetória da relação pra pessoa
+que assessora — nunca como uma lista de registros de sistema, sem bullets nem rótulos de campo.
+
+Dados do contato: ${match.name}${c?.role || c?.company ? `, ${[c?.role, c?.company].filter(Boolean).join(' na ')}` : ''}${c?.category ? ` (categoria: ${c.category})` : ''}.
+
+Histórico completo registrado, do mais antigo ao mais recente (${totalRegistrado} interação(ões) desde
+${primeiraData}):
+${historicoCompleto}
+
+Monte um resumo corrido (6 a 9 frases, pode ter 2 parágrafos) contando a trajetória: como a relação
+começou/evoluiu, quais foram os temas que mais se repetiram ou que tiveram mais peso, se o tom geral foi
+positivo ou teve altos e baixos, e onde a relação está agora. Feche com uma observação sobre pra onde essa
+relação parece estar indo ou uma sugestão de próximo passo, se fizer sentido. Use só o que está no
+histórico acima — nunca invente fato que não esteja lá.`;
+
+    const resposta = await geminiText(summaryPrompt, 600);
+    if (resposta) {
+      await sendReply(number, `📖 *${match.name}*\n\n${resposta}`);
+    } else {
+      // Fallback estático — nunca deixa o usuário sem resposta se o Gemini falhar.
+      await sendReply(number, `📖 *Histórico com ${match.name}* (${totalRegistrado} interação(ões) desde ${primeiraData}):\n\n${historicoCompleto}`);
+    }
     await setFocusContact(userIdProfile, match.id);
     return;
   }
