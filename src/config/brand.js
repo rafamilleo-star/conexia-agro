@@ -9,4 +9,7 @@ export const BRAND = {
   supportEmail: "iagrosolucoes@gmail.com",
   storagePrefix: "conexia",
   exportFileBase: "conexia",
+  legalName: "I.Agro Soluções",
+  legalCnpj: "68.193.589/0001-25",
+  legalAddress: "Rua Sinha Mossurunga, 353 — Centro — Piraí do Sul/PR — CEP 84240-000",
 };
