@@ -5081,7 +5081,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
                   <button onClick={() => setShowPrivacy(false)} style={{ background:"none", border:"none", color:C.txL, fontSize:20, cursor:"pointer", lineHeight:1 }}>×</button>
                 </div>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7 }}>
-                  <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligência relacional para profissionais do agronegócio.</p>
+                  <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligência relacional para profissionais do agronegócio, operada por {BRAND.legalName}, CNPJ {BRAND.legalCnpj}, com sede em {BRAND.legalAddress}.</p>
                   <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Coletamos nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
                   <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Os dados são utilizados exclusivamente para personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
                   <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>O tratamento é realizado com base no consentimento do titular (Art. 7º, I) e para execução do contrato de uso da plataforma (Art. 7º, V).</p>
@@ -5110,6 +5110,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
         </div>
         <button onClick={() => window.history.back()} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>← Voltar para a página inicial</button>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 8 }}>"Networking, além do cafezinho" · Rafael Milléo</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, opacity: 0.7, marginTop: 10, lineHeight: 1.5 }}>{BRAND.legalName} · CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}</p>
       </div>
     </div>
   );
