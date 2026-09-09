@@ -442,10 +442,10 @@ Sem texto extra. Seja específico e use os dados reais.`;
       {/* ── SEÇÃO: INSIGHTS ── */}
       {secao === 'insights' && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
             <div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt }}>Análise inteligente da sua rede</div>
-              {insRefresh && <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 2 }}>Atualizado às {insRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>}
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 19, fontWeight: 600, color: C.gold }}>Análise inteligente da sua rede</div>
+              {insRefresh && <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 3 }}>Atualizado às {insRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>}
             </div>
             <button onClick={generateInsights} disabled={insLoading}
               style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '7px 16px', fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: C.gold, cursor: insLoading ? 'default' : 'pointer', opacity: insLoading ? 0.6 : 1 }}>
@@ -475,17 +475,17 @@ Sem texto extra. Seja específico e use os dados reais.`;
           {insights && insights.map((ins, i) => {
             if (!isPro && i >= 1) return null; // Free vê só o primeiro insight — o resto fica atrás do bloqueio abaixo
             const uc = urgColor[ins.urgencia] || C.txL;
+            const urgLabel = { alta: 'Prioridade alta', media: 'Prioridade média', baixa: 'Prioridade baixa' }[ins.urgencia] || 'Prioridade';
             return (
-              <div key={i} style={{ background: `${uc}06`, border: `1px solid ${uc}20`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: 4, background: uc, flexShrink: 0 }} />
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, flex: 1 }}>{ins.titulo}</div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, color: uc, textTransform: 'uppercase', letterSpacing: '.08em', background: `${uc}15`, padding: '2px 7px', borderRadius: 4 }}>{ins.urgencia}</div>
+              <div key={i} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: '20px 22px', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                  <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: C.txt, lineHeight: 1.3, flex: 1 }}>{ins.titulo}</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: uc, background: `${uc}18`, padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>{urgLabel}</div>
                 </div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, marginBottom: 10 }}>{ins.observacao}</div>
-                <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '8px 12px' }}>
-                  <span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.gold, textTransform: 'uppercase', letterSpacing: '.06em' }}>→ Ação: </span>
-                  <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{ins.acao}</span>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.7, marginBottom: 14 }}>{ins.observacao}</div>
+                <div style={{ borderLeft: `2px solid ${C.gold}`, paddingLeft: 14 }}>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Ação</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txt, lineHeight: 1.7 }}>{ins.acao}</div>
                 </div>
               </div>
             );
