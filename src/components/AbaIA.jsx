@@ -4,6 +4,20 @@ import { BRAND } from "../config/brand";
 import { buildContextCard } from "../../shared/contextCard.js";
 import { supabase } from "../utils/supabase";
 
+// Rede de segurança: mesmo com a proibição no prompt, o Gemini às vezes
+// deixa escapar um score bruto ("(80)", "60%"). Isso remove esses padrões
+// antes do texto chegar à tela, sem tocar em fatos objetivos como "22 dias"
+// ou "4 contatos", que não seguem esse formato.
+function sanitizeInsightText(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    .replace(/\s*\(\d{1,3}\)/g, '')            // remove "(80)", "(60)" etc — score isolado entre parênteses
+    .replace(/\b\d{1,3}\s?%/g, '')              // remove "80%", "60 %" etc
+    .replace(/\s{2,}/g, ' ')                    // colapsa espaços duplos deixados pela remoção
+    .replace(/\s+([,.;:])/g, '$1')              // corrige espaço solto antes de pontuação
+    .trim();
+}
+
 export function AbaIA({ userId, contacts, interactions, assessment, profile, pf, isPro, openAccessKey }) {
   const [secao, setSecao] = useState("insights");
   const [selContact, setSelContact] = useState(null);
@@ -151,7 +165,7 @@ export function AbaIA({ userId, contacts, interactions, assessment, profile, pf,
       };
       const prompt = `Você é um coach de inteligência relacional. Analise os dados reais desta rede e gere EXATAMENTE 3 insights poderosos e acionáveis.
 
-DADOS DA REDE:
+DADOS DA REDE (uso interno seu, para raciocinar — os números abaixo NÃO podem aparecer no texto final):
 ${JSON.stringify(ctx, null, 2)}
 
 REGRAS OBRIGATÓRIAS:
@@ -162,6 +176,15 @@ REGRAS OBRIGATÓRIAS:
 - PROIBIDO ser genérico — seja específico e cirúrgico
 - Cada campo de texto ("observacao", "acao") no máximo 2 frases curtas — direto ao ponto, sem listar vários nomes na mesma observação
 - Urgência: "alta" = precisa agir hoje/essa semana, "media" = essa quinzena, "baixa" = esse mês
+
+PROIBIDO NOS CAMPOS "observacao" E "acao":
+- Nenhum score, nota ou porcentagem de competência (nunca escreva "(80)", "80%", "score de 60", "nota 90" ou qualquer número de 0 a 100 associado a uma competência do assessment)
+- Traduza esses números em linguagem categórica e comparativa: "sua reciprocidade ativa é hoje a mais frágil das suas competências", "sua confiança autêntica é um dos seus pontos mais fortes", nunca o valor bruto
+- Escreva como prosa natural e humana, nunca como enumeração de métricas seguida de uma conclusão colada
+
+PERMITIDO E ESPERADO NOS CAMPOS "observacao" E "acao":
+- Fatos objetivos e verificáveis continuam podendo aparecer como número: dias sem contato, quantidade de interações, quantidade de contatos afetados (ex: "há 22 dias sem contato", "quatro contatos de alto potencial")
+- Rótulos categóricos do sistema (ex: "dormindo", "atrasado") continuam permitidos
 
 Responda APENAS com JSON válido:
 {"insights":[{"titulo":"string","observacao":"string","acao":"string","urgencia":"alta|media|baixa"}]}
@@ -193,9 +216,14 @@ Sem texto extra.`;
         return;
       }
       if (parsed.insights?.length) {
-        setInsights(parsed.insights);
+        const insightsLimpos = parsed.insights.map(ins => ({
+          ...ins,
+          observacao: sanitizeInsightText(ins.observacao),
+          acao: sanitizeInsightText(ins.acao),
+        }));
+        setInsights(insightsLimpos);
         setInsRefresh(new Date());
-        localStorage.setItem(cacheKey, JSON.stringify({ data: parsed.insights, ts: Date.now() }));
+        localStorage.setItem(cacheKey, JSON.stringify({ data: insightsLimpos, ts: Date.now() }));
       } else {
         setInsErr(`A IA respondeu, mas sem insights no formato esperado. Resposta bruta (${text.length} chars): "${text.slice(0, 200) || '(vazio)'}"`);
       }
