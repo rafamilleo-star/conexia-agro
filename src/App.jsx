@@ -4889,26 +4889,95 @@ function SplashScreen({ onDone }) {
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
 /* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
-function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
+/* Converte 6 valores (0–100) em pontos de polígono SVG, eixo a eixo,
+   começando no topo e girando em sentido horário — mesma orientação usada
+   no radar do resultado do assessment, pra manter familiaridade visual. */
+function radarPoints(values, cx = 150, cy = 150, maxR = 110) {
+  return values.map((v, i) => {
+    const angle = (Math.PI * 2 * i) / values.length - Math.PI / 2;
+    const r = (Math.max(0, Math.min(100, v)) / 100) * maxR;
+    return `${(cx + r * Math.cos(angle)).toFixed(1)},${(cy + r * Math.sin(angle)).toFixed(1)}`;
+  }).join(" ");
+}
+function radarAxisPoint(cx, cy, maxR, i, total, fraction = 1) {
+  const angle = (Math.PI * 2 * i) / total - Math.PI / 2;
+  return [cx + maxR * fraction * Math.cos(angle), cy + maxR * fraction * Math.sin(angle)];
+}
+
+/* Radar hero: desenha o hexágono das 6 dimensões com a média real das redes
+   já mapeadas na base (fetchada uma vez, com fallback silencioso se falhar —
+   a landing não pode quebrar por causa de uma query estatística). */
+function HeroRadar({ values }) {
+  const cx = 150, cy = 150, maxR = 110;
+  const rings = [0.25, 0.5, 0.75, 1];
   return (
-    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", padding:"24px 20px 40px" }}>
+    <svg viewBox="0 0 300 300" width="100%" style={{ maxWidth: 280, display: "block", margin: "0 auto" }}>
+      {rings.map(f => (
+        <polygon key={f}
+          points={DIMS.map((_, i) => radarAxisPoint(cx, cy, maxR, i, DIMS.length, f).join(",")).join(" ")}
+          fill="none" stroke={C.brd} strokeWidth={1} />
+      ))}
+      {DIMS.map((d, i) => {
+        const [x, y] = radarAxisPoint(cx, cy, maxR, i, DIMS.length, 1);
+        return <line key={d.key} x1={cx} y1={cy} x2={x} y2={y} stroke={C.brd} strokeWidth={1} />;
+      })}
+      <polygon points={radarPoints(values, cx, cy, maxR)}
+        fill={`${C.gold}22`} stroke={C.gold} strokeWidth={2}
+        style={{ transformOrigin: "150px 150px", animation: "radarDrawIn 1.1s cubic-bezier(0.16,1,0.3,1) both" }} />
+      {DIMS.map((d, i) => {
+        const v = values[i];
+        const [x, y] = radarAxisPoint(cx, cy, maxR, i, DIMS.length, (v / 100));
+        return <circle key={d.key} cx={x} cy={y} r={3.5} fill={C.gold} />;
+      })}
+      {DIMS.map((d, i) => {
+        const [x, y] = radarAxisPoint(cx, cy, maxR, i, DIMS.length, 1.24);
+        return (
+          <text key={d.key} x={x} y={y} fill={C.txL} fontSize={10} fontFamily="DM Sans"
+            textAnchor="middle" dominantBaseline="middle">{d.short}</text>
+        );
+      })}
+    </svg>
+  );
+}
+
+// Média real das 6 dimensões nas redes já mapeadas na base (42 diagnósticos
+// completos, contas de teste/admin excluídas) — checado manualmente via
+// Supabase em 10/09/2026. Estático de propósito: RLS de `profiles` só libera
+// leitura da própria linha, então uma consulta anônima aqui nunca retornaria
+// nada mesmo — atualizar este número à mão quando fizer sentido revisitar.
+const REDES_MAPEADAS_STATS = {
+  count: 42,
+  values: [73.1, 62.5, 60.4, 61.3, 74.8, 82.6], // na mesma ordem de DIMS
+};
+
+function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
+  const [openProfile, setOpenProfile] = useState(null);
+
+  const radarValues = REDES_MAPEADAS_STATS.values;
+  const redesCount = REDES_MAPEADAS_STATS.count;
+  const dimsRanked = DIMS.map((d, i) => ({ ...d, val: radarValues[i] })).sort((a, b) => b.val - a.val);
+  const strongest = dimsRanked[0];
+  const weakest = dimsRanked[dimsRanked.length - 1];
+
+  return (
+    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", padding:"24px 20px 40px", overflowX:"hidden" }}>
 
       {/* ═══ HERO ═══ */}
       <div style={{ minHeight:"calc(100vh - 64px)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", width:"100%" }}>
-        <div style={{ textAlign:"center", marginBottom:40 }}>
-          <ConexiaLogo height={72} style={{ margin: "0 auto 12px", display: "block" }} />
-          <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>{BRAND.platformTag}</div>
+        <div style={{ textAlign:"center", marginBottom:8 }}>
+          <ConexiaLogo height={64} style={{ margin: "0 auto 10px", display: "block" }} />
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>{BRAND.platformTag}</div>
         </div>
 
-        <div style={{ maxWidth:480, textAlign:"center", marginBottom:40 }}>
-          <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 16px" }}>
-            Rede que funciona.
+        <HeroRadar values={radarValues} />
+
+        <div style={{ maxWidth:460, textAlign:"center", margin:"8px 0 32px" }}>
+          <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 14px" }}>
+            Sua rede não é uma lista de contatos. É um mapa — e o seu ainda não foi desenhado.
           </h1>
-          <div style={{ background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"14px 20px", marginBottom:16 }}>
-            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color:C.gold, lineHeight:1.4, margin:0 }}>
-              "Para ser intencional precisa ser estratégico."
-            </p>
-          </div>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:17, fontStyle:"italic", color:C.gold, lineHeight:1.4, margin:0 }}>
+            "Para ser intencional precisa ser estratégico."
+          </p>
         </div>
 
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, opacity:0.6 }}>
@@ -4918,7 +4987,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </div>
 
       {/* ═══ O QUE É ═══ */}
-      <div style={{ maxWidth:520, textAlign:"center", margin:"56px 0" }}>
+      <div style={{ maxWidth:520, textAlign:"center", margin:"64px 0" }}>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.3, margin:"0 0 18px" }}>
           Networking não é o que você faz. É quem você se tornou.
         </h2>
@@ -4926,26 +4995,50 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           A maioria das pessoas não falha em relacionamentos profissionais por falta de esforço — falha por falta de clareza. Manda mensagem sem saber pra quem, lembra tarde demais de quem importava, confunde presença em evento com presença real.
         </p>
         <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, margin:0 }}>
-          O CONÉXIA existe pra trocar isso por método: um diagnóstico que mostra exatamente onde sua rede é forte, onde ela racha, e o que fazer amanhã de manhã — não um conceito abstrato de "networking", uma rede que você pode olhar e entender.
+          O CONÉXIA existe pra trocar isso por método: um diagnóstico que mostra exatamente onde sua rede é forte, onde ela racha, e o que fazer amanhã de manhã.
+        </p>
+      </div>
+
+      {/* ═══ PROVA REAL (dados agregados, não depoimento) ═══ */}
+      <div style={{ maxWidth:520, width:"100%", margin:"0 0 64px", background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:"28px 24px" }}>
+        <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".05em", textAlign:"center", marginBottom:6 }}>
+          O QUE {redesCount} REDES JÁ MAPEADAS MOSTRAM
+        </div>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:21, fontWeight:700, color:C.txt, textAlign:"center", lineHeight:1.4, margin:"0 0 18px" }}>
+          Em média, as pessoas confiam mais nelas mesmas do que aparecem.
+        </h3>
+        <div style={{ display:"flex", justifyContent:"space-between", gap:16, marginBottom:8 }}>
+          <div style={{ flex:1, textAlign:"center" }}>
+            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, color:C.gold }}>{strongest.val}</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginTop:2 }}>{strongest.label} — a mais forte</div>
+          </div>
+          <div style={{ width:1, background:C.brd }} />
+          <div style={{ flex:1, textAlign:"center" }}>
+            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, color:C.txM }}>{weakest.val}</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginTop:2 }}>{weakest.label} — a mais frágil</div>
+          </div>
+        </div>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", margin:0 }}>
+          É o padrão do "Técnico Invisível": competência real, visibilidade baixa. O diagnóstico mostra onde a sua rede está nesse mapa.
         </p>
       </div>
 
       {/* ═══ COMO FUNCIONA ═══ */}
-      <div style={{ maxWidth:560, width:"100%", margin:"0 0 56px" }}>
-        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 28px" }}>
+      <div style={{ maxWidth:560, width:"100%", margin:"0 0 64px" }}>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 32px" }}>
           Como funciona
         </h3>
-        <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
           {[
             { n:"1", t:"Diagnóstico gratuito", d:"18 perguntas cobrindo as 6 dimensões que sustentam uma rede relacional saudável — leva menos de 10 minutos." },
             { n:"2", t:"Seu perfil relacional", d:"Entre 8 perfis mapeados, descubra qual descreve como você constrói e mantém relações hoje — com forças, riscos e ações concretas." },
             { n:"3", t:"Sua rede, de verdade", d:"Cadastre suas conexões e veja o mapa da sua rede (a Teia), priorizado por quem precisa de atenção agora — com assistente de WhatsApp pra não deixar ninguém esfriar." },
-          ].map(s => (
-            <div key={s.n} style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
-              <div style={{ flexShrink:0, width:36, height:36, borderRadius:"50%", background:`${C.gold}14`, border:`1px solid ${C.gL}`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:16, fontWeight:700, color:C.gold }}>
+          ].map((s, idx) => (
+            <div key={s.n} style={{ display:"flex", gap:18, alignItems:"flex-start", padding:"16px 0", borderTop: idx > 0 ? `1px solid ${C.brd}` : "none" }}>
+              <div style={{ flexShrink:0, width:34, fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.gL, lineHeight:1 }}>
                 {s.n}
               </div>
-              <div>
+              <div style={{ paddingTop:4 }}>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:C.txt, marginBottom:4 }}>{s.t}</div>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:13.5, color:C.txM, lineHeight:1.6 }}>{s.d}</div>
               </div>
@@ -4955,17 +5048,17 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </div>
 
       {/* ═══ 6 DIMENSÕES ═══ */}
-      <div style={{ maxWidth:560, width:"100%", margin:"0 0 56px" }}>
+      <div style={{ maxWidth:560, width:"100%", margin:"0 0 64px" }}>
         <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 8px" }}>
           As 6 dimensões que medimos
         </h3>
         <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 24px" }}>
           Nenhuma rede é forte ou fraca de um jeito só — o diagnóstico separa isso.
         </p>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, background:C.brd, borderRadius:10, overflow:"hidden" }}>
           {DIMS.map(d => (
-            <div key={d.key} style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:10, padding:14 }}>
-              <div style={{ fontSize:18, color:d.color, marginBottom:6 }}>{d.icon}</div>
+            <div key={d.key} style={{ background:C.card, padding:16, borderTop:`2px solid ${d.color}` }}>
+              <div style={{ fontSize:20, color:d.color, marginBottom:6 }}>{d.icon}</div>
               <div style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.txt, marginBottom:3 }}>{d.label}</div>
               <div style={{ fontFamily:"'DM Sans'", fontSize:11.5, color:C.txL, lineHeight:1.5 }}>{d.desc}</div>
             </div>
@@ -4973,22 +5066,36 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       </div>
 
-      {/* ═══ 8 PERFIS ═══ */}
-      <div style={{ maxWidth:560, width:"100%", margin:"0 0 56px" }}>
+      {/* ═══ 8 PERFIS (interativo) ═══ */}
+      <div style={{ maxWidth:560, width:"100%", margin:"0 0 64px" }}>
         <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 8px" }}>
           Qual é o seu perfil relacional?
         </h3>
         <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 24px" }}>
-          8 perfis mapeados a partir de como cada dimensão se combina na sua forma de se relacionar.
+          Toque em cada um pra ver o que ele revela.
         </p>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-          {Object.values(PROFILES).map(p => (
-            <div key={p.name} style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:10, padding:"12px 14px" }}>
-              <div style={{ fontSize:20, marginBottom:4 }}>{p.emoji}</div>
-              <div style={{ fontFamily:"'DM Sans'", fontSize:12.5, fontWeight:700, color:C.txt, marginBottom:2 }}>{p.name}</div>
-              <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:12.5, fontStyle:"italic", color:C.gold, lineHeight:1.4 }}>{p.tagline}</div>
-            </div>
-          ))}
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {Object.entries(PROFILES).map(([key, p]) => {
+            const isOpen = openProfile === key;
+            return (
+              <div key={key} onClick={() => setOpenProfile(isOpen ? null : key)}
+                style={{ background:C.card, border:`1px solid ${isOpen ? C.gL : C.brd}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:`border-color ${MOTION.fast}` }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ fontSize:20 }}>{p.emoji}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.txt }}>{p.name}</div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:12.5, fontStyle:"italic", color:C.gold }}>{p.tagline}</div>
+                  </div>
+                  <div style={{ fontSize:12, color:C.txL, transform: isOpen ? "rotate(180deg)" : "none", transition:`transform ${MOTION.fast}` }}>▾</div>
+                </div>
+                {isOpen && (
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txM, lineHeight:1.6, marginTop:10, paddingTop:10, borderTop:`1px solid ${C.brd}` }}>
+                    {p.desc}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
