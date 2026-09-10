@@ -30,6 +30,13 @@
         50% { transform: translateY(6px); opacity: 1; }
       }
 
+      /* Desenho do radar hero na landing pública — um único momento
+         orquestrado na carga da página, não um efeito repetido por scroll. */
+      @keyframes radarDrawIn {
+        from { transform: scale(0.6); opacity: 0; }
+        to   { transform: scale(1); opacity: 1; }
+      }
+
       /* Respeita quem tem "reduzir movimento" ligado no sistema — inclusive
          para as animações adicionadas nesta rodada (toast, skeleton, etc). */
       @media (prefers-reduced-motion: reduce) {
