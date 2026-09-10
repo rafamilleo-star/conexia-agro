@@ -4891,26 +4891,108 @@ function SplashScreen({ onDone }) {
 /* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
 function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
   return (
-    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
-      {/* Logo */}
-      <div style={{ textAlign:"center", marginBottom:40 }}>
-        <ConexiaLogo height={72} style={{ margin: "0 auto 12px", display: "block" }} />
-        <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>{BRAND.platformTag}</div>
-      </div>
+    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", padding:"24px 20px 40px" }}>
 
-      {/* Headline */}
-      <div style={{ maxWidth:480, textAlign:"center", marginBottom:40 }}>
-        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 16px" }}>
-          Rede que funciona.
-        </h1>
-        <div style={{ background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"14px 20px", marginBottom:16 }}>
-          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color:C.gold, lineHeight:1.4, margin:0 }}>
-            "Para ser intencional precisa ser estratégico."
-          </p>
+      {/* ═══ HERO ═══ */}
+      <div style={{ minHeight:"calc(100vh - 64px)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", width:"100%" }}>
+        <div style={{ textAlign:"center", marginBottom:40 }}>
+          <ConexiaLogo height={72} style={{ margin: "0 auto 12px", display: "block" }} />
+          <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>{BRAND.platformTag}</div>
+        </div>
+
+        <div style={{ maxWidth:480, textAlign:"center", marginBottom:40 }}>
+          <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 16px" }}>
+            Rede que funciona.
+          </h1>
+          <div style={{ background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"14px 20px", marginBottom:16 }}>
+            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color:C.gold, lineHeight:1.4, margin:0 }}>
+              "Para ser intencional precisa ser estratégico."
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, opacity:0.6 }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".05em" }}>Conheça o CONÉXIA</div>
+          <div style={{ fontSize:18, color:C.gold, animation:"bounce 1.8s infinite" }}>↓</div>
         </div>
       </div>
 
-      {/* CTAs */}
+      {/* ═══ O QUE É ═══ */}
+      <div style={{ maxWidth:520, textAlign:"center", margin:"56px 0" }}>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.3, margin:"0 0 18px" }}>
+          Networking não é o que você faz. É quem você se tornou.
+        </h2>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, margin:"0 0 14px" }}>
+          A maioria das pessoas não falha em relacionamentos profissionais por falta de esforço — falha por falta de clareza. Manda mensagem sem saber pra quem, lembra tarde demais de quem importava, confunde presença em evento com presença real.
+        </p>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, margin:0 }}>
+          O CONÉXIA existe pra trocar isso por método: um diagnóstico que mostra exatamente onde sua rede é forte, onde ela racha, e o que fazer amanhã de manhã — não um conceito abstrato de "networking", uma rede que você pode olhar e entender.
+        </p>
+      </div>
+
+      {/* ═══ COMO FUNCIONA ═══ */}
+      <div style={{ maxWidth:560, width:"100%", margin:"0 0 56px" }}>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 28px" }}>
+          Como funciona
+        </h3>
+        <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+          {[
+            { n:"1", t:"Diagnóstico gratuito", d:"18 perguntas cobrindo as 6 dimensões que sustentam uma rede relacional saudável — leva menos de 10 minutos." },
+            { n:"2", t:"Seu perfil relacional", d:"Entre 8 perfis mapeados, descubra qual descreve como você constrói e mantém relações hoje — com forças, riscos e ações concretas." },
+            { n:"3", t:"Sua rede, de verdade", d:"Cadastre suas conexões e veja o mapa da sua rede (a Teia), priorizado por quem precisa de atenção agora — com assistente de WhatsApp pra não deixar ninguém esfriar." },
+          ].map(s => (
+            <div key={s.n} style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
+              <div style={{ flexShrink:0, width:36, height:36, borderRadius:"50%", background:`${C.gold}14`, border:`1px solid ${C.gL}`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:16, fontWeight:700, color:C.gold }}>
+                {s.n}
+              </div>
+              <div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:C.txt, marginBottom:4 }}>{s.t}</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:13.5, color:C.txM, lineHeight:1.6 }}>{s.d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ 6 DIMENSÕES ═══ */}
+      <div style={{ maxWidth:560, width:"100%", margin:"0 0 56px" }}>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 8px" }}>
+          As 6 dimensões que medimos
+        </h3>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 24px" }}>
+          Nenhuma rede é forte ou fraca de um jeito só — o diagnóstico separa isso.
+        </p>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          {DIMS.map(d => (
+            <div key={d.key} style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:10, padding:14 }}>
+              <div style={{ fontSize:18, color:d.color, marginBottom:6 }}>{d.icon}</div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.txt, marginBottom:3 }}>{d.label}</div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:11.5, color:C.txL, lineHeight:1.5 }}>{d.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ 8 PERFIS ═══ */}
+      <div style={{ maxWidth:560, width:"100%", margin:"0 0 56px" }}>
+        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 8px" }}>
+          Qual é o seu perfil relacional?
+        </h3>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 24px" }}>
+          8 perfis mapeados a partir de como cada dimensão se combina na sua forma de se relacionar.
+        </p>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {Object.values(PROFILES).map(p => (
+            <div key={p.name} style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ fontSize:20, marginBottom:4 }}>{p.emoji}</div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:12.5, fontWeight:700, color:C.txt, marginBottom:2 }}>{p.name}</div>
+              <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:12.5, fontStyle:"italic", color:C.gold, lineHeight:1.4 }}>{p.tagline}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ CTA FINAL ═══ */}
       <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:360 }}>
         <button onClick={onSignup}
           style={{ background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:12, padding:"16px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:C.bg, cursor:"pointer", width:"100%" }}>
@@ -4921,8 +5003,6 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           Já tenho conta — Entrar
         </button>
       </div>
-
-
 
       {urlKey && (
         <div style={{ marginTop:20, background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 20px", textAlign:"center" }}>
