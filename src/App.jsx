@@ -4933,6 +4933,9 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       <div style={{ marginTop:20, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
         Criado por Rafael Milléo
       </div>
+      <div style={{ marginTop:12, fontFamily:"'DM Sans'", fontSize:10, color:C.txL, opacity:0.7, textAlign:"center", lineHeight:1.5 }}>
+        {BRAND.legalName} · CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}
+      </div>
     </div>
   );
 }
