@@ -4889,6 +4889,58 @@ function SplashScreen({ onDone }) {
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
 /* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
+/* ─── Ilustração original: rede/constelação de nós, com um gerador
+   pseudo-aleatório determinístico (mesma seed = mesmo desenho sempre,
+   sem depender de imagem externa, sem custo de carregamento). ─── */
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function buildConstellation(seed = 7, n = 26) {
+  const rnd = mulberry32(seed);
+  const nodes = Array.from({ length: n }, (_, i) => ({
+    id: i,
+    x: 4 + rnd() * 92,
+    y: 4 + rnd() * 172,
+    r: 0.5 + rnd() * 0.9,
+    hub: rnd() > 0.85,
+  }));
+  const edges = [];
+  nodes.forEach((a, i) => {
+    const dists = nodes
+      .map((b, j) => ({ j, d: i === j ? Infinity : (a.x - b.x) ** 2 + (a.y - b.y) ** 2 }))
+      .sort((p, q) => p.d - q.d)
+      .slice(0, a.hub ? 3 : 1);
+    dists.forEach(({ j }) => {
+      const key = [i, j].sort().join("-");
+      if (!edges.find(e => e.key === key)) edges.push({ key, a: i, b: j });
+    });
+  });
+  return { nodes, edges };
+}
+function ConstellationArt({ seed = 7, n = 34 }) {
+  const { nodes, edges } = useMemo(() => buildConstellation(seed, n), [seed, n]);
+  return (
+    <svg viewBox="0 0 100 180" preserveAspectRatio="xMidYMid slice" style={{ width: "100%", height: "100%", display: "block" }}>
+      {edges.map(e => {
+        const a = nodes[e.a], b = nodes[e.b];
+        const lit = a.hub || b.hub;
+        return <line key={e.key} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+          stroke={lit ? C.gold : C.brd} strokeWidth={lit ? 0.12 : 0.08} opacity={lit ? 0.4 : 0.3} />;
+      })}
+      {nodes.map(node => (
+        <circle key={node.id} cx={node.x} cy={node.y} r={node.hub ? node.r * 1.6 : node.r}
+          fill={node.hub ? C.gold : C.txL} opacity={node.hub ? 0.85 : 0.35}
+          style={node.hub ? { animation: `nodePulse ${3 + (node.id % 4)}s ease-in-out ${node.id * 0.2}s infinite` } : undefined} />
+      ))}
+    </svg>
+  );
+}
+
 /* Converte 6 valores (0–100) em pontos de polígono SVG, eixo a eixo,
    começando no topo e girando em sentido horário — mesma orientação usada
    no radar do resultado do assessment, pra manter familiaridade visual. */
@@ -4903,15 +4955,11 @@ function radarAxisPoint(cx, cy, maxR, i, total, fraction = 1) {
   const angle = (Math.PI * 2 * i) / total - Math.PI / 2;
   return [cx + maxR * fraction * Math.cos(angle), cy + maxR * fraction * Math.sin(angle)];
 }
-
-/* Radar hero: desenha o hexágono das 6 dimensões com a média real das redes
-   já mapeadas na base (fetchada uma vez, com fallback silencioso se falhar —
-   a landing não pode quebrar por causa de uma query estatística). */
-function HeroRadar({ values }) {
+function HeroRadar({ values, size = 280 }) {
   const cx = 150, cy = 150, maxR = 110;
   const rings = [0.25, 0.5, 0.75, 1];
   return (
-    <svg viewBox="0 0 300 300" width="100%" style={{ maxWidth: 280, display: "block", margin: "0 auto" }}>
+    <svg viewBox="0 0 300 300" width="100%" style={{ maxWidth: size, display: "block", margin: "0 auto" }}>
       {rings.map(f => (
         <polygon key={f}
           points={DIMS.map((_, i) => radarAxisPoint(cx, cy, maxR, i, DIMS.length, f).join(",")).join(" ")}
@@ -4940,156 +4988,204 @@ function HeroRadar({ values }) {
   );
 }
 
-// Média real das 6 dimensões nas redes já mapeadas na base (42 diagnósticos
-// completos, contas de teste/admin excluídas) — checado manualmente via
-// Supabase em 10/09/2026. Estático de propósito: RLS de `profiles` só libera
-// leitura da própria linha, então uma consulta anônima aqui nunca retornaria
-// nada mesmo — atualizar este número à mão quando fizer sentido revisitar.
-const REDES_MAPEADAS_STATS = {
-  count: 42,
-  values: [73.1, 62.5, 60.4, 61.3, 74.8, 82.6], // na mesma ordem de DIMS
-};
+/* Ícones das 6 dimensões dispostos em roda, ecoando o radar — peça visual
+   pura; a leitura (label + descrição) vem na lista logo abaixo. */
+function DimensionWheel({ size = 260 }) {
+  const cx = 130, cy = 130, r = 96;
+  return (
+    <svg viewBox="0 0 260 260" style={{ width: "100%", maxWidth: size, display: "block", margin: "0 auto" }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.brd} strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={2} fill={C.brd} />
+      {DIMS.map((d, i) => {
+        const [x, y] = radarAxisPoint(cx, cy, r, i, DIMS.length, 1);
+        return (
+          <g key={d.key}>
+            <line x1={cx} y1={cy} x2={x} y2={y} stroke={C.brd} strokeWidth={1} />
+            <circle cx={x} cy={y} r={19} fill={C.card} stroke={d.color} strokeWidth={1.5} />
+            <text x={x} y={y + 6} textAnchor="middle" fontSize={16}>{d.icon}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* Revela um "momento" (seção de tela cheia) suavemente quando entra na
+   viewport — um único disparo por seção, não animação repetida por scroll.
+   Respeita "reduzir movimento" via a regra global já existente no index.html. */
+function useReveal() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); io.disconnect(); }
+    }, { threshold: 0.25 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return [ref, visible];
+}
+function Moment({ children, minH = true, style = {} }) {
+  const [ref, visible] = useReveal();
+  return (
+    <div ref={ref} style={{
+      minHeight: minH ? "100vh" : undefined,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      width: "100%", padding: "60px 0",
+      opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)",
+      transition: `opacity ${MOTION.slow}, transform ${MOTION.slow}`,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// Média real das 6 dimensões nas redes já mapeadas na base — checado
+// manualmente via Supabase em 10/09/2026 (RLS de `profiles` bloqueia leitura
+// anônima, então isto não é uma consulta ao vivo — atualizar à mão quando
+// fizer sentido revisitar). Só os agregados aparecem na página; a contagem
+// de amostra não é exposta publicamente por escolha do fundador.
+const REDE_STATS_VALUES = [73.1, 62.5, 60.4, 61.3, 74.8, 82.6]; // mesma ordem de DIMS
 
 function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
   const [openProfile, setOpenProfile] = useState(null);
-
-  const radarValues = REDES_MAPEADAS_STATS.values;
-  const redesCount = REDES_MAPEADAS_STATS.count;
+  const radarValues = REDE_STATS_VALUES;
   const dimsRanked = DIMS.map((d, i) => ({ ...d, val: radarValues[i] })).sort((a, b) => b.val - a.val);
   const strongest = dimsRanked[0];
   const weakest = dimsRanked[dimsRanked.length - 1];
 
   return (
-    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", padding:"24px 20px 40px", overflowX:"hidden" }}>
+    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", overflowX:"hidden" }}>
 
-      {/* ═══ HERO ═══ */}
-      <div style={{ minHeight:"calc(100vh - 64px)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", width:"100%" }}>
-        <div style={{ textAlign:"center", marginBottom:8 }}>
-          <ConexiaLogo height={64} style={{ margin: "0 auto 10px", display: "block" }} />
-          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", textTransform:"uppercase" }}>{BRAND.platformTag}</div>
+      {/* ═══ 1. HERO — ilustração + assinatura ═══ */}
+      <div style={{ minHeight:"100vh", width:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative", padding:"24px 20px" }}>
+        <div style={{ position:"absolute", inset:0 }}>
+          <ConstellationArt seed={7} n={34} />
         </div>
+        <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse 260px 220px at 50% 50%, ${C.bg}, transparent)` }} />
+        <div style={{ position:"relative", zIndex:1, textAlign:"center" }}>
+          <ConexiaLogo height={56} style={{ margin: "0 auto 10px", display: "block" }} />
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".1em", textTransform:"uppercase", marginBottom:60 }}>{BRAND.platformTag}</div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10, opacity:0.7 }}>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".05em" }}>Role pra conhecer</div>
+            <div style={{ fontSize:18, color:C.gold, animation:"bounce 1.8s infinite" }}>↓</div>
+          </div>
+        </div>
+      </div>
 
-        <HeroRadar values={radarValues} />
+      {/* ═══ 2. AFIRMAÇÃO CENTRAL ═══ */}
+      <Moment>
+        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.txt, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"0 20px" }}>
+          Sua rede não é uma lista de contatos.
+        </h1>
+        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.gold, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"6px 20px 0" }}>
+          É um mapa.
+        </h1>
+      </Moment>
 
-        <div style={{ maxWidth:460, textAlign:"center", margin:"8px 0 32px" }}>
-          <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, color:C.txt, lineHeight:1.2, margin:"0 0 14px" }}>
-            Sua rede não é uma lista de contatos. É um mapa — e o seu ainda não foi desenhado.
-          </h1>
-          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:17, fontStyle:"italic", color:C.gold, lineHeight:1.4, margin:0 }}>
-            "Para ser intencional precisa ser estratégico."
+      {/* ═══ 3. O PROBLEMA ═══ */}
+      <Moment>
+        <div style={{ maxWidth:400, textAlign:"center", padding:"0 24px" }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:18 }}>O QUE NORMALMENTE ACONTECE</div>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
+            Você não falha em relacionamentos profissionais por falta de esforço. Falha por falta de clareza.
           </p>
         </div>
+      </Moment>
 
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, opacity:0.6 }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".05em" }}>Conheça o CONÉXIA</div>
-          <div style={{ fontSize:18, color:C.gold, animation:"bounce 1.8s infinite" }}>↓</div>
+      <Moment>
+        <div style={{ maxWidth:400, textAlign:"center", padding:"0 24px" }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.gold, letterSpacing:".08em", marginBottom:18 }}>O QUE O CONÉXIA MUDA</div>
+          <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
+            Um diagnóstico que mostra onde sua rede é forte, onde ela racha, e o que fazer amanhã de manhã.
+          </p>
         </div>
-      </div>
+      </Moment>
 
-      {/* ═══ O QUE É ═══ */}
-      <div style={{ maxWidth:520, textAlign:"center", margin:"64px 0" }}>
-        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.3, margin:"0 0 18px" }}>
-          Networking não é o que você faz. É quem você se tornou.
-        </h2>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, margin:"0 0 14px" }}>
-          A maioria das pessoas não falha em relacionamentos profissionais por falta de esforço — falha por falta de clareza. Manda mensagem sem saber pra quem, lembra tarde demais de quem importava, confunde presença em evento com presença real.
-        </p>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, margin:0 }}>
-          O CONÉXIA existe pra trocar isso por método: um diagnóstico que mostra exatamente onde sua rede é forte, onde ela racha, e o que fazer amanhã de manhã.
-        </p>
-      </div>
-
-      {/* ═══ PROVA REAL (dados agregados, não depoimento) ═══ */}
-      <div style={{ maxWidth:520, width:"100%", margin:"0 0 64px", background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:"28px 24px" }}>
-        <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".05em", textAlign:"center", marginBottom:6 }}>
-          O QUE {redesCount} REDES JÁ MAPEADAS MOSTRAM
+      {/* ═══ 4. O RADAR — prova por dado, sem depoimento ═══ */}
+      <Moment>
+        <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", textAlign:"center", marginBottom:8 }}>
+          O QUE AS REDES JÁ MAPEADAS REVELAM
         </div>
-        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:21, fontWeight:700, color:C.txt, textAlign:"center", lineHeight:1.4, margin:"0 0 18px" }}>
-          Em média, as pessoas confiam mais nelas mesmas do que aparecem.
-        </h3>
-        <div style={{ display:"flex", justifyContent:"space-between", gap:16, marginBottom:8 }}>
-          <div style={{ flex:1, textAlign:"center" }}>
-            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, color:C.gold }}>{strongest.val}</div>
-            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginTop:2 }}>{strongest.label} — a mais forte</div>
+        <HeroRadar values={radarValues} size={260} />
+        <div style={{ display:"flex", justifyContent:"center", gap:32, margin:"20px 0 16px" }}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:34, fontWeight:700, color:C.gold }}>{strongest.val}</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginTop:2 }}>{strongest.label}</div>
           </div>
           <div style={{ width:1, background:C.brd }} />
-          <div style={{ flex:1, textAlign:"center" }}>
-            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:700, color:C.txM }}>{weakest.val}</div>
-            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginTop:2 }}>{weakest.label} — a mais frágil</div>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:34, fontWeight:700, color:C.txM }}>{weakest.val}</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginTop:2 }}>{weakest.label}</div>
           </div>
         </div>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", margin:0 }}>
-          É o padrão do "Técnico Invisível": competência real, visibilidade baixa. O diagnóstico mostra onde a sua rede está nesse mapa.
+        <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontStyle:"italic", color:C.txt, lineHeight:1.5, textAlign:"center", maxWidth:340, margin:0 }}>
+          Em média, as pessoas confiam mais nelas mesmas do que aparecem.
         </p>
-      </div>
+      </Moment>
 
-      {/* ═══ COMO FUNCIONA ═══ */}
-      <div style={{ maxWidth:560, width:"100%", margin:"0 0 64px" }}>
-        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 32px" }}>
-          Como funciona
-        </h3>
-        <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
-          {[
-            { n:"1", t:"Diagnóstico gratuito", d:"18 perguntas cobrindo as 6 dimensões que sustentam uma rede relacional saudável — leva menos de 10 minutos." },
-            { n:"2", t:"Seu perfil relacional", d:"Entre 8 perfis mapeados, descubra qual descreve como você constrói e mantém relações hoje — com forças, riscos e ações concretas." },
-            { n:"3", t:"Sua rede, de verdade", d:"Cadastre suas conexões e veja o mapa da sua rede (a Teia), priorizado por quem precisa de atenção agora — com assistente de WhatsApp pra não deixar ninguém esfriar." },
-          ].map((s, idx) => (
-            <div key={s.n} style={{ display:"flex", gap:18, alignItems:"flex-start", padding:"16px 0", borderTop: idx > 0 ? `1px solid ${C.brd}` : "none" }}>
-              <div style={{ flexShrink:0, width:34, fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.gL, lineHeight:1 }}>
-                {s.n}
-              </div>
-              <div style={{ paddingTop:4 }}>
-                <div style={{ fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:C.txt, marginBottom:4 }}>{s.t}</div>
-                <div style={{ fontFamily:"'DM Sans'", fontSize:13.5, color:C.txM, lineHeight:1.6 }}>{s.d}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ═══ 5-7. COMO FUNCIONA — um passo por tela ═══ */}
+      {[
+        { n:"01", t:"Diagnóstico gratuito", d:"18 perguntas cobrindo as 6 dimensões que sustentam uma rede relacional saudável — menos de 10 minutos." },
+        { n:"02", t:"Seu perfil relacional", d:"Entre 8 perfis mapeados, descubra qual descreve como você constrói e mantém relações hoje." },
+        { n:"03", t:"Sua rede, de verdade", d:"Cadastre suas conexões e veja o mapa da sua rede — a Teia — priorizado por quem precisa de atenção agora, com assistente de WhatsApp." },
+      ].map(s => (
+        <Moment key={s.n}>
+          <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:64, fontWeight:700, color:C.gL, lineHeight:1, marginBottom:8 }}>{s.n}</div>
+          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 14px", maxWidth:340 }}>{s.t}</h2>
+          <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, textAlign:"center", maxWidth:340, margin:0 }}>{s.d}</p>
+        </Moment>
+      ))}
 
-      {/* ═══ 6 DIMENSÕES ═══ */}
-      <div style={{ maxWidth:560, width:"100%", margin:"0 0 64px" }}>
-        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 8px" }}>
+      {/* ═══ 8. AS 6 DIMENSÕES ═══ */}
+      <Moment minH={false} style={{ padding:"80px 20px" }}>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 6px" }}>
           As 6 dimensões que medimos
-        </h3>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 24px" }}>
-          Nenhuma rede é forte ou fraca de um jeito só — o diagnóstico separa isso.
+        </h2>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 32px" }}>
+          Nenhuma rede é forte ou fraca de um jeito só.
         </p>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, background:C.brd, borderRadius:10, overflow:"hidden" }}>
-          {DIMS.map(d => (
-            <div key={d.key} style={{ background:C.card, padding:16, borderTop:`2px solid ${d.color}` }}>
-              <div style={{ fontSize:20, color:d.color, marginBottom:6 }}>{d.icon}</div>
-              <div style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.txt, marginBottom:3 }}>{d.label}</div>
-              <div style={{ fontFamily:"'DM Sans'", fontSize:11.5, color:C.txL, lineHeight:1.5 }}>{d.desc}</div>
+        <DimensionWheel />
+        <div style={{ maxWidth:400, width:"100%", marginTop:40 }}>
+          {DIMS.map((d, i) => (
+            <div key={d.key} style={{ display:"flex", gap:16, alignItems:"flex-start", padding:"16px 0", borderTop: i > 0 ? `1px solid ${C.brd}` : "none" }}>
+              <div style={{ fontSize:20, color:d.color, flexShrink:0, width:24, textAlign:"center" }}>{d.icon}</div>
+              <div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:C.txt, marginBottom:3 }}>{d.label}</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.6 }}>{d.desc}</div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </Moment>
 
-      {/* ═══ 8 PERFIS (interativo) ═══ */}
-      <div style={{ maxWidth:560, width:"100%", margin:"0 0 64px" }}>
-        <h3 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 8px" }}>
+      {/* ═══ 9. 8 PERFIS — lista tipográfica, sem cartão ═══ */}
+      <Moment minH={false} style={{ padding:"80px 20px" }}>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 6px" }}>
           Qual é o seu perfil relacional?
-        </h3>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 24px" }}>
+        </h2>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 32px" }}>
           Toque em cada um pra ver o que ele revela.
         </p>
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {Object.entries(PROFILES).map(([key, p]) => {
+        <div style={{ maxWidth:420, width:"100%" }}>
+          {Object.entries(PROFILES).map(([key, p], i) => {
             const isOpen = openProfile === key;
             return (
               <div key={key} onClick={() => setOpenProfile(isOpen ? null : key)}
-                style={{ background:C.card, border:`1px solid ${isOpen ? C.gL : C.brd}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:`border-color ${MOTION.fast}` }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  <div style={{ fontSize:20 }}>{p.emoji}</div>
+                style={{ padding:"20px 4px", borderTop: i > 0 ? `1px solid ${C.brd}` : "none", cursor:"pointer" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ fontSize:24 }}>{p.emoji}</div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.txt }}>{p.name}</div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:12.5, fontStyle:"italic", color:C.gold }}>{p.tagline}</div>
+                    <div style={{ fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:C.txt }}>{p.name}</div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:14, fontStyle:"italic", color:C.gold }}>{p.tagline}</div>
                   </div>
-                  <div style={{ fontSize:12, color:C.txL, transform: isOpen ? "rotate(180deg)" : "none", transition:`transform ${MOTION.fast}` }}>▾</div>
+                  <div style={{ fontSize:13, color:C.txL, transform: isOpen ? "rotate(180deg)" : "none", transition:`transform ${MOTION.fast}` }}>▾</div>
                 </div>
                 {isOpen && (
-                  <div style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txM, lineHeight:1.6, marginTop:10, paddingTop:10, borderTop:`1px solid ${C.brd}` }}>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:13.5, color:C.txM, lineHeight:1.7, marginTop:14, paddingLeft:38 }}>
                     {p.desc}
                   </div>
                 )}
@@ -5097,35 +5193,44 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
             );
           })}
         </div>
-      </div>
+      </Moment>
 
-      {/* ═══ CTA FINAL ═══ */}
-      <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:360 }}>
-        <button onClick={onSignup}
-          style={{ background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:12, padding:"16px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:C.bg, cursor:"pointer", width:"100%" }}>
-          Fazer diagnóstico gratuito
-        </button>
-        <button onClick={onLogin}
-          style={{ background:"transparent", border:`1.5px solid ${C.brd}`, borderRadius:12, padding:"14px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:500, color:C.txM, cursor:"pointer", width:"100%" }}>
-          Já tenho conta — Entrar
-        </button>
-      </div>
-
-      {urlKey && (
-        <div style={{ marginTop:20, background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 20px", textAlign:"center" }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.gold, fontWeight:600 }}>🎁 Chave de acesso detectada: <span style={{ fontFamily:"'JetBrains Mono'", letterSpacing:".06em" }}>{urlKey}</span></div>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, marginTop:3 }}>Crie sua conta para ativar o acesso PRO automaticamente</div>
+      {/* ═══ 10. CTA FINAL ═══ */}
+      <Moment>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, textAlign:"center", lineHeight:1.3, maxWidth:360, margin:"0 0 8px" }}>
+          Para ser intencional
+        </h2>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.gold, textAlign:"center", lineHeight:1.3, maxWidth:360, margin:"0 0 40px" }}>
+          precisa ser estratégico.
+        </h2>
+        <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:340, padding:"0 24px" }}>
+          <button onClick={onSignup}
+            style={{ background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:12, padding:"16px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:C.bg, cursor:"pointer", width:"100%" }}>
+            Fazer diagnóstico gratuito
+          </button>
+          <button onClick={onLogin}
+            style={{ background:"transparent", border:`1.5px solid ${C.brd}`, borderRadius:12, padding:"14px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:500, color:C.txM, cursor:"pointer", width:"100%" }}>
+            Já tenho conta — Entrar
+          </button>
         </div>
-      )}
-      <div style={{ marginTop:20, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
-        Criado por Rafael Milléo
-      </div>
-      <div style={{ marginTop:12, fontFamily:"'DM Sans'", fontSize:10, color:C.txL, opacity:0.7, textAlign:"center", lineHeight:1.5 }}>
-        {BRAND.legalName} · CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}
-      </div>
+
+        {urlKey && (
+          <div style={{ marginTop:20, background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 20px", textAlign:"center", maxWidth:340 }}>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.gold, fontWeight:600 }}>🎁 Chave de acesso detectada: <span style={{ fontFamily:"'JetBrains Mono'", letterSpacing:".06em" }}>{urlKey}</span></div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, marginTop:3 }}>Crie sua conta para ativar o acesso PRO automaticamente</div>
+          </div>
+        )}
+        <div style={{ marginTop:24, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
+          Criado por Rafael Milléo
+        </div>
+        <div style={{ marginTop:12, fontFamily:"'DM Sans'", fontSize:10, color:C.txL, opacity:0.7, textAlign:"center", lineHeight:1.5, paddingBottom:20 }}>
+          {BRAND.legalName} · CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}
+        </div>
+      </Moment>
     </div>
   );
 }
+
 
 /* ═══ Traduz mensagens de erro do Supabase Auth pra português simples ═══ */
 function friendlyAuthError(e, fallback = "Erro de conexão.") {
