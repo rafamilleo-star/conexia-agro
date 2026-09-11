@@ -43,18 +43,6 @@
         50% { opacity: 1; }
       }
 
-      /* Em telas largas e baixas (navegador de computador), 100vh de altura
-         mínima por seção deixa vazio demais dos lados/em cima — reduz pra um
-         respiro fixo em vez de esticar pra preencher a janela toda. */
-      @media (min-width: 860px) {
-        .cx-moment { min-height: auto !important; padding: 140px 24px !important; }
-      }
-
-      /* Rolagem com leve "encaixe" por seção — ajuda tanto o scroll livre
-         quanto o toque-pra-avançar a pousar alinhado em cada tela. */
-      .cx-landing-scroll { scroll-snap-type: y proximity; }
-      .cx-moment { scroll-snap-align: start; }
-
       /* Respeita quem tem "reduzir movimento" ligado no sistema — inclusive
          para as animações adicionadas nesta rodada (toast, skeleton, etc). */
       @media (prefers-reduced-motion: reduce) {
