@@ -5032,6 +5032,50 @@ function PhoneMockup({ subtitle = "assistente relacional", height = 560, childre
 
 /* Ícones das 6 dimensões dispostos em roda, ecoando o radar — peça visual
    pura; a leitura (label + descrição) vem na lista logo abaixo. */
+/* Prévia grande da Teia — mesma lógica visual da tela real do app (anéis
+   concêntricos = % de saúde do relacionamento, distância do centro = saúde,
+   cor do nó = status de prioridade), com contatos de exemplo. Contatos e
+   nomes fictícios, deixado explícito na legenda logo abaixo na página. */
+const TEIA_PRIO_COLORS = { alta: "#4caf50", media: "#E8A020", baixa: "#ff9800" };
+const TEIA_EXAMPLE = [
+  { name: "Marina Costa", health: 88, prio: "alta", interações: 5 },
+  { name: "João Kaminski", health: 74, prio: "alta", interações: 4 },
+  { name: "Patrícia Nunes", health: 60, prio: "media", interações: 3 },
+  { name: "Eduardo Reis", health: 45, prio: "media", interações: 2 },
+  { name: "Camila Torres", health: 30, prio: "baixa", interações: 1 },
+  { name: "Rafael Sanches", health: 68, prio: "media", interações: 3 },
+  { name: "Beatriz Lima", health: 82, prio: "alta", interações: 5 },
+  { name: "Diego Farah", health: 22, prio: "baixa", interações: 1 },
+];
+function TeiaPreview({ size = 340 }) {
+  const cx = 200, cy = 200, R = 168;
+  const step = (2 * Math.PI) / TEIA_EXAMPLE.length;
+  const nodes = TEIA_EXAMPLE.map((c, i) => {
+    const a = -Math.PI / 2 + i * step;
+    const d = R * Math.max(0.15, c.health / 100);
+    return { ...c, x: cx + d * Math.cos(a), y: cy + d * Math.sin(a), col: TEIA_PRIO_COLORS[c.prio], r: 6 + c["interações"] * 2 };
+  });
+  return (
+    <svg viewBox="0 0 400 400" style={{ width: "100%", maxWidth: size, display: "block", margin: "0 auto" }}>
+      {[0.2, 0.4, 0.6, 0.8, 1].map(f => (
+        <circle key={f} cx={cx} cy={cy} r={R * f} fill="none" stroke={C.brd} strokeWidth={0.7}
+          strokeDasharray={f < 1 ? "3,6" : "none"} opacity={0.5} />
+      ))}
+      {nodes.map((n, i) => (
+        <line key={i} x1={cx} y1={cy} x2={n.x} y2={n.y} stroke={n.col} strokeWidth={1} opacity={0.25} />
+      ))}
+      <circle cx={cx} cy={cy} r={9} fill={C.gold} opacity={0.9} />
+      <text x={cx} y={cy + 22} textAnchor="middle" fontSize={9} fontFamily="DM Sans" fill={C.txL}>Você</text>
+      {nodes.map((n, i) => (
+        <g key={i}>
+          <circle cx={n.x} cy={n.y} r={n.r} fill={n.col} opacity={0.88}
+            style={{ animation: `nodePulse ${3 + (i % 4)}s ease-in-out ${i * 0.15}s infinite` }} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 function DimensionWheel({ size = 260 }) {
   const cx = 130, cy = 130, r = 96;
   return (
@@ -5153,8 +5197,8 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
       {/* ═══ 2. AFIRMAÇÃO CENTRAL ═══ */}
       <Moment style={{ position:"relative" }}>
-        <div style={{ position:"absolute", inset:0, opacity:0.35, pointerEvents:"none" }}>
-          <ConstellationArt seed={19} n={14} />
+        <div style={{ position:"absolute", inset:0, opacity:0.55, pointerEvents:"none" }}>
+          <ConstellationArt seed={19} n={24} />
         </div>
         <div style={{ position:"relative", zIndex:1 }}>
           <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.txt, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"0 20px" }}>
@@ -5192,7 +5236,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", textAlign:"center", marginBottom:8 }}>
           O QUE AS REDES JÁ MAPEADAS REVELAM
         </div>
-        <HeroRadar values={radarValues} size={260} />
+        <HeroRadar values={radarValues} size={320} />
         <div style={{ display:"flex", justifyContent:"center", gap:32, margin:"20px 0 16px" }}>
           <div style={{ textAlign:"center" }}>
             <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:34, fontWeight:700, color:C.gold }}>{strongest.val}</div>
@@ -5221,6 +5265,28 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, textAlign:"center", maxWidth:340, margin:0 }}>{s.d}</p>
         </Moment>
       ))}
+
+      {/* ═══ 7.4 — A TEIA, EM GRANDE ═══ */}
+      <Moment>
+        <div style={{ textAlign:"center", marginBottom:16, padding:"0 24px" }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>A TEIA DA SUA REDE</div>
+          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.35, maxWidth:360, margin:"0 auto" }}>
+            Quanto mais perto do centro, mais forte o relacionamento.
+          </h2>
+        </div>
+        <TeiaPreview size={360} />
+        <div style={{ display:"flex", gap:18, justifyContent:"center", marginTop:16, flexWrap:"wrap" }}>
+          {[{c:"#4caf50",l:"Presente e importante"},{c:"#E8A020",l:"Talvez mereça atenção"},{c:"#ff9800",l:"Relação tranquila"}].map(x => (
+            <div key={x.l} style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:x.c }} />
+              <div style={{ fontFamily:"'DM Sans'", fontSize:10.5, color:C.txL }}>{x.l}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", maxWidth:320, margin:"20px 24px 0" }}>
+          Exemplo ilustrativo — sua Teia real mostra seus próprios contatos, com cor e distância calculadas pelo histórico de cada relação.
+        </p>
+      </Moment>
 
       {/* ═══ 7.5 — O ASSISTENTE DE WHATSAPP EM AÇÃO ═══ */}
       <Moment>
@@ -5272,7 +5338,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 32px" }}>
           Nenhuma rede é forte ou fraca de um jeito só.
         </p>
-        <DimensionWheel />
+        <DimensionWheel size={320} />
         <div style={{ maxWidth:400, width:"100%", marginTop:40 }}>
           {DIMS.map((d, i) => (
             <div key={d.key} style={{ display:"flex", gap:16, alignItems:"flex-start", padding:"16px 0", borderTop: i > 0 ? `1px solid ${C.brd}` : "none" }}>
