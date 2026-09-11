@@ -4990,13 +4990,14 @@ function HeroRadar({ values, size = 280 }) {
 
 /* Moldura de celular genérica (não reproduz hardware/UI de nenhuma marca
    específica) com uma conversa estilo app de mensagens, demonstrando o
-   assistente de WhatsApp do CONÉXIA. Conteúdo ilustrativo — nome e números
-   fictícios, deixado explícito na legenda logo abaixo na página. */
-function PhoneMockup() {
-  const Bubble = ({ from, children, tint }) => (
+   assistente de WhatsApp do CONÉXIA. Reutilizável — cada cena passa suas
+   próprias bolhas como children. Conteúdo ilustrativo — nome e números
+   fictícios, deixado explícito na legenda logo abaixo de cada cena na página. */
+function ChatBubble({ from, children }) {
+  return (
     <div style={{ display:"flex", justifyContent: from === "bot" ? "flex-start" : "flex-end", marginBottom:10 }}>
       <div style={{
-        maxWidth:"78%", padding:"9px 13px", borderRadius: from === "bot" ? "4px 14px 14px 14px" : "14px 4px 14px 14px",
+        maxWidth:"82%", padding:"9px 13px", borderRadius: from === "bot" ? "4px 14px 14px 14px" : "14px 4px 14px 14px",
         background: from === "bot" ? C.card : `linear-gradient(135deg,${C.gold},${C.gB})`,
         border: from === "bot" ? `1px solid ${C.brd}` : "none",
         color: from === "bot" ? C.txt : C.bg,
@@ -5006,23 +5007,22 @@ function PhoneMockup() {
       </div>
     </div>
   );
+}
+function PhoneMockup({ subtitle = "assistente relacional", height = 560, children }) {
   return (
     <div style={{ width:252, margin:"0 auto", borderRadius:44, background:"linear-gradient(160deg,#2a2a2a,#0a0a0a)", padding:10, boxShadow:`0 30px 60px -20px ${C.gold}22` }}>
-      <div style={{ position:"relative", background:C.bg, borderRadius:34, overflow:"hidden", height:560 }}>
+      <div style={{ position:"relative", background:C.bg, borderRadius:34, overflow:"hidden", height }}>
         <div style={{ position:"absolute", top:8, left:"50%", transform:"translateX(-50%)", width:64, height:18, background:"#000", borderRadius:20, zIndex:2 }} />
         <div style={{ paddingTop:34, display:"flex", flexDirection:"column", height:"100%" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 16px 12px", borderBottom:`1px solid ${C.brd}` }}>
             <div style={{ width:26, height:26, borderRadius:"50%", background:`${C.gold}22`, border:`1px solid ${C.gL}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>◈</div>
             <div>
               <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:700, color:C.txt }}>CONÉXIA</div>
-              <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>assistente relacional</div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>{subtitle}</div>
             </div>
           </div>
           <div style={{ flex:1, padding:"14px 12px", overflow:"hidden" }}>
-            <Bubble from="bot">Bom dia! Você não fala com a <b>Marina Costa</b> há 42 dias — ela foi peça-chave na sua última negociação. Bora reativar?</Bubble>
-            <Bubble from="user" tint>Boa, manda uma ideia</Bubble>
-            <Bubble from="bot">"Marina, lembrei de você — como está a expansão do projeto que comentou? Bora marcar um café?" ✍️</Bubble>
-            <Bubble from="bot">📊 Sua Carta de Evolução da semana: Health Score 74 <span style={{color:"#6FCF97"}}>(+3)</span>. Consistência subiu 8 pontos.</Bubble>
+            {children}
           </div>
         </div>
       </div>
@@ -5104,13 +5104,13 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
       {/* ═══ 1. HERO — ilustração + assinatura ═══ */}
       <div style={{ minHeight:"100vh", width:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative", padding:"24px 20px" }}>
-        <div style={{ position:"absolute", inset:0 }}>
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"min(640px, 92vw)", aspectRatio:"3 / 4", maxHeight:"88vh" }}>
           <ConstellationArt seed={7} n={34} />
+          <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse 55% 30% at 50% 50%, ${C.bg}, transparent)` }} />
         </div>
-        <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse 260px 220px at 50% 50%, ${C.bg}, transparent)` }} />
         <div style={{ position:"relative", zIndex:1, textAlign:"center" }}>
-          <ConexiaLogo height={56} style={{ margin: "0 auto 10px", display: "block" }} />
-          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".1em", textTransform:"uppercase", marginBottom:60 }}>{BRAND.platformTag}</div>
+          <ConexiaLogo height={76} style={{ margin: "0 auto 12px", display: "block" }} />
+          <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".12em", textTransform:"uppercase", marginBottom:60 }}>{BRAND.platformTag}</div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10, opacity:0.7 }}>
             <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".05em" }}>Role pra conhecer</div>
             <div style={{ fontSize:18, color:C.gold, animation:"bounce 1.8s infinite" }}>↓</div>
@@ -5197,9 +5197,37 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
             O CONÉXIA avisa antes de você esquecer — direto no WhatsApp.
           </h2>
         </div>
-        <PhoneMockup />
+        <PhoneMockup>
+          <ChatBubble from="bot">Bom dia! Você não fala com a <b>Marina Costa</b> há 42 dias — ela foi peça-chave na sua última negociação. Bora reativar?</ChatBubble>
+          <ChatBubble from="user">Boa, manda uma ideia</ChatBubble>
+          <ChatBubble from="bot">"Marina, lembrei de você — como está a expansão do projeto que comentou? Bora marcar um café?" ✍️</ChatBubble>
+          <ChatBubble from="bot">📊 Sua Carta de Evolução da semana: Health Score 74 <span style={{color:"#6FCF97"}}>(+3)</span>. Consistência subiu 8 pontos.</ChatBubble>
+        </PhoneMockup>
         <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", maxWidth:300, margin:"24px 24px 0" }}>
           Exemplo ilustrativo do assistente — os alertas reais usam os contatos e o histórico da sua própria rede.
+        </p>
+      </Moment>
+
+      {/* ═══ 7.6 — BRIEFING ANTES DE UMA REUNIÃO ═══ */}
+      <Moment>
+        <div style={{ textAlign:"center", marginBottom:28, padding:"0 24px" }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>ANTES DE UMA REUNIÃO IMPORTANTE</div>
+          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.35, maxWidth:340, margin:"0 auto" }}>
+            "Vou falar com o João. O que eu preciso saber?"
+          </h2>
+        </div>
+        <PhoneMockup subtitle="briefing de contato" height={600}>
+          <ChatBubble from="user">Vou almoçar com o João Kaminski daqui a pouco, me dá um briefing</ChatBubble>
+          <ChatBubble from="bot">
+            <div style={{ fontWeight:700, marginBottom:4 }}>📋 João Kaminski</div>
+            <div style={{ marginBottom:6 }}><b>Estado:</b> relação sólida, mas 51 dias sem contato direto desde a reunião sobre expansão da fazenda.</div>
+            <div style={{ marginBottom:6 }}><b>Atenção:</b> ele mencionou decisão de compra "até o fim do trimestre" — prazo vence essa semana.</div>
+            <div style={{ marginBottom:6 }}><b>Gancho:</b> pergunte como ficou a decisão sobre a área nova antes de qualquer coisa.</div>
+            <div><b>Próximo passo:</b> propor visita técnica em até 7 dias.</div>
+          </ChatBubble>
+        </PhoneMockup>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", maxWidth:300, margin:"24px 24px 0" }}>
+          Exemplo ilustrativo — o briefing real é gerado pela IA a partir do histórico de cada contato, com perguntas sugeridas e objetivo estratégico.
         </p>
       </Moment>
 
