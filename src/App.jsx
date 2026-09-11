@@ -4988,6 +4988,48 @@ function HeroRadar({ values, size = 280 }) {
   );
 }
 
+/* Moldura de celular genérica (não reproduz hardware/UI de nenhuma marca
+   específica) com uma conversa estilo app de mensagens, demonstrando o
+   assistente de WhatsApp do CONÉXIA. Conteúdo ilustrativo — nome e números
+   fictícios, deixado explícito na legenda logo abaixo na página. */
+function PhoneMockup() {
+  const Bubble = ({ from, children, tint }) => (
+    <div style={{ display:"flex", justifyContent: from === "bot" ? "flex-start" : "flex-end", marginBottom:10 }}>
+      <div style={{
+        maxWidth:"78%", padding:"9px 13px", borderRadius: from === "bot" ? "4px 14px 14px 14px" : "14px 4px 14px 14px",
+        background: from === "bot" ? C.card : `linear-gradient(135deg,${C.gold},${C.gB})`,
+        border: from === "bot" ? `1px solid ${C.brd}` : "none",
+        color: from === "bot" ? C.txt : C.bg,
+        fontFamily:"'DM Sans'", fontSize:12.5, lineHeight:1.5,
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ width:252, margin:"0 auto", borderRadius:44, background:"linear-gradient(160deg,#2a2a2a,#0a0a0a)", padding:10, boxShadow:`0 30px 60px -20px ${C.gold}22` }}>
+      <div style={{ position:"relative", background:C.bg, borderRadius:34, overflow:"hidden", height:560 }}>
+        <div style={{ position:"absolute", top:8, left:"50%", transform:"translateX(-50%)", width:64, height:18, background:"#000", borderRadius:20, zIndex:2 }} />
+        <div style={{ paddingTop:34, display:"flex", flexDirection:"column", height:"100%" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 16px 12px", borderBottom:`1px solid ${C.brd}` }}>
+            <div style={{ width:26, height:26, borderRadius:"50%", background:`${C.gold}22`, border:`1px solid ${C.gL}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>◈</div>
+            <div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:700, color:C.txt }}>CONÉXIA</div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>assistente relacional</div>
+            </div>
+          </div>
+          <div style={{ flex:1, padding:"14px 12px", overflow:"hidden" }}>
+            <Bubble from="bot">Bom dia! Você não fala com a <b>Marina Costa</b> há 42 dias — ela foi peça-chave na sua última negociação. Bora reativar?</Bubble>
+            <Bubble from="user" tint>Boa, manda uma ideia</Bubble>
+            <Bubble from="bot">"Marina, lembrei de você — como está a expansão do projeto que comentou? Bora marcar um café?" ✍️</Bubble>
+            <Bubble from="bot">📊 Sua Carta de Evolução da semana: Health Score 74 <span style={{color:"#6FCF97"}}>(+3)</span>. Consistência subiu 8 pontos.</Bubble>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* Ícones das 6 dimensões dispostos em roda, ecoando o radar — peça visual
    pura; a leitura (label + descrição) vem na lista logo abaixo. */
 function DimensionWheel({ size = 260 }) {
@@ -5077,18 +5119,24 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </div>
 
       {/* ═══ 2. AFIRMAÇÃO CENTRAL ═══ */}
-      <Moment>
-        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.txt, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"0 20px" }}>
-          Sua rede não é uma lista de contatos.
-        </h1>
-        <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.gold, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"6px 20px 0" }}>
-          É um mapa.
-        </h1>
+      <Moment style={{ position:"relative" }}>
+        <div style={{ position:"absolute", inset:0, opacity:0.35, pointerEvents:"none" }}>
+          <ConstellationArt seed={19} n={14} />
+        </div>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.txt, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"0 20px" }}>
+            Sua rede não é uma lista de contatos.
+          </h1>
+          <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.gold, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"6px 20px 0" }}>
+            É um mapa.
+          </h1>
+        </div>
       </Moment>
 
       {/* ═══ 3. O PROBLEMA ═══ */}
-      <Moment>
-        <div style={{ maxWidth:400, textAlign:"center", padding:"0 24px" }}>
+      <Moment style={{ position:"relative" }}>
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-60%)", fontSize:200, color:C.brd, opacity:0.6, lineHeight:1, pointerEvents:"none", fontFamily:"'Cormorant Garamond',serif" }}>"</div>
+        <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:18 }}>O QUE NORMALMENTE ACONTECE</div>
           <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
             Você não falha em relacionamentos profissionais por falta de esforço. Falha por falta de clareza.
@@ -5096,8 +5144,9 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       </Moment>
 
-      <Moment>
-        <div style={{ maxWidth:400, textAlign:"center", padding:"0 24px" }}>
+      <Moment style={{ position:"relative" }}>
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-55%)", fontSize:140, color:`${C.gold}18`, lineHeight:1, pointerEvents:"none" }}>◈</div>
+        <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.gold, letterSpacing:".08em", marginBottom:18 }}>O QUE O CONÉXIA MUDA</div>
           <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
             Um diagnóstico que mostra onde sua rede é forte, onde ela racha, e o que fazer amanhã de manhã.
@@ -5139,6 +5188,20 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, textAlign:"center", maxWidth:340, margin:0 }}>{s.d}</p>
         </Moment>
       ))}
+
+      {/* ═══ 7.5 — O ASSISTENTE DE WHATSAPP EM AÇÃO ═══ */}
+      <Moment>
+        <div style={{ textAlign:"center", marginBottom:28, padding:"0 24px" }}>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>ENQUANTO VOCÊ TRABALHA</div>
+          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.35, maxWidth:340, margin:"0 auto" }}>
+            O CONÉXIA avisa antes de você esquecer — direto no WhatsApp.
+          </h2>
+        </div>
+        <PhoneMockup />
+        <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", maxWidth:300, margin:"24px 24px 0" }}>
+          Exemplo ilustrativo do assistente — os alertas reais usam os contatos e o histórico da sua própria rede.
+        </p>
+      </Moment>
 
       {/* ═══ 8. AS 6 DIMENSÕES ═══ */}
       <Moment minH={false} style={{ padding:"80px 20px" }}>
