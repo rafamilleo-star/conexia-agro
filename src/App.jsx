@@ -13,6 +13,9 @@ import { buildTaskMicroresponse, buildMetaMicroresponse } from "./lib/evolutionC
 import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
 import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
 import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transparente.webp";
+import bgAbstractGold from "./assets/stock/abstract-gold.jpg";
+import bgAgronomoSunset from "./assets/stock/agronomo-por-do-sol.jpg";
+import bgProdutoresCampo from "./assets/stock/produtores-campo.jpg";
 
 /* ─── Logo Components ─────────────────────────────────── */
 // Ícone isolado (para splash, headers, favicons)
@@ -5196,10 +5199,9 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </div>
 
       {/* ═══ 2. AFIRMAÇÃO CENTRAL ═══ */}
-      <Moment style={{ position:"relative" }}>
-        <div style={{ position:"absolute", inset:0, opacity:0.55, pointerEvents:"none" }}>
-          <ConstellationArt seed={19} n={24} />
-        </div>
+      <Moment style={{ position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, backgroundImage:`url(${bgAbstractGold})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+        <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}CC, ${C.bg}66 40%, ${C.bg}CC)` }} />
         <div style={{ position:"relative", zIndex:1 }}>
           <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.txt, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"0 20px" }}>
             Sua rede não é uma lista de contatos.
@@ -5211,8 +5213,9 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </Moment>
 
       {/* ═══ 3. O PROBLEMA ═══ */}
-      <Moment style={{ position:"relative" }}>
-        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-60%)", fontSize:200, color:C.brd, opacity:0.6, lineHeight:1, pointerEvents:"none", fontFamily:"'Cormorant Garamond',serif" }}>"</div>
+      <Moment style={{ position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, backgroundImage:`url(${bgAgronomoSunset})`, backgroundSize:"cover", backgroundPosition:"center 30%" }} />
+        <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}E6 0%, ${C.bg}99 45%, ${C.bg}F2 100%)` }} />
         <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:18 }}>O QUE NORMALMENTE ACONTECE</div>
           <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
@@ -5221,8 +5224,9 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       </Moment>
 
-      <Moment style={{ position:"relative" }}>
-        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-55%)", fontSize:140, color:`${C.gold}18`, lineHeight:1, pointerEvents:"none" }}>◈</div>
+      <Moment style={{ position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, backgroundImage:`url(${bgProdutoresCampo})`, backgroundSize:"cover", backgroundPosition:"center 35%" }} />
+        <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}E6 0%, ${C.bg}80 45%, ${C.bg}F2 100%)` }} />
         <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.gold, letterSpacing:".08em", marginBottom:18 }}>O QUE O CONÉXIA MUDA</div>
           <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
@@ -5271,7 +5275,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         <div style={{ textAlign:"center", marginBottom:16, padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>A TEIA DA SUA REDE</div>
           <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.35, maxWidth:360, margin:"0 auto" }}>
-            Quanto mais perto do centro, mais forte o relacionamento.
+            Quanto mais longe do centro, mais forte o relacionamento.
           </h2>
         </div>
         <TeiaPreview size={360} />
@@ -5331,20 +5335,23 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </Moment>
 
       {/* ═══ 8. AS 6 DIMENSÕES ═══ */}
-      <Moment minH={false} style={{ padding:"80px 20px" }}>
-        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 6px" }}>
+      <Moment minH={false} style={{ padding:"80px 0" }}>
+        <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 6px", padding:"0 20px" }}>
           As 6 dimensões que medimos
         </h2>
-        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 32px" }}>
+        <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 40px", padding:"0 20px" }}>
           Nenhuma rede é forte ou fraca de um jeito só.
         </p>
-        <DimensionWheel size={320} />
-        <div style={{ maxWidth:400, width:"100%", marginTop:40 }}>
+        <div style={{ width:"100%" }}>
           {DIMS.map((d, i) => (
-            <div key={d.key} style={{ display:"flex", gap:16, alignItems:"flex-start", padding:"16px 0", borderTop: i > 0 ? `1px solid ${C.brd}` : "none" }}>
-              <div style={{ fontSize:20, color:d.color, flexShrink:0, width:24, textAlign:"center" }}>{d.icon}</div>
+            <div key={d.key} style={{
+              display:"flex", alignItems:"center", gap:18, padding:"22px max(20px, calc(50% - 210px))",
+              background: i % 2 === 0 ? `${d.color}0f` : "transparent",
+              borderTop: i > 0 ? `1px solid ${C.brd}` : "none",
+            }}>
+              <div style={{ fontSize:26, color:d.color, flexShrink:0, width:32, textAlign:"center" }}>{d.icon}</div>
               <div>
-                <div style={{ fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:C.txt, marginBottom:3 }}>{d.label}</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:C.txt, marginBottom:3 }}>{d.label}</div>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.6 }}>{d.desc}</div>
               </div>
             </div>
