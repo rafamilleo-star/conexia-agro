@@ -37,6 +37,12 @@
         to   { transform: scale(1); opacity: 1; }
       }
 
+      /* Pulsação sutil dos nós-hub da ilustração de rede no hero. */
+      @keyframes nodePulse {
+        0%, 100% { opacity: 0.75; }
+        50% { opacity: 1; }
+      }
+
       /* Respeita quem tem "reduzir movimento" ligado no sistema — inclusive
          para as animações adicionadas nesta rodada (toast, skeleton, etc). */
       @media (prefers-reduced-motion: reduce) {
