@@ -13,9 +13,6 @@ import { buildTaskMicroresponse, buildMetaMicroresponse } from "./lib/evolutionC
 import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
 import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
 import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transparente.webp";
-import bgAbstractGold from "./assets/stock/abstract-gold.jpg";
-import bgAgronomoSunset from "./assets/stock/agronomo-por-do-sol.jpg";
-import bgProdutoresCampo from "./assets/stock/produtores-campo.jpg";
 
 /* ─── Logo Components ─────────────────────────────────── */
 // Ícone isolado (para splash, headers, favicons)
@@ -5200,7 +5197,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
       {/* ═══ 2. AFIRMAÇÃO CENTRAL ═══ */}
       <Moment style={{ position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", inset:0, backgroundImage:`url(${bgAbstractGold})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+        <div style={{ position:"absolute", inset:0, backgroundImage:`radial-gradient(circle at 50% 35%, #8a6b24 0%, #3a2f18 32%, #17140e 68%, #0d0c09 100%)`, backgroundSize:"cover", backgroundPosition:"center" }} />
         <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}CC, ${C.bg}66 40%, ${C.bg}CC)` }} />
         <div style={{ position:"relative", zIndex:1 }}>
           <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.txt, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"0 20px" }}>
@@ -5214,7 +5211,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
       {/* ═══ 3. O PROBLEMA ═══ */}
       <Moment style={{ position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", inset:0, backgroundImage:`url(${bgAgronomoSunset})`, backgroundSize:"cover", backgroundPosition:"center 30%" }} />
+        <div style={{ position:"absolute", inset:0, backgroundImage:`linear-gradient(135deg, #101510 0%, #243128 48%, #0d0f0d 100%)`, backgroundSize:"cover", backgroundPosition:"center 30%" }} />
         <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}E6 0%, ${C.bg}99 45%, ${C.bg}F2 100%)` }} />
         <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:18 }}>O QUE NORMALMENTE ACONTECE</div>
@@ -5225,7 +5222,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </Moment>
 
       <Moment style={{ position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", inset:0, backgroundImage:`url(${bgProdutoresCampo})`, backgroundSize:"cover", backgroundPosition:"center 35%" }} />
+        <div style={{ position:"absolute", inset:0, backgroundImage:`linear-gradient(135deg, #11130d 0%, #2d3024 48%, #0d0e0a 100%)`, backgroundSize:"cover", backgroundPosition:"center 35%" }} />
         <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}E6 0%, ${C.bg}80 45%, ${C.bg}F2 100%)` }} />
         <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.gold, letterSpacing:".08em", marginBottom:18 }}>O QUE O CONÉXIA MUDA</div>
