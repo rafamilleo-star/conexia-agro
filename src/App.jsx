@@ -1864,11 +1864,11 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
             </div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
               {trialStartedAt
-                ? `Ainda não conversou com o assistente ${BRAND.name}? Envie "join regular-realize" para o número abaixo pra ativar as mensagens.`
+               ? `Seu assistente ${BRAND.name} já está disponível no WhatsApp.`
                 : `Ao salvar seu número, você libera 10 dias grátis do assistente ${BRAND.name} direto pelo WhatsApp.`}
             </div>
             {trialStartedAt && (
-              <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer"
+             <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer"
                 style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textDecoration: "none", marginTop: 6 }}>
                 Abrir conversa e ativar →
               </a>
@@ -1927,8 +1927,8 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
           <span style={{ fontSize: 20, flexShrink: 0 }}>🎉</span>
           <div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>WhatsApp ativado! Seu teste grátis de 10 dias começou agora.</div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Falta um passo: envie <strong style={{ color: C.txt }}>"join regular-realize"</strong> pelo WhatsApp para o número do assistente, senão suas mensagens não chegam até nós.</div>
-            <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer"
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Abra a conversa com o assistente no WhatsApp para começar.</div>
+           <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer"
               style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textDecoration: "none", marginTop: 6 }}>
               Abrir conversa e ativar →
             </a>
@@ -3002,7 +3002,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55, marginBottom: 12 }}>
                   Não precisa abrir o {BRAND.name} pra usar. Manda uma mensagem de onde estiver: <em>"Liguei pro André hoje, foi positivo"</em> ou <em>"Minhas próximas ações"</em> — e o assistente cuida do resto.
                 </div>
-                <a href="https://wa.me/14155238886?text=join%20regular-realize" target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.grn, color: "#0D0D0D", borderRadius: 8, padding: "9px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Abrir conversa no WhatsApp →</a>
+                <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.grn, color: "#0D0D0D", borderRadius: 8, padding: "9px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Abrir conversa no WhatsApp →</a>
               </div>
             </div>
           </div>
