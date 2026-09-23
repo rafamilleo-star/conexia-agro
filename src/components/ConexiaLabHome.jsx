@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { computePriorities } from "../../shared/priorityEngine.js";
 import { detectPatterns, PATTERN_NOTES } from "../../shared/relationshipPatternDetector.js";
-import conexiaIcon from "../assets/brand/conexia_icone_fundo-escuro.svg";
+import conexiaIcon from "../assets/brand/conexia_icone_transparente.svg";
 
 const K = {
   bg: "#0D0D0F",
@@ -95,92 +95,132 @@ function VoiceOrb({ state, active, onClick }) {
             ? "Conversando"
             : "Conversar";
 
-  const spin =
-    thinking
-      ? "conexiaSpin 3.6s linear infinite"
-      : speaking
-        ? "conexiaSpin 8s linear infinite"
-        : active
-          ? "conexiaFloat 6s ease-in-out infinite"
-          : "none";
-
   return (
     <>
       <style>{`
-        @keyframes conexiaSpin {
-          from { transform: rotate(0deg) scale(1); }
-          50% { transform: rotate(180deg) scale(1.045); }
-          to { transform: rotate(360deg) scale(1); }
+        @keyframes conexiaBreath {
+          0%,100% { transform: scale(1); opacity:.94; }
+          50% { transform: scale(1.055); opacity:1; }
         }
-        @keyframes conexiaFloat {
-          0%,100% { transform: rotate(-4deg) scale(1); }
-          50% { transform: rotate(4deg) scale(1.035); }
+
+        @keyframes conexiaThink {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
-        @keyframes conexiaListenPulse {
-          0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,.10), 0 0 26px rgba(201,168,76,.12); }
-          50% { box-shadow: 0 0 0 14px rgba(201,168,76,.05), 0 0 48px rgba(201,168,76,.24); }
+
+        @keyframes conexiaSpeak {
+          0%,100% { transform: scale(1); }
+          35% { transform: scale(1.045); }
+          68% { transform: scale(.985); }
+        }
+
+        @keyframes conexiaRing {
+          0%,100% {
+            transform: scale(1);
+            opacity:.45;
+          }
+          50% {
+            transform: scale(1.045);
+            opacity:.9;
+          }
         }
       `}</style>
 
-      <button
-        onClick={onClick}
-        aria-label={active ? "Encerrar conversa" : "Iniciar conversa"}
+      <div
         style={{
-          width: 164,
-          height: 164,
-          borderRadius: "50%",
-          background: listening
-            ? `radial-gradient(circle at center, ${K.gold}20, ${K.card2} 66%)`
-            : `radial-gradient(circle at center, ${K.gold}0B, ${K.card2} 70%)`,
-          border: `1px solid ${active ? `${K.gold}AA` : K.border}`,
-          boxShadow: active
-            ? `0 0 0 10px ${K.gold}08, 0 0 44px ${K.gold}1E`
-            : "0 12px 32px rgba(0,0,0,.30)",
-          color: active ? K.gold : K.text,
-          cursor: "pointer",
-          transition: "all .25s ease",
+          width: 216,
+          minHeight: 248,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-          overflow: "visible",
-          animation: listening ? "conexiaListenPulse 1.7s ease-in-out infinite" : "none",
+          justifyContent: "flex-start",
         }}
       >
-        <div
+        <button
+          onClick={onClick}
+          aria-label={active ? "Encerrar conversa" : "Iniciar conversa"}
           style={{
-            width: 76,
-            height: 76,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            animation: spin,
-            transformOrigin: "50% 50%",
-            filter: active
-              ? "drop-shadow(0 0 12px rgba(201,168,76,.30))"
-              : "none",
+            position: "relative",
+            width: 196,
+            height: 196,
+            borderRadius: "50%",
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+            WebkitTapHighlightColor: "transparent",
           }}
         >
-          <img
-            src={conexiaIcon}
-            alt=""
+          <div
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              opacity: active ? 1 : 0.8,
+              position: "absolute",
+              inset: 5,
+              borderRadius: "50%",
+              border: `1px solid ${active ? `${K.gold}B8` : `${K.gold}55`}`,
+              boxShadow: active
+                ? `0 0 46px ${K.gold}16, inset 0 0 34px ${K.gold}0B`
+                : `0 0 26px rgba(0,0,0,.25)`,
+              animation: active ? "conexiaRing 2.2s ease-in-out infinite" : "none",
+              transition: "border-color .25s ease, box-shadow .25s ease",
             }}
           />
-        </div>
+
+          <div
+            style={{
+              position: "absolute",
+              inset: 18,
+              borderRadius: "50%",
+              background: `radial-gradient(circle at 50% 45%, ${K.gold}10 0%, ${K.card} 50%, ${K.bg} 100%)`,
+              border: `1px solid ${K.gold}24`,
+            }}
+          />
+
+          <div
+            style={{
+              position: "relative",
+              width: 104,
+              height: 104,
+              display: "grid",
+              placeItems: "center",
+              animation: thinking
+                ? "conexiaThink 6.5s linear infinite"
+                : speaking
+                  ? "conexiaSpeak 1.25s ease-in-out infinite"
+                  : listening
+                    ? "conexiaBreath 1.65s ease-in-out infinite"
+                    : active
+                      ? "conexiaBreath 3.2s ease-in-out infinite"
+                      : "none",
+              filter: active
+                ? "drop-shadow(0 0 14px rgba(201,168,76,.34))"
+                : "drop-shadow(0 0 6px rgba(201,168,76,.12))",
+              transformOrigin: "50% 50%",
+            }}
+          >
+            <img
+              src={conexiaIcon}
+              alt=""
+              draggable="false"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </div>
+        </button>
 
         <div
           style={{
+            color: active ? K.gold : K.text,
             fontFamily: sans,
-            fontSize: 13,
+            fontSize: 18,
             fontWeight: 800,
-            marginTop: 8,
-            letterSpacing: ".01em",
+            marginTop: 4,
+            letterSpacing: "-.01em",
           }}
         >
           {label}
@@ -188,15 +228,15 @@ function VoiceOrb({ state, active, onClick }) {
 
         <div
           style={{
-            fontFamily: sans,
-            fontSize: 9,
             color: K.muted,
-            marginTop: 4,
+            fontFamily: sans,
+            fontSize: 11,
+            marginTop: 5,
           }}
         >
-          {active ? "toque para encerrar" : "toque uma vez"}
+          {active ? "toque para encerrar" : "toque para iniciar"}
         </div>
-      </button>
+      </div>
     </>
   );
 }
@@ -646,16 +686,27 @@ export default function ConexiaLabHome({
   };
 
   const speak = (text, resumeListening = true) => {
-    const line = String(text || "").trim();
+    const raw = String(text || "").trim();
 
-    if (!line || !("speechSynthesis" in window)) {
+    if (!raw || !("speechSynthesis" in window)) {
       if (resumeListening && conversationActiveRef.current) {
         startListening();
       }
       return;
     }
 
-    addTurn("assistant", line);
+    addTurn("assistant", raw);
+
+    // O navegador lê markdown, listas e pontuação pesada de forma pausada.
+    // Limpa apenas a forma falada; o texto original continua preservado no contexto.
+    const line = raw
+      .replace(/[*_#>`]/g, "")
+      .replace(/\s*[-–—]\s*/g, ", ")
+      .replace(/\s*[:;]\s*/g, ", ")
+      .replace(/\n+/g, ". ")
+      .replace(/\.{2,}/g, ".")
+      .replace(/\s+/g, " ")
+      .trim();
 
     try {
       window.speechSynthesis.cancel();
@@ -674,15 +725,16 @@ export default function ConexiaLabHome({
       utterance.lang = "pt-BR";
     }
 
-    utterance.rate = 0.96;
-    utterance.pitch = 1;
+    // Mais próximo de conversa normal; 0.96 estava perceptivelmente lento.
+    utterance.rate = 1.08;
+    utterance.pitch = 1.01;
     utterance.volume = 1;
 
     utterance.onstart = () => setVoiceState("speaking");
 
     utterance.onend = () => {
       if (conversationActiveRef.current && resumeListening) {
-        setTimeout(() => startListening(), 350);
+        setTimeout(() => startListening(), 110);
       } else {
         setVoiceState("idle");
       }
@@ -692,7 +744,7 @@ export default function ConexiaLabHome({
       setVoiceState("idle");
 
       if (conversationActiveRef.current && resumeListening) {
-        setTimeout(() => startListening(), 500);
+        setTimeout(() => startListening(), 180);
       }
     };
 
@@ -702,7 +754,7 @@ export default function ConexiaLabHome({
       } catch {
         setVoiceState("idle");
       }
-    }, 80);
+    }, 20);
   };
 
   const stopListening = () => {
@@ -800,7 +852,7 @@ export default function ConexiaLabHome({
           ) {
             startListening();
           }
-        }, 650);
+        }, 260);
       }
     };
 
@@ -837,9 +889,9 @@ export default function ConexiaLabHome({
           "Estou ouvindo.",
           true
         );
-      }, 150);
+      }, 70);
     } else {
-      setTimeout(() => startListening(), 80);
+      setTimeout(() => startListening(), 50);
     }
   };
 
@@ -1841,26 +1893,6 @@ Responda SOMENTE JSON:
             {error}
           </div>
         )}
-      </div>
-
-      <div style={{
-        marginTop: 10,
-        display: "flex",
-        justifyContent: "center",
-        gap: 24,
-        color: K.muted,
-        fontFamily: sans,
-        fontSize: 10,
-      }}>
-        <span>Hoje</span>
-        <span>Rede</span>
-        <span style={{
-          color: K.gold,
-          fontWeight: 800,
-        }}>
-          Conversar
-        </span>
-        <span>Eu</span>
       </div>
     </div>
   );
