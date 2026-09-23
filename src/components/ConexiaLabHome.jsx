@@ -745,7 +745,7 @@ export default function ConexiaLabHome({
 
       setTimeout(() => {
         speak(
-          `${greetingForNow(displayName, timeZone)} Estou ouvindo.`,
+          "Estou ouvindo.",
           true
         );
       }, 150);
@@ -927,8 +927,12 @@ COMPORTAMENTO:
 - preserve o fio da conversa entre turnos;
 - entenda referências como "ele", "ela", "essa reunião", "essa pessoa", "isso", "aquele assunto", "e agora?", "e o risco?";
 - nunca reinicie uma conversa em andamento;
-- nunca diga "bom dia", "boa tarde" ou "boa noite" no meio da conversa;
+- NUNCA diga "bom dia", "boa tarde" ou "boa noite" nas respostas da conversa;
+- saudações de horário pertencem apenas ao cabeçalho visual do app;
 - não repita contexto que já está claro;
+- por padrão, NÃO despeje datas exatas, horários, timestamps ou cronologias detalhadas;
+- prefira linguagem natural como "recentemente", "nas últimas semanas", "há alguns dias" ou "na última conversa";
+- use data exata somente se ela mudar uma decisão, indicar urgência/cadência, fizer parte de compromisso futuro, ou se o usuário pedir "quando", "qual data" ou equivalente;
 - responda diretamente ao que foi perguntado;
 - faça uma pergunta de continuidade SOMENTE quando isso realmente melhorar a análise;
 - se já houver dados suficientes, não faça pergunta: entregue a leitura;
@@ -990,6 +994,7 @@ Responda SOMENTE JSON válido:
 }
 
 REGRAS DE RESPOSTA:
+- DATAS: não cite datas exatas automaticamente; resuma temporalidade em linguagem natural. Cite data exata apenas quando ela for relevante para decisão/urgência/cadência ou quando o usuário pedir;
 - para MEETING_PREP: use até 8 frases se necessário e priorize: histórico relevante, pontos de atenção, pendências, objetivo provável, perguntas recomendadas;
 - para PERSON_MEMORY: sintetize somente o que existe nos registros;
 - para RELATIONSHIP_RISK: explique evidências concretas antes da interpretação;
@@ -1106,6 +1111,9 @@ relational
 out_of_scope
 = assunto sem relação com pessoas, relações, interações, contexto profissional/pessoal relacional, preparação de conversas, networking ou inteligência relacional.
 
+DESPEDIDAS:
+"tchau", "valeu", "obrigado", "até mais", "até amanhã", "falou" não são out_of_scope; são encerramentos naturais e normalmente serão tratados antes deste roteador.
+
 REGRAS:
 - se a fala depende do contexto anterior, escolha relational;
 - "o que eu preciso saber?", "como me preparo?", "e ele?", "por quê?", "e agora?", "qual o risco?", "quem poderia ajudar?" = relational;
@@ -1168,6 +1176,26 @@ Responda SOMENTE JSON:
 
         return;
       }
+    }
+
+    const isFarewell =
+      /^(tchau|valeu|obrigado|obrigada|falou|ate mais|até mais|ate amanha|até amanhã|boa noite por hoje|encerrar|pode encerrar|fim)[.! ]*$/.test(n);
+
+    if (isFarewell) {
+      conversationActiveRef.current = false;
+      greetedThisSessionRef.current = false;
+      setConversationActive(false);
+      stopListening();
+
+      const response =
+        /obrigad/.test(n)
+          ? "Por nada, Milléo. Até mais."
+          : "Até mais, Milléo.";
+
+      setAnswer(response);
+      setCurrentView("answer");
+      speak(response, false);
+      return;
     }
 
     const isPureGreeting =
