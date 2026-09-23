@@ -1,90 +1,78 @@
 /**
  * CONÉXIA — Motor único de prioridade relacional
  *
- * Recebe os contatos já normalizados pelo App.jsx e devolve:
- *
- * {
- *   main: recomendação principal ou null,
- *   secondary: até duas recomendações secundárias
- * }
- *
- * O motor considera:
- * - próxima ação vencida;
- * - aniversário próximo;
- * - pessoa importante sem interação;
- * - frequência ideal ultrapassada;
- * - relevância estratégica;
- * - proximidade declarada (ajusta peso, não decide sozinha);
- * - momentum da relação, calculado do histórico real de interações
- *   (ajusta peso, não decide sozinho);
- * - respostas anteriores do usuário.
+ * Regras temporais blindadas:
+ * - datas impossíveis são ignoradas;
+ * - próxima ação anterior à criação do contato não é válida;
+ * - datas futuras não viram "0 dias";
+ * - atrasos antigos não exibem números absurdos;
+ * - linguagem temporal prioriza contexto humano, não cronômetro.
  */
 
 import { isRecommendationSuppressed } from "./alertsFeedback.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const STALE_ACTION_DAYS = 180;
 
-/**
- * Converte uma data em objeto Date válido.
- *
- * @param {*} value
- * @returns {Date|null}
- */
 function parseDate(value) {
   if (!value) return null;
 
-  const date = new Date(value);
+  // Datas YYYY-MM-DD são interpretadas em horário local para evitar
+  // deslocamento de um dia por UTC/fuso.
+  if (typeof value === "string") {
+    const raw = value.trim();
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
+    if (match) {
+      const year = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const day = Number(match[3]);
+
+      const local = new Date(year, month, day);
+
+      if (
+        local.getFullYear() === year &&
+        local.getMonth() === month &&
+        local.getDate() === day
+      ) {
+        return local;
+      }
+
+      return null;
+    }
+  }
+
+  const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/**
- * Remove horário para comparações de calendário.
- *
- * @param {Date} date
- * @returns {Date}
- */
 function startOfDay(date) {
   const result = new Date(date);
   result.setHours(0, 0, 0, 0);
   return result;
 }
 
-/**
- * Calcula quantos dias se passaram desde uma data.
- *
- * @param {*} dateValue
- * @param {Date} referenceDate
- * @returns {number|null}
- */
-function daysSince(dateValue, referenceDate) {
-  const date = parseDate(dateValue);
-
-  if (!date) return null;
-
-  return Math.max(
-    0,
-    Math.floor(
-      (startOfDay(referenceDate).getTime() - startOfDay(date).getTime()) /
-        DAY_MS
-    )
-  );
+function calendarDiffDays(fromDate, toDate) {
+  const from = startOfDay(fromDate).getTime();
+  const to = startOfDay(toDate).getTime();
+  return Math.round((to - from) / DAY_MS);
 }
 
-/**
- * Calcula quantos dias faltam para o próximo aniversário.
- *
- * @param {*} birthday
- * @param {Date} referenceDate
- * @returns {number|null}
- */
+function daysSince(dateValue, referenceDate) {
+  const date = parseDate(dateValue);
+  if (!date) return null;
+
+  const diff = calendarDiffDays(date, referenceDate);
+
+  // Uma data futura não significa "0 dias atrás".
+  if (diff < 0) return null;
+
+  return diff;
+}
+
 function birthdayDaysAway(birthday, referenceDate) {
   if (!birthday) return null;
 
-  /*
-   * Utiliza os componentes da string YYYY-MM-DD para evitar alterações
-   * causadas pelo fuso horário.
-   */
   const raw = String(birthday).slice(0, 10);
   const parts = raw.split("-").map(Number);
 
@@ -105,18 +93,6 @@ function birthdayDaysAway(birthday, referenceDate) {
   return Math.round((next.getTime() - today.getTime()) / DAY_MS);
 }
 
-/**
- * Calcula relevância com base nos quatro campos estratégicos.
- *
- * Os campos podem chegar como:
- * - números de 1 a 10;
- * - strings numéricas;
- * - booleanos;
- * - null.
- *
- * @param {object} contact
- * @returns {number|null}
- */
 export function calculateRelevance(contact) {
   const rawFields = [
     contact?.influenciaPessoas ?? contact?.influencia_pessoas,
@@ -134,18 +110,12 @@ export function calculateRelevance(contact) {
     }
 
     const number = Number(value);
-
     return Number.isFinite(number) ? number : null;
   });
 
   const valid = values.filter((value) => value !== null);
-
   if (valid.length === 0) return null;
 
-  /*
-   * Mantém compatibilidade com os campos atuais de 1 a 10.
-   * Se algum projeto estiver salvando de 0 a 100, normaliza.
-   */
   const normalized = valid.map((value) =>
     value > 10 ? Math.min(100, value) : Math.min(100, value * 10)
   );
@@ -156,18 +126,6 @@ export function calculateRelevance(contact) {
   );
 }
 
-/**
- * Converte a proximidade declarada do contato (1 = muito próximo,
- * 5 = distante) em um bônus de 0 a 4 para as regras que já existem.
- *
- * Não gera candidato sozinha e não decide prioridade — apenas ajusta
- * o peso de regras existentes: uma relação próxima esfriando ou
- * ultrapassando a frequência ideal merece mais atenção do que uma
- * relação distante nas mesmas condições.
- *
- * @param {object} contact
- * @returns {number|null}
- */
 function proximityCloseness(contact) {
   const raw = Number(contact?.proximity);
 
@@ -176,17 +134,6 @@ function proximityCloseness(contact) {
   return 5 - raw;
 }
 
-/**
- * Filtra e ordena (mais antiga primeiro) as interações de um contato
- * específico a partir da lista completa do usuário.
- *
- * Aceita tanto o formato do frontend (contactId/createdAt) quanto o
- * formato cru do Supabase (contact_id/created_at).
- *
- * @param {Array<object>} interactions
- * @param {string} contactId
- * @returns {Array<Date>}
- */
 export function contactInteractionDates(interactions, contactId) {
   if (!Array.isArray(interactions) || !contactId) return [];
 
@@ -197,31 +144,6 @@ export function contactInteractionDates(interactions, contactId) {
     .sort((a, b) => a.getTime() - b.getTime());
 }
 
-/**
- * Interpreta a tendência de uma relação a partir do histórico real de
- * interações, em vez de depender só de "dias desde o último contato".
- *
- * Exemplo do problema que isso resolve: alguém pode estar há 30 dias
- * sem contato e continuar estável, se o ritmo histórico real dessa
- * relação é a cada 45 dias — mesmo que o campo de frequência ideal
- * cadastrado esteja desatualizado.
- *
- * Estados possíveis:
- * - insufficient_data: histórico curto demais para afirmar qualquer coisa;
- * - new: contato recém-criado, ainda sem ritmo estabelecido;
- * - reactivated: silêncio longo seguido de retomada recente;
- * - strengthening: ritmo atual mais frequente que o histórico;
- * - stable: dentro da variação normal do ritmo histórico;
- * - cooling: intervalo atual bem acima do ritmo histórico.
- *
- * Exige no mínimo 2 interações para calcular ritmo — nunca afirma
- * tendência com base em 1 único ponto de dado.
- *
- * @param {object} contact
- * @param {Array<object>} interactions
- * @param {Date} referenceDate
- * @returns {string}
- */
 export function relationshipMomentum(contact, interactions, referenceDate) {
   const contactId = contact?.id;
   if (!contactId) return "insufficient_data";
@@ -246,6 +168,7 @@ export function relationshipMomentum(contact, interactions, referenceDate) {
   }
 
   const intervals = [];
+
   for (let i = 1; i < history.length; i++) {
     intervals.push(
       (history[i].getTime() - history[i - 1].getTime()) / DAY_MS
@@ -257,15 +180,11 @@ export function relationshipMomentum(contact, interactions, referenceDate) {
 
   if (daysSinceLast === null) return "insufficient_data";
 
-  /*
-   * Reativação: exige pelo menos 3 interações pra ter uma base de
-   * comparação (o intervalo "normal" entre as interações mais antigas)
-   * antes de afirmar que houve um silêncio longo seguido de retomada.
-   */
   if (intervals.length >= 2) {
     const priorIntervals = intervals.slice(0, -1);
     const avgPriorInterval =
       priorIntervals.reduce((a, b) => a + b, 0) / priorIntervals.length;
+
     const lastGap = intervals[intervals.length - 1];
 
     const hadDormantGap = lastGap >= Math.max(avgPriorInterval * 2, 45);
@@ -288,28 +207,10 @@ export function relationshipMomentum(contact, interactions, referenceDate) {
   return "cooling";
 }
 
-/**
- * Identificador estável da recomendação.
- *
- * @param {string} contactId
- * @param {string} actionType
- * @returns {string}
- */
 function recommendationId(contactId, actionType) {
   return `${contactId}:${actionType}`;
 }
 
-/**
- * Cria o formato consumido por HomeToday.jsx.
- *
- * @param {object} contact
- * @param {string} actionType
- * @param {string} title
- * @param {string} reason
- * @param {number} score
- * @param {string} [momentum]
- * @returns {object}
- */
 function createCandidate(
   contact,
   actionType,
@@ -331,58 +232,79 @@ function createCandidate(
   };
 }
 
-/**
- * Verifica se uma data de próxima ação está vencida.
- *
- * @param {*} value
- * @param {Date} referenceDate
- * @returns {number|null}
- */
-function overdueDays(value, referenceDate) {
-  const date = parseDate(value);
+function isActionDatePlausible(contact, actionDateValue, referenceDate) {
+  const actionDate = parseDate(actionDateValue);
+  if (!actionDate) return false;
 
-  if (!date) return null;
+  const createdAt = parseDate(
+    contact?.created_at ?? contact?.createdAt
+  );
 
-  const today = startOfDay(referenceDate);
-  const target = startOfDay(date);
+  // Uma próxima ação nunca pode existir antes do próprio contato.
+  if (
+    createdAt &&
+    startOfDay(actionDate).getTime() <
+      startOfDay(createdAt).getTime()
+  ) {
+    return false;
+  }
 
-  if (target.getTime() >= today.getTime()) {
+  // Proteção contra datas absurdamente futuras por erro de digitação/import.
+  const daysAhead = calendarDiffDays(referenceDate, actionDate);
+
+  if (daysAhead > 3650) {
+    return false;
+  }
+
+  return true;
+}
+
+function overdueDays(contact, value, referenceDate) {
+  if (!isActionDatePlausible(contact, value, referenceDate)) {
     return null;
   }
 
-  return Math.floor((today.getTime() - target.getTime()) / DAY_MS);
+  const date = parseDate(value);
+  if (!date) return null;
+
+  const diff = calendarDiffDays(date, referenceDate);
+
+  if (diff <= 0) {
+    return null;
+  }
+
+  return diff;
 }
 
-/**
- * Converte o estado de momentum em um ajuste de pontuação para as
- * regras que dependem de "tempo sem contato". Mesma filosofia da
- * proximidade: sinal que ajusta peso, nunca cria ou remove candidato
- * sozinho.
- *
- * cooling reforça o alerta; stable/strengthening o atenua, porque
- * sugere que o intervalo atual é normal para o ritmo real dessa
- * relação (mesmo que o campo de frequência ideal cadastrado esteja
- * desatualizado). new/reactivated/insufficient_data não alteram nada
- * — não há evidência suficiente para puxar o placar em nenhuma direção.
- *
- * @param {string} momentum
- * @returns {number}
- */
+function overdueHumanText(contactName, daysOverdue) {
+  if (daysOverdue === 1) {
+    return `Você tinha uma próxima ação combinada com ${contactName} para ontem.`;
+  }
+
+  if (daysOverdue <= 7) {
+    return `Há alguns dias existe uma próxima ação pendente com ${contactName}.`;
+  }
+
+  if (daysOverdue <= 30) {
+    return `Existe uma próxima ação pendente com ${contactName} há algumas semanas.`;
+  }
+
+  if (daysOverdue <= STALE_ACTION_DAYS) {
+    return `Existe uma próxima ação antiga ainda aberta com ${contactName}.`;
+  }
+
+  // Se chegou aqui, o compromisso é muito antigo. Pode ser legado, import
+  // ou uma ação que deixou de representar a realidade. Não mostramos
+  // "790 dias atrasado".
+  return `Há uma próxima ação muito antiga registrada com ${contactName}. Vale confirmar se ela ainda faz sentido.`;
+}
+
 function momentumAdjustment(momentum) {
   if (momentum === "cooling") return 4;
   if (momentum === "stable" || momentum === "strengthening") return -6;
   return 0;
 }
 
-/**
- * Cria candidatos para um contato.
- *
- * @param {object} contact
- * @param {Date} referenceDate
- * @param {Array<object>} interactions Histórico completo do usuário (todos
- *   os contatos) — a função filtra internamente pelo contato atual.
- * @returns {Array<object>}
- */
 function buildContactCandidates(contact, referenceDate, interactions) {
   const candidates = [];
 
@@ -392,6 +314,7 @@ function buildContactCandidates(contact, referenceDate, interactions) {
 
   const relevance = calculateRelevance(contact);
   const momentum = relationshipMomentum(contact, interactions, referenceDate);
+
   const lastInteraction =
     contact.lastInteraction ||
     contact.last_interaction_at ||
@@ -423,15 +346,21 @@ function buildContactCandidates(contact, referenceDate, interactions) {
 
   /*
    * 1. Próxima ação vencida.
-   * É o sinal mais objetivo de que existe algo combinado.
+   *
+   * Só entra se a cronologia for plausível.
+   * Atrasos longos são descritos humanamente, sem cronômetro absurdo.
    */
-  const daysOverdue = overdueDays(actionDate, referenceDate);
+  const daysOverdue = overdueDays(
+    contact,
+    actionDate,
+    referenceDate
+  );
 
   if (daysOverdue !== null) {
-    const reason =
-      daysOverdue === 1
-        ? `Você tinha uma próxima ação combinada com ${contact.name} para ontem.`
-        : `A próxima ação combinada com ${contact.name} está atrasada há ${daysOverdue} dias.`;
+    const reason = overdueHumanText(
+      contact.name,
+      daysOverdue
+    );
 
     candidates.push(
       createCandidate(
@@ -468,9 +397,9 @@ function buildContactCandidates(contact, referenceDate, interactions) {
     const reason =
       birthdayDistance === 0
         ? "Uma mensagem pessoal hoje pode fortalecer essa relação sem transformar o momento em contato comercial."
-        : `Faltam ${birthdayDistance} ${
-            birthdayDistance === 1 ? "dia" : "dias"
-          }. Vale preparar uma mensagem pessoal.`;
+        : birthdayDistance === 1
+          ? "O aniversário é amanhã. Vale preparar uma mensagem pessoal."
+          : "O aniversário está próximo. Vale preparar uma mensagem pessoal.";
 
     candidates.push(
       createCandidate(
@@ -504,27 +433,40 @@ function buildContactCandidates(contact, referenceDate, interactions) {
 
   /*
    * 4. Frequência ideal ultrapassada.
+   *
+   * Sem despejar contagem exata por padrão.
    */
   if (
     daysWithoutContact !== null &&
     daysWithoutContact > idealFrequency
   ) {
-    const excessDays = daysWithoutContact - idealFrequency;
+    const excessDays =
+      daysWithoutContact - idealFrequency;
 
     const strategicBonus =
       relevance !== null
         ? Math.round(relevance / 10)
         : 0;
 
-    const closeness = proximityCloseness(contact) || 0;
-    const momentumBonus = momentumAdjustment(momentum);
+    const closeness =
+      proximityCloseness(contact) || 0;
+
+    const momentumBonus =
+      momentumAdjustment(momentum);
+
+    const temporalReason =
+      daysWithoutContact <= idealFrequency * 1.5
+        ? `A relação passou um pouco do ritmo que você definiu para manter contato.`
+        : daysWithoutContact <= idealFrequency * 3
+          ? `Já faz mais tempo do que o ritmo habitual que você definiu para essa relação.`
+          : `Há um silêncio bem maior do que o ritmo que você definiu para essa relação.`;
 
     candidates.push(
       createCandidate(
         contact,
         "frequency_exceeded",
         `Talvez valha lembrar de ${contact.name}`,
-        `Faz ${daysWithoutContact} dias desde o último registro. O ritmo que você definiu para essa relação era de aproximadamente ${idealFrequency} dias.`,
+        temporalReason,
         65 +
           Math.min(excessDays, 20) +
           strategicBonus +
@@ -537,8 +479,6 @@ function buildContactCandidates(contact, referenceDate, interactions) {
 
   /*
    * 5. Contato relevante com saúde baixa.
-   *
-   * O App.jsx já calcula `health` com base em recência e frequência.
    */
   const health = Number(contact.health);
 
@@ -549,7 +489,8 @@ function buildContactCandidates(contact, referenceDate, interactions) {
     relevance !== null &&
     relevance >= 70
   ) {
-    const closeness = proximityCloseness(contact) || 0;
+    const closeness =
+      proximityCloseness(contact) || 0;
 
     candidates.push(
       createCandidate(
@@ -570,39 +511,27 @@ function buildContactCandidates(contact, referenceDate, interactions) {
   return candidates;
 }
 
-/**
- * Evita mostrar duas recomendações diferentes sobre a mesma pessoa
- * na mesma Home.
- *
- * @param {Array<object>} candidates
- * @returns {Array<object>}
- */
 function keepBestCandidatePerContact(candidates) {
   const bestByContact = new Map();
 
   for (const candidate of candidates) {
-    const current = bestByContact.get(candidate.relationshipId);
+    const current =
+      bestByContact.get(candidate.relationshipId);
 
-    if (!current || candidate.score > current.score) {
-      bestByContact.set(candidate.relationshipId, candidate);
+    if (
+      !current ||
+      candidate.score > current.score
+    ) {
+      bestByContact.set(
+        candidate.relationshipId,
+        candidate
+      );
     }
   }
 
   return Array.from(bestByContact.values());
 }
 
-/**
- * Calcula a recomendação principal e até duas secundárias.
- *
- * @param {Array<object>} contacts
- * @param {Record<string, object>} feedbackMap
- * @param {Date|string} referenceDate
- * @param {Array<object>} [interactions] Histórico completo de interações
- *   do usuário. Opcional — quando omitido, o momentum de cada contato
- *   cai em "insufficient_data" e nenhuma regra é afetada (mesmo
- *   comportamento de antes desta mudança).
- * @returns {{main: object|null, secondary: Array<object>}}
- */
 export function computePriorities(
   contacts = [],
   feedbackMap = {},
@@ -615,17 +544,29 @@ export function computePriorities(
 
   const allCandidates = [];
 
-  for (const contact of Array.isArray(contacts) ? contacts : []) {
-    const feedback = feedbackMap?.[contact.id] || null;
-    const candidates = buildContactCandidates(contact, today, interactions);
+  for (
+    const contact of Array.isArray(contacts)
+      ? contacts
+      : []
+  ) {
+    const feedback =
+      feedbackMap?.[contact.id] || null;
+
+    const candidates =
+      buildContactCandidates(
+        contact,
+        today,
+        interactions
+      );
 
     for (const candidate of candidates) {
-      const suppressed = isRecommendationSuppressed(
-        feedback,
-        candidate.recommendationId,
-        candidate.actionType,
-        today
-      );
+      const suppressed =
+        isRecommendationSuppressed(
+          feedback,
+          candidate.recommendationId,
+          candidate.actionType,
+          today
+        );
 
       if (!suppressed) {
         allCandidates.push(candidate);
@@ -633,22 +574,27 @@ export function computePriorities(
     }
   }
 
-  const ordered = keepBestCandidatePerContact(allCandidates)
-    .sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
+  const ordered =
+    keepBestCandidatePerContact(
+      allCandidates
+    )
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
 
-      return String(a.contactName || "").localeCompare(
-        String(b.contactName || ""),
-        "pt-BR"
-      );
-    })
-    .slice(0, 3);
+        return String(
+          a.contactName || ""
+        ).localeCompare(
+          String(b.contactName || ""),
+          "pt-BR"
+        );
+      })
+      .slice(0,3);
 
   return {
     main: ordered[0] || null,
-    secondary: ordered.slice(1, 3),
+    secondary: ordered.slice(1,3),
   };
 }
 
