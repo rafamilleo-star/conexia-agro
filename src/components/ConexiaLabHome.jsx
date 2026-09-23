@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { computePriorities } from "../../shared/priorityEngine.js";
 import { detectPatterns, PATTERN_NOTES } from "../../shared/relationshipPatternDetector.js";
+import conexiaIcon from "../assets/brand/conexia_icone_fundo-escuro.svg";
 
 const K = {
   bg: "#0D0D0F",
@@ -82,33 +83,121 @@ function VoiceOrb({ state, active, onClick }) {
   const listening = state === "listening";
   const thinking = state === "thinking";
   const speaking = state === "speaking";
-  const label = listening ? "Ouvindo" : thinking ? "Pensando" : speaking ? "Falando" : active ? "Conversando" : "Conversar";
+
+  const label =
+    listening
+      ? "Ouvindo"
+      : thinking
+        ? "Pensando"
+        : speaking
+          ? "Falando"
+          : active
+            ? "Conversando"
+            : "Conversar";
+
+  const spin =
+    thinking
+      ? "conexiaSpin 3.6s linear infinite"
+      : speaking
+        ? "conexiaSpin 8s linear infinite"
+        : active
+          ? "conexiaFloat 6s ease-in-out infinite"
+          : "none";
 
   return (
-    <button
-      onClick={onClick}
-      style={{
-        width: 154,
-        height: 154,
-        borderRadius: "50%",
-        background: listening ? `${K.gold}25` : K.card2,
-        border: `2px solid ${active ? K.gold : K.border}`,
-        boxShadow: active ? `0 0 0 12px ${K.gold}0C, 0 0 42px ${K.gold}20` : "0 10px 30px rgba(0,0,0,.25)",
-        color: active ? K.gold : K.text,
-        cursor: "pointer",
-        transition: "all .2s ease",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div style={{ fontSize: 30, lineHeight: 1 }}>{speaking ? "◉" : listening ? "●" : "◎"}</div>
-      <div style={{ fontFamily: sans, fontSize: 13, fontWeight: 800, marginTop: 8 }}>{label}</div>
-      <div style={{ fontFamily: sans, fontSize: 9, color: K.muted, marginTop: 4 }}>
-        {active ? "toque para encerrar" : "toque uma vez"}
-      </div>
-    </button>
+    <>
+      <style>{`
+        @keyframes conexiaSpin {
+          from { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.045); }
+          to { transform: rotate(360deg) scale(1); }
+        }
+        @keyframes conexiaFloat {
+          0%,100% { transform: rotate(-4deg) scale(1); }
+          50% { transform: rotate(4deg) scale(1.035); }
+        }
+        @keyframes conexiaListenPulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,.10), 0 0 26px rgba(201,168,76,.12); }
+          50% { box-shadow: 0 0 0 14px rgba(201,168,76,.05), 0 0 48px rgba(201,168,76,.24); }
+        }
+      `}</style>
+
+      <button
+        onClick={onClick}
+        aria-label={active ? "Encerrar conversa" : "Iniciar conversa"}
+        style={{
+          width: 164,
+          height: 164,
+          borderRadius: "50%",
+          background: listening
+            ? `radial-gradient(circle at center, ${K.gold}20, ${K.card2} 66%)`
+            : `radial-gradient(circle at center, ${K.gold}0B, ${K.card2} 70%)`,
+          border: `1px solid ${active ? `${K.gold}AA` : K.border}`,
+          boxShadow: active
+            ? `0 0 0 10px ${K.gold}08, 0 0 44px ${K.gold}1E`
+            : "0 12px 32px rgba(0,0,0,.30)",
+          color: active ? K.gold : K.text,
+          cursor: "pointer",
+          transition: "all .25s ease",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+          overflow: "visible",
+          animation: listening ? "conexiaListenPulse 1.7s ease-in-out infinite" : "none",
+        }}
+      >
+        <div
+          style={{
+            width: 76,
+            height: 76,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: spin,
+            transformOrigin: "50% 50%",
+            filter: active
+              ? "drop-shadow(0 0 12px rgba(201,168,76,.30))"
+              : "none",
+          }}
+        >
+          <img
+            src={conexiaIcon}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              opacity: active ? 1 : 0.8,
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            fontFamily: sans,
+            fontSize: 13,
+            fontWeight: 800,
+            marginTop: 8,
+            letterSpacing: ".01em",
+          }}
+        >
+          {label}
+        </div>
+
+        <div
+          style={{
+            fontFamily: sans,
+            fontSize: 9,
+            color: K.muted,
+            marginTop: 4,
+          }}
+        >
+          {active ? "toque para encerrar" : "toque uma vez"}
+        </div>
+      </button>
+    </>
   );
 }
 
