@@ -608,6 +608,18 @@ export default function ConexiaLabHome({
     firstName ||
     "";
 
+  const firstContactStorageKey = userId
+    ? `conexia_first_contact_completed_${userId}`
+    : "";
+
+  const firstContactCompleted =
+    Boolean(prefs?.first_contact_completed) ||
+    Boolean(
+      firstContactStorageKey &&
+      typeof window !== "undefined" &&
+      window.localStorage?.getItem(firstContactStorageKey)
+    );
+
   const priorities = useMemo(
     () =>
       computePriorities(
@@ -859,6 +871,37 @@ export default function ConexiaLabHome({
     rec.start();
   };
 
+  const markFirstContactCompleted = async () => {
+    if (!userId) return;
+
+    if (firstContactStorageKey && typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(firstContactStorageKey, "1");
+      } catch {}
+    }
+
+    setPrefs(prev => ({
+      ...(prev || {}),
+      user_id: userId,
+      first_contact_completed: true,
+    }));
+
+    try {
+      await supabase
+        .from("conexia_lab_preferences")
+        .upsert(
+          {
+            user_id: userId,
+            first_contact_completed: true,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+    } catch (e) {
+      console.warn("[CONÉXIA Live] Não consegui persistir first_contact_completed:", e);
+    }
+  };
+
   const beginConversation = () => {
     if (conversationActiveRef.current) {
       stopConversation();
@@ -884,12 +927,25 @@ export default function ConexiaLabHome({
     if (!greetedThisSessionRef.current) {
       greetedThisSessionRef.current = true;
 
-      setTimeout(() => {
-        speak(
-          "Estou ouvindo.",
-          true
-        );
-      }, 70);
+      if (!firstContactCompleted) {
+        void markFirstContactCompleted();
+
+        const introName = displayName ? `${displayName}, ` : "";
+
+        setTimeout(() => {
+          speak(
+            `${introName}eu sou o CONÉXIA. A partir daqui, vou usar as relações e interações que você registrar para te ajudar a perceber quem merece sua atenção, o que está mudando na sua rede e qual pode ser o próximo movimento. Para começar, me conta uma pessoa importante para você hoje.`,
+            true
+          );
+        }, 70);
+      } else {
+        setTimeout(() => {
+          speak(
+            "Estou ouvindo.",
+            true
+          );
+        }, 70);
+      }
     } else {
       setTimeout(() => startListening(), 50);
     }
@@ -1654,9 +1710,11 @@ Responda SOMENTE JSON:
   }
 
   const greeting =
-    prefs?.greeting_mode === "direto"
-      ? `${displayName ? `${displayName}, ` : ""}vamos cuidar da sua rede.`
-      : greetingForNow(displayName, timeZone);
+    !firstContactCompleted
+      ? `Bem-vindo${displayName ? `, ${displayName}` : ""}.`
+      : prefs?.greeting_mode === "direto"
+        ? `${displayName ? `${displayName}, ` : ""}vamos cuidar da sua rede.`
+        : greetingForNow(displayName, timeZone);
 
   return (
     <div style={{
@@ -1693,9 +1751,11 @@ Responda SOMENTE JSON:
           fontFamily: sans,
           fontSize: 13,
         }}>
-          {currentView === "today"
-            ? "Tem uma coisa na sua rede que eu olharia hoje."
-            : "A conversa continua. Eu mantenho o contexto."}
+          {!firstContactCompleted
+            ? "Vamos começar por uma pessoa importante para você."
+            : currentView === "today"
+              ? "Tem uma coisa na sua rede que eu olharia hoje."
+              : "A conversa continua. Eu mantenho o contexto."}
         </div>
       </div>
 
