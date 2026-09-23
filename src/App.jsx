@@ -462,135 +462,643 @@ function TeamDimensionRadar({ observation, size = 128 }) {
 
 /* ═══ WELCOME ═════════════════════════════════════════════ */
 /* ═══ ONBOARDING ══════════════════════════════════════════ */
-function Onboard({ onDone, initialKey = "" }) {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState({
-    name: "", email: "", role: "", company: "", segment: "", state: "", city: "",
-    whatsapp: "", instagram: "", linkedin: "",
-    hobbies: "", birthday: "",
-    objectives: [], challenge: "", networkSize: "",
-  });
+function Onboard({ onDone, initialKey = "", authEmail = "" }) {
+  const [phase, setPhase] = useState("intro"); // intro | interview | review
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [heard, setHeard] = useState("");
+  const [textAnswer, setTextAnswer] = useState("");
+  const [useText, setUseText] = useState(false);
+  const [error, setError] = useState("");
   const [voucher, setVoucher] = useState(initialKey || "");
-  const tog = (v) => setForm(p => ({ ...p, objectives: p.objectives.includes(v) ? p.objectives.filter(x => x !== v) : [...p.objectives, v] }));
-  const s = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  const recognitionRef = useRef(null);
 
+  const [form, setForm] = useState({
+    name: "",
+    email: authEmail || "",
+    role: "",
+    company: "",
+    segment: "",
+    state: "",
+    city: "",
+    whatsapp: "",
+    instagram: "",
+    linkedin: "",
+    hobbies: "",
+    birthday: "",
+    objectives: [],
+    challenge: "",
+    networkSize: "",
+  });
 
-  const NETWORK_SIZES = [
-    { value: "1-20", label: "1-20 contatos" },
-    { value: "21-50", label: "21-50 contatos" },
-    { value: "51-100", label: "51-100 contatos" },
-    { value: "100+", label: "Mais de 100 contatos" },
+  const normalizeAnswer = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+
+  const segmentFromSpeech = (value) => {
+    const n = normalizeAnswer(value);
+    if (!n) return "outros";
+    if (/(agro|agric|fazenda|rural|sement|defensiv|fertiliz|pecuar)/.test(n)) return "agronegocio";
+    if (/(tecnolog|software|saas|ti|digital|dados|inteligencia artificial|ia\b)/.test(n)) return "tecnologia";
+    if (/(financ|banco|invest|credito|seguros)/.test(n)) return "financas";
+    if (/(saude|medic|hospital|clinica|farmac)/.test(n)) return "saude";
+    if (/(educa|univers|escola|ensino|treinamento)/.test(n)) return "educacao";
+    if (/(varejo|consumo|loja|retail)/.test(n)) return "varejo";
+    if (/(industr|fabrica|manufat)/.test(n)) return "industria";
+    if (/(construc|engenharia civil|imobili)/.test(n)) return "construcao";
+    if (/(consult|assessoria)/.test(n)) return "consultoria";
+    if (/(jurid|advoc|direito)/.test(n)) return "juridico";
+    if (/(marketing|comunic|publicidade|midia)/.test(n)) return "marketing";
+    if (/(rh|recursos humanos|gente|talentos)/.test(n)) return "rh";
+    if (/(logistic|supply|transport)/.test(n)) return "logistica";
+    if (/(energia|eletric|solar|petroleo|gas)/.test(n)) return "energia";
+    return "outros";
+  };
+
+  const objectiveFromSpeech = (value) => {
+    const n = normalizeAnswer(value);
+    if (/(cliente|venda|comercial|negocio)/.test(n)) return "novos_clientes";
+    if (/(oportunidade|crescer|crescimento|carreira)/.test(n)) return "oportunidades";
+    if (/(parceria|parceiro|alianca)/.test(n)) return "parcerias";
+    if (/(aprender|conhecimento|especialista)/.test(n)) return "conhecimento";
+    if (/(visibilidade|marca pessoal|ser conhecido|presenca)/.test(n)) return "visibilidade";
+    if (/(mentor|mentoria)/.test(n)) return "mentoria";
+    if (/(talento|contratar|equipe)/.test(n)) return "talentos";
+    if (/(investidor|investimento|capital)/.test(n)) return "investidores";
+    if (/(recoloc|emprego|vaga|nova posicao)/.test(n)) return "recolocacao";
+    if (/(comunidade|grupo|rede)/.test(n)) return "comunidade";
+    return "oportunidades";
+  };
+
+  const questions = [
+    {
+      key: "name",
+      prompt: "Primeiro, como você prefere que eu te chame?",
+      apply: (value) => setForm(p => ({ ...p, name: String(value || "").trim() })),
+    },
+    {
+      key: "company",
+      prompt: "Qual empresa faz parte do seu momento hoje?",
+      apply: (value) => setForm(p => ({ ...p, company: String(value || "").trim() })),
+    },
+    {
+      key: "role",
+      prompt: "E qual é o seu cargo ou função principal?",
+      apply: (value) => setForm(p => ({ ...p, role: String(value || "").trim() })),
+    },
+    {
+      key: "segment",
+      prompt: "Em que setor você atua hoje?",
+      apply: (value) => setForm(p => ({ ...p, segment: segmentFromSpeech(value) })),
+    },
+    {
+      key: "objective",
+      prompt: "E o que você mais quer que o CONÉXIA te ajude a construir agora?",
+      apply: (value) => setForm(p => ({ ...p, objectives: [objectiveFromSpeech(value)] })),
+    },
   ];
 
+  const currentQuestion = questions[questionIndex];
 
-  const CHALLENGES = [
-    { value: "consistencia", label: "Manter consistência" },
-    { value: "expansao", label: "Expandir a rede" },
-    { value: "reativacao", label: "Reativar relações" },
-    { value: "valor", label: "Gerar valor genuíno" },
-    { value: "visibilidade", label: "Aumentar visibilidade" },
-    { value: "estrategia", label: "Ter estratégia clara" },
-  ];
+  const chooseVoice = () => {
+    if (!("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    const score = (voice) => {
+      const name = normalizeAnswer(voice?.name);
+      const lang = normalizeAnswer(voice?.lang);
+      let s = lang === "pt-br" ? 100 : lang.startsWith("pt") ? 60 : -100;
+      if (name.includes("google")) s += 30;
+      if (name.includes("microsoft")) s += 25;
+      if (name.includes("natural")) s += 25;
+      if (name.includes("neural")) s += 25;
+      return s;
+    };
+    return [...voices].sort((a,b) => score(b) - score(a))[0] || null;
+  };
 
+  const speak = (text, after) => {
+    if (!("speechSynthesis" in window)) {
+      after?.();
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(text || ""));
+      const voice = chooseVoice();
+      if (voice) {
+        u.voice = voice;
+        u.lang = voice.lang || "pt-BR";
+      } else {
+        u.lang = "pt-BR";
+      }
+      u.rate = 1.06;
+      u.pitch = 1.01;
+      u.onstart = () => setSpeaking(true);
+      u.onend = () => {
+        setSpeaking(false);
+        after?.();
+      };
+      u.onerror = () => {
+        setSpeaking(false);
+        after?.();
+      };
+      window.speechSynthesis.speak(u);
+    } catch {
+      setSpeaking(false);
+      after?.();
+    }
+  };
 
-  if (step === 1) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
-      <div style={{ maxWidth: 440, width: "100%" }}>
-        <Tag>Passo 1 de 3 · Quem você é</Tag>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Seu diagnóstico começa aqui</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 24px", lineHeight: 1.6 }}>Estas informações, junto com 12 perguntas rápidas, permitem adaptar seu plano e suas recomendações à forma como você constrói relações.</p>
-        <Inp label="Seu nome" value={form.name} onChange={s('name')} placeholder="Como podemos te chamar?" />
-        <Inp label="Email" value={form.email} onChange={s('email')} placeholder="seu@email.com" type="email" />
-        <Inp label="Empresa" value={form.company} onChange={s('company')} placeholder="Ex: BASF, Syngenta, Bayer..." />
-        <Inp label="Função/cargo" value={form.role} onChange={s('role')} placeholder="Ex: Gerente Comercial, RTV..." />
-        <Sel label="Segmento" value={form.segment} onChange={s('segment')} options={SEGMENTS} placeholder="Selecione..." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Sel label="Estado" value={form.state} onChange={s('state')} options={UFS} placeholder="UF" />
-          <Inp label="Cidade" value={form.city} onChange={s('city')} placeholder="Ex: São Paulo" />
+  const stopListening = () => {
+    try { recognitionRef.current?.stop(); } catch {}
+    recognitionRef.current = null;
+    setListening(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopListening();
+      try { window.speechSynthesis?.cancel(); } catch {}
+    };
+  }, []);
+
+  const beginListening = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setUseText(true);
+      setError("Seu navegador não liberou reconhecimento de voz. Você pode responder por texto.");
+      return;
+    }
+
+    setError("");
+    setHeard("");
+    setTextAnswer("");
+
+    const rec = new SR();
+    recognitionRef.current = rec;
+    rec.lang = "pt-BR";
+    rec.interimResults = true;
+    rec.continuous = false;
+
+    rec.onstart = () => setListening(true);
+    rec.onresult = (event) => {
+      let finalText = "";
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0]?.transcript || "";
+        if (event.results[i].isFinal) finalText += `${t} `;
+        else interim += `${t} `;
+      }
+      const value = (finalText || interim).trim();
+      setHeard(value);
+      if (finalText.trim()) setTextAnswer(finalText.trim());
+    };
+    rec.onerror = (e) => {
+      recognitionRef.current = null;
+      setListening(false);
+      if (e?.error !== "aborted" && e?.error !== "no-speech") {
+        setError("Não entendi bem. Você pode tentar de novo ou responder por texto.");
+      }
+    };
+    rec.onend = () => {
+      recognitionRef.current = null;
+      setListening(false);
+    };
+
+    try { rec.start(); }
+    catch {
+      setUseText(true);
+      setError("Não consegui abrir o microfone. Responda por texto.");
+    }
+  };
+
+  const askCurrentQuestion = () => {
+    if (!currentQuestion) return;
+    speak(currentQuestion.prompt, beginListening);
+  };
+
+  const startInterview = () => {
+    setPhase("interview");
+    setQuestionIndex(0);
+    setError("");
+    setUseText(false);
+    setTimeout(() => {
+      speak(
+        "Eu sou a Danna, a voz do CONÉXIA. Vou te fazer cinco perguntas rápidas. Você pode responder falando e eu organizo tudo para você.",
+        () => speak(questions[0].prompt, beginListening)
+      );
+    }, 120);
+  };
+
+  const acceptAnswer = () => {
+    const value = String(textAnswer || heard || "").trim();
+    if (!value) {
+      setError("Me diga uma resposta antes de continuar.");
+      return;
+    }
+
+    currentQuestion.apply(value);
+    stopListening();
+    setHeard("");
+    setTextAnswer("");
+    setError("");
+
+    if (questionIndex >= questions.length - 1) {
+      setPhase("review");
+      speak("Pronto. Eu organizei o essencial. Confere se está tudo certo.");
+      return;
+    }
+
+    const next = questionIndex + 1;
+    setQuestionIndex(next);
+    setTimeout(() => {
+      speak(questions[next].prompt, beginListening);
+    }, 180);
+  };
+
+  const updateField = (key, value) => {
+    setForm(p => ({ ...p, [key]: value }));
+  };
+
+  const objectiveLabel =
+    OBJECTIVES.find(o => o.value === form.objectives?.[0])?.label ||
+    "Encontrar oportunidades";
+
+  const segmentLabel =
+    SEGMENTS.find(s => s.value === form.segment)?.label ||
+    "Outros";
+
+  const finish = () => {
+    const ready = {
+      ...form,
+      email: form.email || authEmail || "",
+      name: form.name.trim(),
+      company: form.company.trim(),
+      role: form.role.trim(),
+      segment: form.segment || "outros",
+      objectives: form.objectives?.length ? form.objectives : ["oportunidades"],
+    };
+
+    if (!ready.name || !ready.role) {
+      setError("Nome e função são necessários para começar.");
+      return;
+    }
+
+    onDone(ready, voucher.trim());
+  };
+
+  if (phase === "intro") {
+    return (
+      <div style={{
+        minHeight: "100dvh",
+        background: C.bg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 22,
+      }}>
+        <div style={{
+          width: "100%",
+          maxWidth: 440,
+          textAlign: "center",
+        }}>
+          <ConexiaIcon size={92} dark={false} style={{ margin: "0 auto 24px", display: "block" }} />
+          <Tag>Primeiro contato</Tag>
+          <h2 style={{
+            fontFamily: "'Cormorant Garamond',serif",
+            fontSize: 31,
+            color: C.txt,
+            margin: "14px 0 8px",
+            lineHeight: 1.08,
+          }}>
+            Vamos começar conversando.
+          </h2>
+          <p style={{
+            fontFamily: "'DM Sans'",
+            fontSize: 13,
+            color: C.txM,
+            lineHeight: 1.65,
+            margin: "0 auto 22px",
+            maxWidth: 360,
+          }}>
+            A Danna faz as perguntas, você responde falando e o CONÉXIA organiza o essencial. Se preferir, pode escrever a qualquer momento.
+          </p>
+          <Btn full onClick={startInterview}>Começar conversa</Btn>
         </div>
-        <Inp label="WhatsApp" value={form.whatsapp} onChange={s('whatsapp')} placeholder="(11) 99999-9999" type="tel" />
-        <Btn onClick={() => setStep(2)} disabled={!form.name.trim() || !form.email.trim() || !form.role.trim() || !form.segment} full>Continuar →</Btn>
       </div>
-    </div>
-  );
+    );
+  }
 
+  if (phase === "interview") {
+    return (
+      <div style={{
+        minHeight: "100dvh",
+        background: C.bg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}>
+        <div style={{
+          width: "100%",
+          maxWidth: 520,
+          background: C.card,
+          border: `1px solid ${C.brd}`,
+          borderRadius: 22,
+          padding: "24px 20px",
+          boxShadow: "0 18px 48px rgba(0,0,0,.24)",
+        }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 18,
+          }}>
+            <div>
+              <div style={{
+                fontFamily: "'DM Sans'",
+                color: C.gold,
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: ".12em",
+                textTransform: "uppercase",
+              }}>
+                DANNA · PRIMEIRO CONTATO
+              </div>
+              <div style={{
+                fontFamily: "'DM Sans'",
+                color: C.txL,
+                fontSize: 11,
+                marginTop: 4,
+              }}>
+                {questionIndex + 1} de {questions.length}
+              </div>
+            </div>
+            <div style={{
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              border: `1px solid ${C.gL}`,
+              display: "grid",
+              placeItems: "center",
+              background: C.gD,
+            }}>
+              <ConexiaIcon size={28} dark={false} />
+            </div>
+          </div>
 
-  if (step === 2) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
-      <div style={{ maxWidth: 480, width: "100%" }}>
-        <Tag>Passo 2 de 3 · O que você busca</Tag>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Seus objetivos de networking</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Selecione tudo que faz sentido.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
-          {OBJECTIVES.map(o => {
-            const sel = form.objectives.includes(o.value);
-            return (
-              <button key={o.value} onClick={() => tog(o.value)} style={{ background: sel ? C.gD : C.sf, border: `1px solid ${sel ? C.gL : C.brd}`, borderRadius: 10, padding: 14, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 18 }}>{o.icon}</span>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: sel ? 600 : 400, color: sel ? C.gold : C.txM }}>{o.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txM, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Maior desafio no networking hoje</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {CHALLENGES.map(c => {
-              const sel = form.challenge === c.value;
-              return (
-                <button key={c.value} onClick={() => setForm(p => ({ ...p, challenge: c.value }))} style={{ background: sel ? C.gD : C.sf, border: `1px solid ${sel ? C.gL : C.brd}`, borderRadius: 8, padding: '10px 12px', cursor: 'pointer', fontFamily: "'DM Sans'", fontSize: 12, fontWeight: sel ? 600 : 400, color: sel ? C.gold : C.txM, textAlign: 'left' }}>
-                  {c.label}
-                </button>
-              );
-            })}
+          <div style={{
+            fontFamily: "'Cormorant Garamond',serif",
+            color: C.txt,
+            fontSize: 28,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            marginBottom: 18,
+          }}>
+            {currentQuestion?.prompt}
+          </div>
+
+          <button
+            onClick={() => {
+              if (listening) stopListening();
+              else askCurrentQuestion();
+            }}
+            style={{
+              width: 118,
+              height: 118,
+              borderRadius: "50%",
+              margin: "0 auto 14px",
+              display: "grid",
+              placeItems: "center",
+              border: `1px solid ${listening ? C.gold : C.brd}`,
+              background: listening ? `${C.gold}12` : C.sf,
+              color: listening ? C.gold : C.txM,
+              cursor: "pointer",
+              boxShadow: listening ? `0 0 0 10px ${C.gold}08` : "none",
+            }}
+          >
+            <span style={{ fontSize: 28 }}>{listening ? "◉" : speaking ? "◌" : "●"}</span>
+          </button>
+
+          <div style={{
+            textAlign: "center",
+            fontFamily: "'DM Sans'",
+            fontSize: 11,
+            color: C.txL,
+            marginBottom: 16,
+          }}>
+            {speaking ? "Danna falando..." : listening ? "Ouvindo..." : "Toque no círculo para responder"}
+          </div>
+
+          {(heard || useText) && (
+            <div style={{
+              background: C.sf,
+              border: `1px solid ${C.brd}`,
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 12,
+            }}>
+              <textarea
+                value={textAnswer || heard}
+                onChange={(e) => {
+                  setTextAnswer(e.target.value);
+                  setHeard("");
+                }}
+                placeholder="Sua resposta..."
+                rows={3}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: C.txt,
+                  resize: "vertical",
+                  fontFamily: "'DM Sans'",
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                }}
+              />
+            </div>
+          )}
+
+          {error && (
+            <div style={{
+              fontFamily: "'DM Sans'",
+              color: C.cor,
+              fontSize: 11,
+              lineHeight: 1.5,
+              marginBottom: 10,
+            }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn
+              variant="ghost"
+              onClick={() => setUseText(true)}
+              style={{ flex: 1 }}
+            >
+              Escrever
+            </Btn>
+            <Btn
+              onClick={acceptAnswer}
+              disabled={!String(textAnswer || heard || "").trim()}
+              style={{ flex: 2 }}
+            >
+              Confirmar resposta
+            </Btn>
           </div>
         </div>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txM, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Tamanho atual da sua rede profissional</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {NETWORK_SIZES.map(ns => {
-              const sel = form.networkSize === ns.value;
-              return (
-                <button key={ns.value} onClick={() => setForm(p => ({ ...p, networkSize: ns.value }))} style={{ background: sel ? C.gD : C.sf, border: `1px solid ${sel ? C.gL : C.brd}`, borderRadius: 8, padding: '10px 12px', cursor: 'pointer', fontFamily: "'DM Sans'", fontSize: 12, fontWeight: sel ? 600 : 400, color: sel ? C.gold : C.txM, textAlign: 'left' }}>
-                  {ns.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Btn onClick={() => setStep(1)} style={{ flex: 1, background: C.sf, color: C.txM }}>← Voltar</Btn>
-          <Btn onClick={() => setStep(3)} disabled={form.objectives.length === 0} style={{ flex: 2 }}>Continuar →</Btn>
-        </div>
       </div>
-    </div>
-  );
-
+    );
+  }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
-      <div style={{ maxWidth: 440, width: "100%" }}>
-        <Tag>Passo 3 de 3 · O lado humano</Tag>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 700, color: C.txt, margin: "12px 0 6px" }}>Detalhes que fazem diferença</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Opcional — mas a IA usa isso para insights mais precisos.</p>
-        <Inp label="Hobbies e interesses" value={form.hobbies} onChange={s('hobbies')} placeholder="Ex: futebol, leitura, viagens..." />
-        <Inp label="Aniversário" value={form.birthday} onChange={s('birthday')} placeholder="DD/MM/AAAA" type="date" />
-        <Inp label="LinkedIn (usuário ou URL)" value={form.linkedin} onChange={s('linkedin')} placeholder="linkedin.com/in/..." />
-        <Inp label="Instagram (@)" value={form.instagram} onChange={s('instagram')} placeholder="@seuperfil" />
-        {/* Chave de acesso opcional */}
-        <div style={{ borderTop:`1px solid ${C.brd}`, paddingTop:16, marginTop:4, marginBottom:16 }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:6 }}>Tem uma chave de acesso PRO? (opcional)</div>
-          <input
-            value={voucher}
-            onChange={e => setVoucher(e.target.value.toUpperCase())}
-            placeholder="Ex: MILLEO-PRO-15"
-            style={{ width:"100%", background:C.sf, border:`1px solid ${voucher?C.gL:C.brd}`, borderRadius:8, padding:"10px 14px", fontFamily:"'JetBrains Mono'", fontSize:13, fontWeight:voucher?700:400, color:voucher?C.gold:C.txM, outline:"none", letterSpacing:".08em", boxSizing:"border-box" }}
-          />
-          {voucher && <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.gold, marginTop:4 }}>✓ Chave será ativada após o diagnóstico</div>}
+    <div style={{
+      minHeight: "100dvh",
+      background: C.bg,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+    }}>
+      <div style={{
+        width: "100%",
+        maxWidth: 520,
+        background: C.card,
+        border: `1px solid ${C.brd}`,
+        borderRadius: 22,
+        padding: 22,
+      }}>
+        <Tag>Confirmação</Tag>
+        <h2 style={{
+          fontFamily: "'Cormorant Garamond',serif",
+          fontSize: 29,
+          color: C.txt,
+          margin: "12px 0 6px",
+        }}>
+          Foi isso que eu entendi.
+        </h2>
+        <p style={{
+          fontFamily: "'DM Sans'",
+          color: C.txM,
+          fontSize: 12.5,
+          lineHeight: 1.55,
+          margin: "0 0 18px",
+        }}>
+          Ajuste qualquer coisa antes de continuarmos.
+        </p>
+
+        <Inp label="Como devo te chamar" value={form.name} onChange={v => updateField("name", v)} />
+        <Inp label="Empresa" value={form.company} onChange={v => updateField("company", v)} />
+        <Inp label="Cargo / função" value={form.role} onChange={v => updateField("role", v)} />
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{
+            fontFamily: "'DM Sans'",
+            fontSize: 11,
+            fontWeight: 600,
+            color: C.txM,
+            marginBottom: 6,
+          }}>
+            Setor entendido
+          </div>
+          <select
+            value={form.segment || "outros"}
+            onChange={e => updateField("segment", e.target.value)}
+            style={{
+              width: "100%",
+              background: C.sf,
+              border: `1px solid ${C.brd}`,
+              borderRadius: 8,
+              padding: "11px 12px",
+              color: C.txt,
+              fontFamily: "'DM Sans'",
+              fontSize: 13,
+            }}
+          >
+            {SEGMENTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Btn onClick={() => setStep(2)} style={{ flex: 1, background: C.sf, color: C.txM }}>← Voltar</Btn>
-          <Btn onClick={() => onDone(form, voucher.trim())} style={{ flex: 2 }}>Descobrir meu perfil →</Btn>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{
+            fontFamily: "'DM Sans'",
+            fontSize: 11,
+            fontWeight: 600,
+            color: C.txM,
+            marginBottom: 6,
+          }}>
+            Principal objetivo
+          </div>
+          <select
+            value={form.objectives?.[0] || "oportunidades"}
+            onChange={e => updateField("objectives", [e.target.value])}
+            style={{
+              width: "100%",
+              background: C.sf,
+              border: `1px solid ${C.brd}`,
+              borderRadius: 8,
+              padding: "11px 12px",
+              color: C.txt,
+              fontFamily: "'DM Sans'",
+              fontSize: 13,
+            }}
+          >
+            {OBJECTIVES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+
+        <div style={{
+          background: `${C.gold}08`,
+          border: `1px solid ${C.gL}`,
+          borderRadius: 10,
+          padding: 12,
+          marginBottom: 16,
+          fontFamily: "'DM Sans'",
+          fontSize: 12,
+          color: C.txM,
+          lineHeight: 1.55,
+        }}>
+          <strong style={{ color: C.gold }}>Danna entendeu:</strong>{" "}
+          {segmentLabel} · {objectiveLabel}
+        </div>
+
+        {voucher && (
+          <div style={{ marginBottom: 14 }}>
+            <Inp label="Chave PRO" value={voucher} onChange={setVoucher} />
+          </div>
+        )}
+
+        {error && (
+          <div style={{
+            fontFamily: "'DM Sans'",
+            color: C.cor,
+            fontSize: 11,
+            marginBottom: 10,
+          }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn variant="ghost" onClick={() => {
+            setPhase("interview");
+            setQuestionIndex(0);
+            setUseText(false);
+            setError("");
+          }} style={{ flex: 1 }}>
+            Refazer
+          </Btn>
+          <Btn onClick={finish} style={{ flex: 2 }}>
+            Está certo · continuar
+          </Btn>
         </div>
       </div>
     </div>
@@ -6128,7 +6636,7 @@ function App() {
       {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
       {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
-      {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} />}
+      {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} authEmail={user?.email || ""} />}
       {state === "assess"       && user && <Assess profile={profile} onDone={handleAssess} />}
       {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} onProfileUpdate={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))} />}
     </>
