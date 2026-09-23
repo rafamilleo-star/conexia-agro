@@ -3289,8 +3289,36 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       return (
         <div>
           <button onClick={() => setSelId(null)} style={{ background: "none", border: "none", color: C.txM, cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 13, padding: "0 0 14px" }}>← Voltar</button>
-          <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginBottom: 14, display: "flex", gap: 16, alignItems: "flex-start" }}>
-            <div style={{ width: 50, height: 50, borderRadius: 12, background: `${ci?.color || C.gold}18`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: ci?.color }}>{sel.name[0]}</div>
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.brd}`,
+              borderRadius: 14,
+              padding: isMobile ? 16 : 20,
+              marginBottom: 14,
+              display: "grid",
+              gridTemplateColumns: isMobile ? "56px minmax(0,1fr)" : "50px minmax(0,1fr) auto",
+              gap: isMobile ? 12 : 16,
+              alignItems: "flex-start",
+            }}
+          >
+            <div
+              style={{
+                width: isMobile ? 44 : 50,
+                height: isMobile ? 44 : 50,
+                borderRadius: 12,
+                background: `${ci?.color || C.gold}18`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "'Cormorant Garamond',serif",
+                fontSize: isMobile ? 20 : 22,
+                fontWeight: 700,
+                color: ci?.color,
+              }}
+            >
+              {sel.name[0]}
+            </div>
             <div style={{ flex: 1 }}>
               <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>{sel.name}</h3>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{[sel.role, sel.company].filter(Boolean).join(" · ")}</div>
@@ -3302,7 +3330,15 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 const bc = badgeColors[priority.status] || C.txL;
                 return (
                   <div style={{ marginTop:10 }}>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: isMobile ? 10 : 8,
+                        marginBottom: isMobile ? 10 : 8,
+                        width: "100%",
+                      }}
+                    >
                       <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px" }}>
                         <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Presença</div>
                         <div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:sel.health>=70?C.grn:sel.health>=40?C.amb:C.cor, marginBottom:5 }}>{sel.health}%</div>
@@ -3328,9 +3364,17 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 );
               })()}
             </div>
-            <div style={{ display:"flex", gap:8 }}>
-              <Btn small onClick={() => openEditC(sel)}>✏️ Editar</Btn>
-              <Btn variant="danger" small onClick={() => { if (confirm("Remover contato?")) delC(sel.id); }}>Remover</Btn>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr 1fr" : "auto auto",
+                gap: 8,
+                width: isMobile ? "100%" : "auto",
+                gridColumn: isMobile ? "1 / -1" : "auto",
+              }}
+            >
+              <Btn small full={isMobile} onClick={() => openEditC(sel)}>✏️ Editar</Btn>
+              <Btn variant="danger" small full={isMobile} onClick={() => { if (confirm("Remover contato?")) delC(sel.id); }}>Remover</Btn>
             </div>
           </div>
           {sel.notes && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 14, marginBottom: 10, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{sel.notes}</div>}
@@ -3571,7 +3615,13 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
   const [redeSubTab, setRedeSubTab] = useState("teia"); // Teia como padrão — é o elemento mais diferenciado do produto, não devia ficar atrás de um clique extra
   const renderContacts = () => (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: isMobile ? 10 : 16,
+        }}
+      >
         <button onClick={() => setRedeSubTab("pessoas")} style={{ background: redeSubTab === "pessoas" ? C.gD : "transparent", border: `1px solid ${redeSubTab === "pessoas" ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: redeSubTab === "pessoas" ? C.gold : C.txM, cursor: "pointer" }}>Pessoas</button>
         <button onClick={() => setRedeSubTab("teia")} style={{ background: redeSubTab === "teia" ? C.gD : "transparent", border: `1px solid ${redeSubTab === "teia" ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: redeSubTab === "teia" ? C.gold : C.txM, cursor: "pointer" }}>Teia</button>
       </div>
@@ -4518,7 +4568,19 @@ ${MENTORIA_LINK || true ? `
       )}
 
 
-      <main style={{ flex: 1, padding: isMobile ? "16px" : "24px 28px", overflowY: "auto", maxHeight: isMobile ? "calc(100vh - 110px)" : "100vh", paddingBottom: isMobile ? 70 : 24 }}>
+      <main
+        style={{
+          flex: 1,
+          minHeight: 0,
+          padding: isMobile ? "14px 14px 0" : "24px 28px",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
+          maxHeight: "none",
+          paddingBottom: isMobile
+            ? "calc(104px + env(safe-area-inset-bottom))"
+            : 24,
+        }}
+      >
         {view === "dash" && renderDash()}
         {view === "startNetwork" && (
           <GuidedNetworkStart
@@ -4542,7 +4604,22 @@ ${MENTORIA_LINK || true ? `
 
 
       {isMobile && (
-        <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.sf, borderTop: `1px solid ${C.brd}`, display: "flex", justifyContent: "space-around", padding: "6px 0", zIndex: 50 }}>
+        <nav
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: "rgba(18,18,18,.96)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderTop: `1px solid ${C.brd}`,
+            display: "flex",
+            justifyContent: "space-around",
+            padding: "8px 0 calc(8px + env(safe-area-inset-bottom))",
+            zIndex: 50,
+          }}
+        >
           {NAVS.map(n => (
             <button key={n.id} onClick={() => { setView(n.id); setSelId(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 8px", minWidth: 0 }}>
               <span style={{ fontSize: 16, color: view === n.id ? C.gold : C.txL }}>{n.icon}</span>
