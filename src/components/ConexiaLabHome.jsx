@@ -123,17 +123,95 @@ export default function ConexiaLabHome({
   const speechBufferRef = useRef("");
   const voiceIntentRef = useRef("auto");
 
+  const chooseBestPortugueseVoice = () => {
+    if (!("speechSynthesis" in window)) return null;
+
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+
+    const scoreVoice = (voice) => {
+      const name = normalize(voice?.name || "");
+      const lang = normalize(voice?.lang || "");
+      let score = 0;
+
+      // Prioridade máxima: português do Brasil.
+      if (lang === "pt-br") score += 120;
+      else if (lang.startsWith("pt")) score += 70;
+      else score -= 100;
+
+      // Vozes normalmente mais naturais nos principais sistemas/navegadores.
+      if (name.includes("google")) score += 35;
+      if (name.includes("microsoft")) score += 30;
+      if (name.includes("natural")) score += 30;
+      if (name.includes("neural")) score += 30;
+      if (name.includes("online")) score += 15;
+      if (name.includes("premium")) score += 15;
+
+      // Nomes comuns de vozes pt-BR que costumam soar melhor.
+      if (/(antonio|antônio|thiago|daniel|francisca|fernanda|luciana|camila)/.test(name)) score += 18;
+
+      // Evitar vozes claramente sintéticas/experimentais quando houver alternativa.
+      if (/(compact|espeak|festival|novelty|whisper|robot|child)/.test(name)) score -= 40;
+
+      if (voice.default) score += 5;
+      if (voice.localService === false) score += 8;
+
+      return score;
+    };
+
+    return [...voices].sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || null;
+  };
+
   const speak = (text) => {
     const line = String(text || "").trim();
     if (!line) return;
+
     setAssistantLine(line);
+
     if (!("speechSynthesis" in window)) return;
+
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(line);
-    u.lang = "pt-BR";
-    u.rate = 1.02;
-    u.pitch = 0.96;
-    window.speechSynthesis.speak(u);
+
+    const speakNow = () => {
+      const u = new SpeechSynthesisUtterance(line);
+      const voice = chooseBestPortugueseVoice();
+
+      if (voice) u.voice = voice;
+      u.lang = voice?.lang || "pt-BR";
+
+      // Ajuste para fala limpa e natural: ritmo levemente abaixo do padrão,
+      // pitch neutro e volume integral. Sem efeito de "locutor".
+      u.rate = 0.96;
+      u.pitch = 1.0;
+      u.volume = 1.0;
+
+      window.speechSynthesis.speak(u);
+    };
+
+    // Chrome/Android às vezes carregam a lista de vozes só depois do primeiro acesso.
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (voices.length) {
+      speakNow();
+      return;
+    }
+
+    let spoken = false;
+    const onVoicesChanged = () => {
+      if (spoken) return;
+      spoken = true;
+      window.speechSynthesis.removeEventListener?.("voiceschanged", onVoicesChanged);
+      speakNow();
+    };
+
+    window.speechSynthesis.addEventListener?.("voiceschanged", onVoicesChanged);
+
+    // Fallback: não deixa o app ficar mudo se o evento não disparar.
+    setTimeout(() => {
+      if (spoken) return;
+      spoken = true;
+      window.speechSynthesis.removeEventListener?.("voiceschanged", onVoicesChanged);
+      speakNow();
+    }, 350);
   };
 
   useEffect(() => {
