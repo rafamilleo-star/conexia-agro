@@ -347,36 +347,68 @@ export default function ConexiaLabHome({
 
   const speak = (text, resumeListening = true) => {
     const line = String(text || "").trim();
+
     if (!line || !("speechSynthesis" in window)) {
-      if (resumeListening && conversationActiveRef.current) startListening();
+      if (resumeListening && conversationActiveRef.current) {
+        startListening();
+      }
       return;
     }
 
-    window.speechSynthesis.cancel();
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+    } catch (_) {}
+
     setVoiceState("speaking");
 
-    const doSpeak = () => {
-      const u = new SpeechSynthesisUtterance(line);
-      const voice = chooseVoice();
-      if (voice) u.voice = voice;
-      u.lang = voice?.lang || "pt-BR";
-      u.rate = 0.97;
-      u.pitch = 1;
-      u.volume = 1;
-      u.onend = () => {
-        if (conversationActiveRef.current && resumeListening) {
-          setTimeout(() => startListening(), 180);
-        } else {
-          setVoiceState("idle");
-        }
-      };
-      u.onerror = () => setVoiceState("idle");
-      window.speechSynthesis.speak(u);
+    const utterance = new SpeechSynthesisUtterance(line);
+    const voice = chooseVoice();
+
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang || "pt-BR";
+    } else {
+      utterance.lang = "pt-BR";
+    }
+
+    utterance.rate = 0.96;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setVoiceState("speaking");
     };
 
-    const voices = window.speechSynthesis.getVoices() || [];
-    if (voices.length) doSpeak();
-    else setTimeout(doSpeak, 300);
+    utterance.onend = () => {
+      if (conversationActiveRef.current && resumeListening) {
+        setTimeout(() => {
+          startListening();
+        }, 350);
+      } else {
+        setVoiceState("idle");
+      }
+    };
+
+    utterance.onerror = (event) => {
+      console.error("Erro speechSynthesis:", event);
+      setVoiceState("idle");
+
+      if (conversationActiveRef.current && resumeListening) {
+        setTimeout(() => {
+          startListening();
+        }, 500);
+      }
+    };
+
+    setTimeout(() => {
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.error("Erro ao falar:", e);
+        setVoiceState("idle");
+      }
+    }, 80);
   };
 
   const stopListening = () => {
@@ -446,16 +478,36 @@ export default function ConexiaLabHome({
   };
 
   const beginConversation = () => {
-    if (conversationActive) {
+    if (conversationActiveRef.current) {
       stopConversation();
       return;
     }
+
     conversationActiveRef.current = true;
     setConversationActive(true);
-    setCurrentView(v => v === "saved" ? "today" : v);
+
+    setCurrentView((v) =>
+      v === "saved" ? "today" : v
+    );
+
     setInput("");
     setError("");
-    setTimeout(() => startListening(), 60);
+
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+
+      const unlock = new SpeechSynthesisUtterance("");
+      unlock.volume = 0.01;
+      window.speechSynthesis.speak(unlock);
+    } catch (_) {}
+
+    setTimeout(() => {
+      speak(
+        `${greetingForNow(displayName)} Estou ouvindo. O que aconteceu?`,
+        true
+      );
+    }, 150);
   };
 
   const findContactByName = (name) => {
