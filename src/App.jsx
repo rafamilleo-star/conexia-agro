@@ -1,5 +1,6 @@
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
+import ConexiaLabHome from './components/ConexiaLabHome';
 import GuidedNetworkStart from './components/GuidedNetworkStart';
 import { computePriorities, calculateRelevance as calculateRelevanceCanonical, relationshipMomentum } from '../shared/priorityEngine.js';
 import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
@@ -13,6 +14,7 @@ import { buildTaskMicroresponse, buildMetaMicroresponse } from "./lib/evolutionC
 import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
 import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
 import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transparente.webp";
+
 
 /* ─── Logo Components ─────────────────────────────────── */
 // Ícone isolado (para splash, headers, favicons)
@@ -32,6 +34,7 @@ const ConexiaLogo = ({ height = 48, style = {} }) => (
   />
 );
 
+
 /* ─── Profiles ────────────────────────────────────────── */
 const PROFILES = {
   estrategista: { name: "O Estrategista", emoji: "🎯", tagline: "Você joga xadrez relacional.", desc: "Você não faz networking por acaso. Sabe exatamente quem precisa na sua rede, por quê, e cultiva com disciplina. Sua força está na clareza de intenção combinada com consistência.", strengths: ["Visão estratégica de longo prazo", "Disciplina no follow-up", "Capacidade de priorizar relações"], risks: ["Pode parecer transacional", "Subestima conexões sem utilidade imediata"], actions: ["Liste 3 pessoas que mantém contato por obrigação — existe algo genuíno ali?", "Tenha 1 conversa sem agenda nas próximas 2 semanas.", "Envie reconhecimento para alguém que te ajudou, sem pedir nada."] },
@@ -44,12 +47,14 @@ const PROFILES = {
   explorador_rede: { name: "O Explorador de Rede", emoji: "🧭", tagline: "Você está no começo. E isso é vantagem.", desc: `Sem padrão dominante — pode construir do zero, com método, sem vícios. O ${BRAND.name} será sua fundação.`, strengths: ["Mente aberta", "Sem vícios de networking", "Alto potencial"], risks: ["Pode se sentir perdido", "Risco de desistir cedo"], actions: [`Liste 15 pessoas que importam — classifique cada uma no ${BRAND.name}.`, "Escolha 3 e envie mensagem genuína esta semana.", "Leia o capítulo 1 do livro e aplique 1 conceito."] },
 };
 
+
 const PLAN = [
   { week: 1, title: "Mapear contatos", icon: "🗺️", goal: "Construir a fundação da sua rede.", tasks: ["Cadastre 10 contatos estratégicos", "Classifique cada um", "Defina frequência ideal", "Escreva notas sobre cada pessoa"], metric: "10 contatos cadastrados" },
   { week: 2, title: "Reativar relações", icon: "🔄", goal: "Reconectar com quem esfriou.", tasks: ["Identifique 3 contatos com menor health", "Envie mensagem genuína para cada um", `Registre cada interação no ${BRAND.name}`], metric: "3 relações reativadas" },
   { week: 3, title: "Gerar valor", icon: "💎", goal: "Dar antes de pedir.", tasks: ["Para cada contato-chave: o que posso oferecer?", "Faça 2 indicações", "Compartilhe conteúdo com 3 contatos"], metric: "2 indicações + 3 conteúdos" },
   { week: 4, title: "Criar sistema", icon: "⚙️", goal: "Transformar ação em hábito.", tasks: ["Defina ritual semanal", "Configure alertas", "Defina 3 metas para 90 dias"], metric: "Ritual + metas documentadas" },
 ];
+
 
 /* ─── Culturas Agro ───────────────────────────────────── */
 const MAIN_CULTURES = [
@@ -67,6 +72,7 @@ const MAIN_CULTURES = [
   { value: "arroz",       label: "🍚 Arroz" },
   { value: "outro",       label: "🌍 Outro" },
 ];
+
 
 /* ─── Helpers ─────────────────────────────────────────── */
 const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999;
@@ -111,6 +117,7 @@ const normalizeWhatsapp = (raw) => {
   return digits;
 };
 
+
 // ── RELEVANCE SCORE utils ──────────────────────────────────
 const calculateRelevanceScore = (c) => {
   // Cálculo delegado a shared/priorityEngine.js (fonte única de verdade para
@@ -125,6 +132,7 @@ const calculateRelevanceScore = (c) => {
   return calculateRelevanceCanonical(c);
 };
 
+
 const getRelevanceLabel = (rs) => {
   if (rs === null || rs === undefined) return null;
   if (rs >= 80) return "Estratégico";
@@ -133,6 +141,7 @@ const getRelevanceLabel = (rs) => {
   return "Sem prioridade agora";
 };
 
+
 const getRelevanceLabelColor = (rs) => {
   if (rs === null || rs === undefined) return "#5a5650";
   if (rs >= 80) return "#c9a227";
@@ -140,6 +149,7 @@ const getRelevanceLabelColor = (rs) => {
   if (rs >= 40) return "#ff9800";
   return "#6a6460";
 };
+
 
 const getContactPriorityStatus = (health, rs) => {
   if (rs === null || rs === undefined) return {
@@ -168,6 +178,7 @@ const getContactPriorityStatus = (health, rs) => {
     color: "#6a6460"
   };
 };
+
 
 const generateImmediateActionPlan = (sc) => {
   if (!sc) return null;
@@ -232,6 +243,7 @@ const birthdayDaysAway = (birthday) => {
   return Math.round((next - today) / 86400000);
 };
 
+
 function calcScores(answers) {
   const scores = {};
   DIMS.forEach((dim, di) => {
@@ -242,6 +254,7 @@ function calcScores(answers) {
   const overall = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length);
   return { scores, overall };
 }
+
 
 function getProfile(scores) {
   const { intencao_estrategica: IE = 0, escuta_relacional: ER = 0, presenca_mercado: PM = 0, reciprocidade_ativa: RA = 0, ritual_consistencia: RC = 0, confianca_autentica: CA = 0 } = scores;
@@ -255,12 +268,14 @@ function getProfile(scores) {
   return "explorador_rede";
 }
 
+
 /* ─── UI Components ───────────────────────────────────── */
 function Btn({ children, onClick, variant = "primary", disabled, small, full }) {
   const base = { fontFamily: "'DM Sans',sans-serif", fontSize: small ? 12 : 15, fontWeight: 600, border: "none", borderRadius: 8, cursor: disabled ? "default" : "pointer", padding: small ? "8px 16px" : "14px 28px", transition: `all ${MOTION.fast}`, opacity: disabled ? 0.5 : 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, width: full ? "100%" : "auto" };
   const v = { primary: { color: C.bg, background: `linear-gradient(135deg,${C.gold},${C.gB})` }, secondary: { color: C.txt, background: C.w06 }, ghost: { color: C.txM, background: "transparent" }, danger: { color: C.cor, background: C.corD }, success: { color: C.grn, background: C.grnD } };
   return <button onClick={onClick} disabled={disabled} style={{ ...base, ...v[variant] }}>{children}</button>;
 }
+
 
 function Inp({ label, value, onChange, placeholder, type = "text", textarea }) {
   const [showPass, setShowPass] = useState(false);
@@ -290,6 +305,7 @@ function Inp({ label, value, onChange, placeholder, type = "text", textarea }) {
   );
 }
 
+
 function Sel({ label, value, onChange, options, placeholder }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -302,9 +318,11 @@ function Sel({ label, value, onChange, options, placeholder }) {
   );
 }
 
+
 function Tag({ children, color = C.gold, small }) {
   return <span style={{ display: "inline-block", fontSize: small ? 9 : 10, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color, background: `${color}16`, border: `1px solid ${color}28`, padding: small ? "2px 7px" : "3px 10px", borderRadius: 4, fontFamily: "'DM Sans'" }}>{children}</span>;
 }
+
 
 function HBar({ score, small }) {
   const cl = score >= 70 ? C.grn : score >= 40 ? C.amb : C.cor;
@@ -319,6 +337,7 @@ function HBar({ score, small }) {
   );
 }
 
+
 function Modal({ children, onClose, title }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
@@ -332,6 +351,7 @@ function Modal({ children, onClose, title }) {
     </div>
   );
 }
+
 
 function RadarChart({ scores, size = 260 }) {
   const cx = size / 2, cy = size / 2, r = size / 2 - 40;
@@ -348,6 +368,7 @@ function RadarChart({ scores, size = 260 }) {
     </svg>
   );
 }
+
 
 /* ═══ TENDÊNCIA DE EQUIPE (LINHA) ═════════════════════════════
    % da equipe evoluindo, semana a semana. Já vem filtrado (>=3 pessoas
@@ -411,6 +432,7 @@ function TeamTrendChart({ data, width = 640, height = 170 }) {
   );
 }
 
+
 /* ═══ RADAR CATEGÓRICO DE EQUIPE ══════════════════════════════
    Mesma geometria hexagonal do RadarChart acima, mas sem número de
    desempenho: cada eixo vai pra 1 de 3 raios fixos conforme o estado
@@ -436,6 +458,7 @@ function TeamDimensionRadar({ observation, size = 128 }) {
   );
 }
 
+
 /* ═══ WELCOME ═════════════════════════════════════════════ */
 /* ═══ ONBOARDING ══════════════════════════════════════════ */
 function Onboard({ onDone, initialKey = "" }) {
@@ -450,12 +473,14 @@ function Onboard({ onDone, initialKey = "" }) {
   const tog = (v) => setForm(p => ({ ...p, objectives: p.objectives.includes(v) ? p.objectives.filter(x => x !== v) : [...p.objectives, v] }));
   const s = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
 
+
   const NETWORK_SIZES = [
     { value: "1-20", label: "1-20 contatos" },
     { value: "21-50", label: "21-50 contatos" },
     { value: "51-100", label: "51-100 contatos" },
     { value: "100+", label: "Mais de 100 contatos" },
   ];
+
 
   const CHALLENGES = [
     { value: "consistencia", label: "Manter consistência" },
@@ -465,6 +490,7 @@ function Onboard({ onDone, initialKey = "" }) {
     { value: "visibilidade", label: "Aumentar visibilidade" },
     { value: "estrategia", label: "Ter estratégia clara" },
   ];
+
 
   if (step === 1) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
@@ -486,6 +512,7 @@ function Onboard({ onDone, initialKey = "" }) {
       </div>
     </div>
   );
+
 
   if (step === 2) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
@@ -538,6 +565,7 @@ function Onboard({ onDone, initialKey = "" }) {
     </div>
   );
 
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
       <div style={{ maxWidth: 440, width: "100%" }}>
@@ -568,6 +596,7 @@ function Onboard({ onDone, initialKey = "" }) {
   );
 }
 
+
 /* ═══ ASSESSMENT ══════════════════════════════════════════ */
 // Tela final do assessment — reescrita para terminar em 1 CTA único
 // ("Começar minha rede"), em vez de radar + 6 dimensões + plano de 4
@@ -579,19 +608,23 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
   const [showFull, setShowFull] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
+
   useEffect(() => {
     if (!userId) return;
     supabase.from("page_events").insert({ user_id: userId, event_type: "assessment_result_viewed", tab_name: "assess" }).then(() => {}, () => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
   const handleStartNetwork = () => {
     if (userId) supabase.from("page_events").insert({ user_id: userId, event_type: "start_network_clicked", tab_name: "assess" }).then(() => {}, () => {});
     onSave();
   };
 
+
   const forcaLabel = (maxD?.label || "").toLowerCase();
   const desafioLabel = (minD?.label || "").toLowerCase();
+
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
@@ -605,6 +638,7 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
           <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txM, fontStyle: "italic" }}>{prof.tagline}</p>
         </div>
 
+
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 22, marginBottom: 20 }}>
           <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txt, lineHeight: 1.7, margin: 0 }}>
             {maxD && minD ? (
@@ -615,16 +649,19 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
           </p>
         </div>
 
+
         <Btn onClick={handleStartNetwork} disabled={saving} full>{saving ? "Salvando..." : "Começar minha rede →"}</Btn>
         {saveError && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.cor, textAlign: "center", marginTop: 10 }}>{saveError}</div>
         )}
+
 
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <button onClick={() => setShowFull(s => !s)} style={{ background: "none", border: "none", color: C.txL, fontFamily: "'DM Sans'", fontSize: TYPE.caption, cursor: "pointer", textDecoration: "underline" }}>
             {showFull ? "Ocultar diagnóstico completo" : "Ver diagnóstico completo"}
           </button>
         </div>
+
 
         {showFull && (
           <div style={{ marginTop: 20 }}>
@@ -653,6 +690,7 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
   );
 }
 
+
 function Assess({ profile, onDone }) {
   // ── Rascunho persistente (retomada entre sessões/dispositivos) ──
   // Restaura de profile.assessment_draft/assessment_draft_step no primeiro
@@ -675,10 +713,12 @@ function Assess({ profile, onDone }) {
   const q = QS[qi];
   const cur = ans[q?.id];
 
+
   const trackAssess = (eventType, metadata) => {
     if (!profile?.id) return;
     supabase.from("page_events").insert({ user_id: profile.id, event_type: eventType, tab_name: "assess", metadata: metadata || null }).then(() => {}, () => {});
   };
+
 
   // Dispara 1x no mount: assessment_started (rascunho novo) ou
   // assessment_resumed (já havia respostas salvas).
@@ -686,6 +726,7 @@ function Assess({ profile, onDone }) {
     trackAssess(hadDraft ? "assessment_resumed" : "assessment_started", hadDraft ? { resumedAtStep: qi } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // Salva o rascunho automaticamente a cada resposta/mudança de pergunta.
   // Erro de salvamento nunca bloqueia o preenchimento — só fica registrado
@@ -704,10 +745,12 @@ function Assess({ profile, onDone }) {
     return () => clearTimeout(draftSaveRef.current);
   }, [ans, qi, done, profile?.id]);
 
+
   const answerQuestion = (questionId, value) => {
     setAns(p => ({ ...p, [questionId]: value }));
     trackAssess("assessment_step_completed", { step: qi, questionId });
   };
+
 
   const save = async () => {
     if (savingRef.current) return; // evita duplo-clique criar registros duplicados
@@ -729,14 +772,18 @@ function Assess({ profile, onDone }) {
     }
   };
 
+
   if (done) {
+
 
     const vals = Object.entries(scores);
     const maxD = DIMS.find(d => d.key === vals.sort((a, b) => b[1] - a[1])[0]?.[0]);
     const minD = DIMS.find(d => d.key === vals.sort((a, b) => a[1] - b[1])[0]?.[0]);
 
+
     return <AssessResult prof={prof} overall={overall} maxD={maxD} minD={minD} scores={scores} saving={saving} saveError={saveError} onSave={save} userId={profile?.id} />;
   }
+
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
@@ -765,6 +812,7 @@ function Assess({ profile, onDone }) {
   );
 }
 
+
 /* ═══ MAKE WEBHOOK ════════════════════════════════════════
    A URL real do webhook Make NUNCA fica no frontend (era um segredo exposto
    no bundle público, acionável por qualquer pessoa via DevTools). O push
@@ -772,6 +820,7 @@ function Assess({ profile, onDone }) {
    Vercel e repassa no servidor. */
 const MAKE_WEBHOOK = "/api/track-crm-event";
 const MENTORIA_LINK = ""; // Preencher com link WhatsApp/Calendly
+
 
 /* ═══ STRIPE — CONFIGURAÇÃO CENTRALIZADA ═══════════════════
    Um único Payment Link (modo Live) com os dois preços cadastrados
@@ -784,6 +833,7 @@ const STRIPE = {
 // pro mesmo link único, já que mensal e anual vivem dentro dele.
 const STRIPE_MENSAL = STRIPE.checkoutUrl;
 const STRIPE_ANUAL  = STRIPE.checkoutUrl;
+
 
 /* Monta a URL do Payment Link já associada ao usuário logado.
    client_reference_id e prefilled_email são parâmetros oficiais da Stripe
@@ -799,9 +849,11 @@ const buildStripeCheckoutUrl = (baseUrl, user) => {
   return `${baseUrl}?${params.toString()}`;
 };
 
+
 const ADMIN_EMAILS           = ["rafaelmilleo@yahoo.com.br", "rafamilleo@gmail.com"];
 const FREE_CT_LIMIT          = 5;
 const FREE_IT_PER_CT_LIMIT   = 3; // interações por contato no plano Free
+
 
 const isProUser = (prof, email) => {
   if (!prof && !email) return false;
@@ -814,7 +866,9 @@ const isProUser = (prof, email) => {
   return false;
 };
 
+
 const isAdminEmail = (email) => ADMIN_EMAILS.includes(email);
+
 
 const getPlanLabel = (prof, email) => {
   if (isAdminEmail(email)) return "Admin";
@@ -823,6 +877,7 @@ const getPlanLabel = (prof, email) => {
   return "PRO";
 };
 
+
 /* ═══ IA PROATIVA ════════════════════════════════════════ */
 function PainelIAProativa({ userId, contacts, interactions, assessment, profile }) {
   const [insights, setInsights] = useState(null);
@@ -830,7 +885,9 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
   const [lastRefresh, setLastRefresh] = useState(null);
   const [errMsg, setErrMsg] = useState(null);
 
+
   const cacheKey = `${BRAND.storagePrefix}_ai_insights_${userId}`;
+
 
   const generateInsights = async () => {
     if (contacts.length < 3) return;
@@ -887,6 +944,7 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         };
       });
 
+
       // ── Assessment completo do usuário ──
       const sc = assessment?.scores || {};
       const assessmentScores = {
@@ -900,11 +958,13 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         confiancaAutentica: sc.confianca_autentica || 0,
       };
 
+
       // ── Análises agregadas ──
       const empCount = {};
       contacts.forEach(c => { if (c.company) empCount[c.company] = (empCount[c.company] || 0) + 1; });
       const catCount = {};
       contacts.forEach(c => { catCount[c.category || 'outro'] = (catCount[c.category || 'outro'] || 0) + 1; });
+
 
       // Contatos estratégicos de alto potencial sem interação recente
       const altoPotencialSemContato = contactsDetail.filter(c =>
@@ -912,10 +972,12 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         (c.diasSemContato === null || c.diasSemContato > 14)
       );
 
+
       // Contatos com relacionamento deteriorando (negativos recentes)
       const relacionamentoDeterirorando = contactsDetail.filter(c =>
         c.interacoesNegativas > 0 && c.interacoesNegativas >= c.interacoesPositivas
       );
+
 
       // Contatos atrasados na frequência ideal
       const atrasadosNaFrequencia = contactsDetail
@@ -923,8 +985,10 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         .sort((a, b) => b.diasDeAtraso - a.diasDeAtraso)
         .slice(0, 5);
 
+
       // Contatos sem nenhuma interação
       const semInteracao = contactsDetail.filter(c => c.totalInteracoes === 0);
+
 
       // Contatos ponte/mentor sem interação recente (crítico)
       const ponteMentorSemContato = contactsDetail.filter(c =>
@@ -932,10 +996,12 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         (c.diasSemContato === null || c.diasSemContato > 21)
       );
 
+
       // Reciprocidade: contatos com muitas interações mas sem valor gerado
       const semReciprocidade = contactsDetail.filter(c =>
         c.totalInteracoes >= 3 && c.vezesMandouValor === 0
       );
+
 
       const ctx = {
         assessment: assessmentScores,
@@ -974,7 +1040,9 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         todosContatos: contactsDetail,
       };
 
+
       const prompt = `Você é um coach de networking estratégico de alto nível. Analise os dados REAIS da rede do usuário e gere exatamente 3 insights PODEROSOS, ESPECÍFICOS e CORRELACIONADOS.
+
 
 Regras obrigatórias:
 - Use NOMES REAIS dos contatos — nunca seja genérico
@@ -989,11 +1057,14 @@ Regras obrigatórias:
 - Considere a categoria do contato: pontes e mentores têm peso estratégico maior que dormindo
 - Considere a proximidade (1=muito próximo, 5=distante) para calibrar a urgência
 
+
 Dados reais: ${JSON.stringify(ctx)}
+
 
 Responda APENAS com JSON no formato:
 {"insights": [{"titulo": "...", "observacao": "...", "acao": "...", "urgencia": "alta|media|baixa"}]}
 Sem texto extra.`;
+
 
       const res = await fetch('/api/claude', {
         method: 'POST',
@@ -1015,6 +1086,7 @@ Sem texto extra.`;
     setLoading(false);
   };
 
+
   useEffect(() => {
     if (!userId) return;
     const cached = localStorage.getItem(cacheKey);
@@ -1031,7 +1103,9 @@ Sem texto extra.`;
     if (contacts.length >= 3) generateInsights();
   }, [userId]);
 
+
   const urgColor = { alta: C.cor, media: C.amb, baixa: C.grn };
+
 
   return (
     <div style={{ background: `${C.gold}04`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
@@ -1047,11 +1121,13 @@ Sem texto extra.`;
         </button>
       </div>
 
+
       {loading && (
         <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, textAlign: 'center', padding: '16px 0' }}>
           A IA está analisando sua rede...
         </div>
       )}
+
 
       {errMsg && (
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.cor, marginBottom: 8, padding: '8px 10px', background: `${C.cor}10`, borderRadius: 6 }}>
@@ -1065,6 +1141,7 @@ Sem texto extra.`;
             : 'Clique em Atualizar para gerar insights personalizados da sua rede.'}
         </div>
       )}
+
 
       {insights && insights.map((ins, i) => {
         const uc = urgColor[ins.urgencia] || C.txL;
@@ -1087,6 +1164,7 @@ Sem texto extra.`;
   );
 }
 
+
 /* ═══ AÇÕES DO ARQUÉTIPO (compartilhado entre Plano e Trajetória) ═══
    Antes existiam 2 blocos estáticos idênticos e desconectados — um em
    "Plano de Ativação" (PlanInterativo) e outro em "Trajetória"
@@ -1097,6 +1175,7 @@ function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
   const [archetypeDone, setArchetypeDone] = useState({});
   const [loaded, setLoaded] = useState(false);
 
+
   const load = async () => {
     if (!userId) return;
     const { data } = await supabase.from('plan_step_completion').select('step_number').eq('user_id', userId).eq('phase', 0);
@@ -1106,6 +1185,7 @@ function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
     setLoaded(true);
   };
   useEffect(() => { load(); }, [userId]);
+
 
   const toggle = async (idx) => {
     const wasDone = !!archetypeDone[idx];
@@ -1120,6 +1200,7 @@ function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
       if (error) { console.error('[AçõesArquétipo] falha ao salvar:', error); setArchetypeDone(a => ({ ...a, [idx]: wasDone })); }
     }
   };
+
 
   if (!pf || !pf.actions?.length) return null;
   return (
@@ -1141,6 +1222,7 @@ function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
   );
 }
 
+
 /* ═══ PLANO INTERATIVO ══════════════════════════════════ */
 function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   const [done, setDone] = useState({});
@@ -1160,6 +1242,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     return () => clearTimeout(t);
   }, [microMsg]);
 
+
   // Carrega estado real do Supabase: checklist (plan_step_completion), metas de IA
   // com progresso calculado (ai_goals_progress) e atividade real registrada (plan_progress).
   const loadAll = async () => {
@@ -1177,6 +1260,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     setDone(newDone);
     setMetaDone(newMeta);
     setRealProgress(progress?.[0] || null);
+
 
     // Meta de 90 dias batida (100%) não fecha sozinha — sem isso ela fica
     // "somando pra sempre" na tela mesmo já concluída. Aqui, ao carregar,
@@ -1205,7 +1289,9 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     setLoaded(true);
   };
 
+
   useEffect(() => { loadAll(); }, [userId]);
+
 
   // Troca só esta meta (arquiva 1, gera 1 nova), diferente de "Regenerar"
   // que substitui as 3 de uma vez — evita perder progresso de metas ainda
@@ -1240,6 +1326,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     setRegeneratingGoalId(null);
   };
 
+
   const toggleTask = async (weekNum, taskIdx) => {
     const key = `${weekNum}_${taskIdx}`;
     const wasDone = !!done[key];
@@ -1256,6 +1343,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     }
   };
 
+
   const toggleMeta = async (weekNum) => {
     const wasDone = !!metaDone[weekNum];
     setMetaDone(m => ({ ...m, [weekNum]: !wasDone }));
@@ -1271,6 +1359,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     }
   };
 
+
   // Gera metas de 90 dias com métrica real e mensurável (interações ou contatos engajados),
   // não texto solto: a IA define o alvo numérico, e o progresso evolui sozinho a partir do uso real da plataforma.
   const generateAiGoals = async () => {
@@ -1282,6 +1371,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         supabase.from('interactions').select('contact_id').eq('user_id', userId),
       ]);
       const contactsEngaged = new Set((contactRows || []).map(r => r.contact_id)).size;
+
 
       const prompt = `Você é um coach de networking estratégico. O usuário tem o perfil relacional "${pf.name}" (${pf.tagline}). Pontos fortes: ${pf.strengths?.join(', ')}. Riscos: ${pf.risks?.join(', ')}. Hoje ele tem ${interactionsCount || 0} interações registradas e ${contactsEngaged} contatos engajados na plataforma. Gere exatamente 3 metas mensuráveis para os próximos 90 dias, cada uma medida por UM destes dois indicadores: "interactions_count" (total de interações registradas) ou "contacts_engaged" (contatos distintos com quem interagiu). Defina um alvo numérico realista acima do valor atual. Responda APENAS com JSON no formato: {"goals": [{"text": "descrição curta e específica da meta", "metric_type": "interactions_count", "target_value": 40}]}. Sem texto extra.`;
       const res = await fetch('/api/claude', {
@@ -1312,7 +1402,9 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     setAiLoading(false);
   };
 
+
   const hasActiveGoals = aiGoals && aiGoals.length > 0;
+
 
   return (
     <div>
@@ -1330,8 +1422,10 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         </div>
       )}
 
+
       {/* Suas 3 ações do perfil — componente compartilhado com a aba Trajetória (mesmo estado real) */}
       <ArchetypeActionsChecklist userId={userId} pf={pf} />
+
 
       {/* Metas de IA — mensuráveis, com progresso calculado a partir do uso real */}
       <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
@@ -1384,12 +1478,14 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         })}
       </div>
 
+
       {/* Microrresposta contextual — aparece ao concluir tarefa/meta, some sozinha */}
       {microMsg && (
         <div style={{ background: `${C.gold}0d`, border: `1px solid ${C.gL}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontFamily: "'DM Sans'", fontSize: 12.5, color: C.txt, lineHeight: 1.5 }}>
           {microMsg}
         </div>
       )}
+
 
       {/* Semanas do plano */}
       {PLAN.map((w, i) => {
@@ -1398,6 +1494,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         const isLocked = !isPro && w.week > 1;
         const weekTasksDone = w.tasks.filter((_, j) => done[`${w.week}_${j}`]).length;
         const allTasksDone = weekTasksDone === w.tasks.length;
+
 
         if (isLocked) return (
           <div key={i} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10, opacity: 0.6 }}>
@@ -1410,11 +1507,13 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
           </div>
         );
 
+
         // Semana já concluída (e não é a atual) fica colapsada por padrão —
         // antes ficava sempre expandida com o mesmo tamanho de uma semana
         // ativa, empurrando tudo pra baixo mesmo depois de feita.
         const isCollapsible = !isCurrent && allTasksDone;
         const isExpanded = !isCollapsible || !!expandedWeeks[w.week];
+
 
         if (isCollapsible && !isExpanded) return (
           <div key={i} onClick={() => setExpandedWeeks(e => ({ ...e, [w.week]: true }))}
@@ -1424,6 +1523,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
             <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>ver detalhes</span>
           </div>
         );
+
 
         return (
           <div key={i} style={{ background: isCurrent ? `${C.gold}06` : C.card, border: `1px solid ${isCurrent ? C.gL : C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10 }}>
@@ -1446,6 +1546,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
             </div>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, margin: '0 0 10px', fontStyle: 'italic' }}>{w.goal}</p>
 
+
             {/* Tarefas com checkbox */}
             {w.tasks.map((t, j) => {
               const key = `${w.week}_${j}`;
@@ -1461,6 +1562,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
               );
             })}
 
+
             {/* Meta da semana com flag */}
             <div onClick={() => toggleMeta(w.week)}
               style={{ marginTop: 12, background: metaDone[w.week] ? C.grnD : C.w06, border: `1px solid ${metaDone[w.week] ? C.grn + '40' : 'transparent'}`, borderRadius: 6, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: `all ${MOTION.base}` }}>
@@ -1475,6 +1577,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
           </div>
         );
       })}
+
 
       {/* Dicas */}
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginTop: 8 }}>
@@ -1495,6 +1598,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   );
 }
 
+
 /* ═══ AJUDA CONTEXTUAL (primeira vez + lâmpada de dicas) ═════════
    Antes disso era um tour fixo com 9 passos descrevendo abas que não
    existem mais ("Analytics", "Dashboard" separado, "IA" como aba própria).
@@ -1502,6 +1606,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
    dentro do assessment e do cadastro guiado, que antes não tinham nenhum
    tipo de ajuda. */
 const WELCOME_STEP = { icon: "✨", title: `Bem-vindo(a) ao ${BRAND.name}`, desc: "Isso aqui não é um CRM tradicional. É um assistente que te ajuda a cuidar das pessoas importantes, sem transformar relações em tarefas." };
+
 
 const HELP_STEPS = {
   // Onboarding e assessment — telas que hoje não tinham ajuda nenhuma.
@@ -1516,9 +1621,11 @@ const HELP_STEPS = {
   insights: [{ icon: "🧠", title: "Insights", desc: "Sugestões, análises e próximos passos da IA. Seu plano de ativação e o relatório em PDF também ficam aqui, nas abas do topo." }],
 };
 
+
 function getHelpSteps(context) {
   return HELP_STEPS[context] || [WELCOME_STEP];
 }
+
 
 // Botão flutuante reutilizável — usado dentro do app (CRM), do assessment
 // e do cadastro guiado, sempre com o conteúdo certo pra onde a pessoa está.
@@ -1532,6 +1639,8 @@ function HelpButton({ onClick, bottom = 20 }) {
     >💡</button>
   );
 }
+
+
 
 
 function TourModal({ onClose, onFinish, steps }) {
@@ -1564,6 +1673,7 @@ function TourModal({ onClose, onFinish, steps }) {
   );
 }
 
+
 /* ═══ PERFIL FORM ════════════════════════════════════════ */
 // Captura Passiva via Calendário — conexão OAuth com Google Calendar (sem
 // copiar/colar link .ics). Outlook e Apple ainda não têm botão próprio;
@@ -1577,6 +1687,7 @@ function CalendarConnectionCard({ pf, sp }) {
   const [showLegacyIcs, setShowLegacyIcs] = useState(false);
   const [connectError, setConnectError] = useState(null);
 
+
   const refreshConn = useCallback(async () => {
     setLoadingConn(true);
     const { data } = await supabase
@@ -1588,7 +1699,9 @@ function CalendarConnectionCard({ pf, sp }) {
     setLoadingConn(false);
   }, []);
 
+
   useEffect(() => { refreshConn(); }, [refreshConn]);
+
 
   // Depois do redirect de volta do Google (?calendar=connected|error|denied)
   useEffect(() => {
@@ -1601,6 +1714,7 @@ function CalendarConnectionCard({ pf, sp }) {
     const rest = params.toString();
     window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''));
   }, [refreshConn]);
+
 
   const handleConnect = async () => {
     setConnecting(true);
@@ -1635,6 +1749,7 @@ function CalendarConnectionCard({ pf, sp }) {
     }
   };
 
+
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
@@ -1649,8 +1764,10 @@ function CalendarConnectionCard({ pf, sp }) {
     }
   };
 
+
   const conectado = conn?.status === 'active';
   const comErro = conn?.status === 'error';
+
 
   return (
     <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
@@ -1658,6 +1775,7 @@ function CalendarConnectionCard({ pf, sp }) {
       <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 14 }}>
         Conecte seu calendário e, quando você tiver uma reunião com alguém da sua rede, o assistente {BRAND.name} te pergunta pelo WhatsApp se quer registrar como interação — sem precisar abrir o app.
       </div>
+
 
       {!loadingConn && conectado && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: C.w06, border: `1px solid ${C.gold}30`, borderRadius: 8, padding: "12px 14px" }}>
@@ -1667,6 +1785,7 @@ function CalendarConnectionCard({ pf, sp }) {
           </button>
         </div>
       )}
+
 
       {!loadingConn && !conectado && (
         <>
@@ -1686,9 +1805,11 @@ function CalendarConnectionCard({ pf, sp }) {
         </>
       )}
 
+
       <button onClick={() => setShowLegacyIcs(v => !v)} style={{ display: "block", marginTop: 14, background: "none", border: "none", padding: 0, fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, textDecoration: "underline", cursor: "pointer" }}>
         {showLegacyIcs ? "Ocultar opção avançada" : "Uso Outlook, Apple, ou quero colar um link .ics manualmente"}
       </button>
+
 
       {showLegacyIcs && (
         <div style={{ marginTop: 12 }}>
@@ -1708,6 +1829,7 @@ function CalendarConnectionCard({ pf, sp }) {
     </div>
   );
 }
+
 
 function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype }) {
   const NETWORK_SIZES = [
@@ -1761,6 +1883,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
     });
   }, [profile]);
 
+
   const toggleChallenge = (val) => setPf(p => ({
     ...p,
     challenges: p.challenges.includes(val)
@@ -1773,10 +1896,12 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
   const [justActivatedTrial, setJustActivatedTrial] = useState(false);
   const sp = (k) => (v) => setPf(p => ({ ...p, [k]: v }));
 
+
   // Carta de Evolução e observação por dimensão: vivem em Insights →
   // Trajetória (renderReport, componente CRM), não aqui. PerfilForm é só
   // conta/dados pessoais — ver comentário acima de renderInsightsHub no
   // componente CRM.
+
 
   // Estado do trial gratuito do Assistente de WhatsApp (10 dias, contados a
   // partir do primeiro cadastro do número — não da criação da conta).
@@ -1785,6 +1910,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
   const trialExpirado   = !isPro && diasDeTrial !== null && diasDeTrial > 10;
   const diasRestantes   = diasDeTrial !== null ? Math.max(0, Math.ceil(10 - diasDeTrial)) : null;
   const canEditWhatsapp = isPro || !trialExpirado;
+
 
   const handleSave = async () => {
     setSaving(true); setErr(""); setSaved(false); setJustActivatedTrial(false);
@@ -1831,6 +1957,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
     }
     setSaving(false);
   };
+
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 0 40px" }}>
@@ -1939,6 +2066,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
   );
 }
 
+
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [view, setView] = useState("dash");
@@ -1988,10 +2116,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [metricsErr, setMetricsErr] = useState("");
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
 
+
   // ── Computed plan ─────────────────────────────────────────
   const isPro         = isProUser(profile, user?.email);
   const planLabel     = getPlanLabel(profile, user?.email);
   const canAddContact = isPro || cts.length < FREE_CT_LIMIT;
+  const CONEXIA_LAB_USER_ID = "848ebde1-dd60-4652-8f9a-3e86dd31482f";
+  const isConexiaLab = user?.id === CONEXIA_LAB_USER_ID;
+
 
   // Observação comportamental por dimensão (declarado vs. observado) —
   // consumida em renderReport (Insights → Trajetória). Ver
@@ -2015,10 +2147,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       });
   }, [user?.id, isPro]);
 
+
   // Trial grátis do Assistente de WhatsApp: 10 dias a partir do cadastro do
   // número (whatsapp_trial_started_at), independente de virar PRO depois.
   const diasDeTrialCrm    = profile?.whatsapp_trial_started_at ? (Date.now() - new Date(profile.whatsapp_trial_started_at).getTime()) / 86400000 : null;
   const hasWhatsappAccess = isPro || (diasDeTrialCrm !== null && diasDeTrialCrm <= 10);
+
 
   const redeemKey = async () => {
     if (!akCode.trim()) return;
@@ -2040,6 +2174,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   };
   const openAccessKey = () => { setAkCode(""); setAkMsg(""); setShowAccessKey(true); };
 
+
   // ── Analytics: rastrear navegação de abas ───────────────
   const trackEvent = useCallback(async (eventType, tabName, metadata = {}) => {
     if (!user?.id) return;
@@ -2053,10 +2188,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     } catch (_) { /* silencioso — não interrompe o fluxo */ }
   }, [user?.id]);
 
+
   // Rastrear toda vez que a aba muda
   useEffect(() => {
     trackEvent("tab_view", view);
   }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const load = useCallback(async () => {
     if (!user?.id) { setDbgMsg("⚠️ user.id ausente — não autenticado"); return; }
@@ -2069,7 +2206,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     setIts((i || []).map(it => ({ ...it, desc: it.description, contactId: it.contact_id, createdAt: it.created_at, valueGen: it.value_generated })));
   }, [user?.id]);
 
+
   useEffect(() => { load(); }, [load]);
+
 
   // ── Métricas administrativas: acompanhamento do produto CONÉXIA ──
   // Contas de teste do próprio admin ficam de fora de todas as agregações,
@@ -2085,8 +2224,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       ]);
       if (pe || ae || ie || se) throw (pe || ae || ie || se);
 
+
       const testers = new Set((profs || []).filter(p => ADMIN_EMAILS.includes((p.email || "").toLowerCase())).map(p => p.id));
       const real = (profs || []).filter(p => !testers.has(p.id));
+
 
       const onboardingDone = real.filter(p => p.onboarding_completed).length;
       const assessmentDone = real.filter(p => p.assessment_completed).length;
@@ -2095,10 +2236,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       const proBySource = proReal.reduce((acc, p) => { const k = p.pro_access_source || "desconhecido"; acc[k] = (acc[k] || 0) + 1; return acc; }, {});
       const payingReal = (subs || []).filter(s => !testers.has(s.user_id) && s.status === "active" && s.stripe_price_id !== "price_pro_monthly_test").length;
 
+
       const weekKey = (d) => { const dt = new Date(d); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() - day + 1); return dt.toISOString().slice(0, 10); };
       const weekly = {};
       real.forEach(p => { const k = weekKey(p.created_at); weekly[k] = (weekly[k] || 0) + 1; });
       const weeklySignups = Object.entries(weekly).sort(([a], [b]) => a.localeCompare(b)).map(([week, count]) => ({ week, count }));
+
 
       setMetrics({
         totalReal: real.length,
@@ -2115,6 +2258,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     }
     setMetricsLoading(false);
   }, []);
+
+
 
 
   const addC = async () => {
@@ -2176,6 +2321,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       setSavingContact(false);
     }
   };
+
 
   const addI = async () => {
     if (!inf.desc.trim() || !intCid || !user?.id) return;
@@ -2239,6 +2385,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     }
   };
 
+
   const saveSchedule = async (contactId) => {
     if (!schedForm.date || !contactId || !user?.id) return;
     if (savingSchedule) return; // trava contra duplo clique / duplo submit
@@ -2281,12 +2428,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     }
   };
 
+
   const delC = async (id) => {
     await supabase.from("interactions").delete().eq("contact_id", id);
     await supabase.from("contacts").delete().eq("id", id);
     setSelId(null);
     await load();
   };
+
 
   const openEditC = (c) => {
     setCf({
@@ -2309,6 +2458,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     setEditId(c.id);
     setModal("editC");
   };
+
 
   const saveEditC = async () => {
     if (!editId || !cf.name.trim()) return;
@@ -2334,6 +2484,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     }).eq("id", editId).eq("user_id", user.id);
     if (!error) { setModal(null); setEditId(null); await load(); }
   };
+
 
   const sel = cts.find(c => c.id === selId);
   const cI = sel ? its.filter(i => i.contactId === sel.id) : [];
@@ -2363,9 +2514,11 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     ...(profile?.organization_id && profile?.org_role === "admin" ? [{ id: "empresa", icon: "🏢", label: "Empresa" }] : []),
   ];
 
+
   useEffect(() => {
     if (view === "metrics" && isMetricsAdmin && !metrics && !metricsLoading) loadMetrics();
   }, [view, isMetricsAdmin, metrics, metricsLoading, loadMetrics]);
+
 
   // CONÉXIA B2B — visão agregada da equipe, só para org_role
   // 'admin'. Lê exclusivamente get_org_team_overview() (SECURITY DEFINER),
@@ -2395,6 +2548,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       .finally(() => setOrgOverviewLoading(false));
   }, [view, profile?.organization_id, profile?.org_role, orgOverview, orgOverviewLoading]);
 
+
   const regenerateOrgCode = async () => {
     if (!profile?.organization_id) return;
     setOrgCodeBusy(true);
@@ -2409,6 +2563,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     }
   };
 
+
   const copyOrgCode = async () => {
     if (!orgInfo?.invite_code) return;
     try {
@@ -2417,6 +2572,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       setTimeout(() => setOrgCodeCopied(false), 1800);
     } catch (e) { /* clipboard indisponível — botão só não confirma visualmente */ }
   };
+
 
   const saveOrgName = async () => {
     const name = orgNameDraft.trim();
@@ -2433,6 +2589,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       setOrgNameBusy(false);
     }
   };
+
 
   // Análise de IA da equipe — a IA só recebe percentuais agregados
   // (nunca nome, nunca dado individual). Sob demanda (botão), não
@@ -2452,9 +2609,11 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         : "";
       const prompt = `Você é um consultor de inteligência relacional (metodologia CONÉXIA) analisando o estado agregado e ANÔNIMO de uma equipe comercial de agronegócio, medido em 6 dimensões relacionais e em volume de atividade. Você não recebe nome nem dado de nenhuma pessoa — só percentuais e totais da equipe inteira.
 
+
 Dados desta semana (${orgTeamStats.memberCount} pessoas com dado comportamental computado):
 ${dimLines}
 ${activityLine}
+
 
 Escreva uma análise executiva curta para o gestor da equipe, em português, tom consultivo e direto, 4 a 6 frases corridas (sem bullet points, sem markdown):
 1. Qual é o padrão mais forte da equipe e o que isso indica sobre como ela constrói relações.
@@ -2479,6 +2638,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     }
   };
 
+
   // Guardrail de consentimento: vínculo a organização nunca é silencioso.
   // respond_to_org_invite() é a única via de escrita nesses campos vinda
   // do client — aceitar seta org_consent_status='accepted'; recusar limpa
@@ -2500,6 +2660,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     }
   };
 
+
   const leaveOrganization = async () => {
     setOrgConsentBusy(true);
     try {
@@ -2512,6 +2673,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       setOrgConsentBusy(false);
     }
   };
+
 
   // Auto-declaração: pessoa digita o código da própria empresa e entra
   // sozinha. join_organization_by_code() já bloqueia quem já está em uma
@@ -2543,6 +2705,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     }
   };
 
+
   const renderMentor = () => {
     // In localStorage mode, mentor sees shared data. In Supabase mode, RLS handles cross-user reads.
     return (
@@ -2566,6 +2729,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     );
   };
 
+
   // Rótulos legíveis das 6 dimensões, usados nos cards de resumo agregado.
   const DIMENSION_LABELS = {
     intencao_estrategica: "Estratégia",
@@ -2575,6 +2739,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     ritual_consistencia: "Consistência",
     confianca_autentica: "Autenticidade",
   };
+
 
   // Resumo agregado de equipe — estatística do time, nunca de uma pessoa.
   // Só calcula/mostra com >=3 membros consentidos com dado, senão o
@@ -2613,6 +2778,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     };
   }, [orgOverview]);
 
+
   // Atividade agregada — soma bruta de contatos/interações da equipe.
   // Usa o mesmo piso de 3 pessoas que o resto do agregado, mesmo essa
   // métrica não depender do cron semanal (existe assim que há contato
@@ -2628,6 +2794,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     };
   }, [orgOverview]);
 
+
   const renderTeamStatCard = (label, value, sub, accent) => (
     <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "16px 18px", flex: "1 1 160px", minWidth: 160 }}>
       <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{label}</div>
@@ -2635,6 +2802,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       {sub && <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginTop: 4 }}>{sub}</div>}
     </div>
   );
+
 
   // Visão Empresa. Só categórico, só arquétipo.
   // Nunca lista contatos, interações ou conteúdo de mensagens de ninguém.
@@ -2666,6 +2834,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           Estado comportamental semanal e volume de atividade da sua equipe — categórico e quantitativo, nunca identidade ou conteúdo. Quem são os contatos de cada pessoa e o que foi dito em qualquer conversa nunca aparecem aqui.
         </p>
 
+
         {orgInfo?.invite_code && (
           <div style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
             <div>
@@ -2680,15 +2849,18 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
 
+
         {orgOverviewLoading && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando…</div>
         )}
+
 
         {!orgOverviewLoading && orgOverviewError && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
             {orgOverviewError}
           </div>
         )}
+
 
         {orgDeclineAlerts && orgDeclineAlerts.length > 0 && (
           <div style={{ background: `${C.cor}12`, border: `1px solid ${C.cor}50`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
@@ -2703,11 +2875,13 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
 
+
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length === 0 && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
             Nenhum membro vinculado a esta organização ainda.
           </div>
         )}
+
 
         {!orgOverviewLoading && !orgOverviewError && orgTeamStats && (
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
@@ -2739,12 +2913,14 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
 
+
         {orgTrend && orgTrend.length >= 2 && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Tendência — % da equipe evoluindo por semana</div>
             <TeamTrendChart data={orgTrend} />
           </div>
         )}
+
 
         {orgTeamStats && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
@@ -2762,6 +2938,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
 
+
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
           <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>Legenda</span>
@@ -2773,6 +2950,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             ))}
           </div>
         )}
+
 
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -2824,6 +3002,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     );
   };
 
+
   const renderExport = () => {
     const exportCSV = () => {
       try {
@@ -2837,6 +3016,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       } catch (e) { console.error(e); }
     };
 
+
     const exportJSON = () => {
       try {
         const data = { profile, assessment, contacts: cts, interactions: its, exportedAt: new Date().toISOString() };
@@ -2848,10 +3028,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       } catch (e) { console.error(e); }
     };
 
+
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Exportar dados</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Apenas o admin pode exportar. Testadores não veem esta tela.</p>
+
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
@@ -2868,6 +3050,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         </div>
 
+
         {admin && (
         <div style={{ background: C.ambD, border: `1px solid ${C.amb}28`, borderRadius: 10, padding: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, marginBottom: 6 }}>Google Drive · Em breve</div>
@@ -2878,6 +3061,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     );
   };
 
+
   const renderMetrics = () => {
     const Card = ({ label, value, danger }) => (
       <div style={{ background: danger ? C.corD : C.card, border: `1px solid ${danger ? C.cor + "40" : C.brd}`, borderRadius: 12, padding: "16px 18px" }}>
@@ -2887,13 +3071,16 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     );
     const sourceLabels = { access_key: "Convite (grátis)", admin: "Concedido (admin)", stripe: "Stripe", stripe_test: "Teste Stripe", demo: "Demo", desconhecido: "Desconhecido" };
 
+
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Métricas do CONÉXIA</h2>
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Visão administrativa do produto — contas de teste do admin excluídas.</p>
 
+
         {metricsLoading && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando métricas…</p>}
         {metricsErr && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.cor }}>{metricsErr}</p>}
+
 
         {metrics && (
           <>
@@ -2905,6 +3092,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               <Card label="Pro concedido" value={metrics.proConcedido} />
               <Card label="Pagantes externos reais" value={metrics.payingReal} danger={metrics.payingReal === 0} />
             </div>
+
 
             <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Cadastros reais por semana</div>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120, marginBottom: 24, padding: "0 2px" }}>
@@ -2920,6 +3108,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               })}
             </div>
 
+
             <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Origem do acesso pro</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
               {Object.entries(metrics.proBySource).map(([src, qtd]) => (
@@ -2933,6 +3122,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               ))}
             </div>
 
+
             {metrics.payingReal === 0 && (
               <div style={{ background: C.corD, border: `1px solid ${C.cor}40`, borderRadius: 10, padding: 16 }}>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, marginBottom: 6 }}>Estado real do negócio</div>
@@ -2945,6 +3135,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     );
   };
 
+
     const renderPlan = () => {
     const week = Math.min(4, Math.max(1, Math.ceil(dSince(assessment?.createdAt) / 7) || 1));
     return (
@@ -2955,6 +3146,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       </div>
     );
   };
+
 
   const renderDash = () => {
     // A Home ("Hoje") deixou de acumular 4 mecanismos de prioridade
@@ -2972,6 +3164,25 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     // ficavam presas na tela de "diagnóstico não concluído" para sempre.
     const assessmentCompleted = !!(profile?.assessment_completed || assessment);
 
+
+    if (isConexiaLab) {
+      return (
+        <ConexiaLabHome
+          userId={user?.id}
+          firstName={profile?.first_name || profile?.name || ""}
+          contacts={cts}
+          interactions={its}
+          onOpenContact={(cid) => {
+            setSelId(cid);
+            setRedeSubTab("pessoas");
+            setView("contacts");
+          }}
+          onDataChanged={load}
+        />
+      );
+    }
+
+
     return (
       <div>
         {/* Transparência LGPD: o membro precisa saber que o
@@ -2983,9 +3194,11 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
 
+
         {/* Removido: "{pf.emoji} {pf.name}" ocupava a posição mais nobre da
             página (antes até do card do WhatsApp) pra mostrar algo puramente
             decorativo, não acionável. O arquétipo continua visível em "Eu". */}
+
 
         {/* ── Assistente por WhatsApp: em destaque, no topo — não é um
             detalhe de rodapé, é o jeito mais usado de falar com o CONÉXIA
@@ -3035,6 +3248,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
 
+
         <HomeToday
           userId={user?.id}
           contacts={cts}
@@ -3049,6 +3263,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           openAccessKey={openAccessKey}
           stripeCheckoutUrl={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)}
         />
+
 
         {/* ── Áreas secundárias: nunca competem com a orientação principal acima ── */}
         {!isPro && (
@@ -3250,6 +3465,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           );
         })()}
 
+
         {cts.length === 0 ? <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 40, textAlign: "center" }}><Btn small onClick={() => setModal("addC")}>+ Primeiro contato</Btn></div>
         : [...cts].sort((a, b) => {
             // Ordena por prioridade, não por ordem de cadastro — usa o mesmo
@@ -3286,6 +3502,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     );
   };
 
+
   const renderTeia = () => {
     if (!isPro) return (
       <div>
@@ -3320,6 +3537,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       "Dados incompletos":"#5B9BD5",
     };
 
+
     // Apply filter
     const filtered = cts.filter(c => {
       const rs = calculateRelevanceScore(c);
@@ -3333,6 +3551,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       return true;
     });
 
+
     if (cts.length < 2) return (
       <div>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:700, color:C.txt, margin:"0 0 12px" }}>Teia da Rede</h2>
@@ -3344,6 +3563,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         </div>
       </div>
     );
+
 
     const CX = 280, CY = 255, R = 190;
     // Cruzamento com o motor único (mesmo usado na Home/WhatsApp) — não
@@ -3374,10 +3594,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     });
     const wp = nodes.length >= 3 ? nodes.map((n,i) => `${i===0?"M":"L"} ${n.x} ${n.y}`).join(" ") + " Z" : "";
 
+
     // Insight de rede (Fase 5, mesma fonte do card "O que percebi" na Home
     // e da Carta de Evolução no Perfil) — no máximo 1, só o de maior
     // confiança, nunca uma lista. Silencioso quando não há evidência.
     const networkInsight = detectPatterns(cts, its, new Date())[0] || null;
+
 
     const MOMENTUM_LABELS = {
       strengthening: 'fortalecendo',
@@ -3388,6 +3610,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       insufficient_data: null,
     };
 
+
     const FILTERS = [
       { key:"todos",        label:"Todos" },
       { key:"estrategicos", label:"Estratégicos" },
@@ -3397,12 +3620,14 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       ...CATS.map(ct => ({ key: ct.value, label: ct.label })),
     ];
 
+
     const selContact = teiaSel ? cts.find(c => c.id === teiaSel) : null;
     const selRS  = selContact ? calculateRelevanceScore(selContact) : null;
     const selP   = selContact ? getContactPriorityStatus(selContact.health, selRS) : null;
     const selCat = selContact ? CATS.find(x => x.value === selContact.category) : null;
     const selInt = selContact ? its.filter(i => i.contactId === selContact.id) : [];
     const selMomentum = selContact ? relationshipMomentum(selContact, its, new Date()) : null;
+
 
     return (
       <div>
@@ -3411,11 +3636,13 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL }}>{filtered.length} de {cts.length} contatos</div>
         </div>
 
+
         {networkInsight && PATTERN_NOTES[networkInsight.type] && (
           <div style={{ background:`${C.gold}0d`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 14px", marginBottom:14, fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.5 }}>
             {PATTERN_NOTES[networkInsight.type]}
           </div>
         )}
+
 
         {/* Filtros */}
         <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
@@ -3430,6 +3657,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             </button>
           ))}
         </div>
+
 
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 300px", gap:12 }}>
           {/* SVG Teia */}
@@ -3488,6 +3716,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             )}
           </div>
 
+
           {/* Side panel */}
           {!(teiaSel && selContact) && (() => {
             // Visão geral da rede — mesmo lugar onde aparece o detalhe da
@@ -3505,15 +3734,18 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               { label: "Dados incompletos", count: countBy("Dados incompletos"), color: "#5B9BD5" },
             ].filter(r => r.count > 0);
 
+
             return (
               <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16 }}>
                 <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:19, fontWeight:700, color:C.txt, marginBottom:2 }}>Sua rede</div>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:16 }}>{filtered.length} {filtered.length === 1 ? "pessoa" : "pessoas"} neste filtro</div>
 
+
                 <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px", marginBottom:14 }}>
                   <div style={{ fontFamily:"'DM Sans'", fontSize:8, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:4 }}>Presença média</div>
                   <div style={{ fontFamily:"'JetBrains Mono'", fontSize:22, fontWeight:700, color: avgHealth>=70?C.grn:avgHealth>=40?C.amb:C.cor }}>{avgHealth}%</div>
                 </div>
+
 
                 <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>Como está agora</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
@@ -3528,6 +3760,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                   ))}
                 </div>
 
+
                 <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic", lineHeight:1.5 }}>
                   Toque em uma pessoa na teia pra ver os detalhes dela.
                 </div>
@@ -3535,10 +3768,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             );
           })()}
 
+
           {teiaSel && selContact && (
             <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:16, position:"relative" }}>
               <button onClick={() => setTeiaSel(null)}
                 style={{ position:"absolute", top:12, right:12, background:"none", border:"none", color:C.txL, fontSize:18, cursor:"pointer", lineHeight:1 }}>×</button>
+
 
               {/* Avatar + Name */}
               <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:14, paddingRight:20 }}>
@@ -3553,6 +3788,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                   {selCat && <div style={{ marginTop:4 }}><Tag small color={selCat.color}>{selCat.label}</Tag></div>}
                 </div>
               </div>
+
 
               {/* Scores side by side */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
@@ -3569,6 +3805,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 </div>
               </div>
 
+
               {/* Priority status */}
               <div style={{ background:`${PRIO_COLORS[selP?.status]||C.txL}12`,
                 border:`1px solid ${PRIO_COLORS[selP?.status]||C.txL}25`,
@@ -3578,12 +3815,14 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, lineHeight:1.4 }}>{selP?.msg}</div>
               </div>
 
+
               {MOMENTUM_LABELS[selMomentum] && (
                 <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:12 }}>
                   <span style={{ color:C.txM, fontWeight:500 }}>Tendência: </span>
                   {MOMENTUM_LABELS[selMomentum]}
                 </div>
               )}
+
 
               {/* Last interaction + next action */}
               {selContact.lastInteraction && (
@@ -3600,6 +3839,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                   {selContact.nextActionDate && <span style={{ color:C.amb }}> · {fD(selContact.nextActionDate)}</span>}
                 </div>
               )}
+
 
               {/* Action buttons */}
               <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
@@ -3624,6 +3864,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             </div>
           )}
         </div>
+
 
         {/* Legenda — recolhida por padrão. É informação de referência, não
             precisa competir visualmente com o gráfico toda vez que alguém
@@ -3676,6 +3917,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     );
   };
 
+
   const UpgradeModal = () => (
     <Modal title="" onClose={() => setShowUpgrade(false)}>
       <div style={{ textAlign: "center", marginBottom: 16 }}>
@@ -3722,6 +3964,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     </Modal>
   );
 
+
   // ── "Rede" (âncora principal) = Pessoas + Teia num só lugar ──
   // Reaproveita renderContactsList() e renderTeia() sem tocar no que já
   // funciona — só adiciona um alternador simples por cima.
@@ -3735,6 +3978,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       {redeSubTab === "pessoas" ? renderContactsList() : renderTeia()}
     </div>
   );
+
 
   const renderReport = () => {
     if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
@@ -3765,6 +4009,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       const getLvlClr = (v) => v>=75?'#2e7d32':v>=50?'#e65100':'#c62828';
       const percLabel = assessment.overall>=85?'TOP 10%':assessment.overall>=75?'TOP 20%':assessment.overall>=65?'TOP 30%':'EM DESENVOLVIMENTO';
       const overallTen = Math.round(assessment.overall/10);
+
 
       const dimInterp = {
         intencao_estrategica:{
@@ -3799,6 +4044,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         },
       };
 
+
       const sintese = [
         {q:"O que mais te impressiona?", a: pct('intencao_estrategica')>=70?`A clareza sobre quem quer ter na rede e por quê — vê o networking como investimento, não evento.`:`A intenção existe, mas a estratégia de rede ainda está em construção.`},
         {q:"Como gostaria de ser descrito?", a: pct('presenca_mercado')>=70?`Uma referência — domínio técnico e visão que geram reconhecimento de mercado.`:`Um profissional sólido, construindo visibilidade consistente.`},
@@ -3814,14 +4060,17 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         {q:"O que rede representa?", a: pct('confianca_autentica')>=70?`Segurança — pessoas que estarão lá quando precisar, porque cultivou com autenticidade.`:`Oportunidade — mas ainda não operacionalizada com a consistência que o potencial merece.`},
       ];
 
+
       const tensao = top2.length>=2&&bot2.length>=2
         ? `${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1].label} ${s10(top2[1].key)}/10 — mas ${bot2[1].label} ${s10(bot2[1].key)}/10 e ${bot2[0].label} ${s10(bot2[0].key)}/10. Os pontos mais fortes coexistem com gaps que limitam a conversão do potencial em resultado relacional real.`
         : `Score geral ${overallTen}/10. ${pf?.desc?.split('.')[0]||''}.`;
+
 
       const termometro = DIMS.map(d => ({
         label: d.label, hoje: `${s10(d.key)}/10`, d90: `${Math.round(proj(pct(d.key))/10)}/10`,
         muda: dimInterp[d.key]?.high?.split('—')[1]?.trim() || dimInterp[d.key]?.high?.split('.')[0] || ''
       }));
+
 
       const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Diagnóstico Relacional — ${nomePessoa}</title>
@@ -3832,10 +4081,12 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 @media print{.no-print{display:none!important}.pb{page-break-before:always}}
 .print-btn{position:fixed;top:16px;right:16px;background:#c9a227;color:#000;border:none;border-radius:6px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:12px;z-index:99}
 
+
 /* ── CABEÇALHO DE PÁGINA ── */
 .pg-hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid #ddd;margin-bottom:14px}
 .pg-hdr-title{font-size:8pt;color:#888;letter-spacing:.05em}
 .pg-hdr-right{font-size:8pt;color:#888}
+
 
 /* ── CAPA ── */
 .cover{min-height:90vh;display:flex;flex-direction:column;justify-content:space-between;padding:24px 0}
@@ -3859,6 +4110,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .footer-bar-l{font-size:12pt;font-weight:700;color:#c9a227}
 .footer-bar-r{font-size:7.5pt;color:#888;text-align:right}
 
+
 /* ── DIM TABLE ── */
 .dim-table{width:100%;border-collapse:collapse;margin-bottom:8px}
 .dim-table td{padding:5px 4px;vertical-align:middle}
@@ -3873,12 +4125,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .dim-bar-fg{height:4px;border-radius:2px}
 .dim-sep{border-bottom:1px solid #f0ede8}
 
+
 /* ── SINTESE ── */
 .sq{display:flex;gap:8px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #f0ede8;break-inside:avoid}
 .sq:last-child{border-bottom:none;margin-bottom:0}
 .sq-num{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#c9a227;background:#c9a22712;border:1px solid #c9a22730;min-width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 .sq-q{font-weight:600;font-size:8.5pt;color:#1a1a1a;margin-bottom:2px}
 .sq-a{font-size:8pt;color:#555;line-height:1.6;word-break:break-word;overflow-wrap:anywhere}
+
 
 /* ── SECTIONS ── */
 .section{margin-bottom:20px}
@@ -3892,6 +4146,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .box-grey{background:#f9f7f3;border:1px solid #e0ddd8}
 .box-lbl{font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
 
+
 /* ── GATILHOS ── */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .gt-block{border-radius:6px;padding:11px 13px;margin-bottom:10px;break-inside:avoid}
@@ -3900,6 +4155,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .gt-title{font-size:8.5pt;font-weight:700;margin-bottom:4px}
 .gt-desc{font-size:8pt;color:#444;line-height:1.55;margin-bottom:4px}
 .gt-action{font-size:7.5pt;font-style:italic;color:#c9a227}
+
 
 /* ── PLANO ── */
 .week-box{display:grid;grid-template-columns:56px 1fr;border:1px solid #e0ddd8;border-radius:6px;overflow:hidden;margin-bottom:12px;break-inside:avoid}
@@ -3912,11 +4168,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .week-task{font-size:8pt;color:#333;margin-bottom:2px;display:flex;gap:6px}
 .week-meta{margin-top:6px;background:#fdf9ec;border:1px solid #c9a22720;border-radius:2px;padding:4px 8px;font-family:'Courier New',monospace;font-size:7.5pt;color:#c9a227}
 
+
 /* ── TERMÔMETRO ── */
 .thermo{width:100%;border-collapse:collapse}
 .thermo th{background:#f3f0ea;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px;border:1px solid #ddd;color:#666}
 .thermo td{padding:6px 8px;border:1px solid #ddd;font-size:8.5pt;vertical-align:middle}
 .thermo tr:nth-child(even) td{background:#faf8f4}
+
 
 /* ── VANTAGEM ── */
 .vant-box{background:#fdf9ec;border-left:3px solid #c9a227;border-radius:0 3px 3px 0;padding:12px;margin-bottom:10px}
@@ -3925,7 +4183,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .frase-sub{font-size:8.5pt;color:#666;font-style:italic}
 </style></head><body>
 
+
 <button class="print-btn no-print" onclick="window.print()">⬇ Salvar como PDF</button>
+
 
 <!-- ════ CAPA ══════════════════════════════════════════════════════ -->
 <div class="cover">
@@ -3940,6 +4200,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
       ${[profile?.role,profile?.segment,profile?.state].filter(Boolean).join("  ·  ")}
     </div>
 
+
     <div class="score-row">
       <div class="score-cell" style="background:#fdf9ec">
         <div class="score-val">${assessment.overall}%</div>
@@ -3952,13 +4213,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
       ${DIMS.slice(0,3).map(d=>{const v=pct(d.key);return`<div class="score-cell"><div class="score-dim" style="color:${d.color}">${v}%</div><div class="score-lbl">${d.short}</div></div>`;}).join('')}
     </div>
 
+
     <div class="tensao-box">
       <div class="tensao-lbl">Tensão Central</div>
       <div class="tensao-txt">${tensao}</div>
     </div>
 
+
     <div class="quote">"${pf?.tagline||""}"</div>
   </div>
+
 
   <div class="footer-bar">
     <div class="footer-bar-l">${BRAND.name}</div>
@@ -3966,11 +4230,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
   </div>
 </div>
 
+
 <!-- ════ P2: MAPA DIMENSIONAL + SÍNTESE ═════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
   <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
+
 
 <div style="display:grid;grid-template-columns:47% 53%;gap:16px">
   <div>
@@ -3998,29 +4264,36 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
   </div>
 </div>
 
+
 <!-- ════ P3: ANÁLISE PROFUNDA ════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
   <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
+
 <div class="lbl">Análise Profunda do Perfil</div>
 <div class="h1">O que suas respostas revelam sobre você</div>
 
+
 <p class="body-p">${pf?.desc||""} ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 criam a percepção de profissional com propósito e coerência. ${bot2[0]?`O desafio central é ${bot2[0].label} ${s10(bot2[0].key)}/10 — ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}.`:''}`:''}.</p>
+
 
 <div class="h3">Sua arquitetura relacional — como você está sendo percebido</div>
 <p class="body-p">${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 ${top2[1]?`combinado com ${top2[1].label} ${s10(top2[1].key)}/10`:''} cria a impressão de alguém que sabe o que está fazendo e para onde vai. Isso é um ativo real — as pessoas confiam em quem demonstra clareza de propósito. O problema é que essa percepção ainda não é suficientemente nutrida ${bot2[0]?`pela ausência de ${bot2[0].label.toLowerCase()} ativa`:''}.`:''}</p>
+
 
 <div class="box box-warn" style="margin-top:12px">
   <div class="box-lbl" style="color:#c62828">A sombra do seu perfil — o ponto cego que mais te custa</div>
   <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`A sombra mais profunda é o gap entre a intenção declarada e a execução. ${bot2[0].label} ${s10(bot2[0].key)}/10 é o padrão que mais custa — não pela ausência de vontade, mas pela ausência de sistema. ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]||''}`:pf?.risks?.[0]||''}</p>
 </div>
 
+
 <div class="box box-gold">
   <div class="box-lbl" style="color:#c9a227">⚑ Não ignore isso</div>
   <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`${(['presenca_mercado','escuta_relacional','reciprocidade_ativa','confianca_autentica'].includes(bot2[0].key)?bot2[0].label+' baixa':bot2[0].label+' baixo')} é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[1]||''}</p>
 </div>
+
 
 <div style="margin-top:14px">
   <div class="lbl">Forças e Riscos</div>
@@ -4036,10 +4309,12 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
   </div>
 </div>
 
+
 <div class="box box-gold" style="margin-top:10px">
   <div class="box-lbl" style="color:#c9a227">Suas 3 Ações Prioritárias</div>
   ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<(pf?.actions?.length-1)?'1px solid #e5d89a':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
 </div>
+
 
 <!-- ════ PLANO DE AÇÃO IMEDIATO ═══════════════════════════════════════ -->
 ${(() => {
@@ -4092,15 +4367,18 @@ ${(() => {
 </div>`;
 })()}
 
+
 <!-- ════ P4: GATILHOS ══════════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
   <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
+
 <div class="lbl">Gatilhos Relacionais</div>
 <div class="h1" style="margin-bottom:6px">Os padrões automáticos que ativam e travam o comportamento relacional</div>
 <p style="font-size:8.5pt;color:#666;margin-bottom:14px">O que faz você aparecer com energia total — e o que te impede de avançar.</p>
+
 
 <div class="g2" style="margin-bottom:18px">
   <div>
@@ -4141,11 +4419,13 @@ ${(() => {
   </div>
 </div>
 
+
 <!-- ════ P5: PLANO ═════════════════════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
   <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
+
 
 <div class="lbl">Plano de Ativação — 4 Semanas</div>
 <div class="h1" style="margin-bottom:6px">Quatro semanas para transformar o gap mais custoso em hábito</div>
@@ -4161,31 +4441,38 @@ ${PLAN.map((w,i)=>`<div class="week-box">
   </div>
 </div>`).join('')}
 
+
 <!-- ════ P5: TERMÔMETRO + VANTAGEM ══════════════════════════════════ -->
 <div class="pg-hdr pb">
   <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
   <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
 </div>
 
+
 <div class="lbl">Termômetro Relacional — 90 Dias</div>
 <div class="h1" style="margin-bottom:10px">O que é possível construir com consistência de aplicação</div>
+
 
 <table class="thermo" style="margin-bottom:16px">
   <tr><th>Dimensão</th><th>Hoje</th><th>90 dias</th><th>O que muda</th></tr>
   ${termometro.map(t=>`<tr><td style="font-weight:600">${t.label}</td><td style="font-family:'Courier New',monospace;font-weight:700;text-align:center">${t.hoje}</td><td style="font-family:'Courier New',monospace;font-weight:700;color:#2e7d32;text-align:center">${t.d90}</td><td style="font-size:8pt;color:#555">${t.muda}</td></tr>`).join('')}
 </table>
 
+
 <div class="lbl">A Vantagem Única do Seu Perfil</div>
 <div class="vant-box">
   <p style="font-size:9pt;color:#333;line-height:1.75;margin:0">${pf?.desc?.split('.').slice(0,2).join('.')||''}. ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 é uma combinação que já posiciona como referência. O próximo nível não exige mudar o que você faz — exige ampliar como o mercado enxerga o que você entrega.`:''}</p>
 </div>
 
+
 <p style="text-align:center;font-style:italic;color:#666;font-size:9pt;margin-bottom:20px">"Toda semana: em quantas conversas você genuinamente aprendeu algo sobre o outro que não sabia antes — e o que isso diz sobre a qualidade da sua presença?"</p>
+
 
 <div class="frase-box">
   <div class="frase-big">${nomePessoa.split(" ")[0]||"Você"}, você já sabe chegar.<br>O próximo nível é fazer as pessoas quererem que você fique.</div>
   <div class="frase-sub">"Relacionamento não é sobre ter muitos contatos. É sobre ser indispensável para os que importam."</div>
 </div>
+
 
 ${MENTORIA_LINK || true ? `
 <div class="pb" style="background:#f9f7f3;border-top:1px solid #e0ddd8;padding:28px 40px;text-align:center">
@@ -4195,18 +4482,22 @@ ${MENTORIA_LINK || true ? `
   ${MENTORIA_LINK ? `<a href="${MENTORIA_LINK}" target="_blank" style="display:inline-block;background:#c9a227;color:#0d0d0f;border-radius:6px;padding:10px 24px;font-size:10pt;font-weight:700;text-decoration:none">Quero desenvolver meu plano</a>` : `<div style="font-size:9pt;color:#888;font-style:italic">Em breve você poderá solicitar sua mentoria por aqui.</div>`}
 </div>` : ''}
 
+
 <div class="footer-bar" style="margin-top:20px">
   <div class="footer-bar-l">${BRAND.name}</div>
   <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>Diagnóstico Relacional Profissional · ${new Date().toLocaleDateString('pt-BR')}</div>
 </div>
 
+
 </body></html>`;
+
 
       const win=window.open("","_blank");
       if(!win){alert("Permita pop-ups para abrir o relatório.");return;}
       win.document.write(html);
       win.document.close();
     };
+
 
     return (
       <div style={{ overflowY: "auto", paddingBottom: 40 }}>
@@ -4299,6 +4590,7 @@ ${MENTORIA_LINK || true ? `
           const catLabel = (v) => CATS.find(c => c.value === v)?.label || v;
           const catColor = (v) => CATS.find(c => c.value === v)?.color || C.gold;
 
+
           // Distribuição por empresa
           const empCount = {};
           cts.forEach(c => { if (c.company) { empCount[c.company] = (empCount[c.company] || 0) + 1; } });
@@ -4306,15 +4598,18 @@ ${MENTORIA_LINK || true ? `
           const topEmp = empEntries[0];
           const topEmpPct = topEmp ? Math.round(topEmp[1] / cts.length * 100) : 0;
 
+
           // Contatos sem próxima ação
           const semAcao = cts.filter(c => !c.nextAction && c.status === 'active').length;
           const semInteracao = cts.filter(c => !c.lastInteraction).length;
+
 
           // Interações recentes
           const recentIts = its.slice(0, 8);
           const sentPos = its.filter(i => i.sentiment === 'positivo').length;
           const sentNeg = its.filter(i => i.sentiment === 'negativo').length;
           const sentPct = its.length > 0 ? Math.round(sentPos / its.length * 100) : 0;
+
 
           return (
             <>
@@ -4329,6 +4624,7 @@ ${MENTORIA_LINK || true ? `
                     </div>
                   ))}
                 </div>
+
 
                 {/* Distribuição por categoria */}
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Distribuição por categoria</div>
@@ -4348,6 +4644,7 @@ ${MENTORIA_LINK || true ? `
                   );
                 })}
               </div>
+
 
               {/* Alerta de concentração */}
               {(dominantPct > 60 || topEmpPct > 60) && (
@@ -4369,6 +4666,7 @@ ${MENTORIA_LINK || true ? `
                   </div>
                 </div>
               )}
+
 
               {/* Distribuição por empresa */}
               {empEntries.length > 0 && (
@@ -4393,6 +4691,7 @@ ${MENTORIA_LINK || true ? `
                   })}
                 </div>
               )}
+
 
               {/* Interações recentes */}
               {recentIts.length > 0 && (
@@ -4430,6 +4729,7 @@ ${MENTORIA_LINK || true ? `
       </div>
     );
   };
+
 
   // ── Aba Perfil ────────────────────────────────────────────
   const renderPerfilForm = () => (
@@ -4473,6 +4773,7 @@ ${MENTORIA_LINK || true ? `
     </div>
   );
 
+
   // ── "Insights" (âncora principal, coluna lateral) = IA + Plano + Relatório ──
   // Cadastro/atualização de perfil NÃO fica aqui — só no botão "Perfil" do
   // rodapé da barra lateral (view="perfil", renderPerfilForm acima). São 2
@@ -4498,12 +4799,14 @@ ${MENTORIA_LINK || true ? `
     </div>
   );
 
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
 
   // ── Tour de uso (primeira vez) ─────────────────────────────
   // Mostra automaticamente só na primeira visita (profile.tour_completed
@@ -4515,6 +4818,7 @@ ${MENTORIA_LINK || true ? `
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
   const closeTour = async () => {
     setShowTour(false);
     if (profile?.tour_completed || !user?.id) return;
@@ -4524,6 +4828,7 @@ ${MENTORIA_LINK || true ? `
     } catch (e) { console.error("[Tour] excecao ao salvar tour_completed:", e); }
     onProfileUpdate?.({ tour_completed: true });
   };
+
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
@@ -4590,6 +4895,7 @@ ${MENTORIA_LINK || true ? `
         </nav>
       )}
 
+
       {isMobile && (
         <div style={{ background: C.sf, borderBottom: `1px solid ${C.brd}`, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -4610,6 +4916,7 @@ ${MENTORIA_LINK || true ? `
           </div>
         </div>
       )}
+
 
       <main style={{ flex: 1, padding: isMobile ? "16px" : "24px 28px", overflowY: "auto", maxHeight: isMobile ? "calc(100vh - 110px)" : "100vh", paddingBottom: isMobile ? 70 : 24 }}>
         {view === "dash" && renderDash()}
@@ -4633,6 +4940,7 @@ ${MENTORIA_LINK || true ? `
         {view === "perfil" && renderPerfilForm()}
       </main>
 
+
       {isMobile && (
         <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.sf, borderTop: `1px solid ${C.brd}`, display: "flex", justifyContent: "space-around", padding: "6px 0", zIndex: 50 }}>
           {NAVS.map(n => (
@@ -4643,6 +4951,7 @@ ${MENTORIA_LINK || true ? `
           ))}
         </nav>
       )}
+
 
       {modal === "addC" && <Modal title="Novo contato" onClose={() => setModal(null)}>
         <Inp label="Nome *" value={cf.name} onChange={v => setCf({ ...cf, name: v })} placeholder="Nome completo" />
@@ -4812,6 +5121,7 @@ ${MENTORIA_LINK || true ? `
         </a>
       </Modal>}
 
+
       {/* Limite interações por contato Free */}
       {modal === "limiteIt" && <Modal title="Limite do plano gratuito" onClose={() => setModal(null)}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
@@ -4829,6 +5139,7 @@ ${MENTORIA_LINK || true ? `
           Tenho uma chave de acesso
         </button>
       </Modal>}
+
 
       {/* Limite contatos Free */}
       {modal === "limiteCt" && <Modal title="Limite do plano gratuito" onClose={() => setModal(null)}>
@@ -4848,6 +5159,7 @@ ${MENTORIA_LINK || true ? `
         </button>
       </Modal>}
 
+
       {modal === "addI" && <Modal title="Registrar interação" onClose={() => setModal(null)}>
         <div style={{ marginBottom: 16 }}><label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 6 }}>Tipo</label><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{ITYPES.map(t => <button key={t.value} onClick={() => setInf({ ...inf, type: t.value })} style={{ background: inf.type === t.value ? C.gD : C.sf, border: `1px solid ${inf.type === t.value ? C.gL : C.brd}`, borderRadius: 6, padding: "8px 14px", cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 12, color: inf.type === t.value ? C.gold : C.txM }}>{t.icon} {t.label}</button>)}</div></div>
         <Inp label="O que aconteceu? *" value={inf.desc} onChange={v => setInf({ ...inf, desc: v })} placeholder="Descreva a interação..." textarea />
@@ -4859,6 +5171,7 @@ ${MENTORIA_LINK || true ? `
     </div>
   );
 }
+
 
 /* ═══ SPLASH SCREEN ════════════════════════════════════════ */
 function SplashScreen({ onDone }) {
@@ -4886,6 +5199,7 @@ function SplashScreen({ onDone }) {
     </div>
   );
 }
+
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
 /* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
@@ -4941,6 +5255,7 @@ function ConstellationArt({ seed = 7, n = 34 }) {
   );
 }
 
+
 /* Converte 6 valores (0–100) em pontos de polígono SVG, eixo a eixo,
    começando no topo e girando em sentido horário — mesma orientação usada
    no radar do resultado do assessment, pra manter familiaridade visual. */
@@ -4988,6 +5303,7 @@ function HeroRadar({ values, size = 280 }) {
   );
 }
 
+
 /* Moldura de celular genérica (não reproduz hardware/UI de nenhuma marca
    específica) com uma conversa estilo app de mensagens, demonstrando o
    assistente de WhatsApp do CONÉXIA. Reutilizável — cada cena passa suas
@@ -5029,6 +5345,7 @@ function PhoneMockup({ subtitle = "assistente relacional", height = 560, childre
     </div>
   );
 }
+
 
 /* Ícones das 6 dimensões dispostos em roda, ecoando o radar — peça visual
    pura; a leitura (label + descrição) vem na lista logo abaixo. */
@@ -5076,6 +5393,7 @@ function TeiaPreview({ size = 340 }) {
   );
 }
 
+
 function DimensionWheel({ size = 260 }) {
   const cx = 130, cy = 130, r = 96;
   return (
@@ -5095,6 +5413,7 @@ function DimensionWheel({ size = 260 }) {
     </svg>
   );
 }
+
 
 /* Revela um "momento" (seção de tela cheia) suavemente quando entra na
    viewport — um único disparo por seção, não animação repetida por scroll.
@@ -5129,6 +5448,7 @@ function Moment({ children, minH = true, style = {} }) {
   );
 }
 
+
 // Média real das 6 dimensões nas redes já mapeadas na base — checado
 // manualmente via Supabase em 10/09/2026 (RLS de `profiles` bloqueia leitura
 // anônima, então isto não é uma consulta ao vivo — atualizar à mão quando
@@ -5136,12 +5456,14 @@ function Moment({ children, minH = true, style = {} }) {
 // de amostra não é exposta publicamente por escolha do fundador.
 const REDE_STATS_VALUES = [73.1, 62.5, 60.4, 61.3, 74.8, 82.6]; // mesma ordem de DIMS
 
+
 function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
   const [openProfile, setOpenProfile] = useState(null);
   const radarValues = REDE_STATS_VALUES;
   const dimsRanked = DIMS.map((d, i) => ({ ...d, val: radarValues[i] })).sort((a, b) => b.val - a.val);
   const strongest = dimsRanked[0];
   const weakest = dimsRanked[dimsRanked.length - 1];
+
 
   // Toque em qualquer ponto "neutro" da página avança pra próxima seção —
   // como em Stories. Elementos com sua própria ação (botões, perfis
@@ -5174,10 +5496,12 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
     window.scrollBy({ top: window.innerHeight * 0.9, behavior: "smooth" });
   };
 
+
   return (
     <div
       onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={handleAdvanceClick}
       style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", overflowX:"hidden", cursor:"pointer" }}>
+
 
       {/* ═══ 1. HERO — ilustração + assinatura ═══ */}
       <div style={{ minHeight:"100vh", width:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative", padding:"24px 20px" }}>
@@ -5195,6 +5519,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       </div>
 
+
       {/* ═══ 2. AFIRMAÇÃO CENTRAL ═══ */}
       <Moment style={{ position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:`radial-gradient(circle at 50% 35%, #8a6b24 0%, #3a2f18 32%, #17140e 68%, #0d0c09 100%)`, backgroundSize:"cover", backgroundPosition:"center" }} />
@@ -5209,6 +5534,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       </Moment>
 
+
       {/* ═══ 3. O PROBLEMA ═══ */}
       <Moment style={{ position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:`linear-gradient(135deg, #101510 0%, #243128 48%, #0d0f0d 100%)`, backgroundSize:"cover", backgroundPosition:"center 30%" }} />
@@ -5221,6 +5547,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       </Moment>
 
+
       <Moment style={{ position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:`linear-gradient(135deg, #11130d 0%, #2d3024 48%, #0d0e0a 100%)`, backgroundSize:"cover", backgroundPosition:"center 35%" }} />
         <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}E6 0%, ${C.bg}80 45%, ${C.bg}F2 100%)` }} />
@@ -5231,6 +5558,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           </p>
         </div>
       </Moment>
+
 
       {/* ═══ 4. O RADAR — prova por dado, sem depoimento ═══ */}
       <Moment>
@@ -5254,6 +5582,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </p>
       </Moment>
 
+
       {/* ═══ 5-7. COMO FUNCIONA — um passo por tela ═══ */}
       {[
         { n:"01", t:"Diagnóstico gratuito", d:"18 perguntas cobrindo as 6 dimensões que sustentam uma rede relacional saudável — menos de 10 minutos." },
@@ -5266,6 +5595,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           <p style={{ fontFamily:"'DM Sans'", fontSize:15, color:C.txM, lineHeight:1.7, textAlign:"center", maxWidth:340, margin:0 }}>{s.d}</p>
         </Moment>
       ))}
+
 
       {/* ═══ 7.4 — A TEIA, EM GRANDE ═══ */}
       <Moment>
@@ -5289,6 +5619,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </p>
       </Moment>
 
+
       {/* ═══ 7.5 — O ASSISTENTE DE WHATSAPP EM AÇÃO ═══ */}
       <Moment>
         <div style={{ textAlign:"center", marginBottom:28, padding:"0 24px" }}>
@@ -5307,6 +5638,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           Exemplo ilustrativo do assistente — os alertas reais usam os contatos e o histórico da sua própria rede.
         </p>
       </Moment>
+
 
       {/* ═══ 7.6 — BRIEFING ANTES DE UMA REUNIÃO ═══ */}
       <Moment>
@@ -5330,6 +5662,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           Exemplo ilustrativo — o briefing real é gerado pela IA a partir do histórico de cada contato, com perguntas sugeridas e objetivo estratégico.
         </p>
       </Moment>
+
 
       {/* ═══ 8. AS 6 DIMENSÕES ═══ */}
       <Moment minH={false} style={{ padding:"80px 0" }}>
@@ -5355,6 +5688,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           ))}
         </div>
       </Moment>
+
 
       {/* ═══ 9. 8 PERFIS — lista tipográfica, sem cartão ═══ */}
       <Moment minH={false} style={{ padding:"80px 20px" }}>
@@ -5389,6 +5723,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
       </Moment>
 
+
       {/* ═══ 10. CTA FINAL ═══ */}
       <Moment>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, textAlign:"center", lineHeight:1.3, maxWidth:360, margin:"0 0 8px" }}>
@@ -5408,6 +5743,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           </button>
         </div>
 
+
         {urlKey && (
           <div style={{ marginTop:20, background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 20px", textAlign:"center", maxWidth:340 }}>
             <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.gold, fontWeight:600 }}>🎁 Chave de acesso detectada: <span style={{ fontFamily:"'JetBrains Mono'", letterSpacing:".06em" }}>{urlKey}</span></div>
@@ -5424,6 +5760,8 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
     </div>
   );
 }
+
+
 
 
 /* ═══ Traduz mensagens de erro do Supabase Auth pra português simples ═══ */
@@ -5454,6 +5792,7 @@ function friendlyAuthError(e, fallback = "Erro de conexão.") {
   return raw || fallback;
 }
 
+
 /* ═══ AUTH ═════════════════════════════════════════════════ */
 function Auth({ onAuth, initialMode = "signup" }) {
   const [mode, setMode] = useState(initialMode || "signup");
@@ -5468,6 +5807,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotBusy, setForgotBusy] = useState(false);
   const [forgotMsg, setForgotMsg] = useState("");
+
 
   const sendResetEmail = async () => {
     if (!forgotEmail) { setForgotMsg("Informe seu email."); return; }
@@ -5484,6 +5824,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
     }
     setForgotBusy(false);
   };
+
 
   const submit = async () => {
     setErr(""); setBusy(true);
@@ -5518,6 +5859,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
     } catch (e) { setErr(friendlyAuthError(e)); }
     setBusy(false);
   };
+
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
@@ -5605,12 +5947,14 @@ function Auth({ onAuth, initialMode = "signup" }) {
   );
 }
 
+
 /* ═══ RESET DE SENHA ══════════════════════════════════════ */
 function ResetPassword({ onDone }) {
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
 
   const submit = async () => {
     setErr("");
@@ -5628,6 +5972,7 @@ function ResetPassword({ onDone }) {
     setBusy(false);
   };
 
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: C.bg }}>
       <div style={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
@@ -5644,6 +5989,7 @@ function ResetPassword({ onDone }) {
     </div>
   );
 }
+
 
 /* ═══ ROOT ════════════════════════════════════════════════ */
 function ProLock({ title = "Recurso disponível no PRO", desc = `Desbloqueie o ${BRAND.name} completo para transformar diagnóstico em ação prática.`, cta = "Assinar PRO — R$ 39,90/mês", onKey, user }) {
@@ -5664,6 +6010,7 @@ function ProLock({ title = "Recurso disponível no PRO", desc = `Desbloqueie o $
   );
 }
 
+
 function App() {
   const [state, setState]       = useState("loading"); // loading | landing | auth_signup | auth_login | onboard | assess | app | reset_password
   const [splashDone, setSplashDone] = useState(false);
@@ -5683,6 +6030,7 @@ function App() {
   const [objectivesFixBusy, setObjectivesFixBusy] = useState(false);
   const activationTrackedRef = useRef(new Set());
 
+
   const trackActivationEvent = useCallback(async (eventType, tabName, metadata = null) => {
     if (!user?.id) return;
     try {
@@ -5698,6 +6046,7 @@ function App() {
     }
   }, [user?.id]);
 
+
   useEffect(() => {
     if (!user?.id || !["onboard", "assess"].includes(state)) return;
     const eventKey = `${user.id}:${state}`;
@@ -5712,6 +6061,7 @@ function App() {
     // assessment_draft) — aqui não dá pra distinguir os dois casos.
   }, [state, user?.id, trackActivationEvent]);
 
+
   useEffect(() => {
     // Verificar sessão atual ao iniciar
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -5722,6 +6072,7 @@ function App() {
         setState("landing");   // Sem sessão → landing pública
       }
     });
+
 
     // Escutar mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -5743,6 +6094,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+
   const loadUserData = async (userId) => {
     const lsKey = BRAND.storagePrefix + "_done_" + userId;
     // Dispara sem esperar (fire-and-forget) — se falhar, não deve travar o
@@ -5757,6 +6109,7 @@ function App() {
         setNeedsObjectivesFix(true);
       }
 
+
       // Contas criadas antes da correção do registro de consentimento LGPD
       // não têm esse aceite gravado. Verifica e pede pra confirmar agora.
       try {
@@ -5768,6 +6121,7 @@ function App() {
         const { data: consent } = await supabase.from("consent_logs").select("id").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
         if (!consent || consent.length === 0) setNeedsConsent(true);
       } catch { setNeedsConsent(true); }
+
 
       const { data: a } = await supabase.from("assessments").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
       const assess = a?.[0] || null;
@@ -5797,11 +6151,13 @@ function App() {
     }
   };
 
+
   const handleAuth = async (session, authUser) => {
     setUser(authUser);
     await new Promise(r => setTimeout(r, 300));
     await loadUserData(authUser.id);
   };
+
 
   const handleOnboard = async (form, voucherCode) => {
     if (voucherCode) setPendingKey(voucherCode);
@@ -5836,6 +6192,7 @@ function App() {
     void trackActivationEvent("onboarding_completed", "onboard");
     setState("assess");
   };
+
 
   const sendToMake = async (result) => {
     try {
@@ -5876,9 +6233,11 @@ function App() {
     } catch (e) { console.warn("[Make webhook]", e); }
   };
 
+
   const handleAssess = async (result) => {
     const scores = result.scores;
     const fullScores = { ...scores, profileKey: result.profileKey, profileName: result.profileName, overall: result.overall };
+
 
     // Idempotência: se uma tentativa anterior já inseriu o assessment mas
     // falhou no update do perfil logo depois, uma nova tentativa (mesmo
@@ -5896,6 +6255,7 @@ function App() {
       .limit(1)
       .maybeSingle();
 
+
     if (!existingAttempt) {
       const { error: insertError } = await supabase.from("assessments").insert({
         user_id: user.id,
@@ -5907,6 +6267,7 @@ function App() {
         throw insertError; // crítico: sem isso não há diagnóstico salvo — o usuário precisa poder tentar de novo
       }
     }
+
 
     const profileUpdate = {
       assessment_completed: true,
@@ -5930,6 +6291,7 @@ function App() {
     }
     if (updateError) throw updateError; // crítico: sem isso o app nunca sai da tela de assessment (assessment_completed continuaria false)
 
+
     // Daqui pra baixo é best-effort — não deve impedir a navegação nem
     // acionar o retry do usuário se falhar (nada aqui é indispensável para
     // ele seguir em frente).
@@ -5950,6 +6312,7 @@ function App() {
         if (planError) console.error("[Assess] falha ao criar user_plans:", planError);
       }
     } catch (e) { console.error("[Assess] excecao (não-crítica):", e); }
+
 
     sendToMake(result);
     void trackActivationEvent("assessment_completed", "assess", {
@@ -5974,17 +6337,21 @@ function App() {
   };
 
 
+
+
   const handlePasswordUpdated = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) { setUser(session.user); await loadUserData(session.user.id); }
     else setState("landing");
   };
 
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null); setProfile(null); setAssessment(null);
     // onAuthStateChange disparará SIGNED_OUT e irá para landing
   };
+
 
   const acceptConsentNow = async () => {
     if (!user) return;
@@ -6005,6 +6372,7 @@ function App() {
     setConsentBusy(false);
   };
 
+
   const saveObjectivesFix = async () => {
     if (!user || objectivesFixSel.length === 0) return;
     setObjectivesFixBusy(true);
@@ -6023,8 +6391,10 @@ function App() {
     setObjectivesFixBusy(false);
   };
 
+
   // Splash aparece imediatamente na primeira abertura, independente do estado de auth
   if (!splashShown) return <SplashScreen onDone={() => setSplashShown(true)} />;
+
 
   if (state === "loading") return (
     <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
@@ -6034,6 +6404,7 @@ function App() {
       <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".08em" }}>Verificando acesso...</div>
     </div>
   );
+
 
   return (
     <>
@@ -6084,5 +6455,6 @@ function App() {
     </>
   );
 }
+
 
 export default App;
