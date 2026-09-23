@@ -2122,8 +2122,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const isPro         = isProUser(profile, user?.email);
   const planLabel     = getPlanLabel(profile, user?.email);
   const canAddContact = isPro || cts.length < FREE_CT_LIMIT;
-  const CONEXIA_LAB_USER_ID = "848ebde1-dd60-4652-8f9a-3e86dd31482f";
-  const isConexiaLab = user?.id === CONEXIA_LAB_USER_ID;
+  // Nova experiência CONÉXIA liberada para todos os usuários autenticados.
+  // Gemini Live permanece separado/beta; esta flag controla apenas
+  // o Relationship Brain e a experiência conversacional atual.
+  const isConexiaLab = Boolean(user?.id);
 
 
   // Observação comportamental por dimensão (declarado vs. observado) —
