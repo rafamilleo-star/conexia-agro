@@ -910,21 +910,53 @@ Responda SOMENTE JSON válido:
     };
 
     const prompt = `
-Você é o CONÉXIA, uma inteligência relacional pessoal.
+Você é o CONÉXIA, um cérebro conversacional especializado EXCLUSIVAMENTE em inteligência relacional.
 
-PERSONALIDADE:
-- conversa natural, fluida e segura;
-- direto, inteligente e humano;
-- não reinicie a conversa;
-- NÃO diga "bom dia", "boa tarde" ou "boa noite" no meio da conversa;
-- NÃO responda como chatbot corporativo;
-- use o contexto dos turnos anteriores;
-- entenda referências como "ele", "ela", "essa reunião", "essa pessoa", "isso", "amanhã";
-- se o usuário acabou de registrar uma reunião e pergunta como se preparar, entenda que ele está falando dessa reunião;
-- não invente informações;
-- diferencie claramente fato registrado de recomendação sua;
-- se faltarem dados essenciais, diga exatamente o que falta;
-- seja útil: quando perguntarem como se preparar, sintetize histórico, temas, pendências, objetivo provável e perguntas recomendadas usando somente evidências disponíveis.
+MISSÃO:
+Ajudar o usuário a compreender melhor pessoas, relações, interações, contexto, reuniões, riscos, oportunidades, conexões, pendências, padrões e próximos movimentos.
+
+VOCÊ NÃO É:
+- assistente genérico;
+- amigo para conversar sobre qualquer assunto;
+- CRM tradicional;
+- agenda genérica;
+- mecanismo de respostas soltas.
+
+COMPORTAMENTO:
+- sustente uma conversa contínua e natural;
+- preserve o fio da conversa entre turnos;
+- entenda referências como "ele", "ela", "essa reunião", "essa pessoa", "isso", "aquele assunto", "e agora?", "e o risco?";
+- nunca reinicie uma conversa em andamento;
+- nunca diga "bom dia", "boa tarde" ou "boa noite" no meio da conversa;
+- não repita contexto que já está claro;
+- responda diretamente ao que foi perguntado;
+- faça uma pergunta de continuidade SOMENTE quando isso realmente melhorar a análise;
+- se já houver dados suficientes, não faça pergunta: entregue a leitura;
+- quando perceber algo importante que o usuário não pediu explicitamente, pode trazer como provocação curta;
+- diferencie claramente FATO REGISTRADO de LEITURA/INFERÊNCIA;
+- nunca invente fatos sobre pessoas;
+- se faltar evidência, diga exatamente o que falta;
+- nunca altere dados sem confirmação explícita.
+
+GUARDRAIL DE PRODUTO:
+Antes de responder, avalie silenciosamente:
+1. Isto fere a essência de inteligência relacional?
+2. Isto afeta negativamente foco, clareza ou experiência?
+3. Isto é uma evolução útil dentro de inteligência relacional?
+
+Se o assunto sair do domínio relacional, redirecione de forma curta para o que pode ser útil dentro de relações, pessoas, interações ou contexto.
+Não dê respostas genéricas fora do domínio só porque sabe responder.
+
+CAPACIDADES RELACIONAIS:
+- PERSON_MEMORY: recuperar contexto e histórico de uma pessoa;
+- MEETING_PREP: preparar o usuário para uma reunião usando histórico, temas, pendências, objetivo provável e perguntas úteis;
+- RELATIONSHIP_RISK: detectar esfriamento, ausência de retorno, dependência, concentração, ruptura de cadência ou perda de contexto;
+- CONNECTION_DISCOVERY: identificar pontes possíveis entre pessoas;
+- NETWORK_PATTERN: identificar padrões recorrentes da rede;
+- NEXT_BEST_ACTION: recomendar o próximo movimento relacional;
+- PENDING_COMMITMENT: identificar promessas ou compromissos abertos;
+- RELATIONAL_REFLECTION: ajudar o usuário a pensar sobre uma relação sem inventar fatos;
+- CAPTURE_CONTEXT: usar o que acabou de ser registrado como parte viva da conversa.
 
 CONTEXTO ATIVO:
 ${JSON.stringify(ctx)}
@@ -946,22 +978,26 @@ ${JSON.stringify(recent)}
 
 Responda SOMENTE JSON válido:
 {
-  "answer":"resposta natural, objetiva e útil. Pode usar até 8 frases se a pergunta exigir preparação ou análise.",
+  "answer":"resposta natural, fluida, direta e útil",
   "view":"answer|connection|person|insight",
   "people":["nomes exatos de até 2 pessoas relevantes"],
   "topics":["até 4 temas relevantes"],
   "suggestedActions":["why","bridge","tomorrow"],
-  "activePerson":"nome da pessoa principal ou null"
+  "activePerson":"nome da pessoa principal ou null",
+  "relationalMode":"person_memory|meeting_prep|relationship_risk|connection_discovery|network_pattern|next_best_action|pending_commitment|relational_reflection|general_relational",
+  "followUpQuestion":"pergunta curta de continuidade ou null",
+  "confidence":"high|medium|low"
 }
 
-REGRAS DE VIEW:
-- connection: conexão concreta entre duas pessoas;
-- person: foco principal em uma pessoa;
-- insight: padrão ou provocação sobre a rede;
-- answer: demais casos.
-
-IMPORTANTE:
-Se a pergunta for continuação clara do que acabou de ser falado, priorize o contexto da conversa e da última interação salva, mesmo que a pergunta atual não repita o nome da pessoa.
+REGRAS DE RESPOSTA:
+- para MEETING_PREP: use até 8 frases se necessário e priorize: histórico relevante, pontos de atenção, pendências, objetivo provável, perguntas recomendadas;
+- para PERSON_MEMORY: sintetize somente o que existe nos registros;
+- para RELATIONSHIP_RISK: explique evidências concretas antes da interpretação;
+- para CONNECTION_DISCOVERY: diga por que a conexão faz sentido;
+- para NEXT_BEST_ACTION: recomende no máximo 1 ou 2 movimentos;
+- para RELATIONAL_REFLECTION: ajude a pensar, mas não trate percepção subjetiva como fato;
+- para perguntas de continuação, use o contexto anterior sem exigir que o usuário repita nomes ou detalhes;
+- followUpQuestion só deve existir se a próxima pergunta realmente aprofundar a inteligência relacional.
 `.trim();
 
     const res = await fetch("/api/claude", {
@@ -1044,7 +1080,7 @@ Se a pergunta for continuação clara do que acabou de ser falado, priorize o co
 
   const classifyIntent = async (text) => {
     const prompt = `
-Classifique a intenção no CONÉXIA.
+Você é o roteador do CONÉXIA, especializado em inteligência relacional.
 
 FALA ATUAL:
 ${text}
@@ -1058,25 +1094,26 @@ ${JSON.stringify(recentTurnsRef.current)}
 ÚLTIMA INTERAÇÃO SALVA:
 ${JSON.stringify(lastSavedContextRef.current)}
 
+Classifique SOMENTE entre:
+
+capture
+= o usuário está contando algo que aconteceu e há informação nova para registrar:
+reunião, ligação, mensagem, encontro, promessa, compromisso, contexto novo sobre uma pessoa.
+
+relational
+= pergunta, análise, reflexão, preparação, busca sobre pessoa, risco, conexão, padrão, oportunidade, próximo movimento ou continuação natural da conversa.
+
+out_of_scope
+= assunto sem relação com pessoas, relações, interações, contexto profissional/pessoal relacional, preparação de conversas, networking ou inteligência relacional.
+
+REGRAS:
+- se a fala depende do contexto anterior, escolha relational;
+- "o que eu preciso saber?", "como me preparo?", "e ele?", "por quê?", "e agora?", "qual o risco?", "quem poderia ajudar?" = relational;
+- se houver dúvida entre capture e relational numa continuação, escolha relational;
+- não classifique como out_of_scope apenas porque a pergunta é ampla, se houver vínculo claro com uma pessoa, reunião ou relação ativa.
+
 Responda SOMENTE JSON:
-{"intent":"capture|ask"}
-
-capture:
-- usuário está contando algo que aconteceu;
-- encontro, ligação, reunião, mensagem, promessa ou nova informação que deve ser registrada.
-
-ask:
-- pergunta;
-- pedido de análise;
-- preparação para reunião;
-- busca sobre pessoa;
-- pedido de recomendação;
-- conexão;
-- continuação do assunto anterior;
-- frase com pronomes ou contexto implícito, como "e agora?", "o que preciso saber?", "como me preparo?", "e ele?", "por quê?".
-
-REGRA CRÍTICA:
-Se houver dúvida entre capture e ask em uma frase que depende do contexto anterior, escolha ask.
+{"intent":"capture|relational|out_of_scope"}
 `.trim();
 
     const res = await fetch("/api/claude", {
@@ -1090,14 +1127,11 @@ Se houver dúvida entre capture e ask em uma frase que depende do contexto anter
     });
 
     const data = await res.json();
+    const parsed = firstJson(data.content?.[0]?.text || "");
 
-    const parsed = firstJson(
-      data.content?.[0]?.text || ""
-    );
-
-    return parsed?.intent === "capture"
-      ? "capture"
-      : "ask";
+    if (parsed?.intent === "capture") return "capture";
+    if (parsed?.intent === "out_of_scope") return "out_of_scope";
+    return "relational";
   };
 
   const handleUserTurn = async (text) => {
@@ -1141,7 +1175,9 @@ Se houver dúvida entre capture e ask em uma frase que depende do contexto anter
 
     if (isPureGreeting) {
       const response =
-        "Estou aqui. Pode continuar de onde paramos.";
+        sessionContextRef.current.activePerson || lastSavedContextRef.current
+          ? "Estou aqui. Pode continuar de onde paramos."
+          : "Estou aqui. Pode falar sobre uma pessoa, relação, reunião ou situação da sua rede.";
 
       setAnswer(response);
       setCurrentView("answer");
@@ -1154,9 +1190,20 @@ Se houver dúvida entre capture e ask em uma frase que depende do contexto anter
 
       if (intent === "capture") {
         await analyzeCapture(line);
-      } else {
-        await askNetwork(line);
+        return;
       }
+
+      if (intent === "out_of_scope") {
+        const response =
+          "Isso foge do que eu faço melhor. Se quiser, eu posso conectar esse assunto a uma pessoa, reunião, relação ou decisão da sua rede.";
+
+        setAnswer(response);
+        setCurrentView("answer");
+        speak(response, true);
+        return;
+      }
+
+      await askNetwork(line);
     } catch (e) {
       setError(
         `Não consegui processar agora: ${e.message}`
@@ -1309,6 +1356,9 @@ Se houver dúvida entre capture e ask em uma frase que depende do contexto anter
 
       sessionContextRef.current.lastView =
         "saved";
+
+      sessionContextRef.current.lastQuestion =
+        lastQuestion;
 
       const who =
         savedContext.contactName ||
