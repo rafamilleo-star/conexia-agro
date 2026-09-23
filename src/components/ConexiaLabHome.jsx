@@ -117,6 +117,8 @@ export default function ConexiaLabHome({
   const [prefsLoading, setPrefsLoading] = useState(true);
   const [interviewStep, setInterviewStep] = useState(0);
   const [interviewBusy, setInterviewBusy] = useState(false);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [showMoreSignals, setShowMoreSignals] = useState(false);
   const recognitionRef = useRef(null);
   const speechBufferRef = useRef("");
   const voiceIntentRef = useRef("auto");
@@ -630,129 +632,173 @@ Responda SOMENTE JSON:
           )}
           {error && <div style={{ color:K.red, fontFamily:sans, fontSize:12, marginTop:14 }}>{error}</div>}
         </div>
-
-        <div style={{ color:K.muted, fontFamily:sans, fontSize:10, textAlign:"center", marginTop:12 }}>
-          As respostas ficam associadas à sua conta e servem para personalizar a forma como o CONÉXIA conversa com você.
-        </div>
       </div>
     );
   }
 
   const naturalGreeting = prefs?.greeting_mode === "direto" ? "" : greetingForNow(displayName);
+  const mainSignal = cards[0] || null;
+  const extraSignals = cards.slice(1);
+  const isWorking = processingVoice || busy;
+  const resetConversation = () => {
+    setInput("");
+    setDraft(null);
+    setAnswer("");
+    setSaved("");
+    setAssistantLine("");
+    setError("");
+    setShowTextInput(false);
+  };
 
   return (
-    <div style={{ maxWidth: 860, margin:"0 auto", paddingBottom: 40 }}>
-      <div style={{ marginBottom: 22 }}>
-        <div style={{ color:K.gold, fontFamily:sans, fontSize:10, fontWeight:800, letterSpacing:".14em", textTransform:"uppercase", marginBottom:7 }}>CONÉXIA LAB · só você</div>
-        <h1 style={{ color:K.text, fontFamily:serif, fontSize:32, lineHeight:1.05, margin:"0 0 8px", fontWeight:700 }}>
-          {naturalGreeting || `${displayName ? `${displayName}, ` : ""}o que está acontecendo na sua rede?`}
+    <div style={{ maxWidth: 820, margin:"0 auto", paddingBottom: 40 }}>
+      <div style={{ marginBottom:18 }}>
+        <div style={{ color:K.gold, fontFamily:sans, fontSize:10, fontWeight:800, letterSpacing:".14em", textTransform:"uppercase", marginBottom:7 }}>CONÉXIA LAB</div>
+        <h1 style={{ color:K.text, fontFamily:serif, fontSize:31, lineHeight:1.08, margin:"0 0 6px", fontWeight:700 }}>
+          {naturalGreeting || `${displayName ? `${displayName}, ` : ""}vamos cuidar da sua rede.`}
         </h1>
-        <div style={{ color:K.muted, fontFamily:sans, fontSize:13 }}>
-          {naturalGreeting ? "O que está acontecendo na sua rede?" : "Menos dashboard. Mais contexto, memória e próximo movimento."}
-        </div>
+        <div style={{ color:K.muted, fontFamily:sans, fontSize:12.5 }}>Uma coisa por vez. O CONÉXIA organiza o resto.</div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px,1fr))", gap:12, marginBottom:20 }}>
-        {cards.length ? cards.map((card,idx) => <ActionCard key={idx} {...card} />) : (
-          <ActionCard eyebrow="Hoje" title="Nada crítico apareceu." body="Registre uma conversa ou pergunte algo à sua rede. O CONÉXIA aprende com o que realmente aconteceu." tone="green" />
-        )}
-      </div>
-
-      <div style={{ background:K.card, border:`1px solid ${K.border}`, borderRadius:20, padding:20, boxShadow:"0 14px 40px rgba(0,0,0,.18)" }}>
-        <div style={{ textAlign:"center", marginBottom:18 }}>
-          <div style={{ color:K.text, fontFamily:serif, fontSize:23, fontWeight:700, marginBottom:5 }}>
-            {listening ? "Estou ouvindo..." : processingVoice || busy ? "Estou entendendo..." : "Fale com o CONÉXIA"}
-          </div>
-          <div style={{ color:K.muted, fontFamily:sans, fontSize:12 }}>
-            Conte algo que aconteceu ou pergunte qualquer coisa sobre sua rede.
-          </div>
+      {mainSignal && !draft && !assistantLine && !saved && !listening && !isWorking && (
+        <div style={{ marginBottom:14 }}>
+          <ActionCard {...mainSignal} />
+          {extraSignals.length > 0 && (
+            <button
+              onClick={() => setShowMoreSignals(v => !v)}
+              style={{ marginTop:8, background:"transparent", border:"none", color:K.muted, fontFamily:sans, fontSize:11, cursor:"pointer", padding:0 }}
+            >
+              {showMoreSignals ? "Ocultar outros sinais" : `Ver mais ${extraSignals.length} sinal${extraSignals.length > 1 ? "is" : ""}`}
+            </button>
+          )}
+          {showMoreSignals && (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:10, marginTop:10 }}>
+              {extraSignals.map((card, idx) => <ActionCard key={idx} {...card} />)}
+            </div>
+          )}
         </div>
+      )}
 
-        <div style={{ display:"flex", justifyContent:"center", margin:"8px 0 22px" }}>
-          <button
-            onPointerDown={() => startPushToTalk("auto")}
-            onPointerUp={stopPushToTalk}
-            onPointerCancel={stopPushToTalk}
-            onPointerLeave={() => listening && stopPushToTalk()}
-            disabled={busy || processingVoice}
-            style={{
-              width:142, height:142, borderRadius:"50%",
-              background:listening ? `${K.gold}30` : K.card2,
-              border:`2px solid ${listening ? K.gold : K.gold}90`,
-              boxShadow:listening ? `0 0 0 14px ${K.gold}10, 0 0 52px ${K.gold}28` : "0 10px 30px rgba(0,0,0,.30)",
-              color:listening ? K.gold : K.text,
-              fontFamily:sans, fontSize:13, fontWeight:800,
-              cursor:"pointer", transition:"all .18s ease", touchAction:"none",
-              opacity:(busy || processingVoice) ? .55 : 1,
-            }}
-          >
-            <div style={{ fontSize:34, marginBottom:6 }}>◉</div>
-            {listening ? "FALE..." : "SEGURE E FALE"}
-          </button>
-        </div>
+      <div style={{ background:K.card, border:`1px solid ${draft ? K.gold+"66" : K.border}`, borderRadius:22, padding:"22px 20px", boxShadow:"0 16px 42px rgba(0,0,0,.20)", minHeight:310, display:"flex", flexDirection:"column", justifyContent:"center" }}>
 
-        {assistantLine && (
-          <div style={{ background:`${K.gold}0D`, border:`1px solid ${K.gold}35`, borderRadius:13, padding:14, marginBottom:14 }}>
-            <div style={{ color:K.gold, fontFamily:sans, fontSize:9, fontWeight:800, letterSpacing:".1em", textTransform:"uppercase", marginBottom:5 }}>CONÉXIA</div>
-            <div style={{ color:K.text, fontFamily:sans, fontSize:13, lineHeight:1.55 }}>{assistantLine}</div>
-          </div>
-        )}
+        {draft ? (
+          <div>
+            <div style={{ color:K.gold, fontFamily:sans, fontSize:10, fontWeight:800, letterSpacing:".11em", textTransform:"uppercase", marginBottom:8 }}>CONFIRME ANTES DE SALVAR</div>
+            <div style={{ color:K.text, fontFamily:serif, fontSize:27, fontWeight:700, lineHeight:1.15, marginBottom:8 }}>
+              {draft.contactName || "Esta interação"}
+            </div>
+            <div style={{ color:K.muted, fontFamily:sans, fontSize:13, lineHeight:1.6, marginBottom:16 }}>{draft.description}</div>
 
-        <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
-          <button onClick={() => { setMode("capture"); setAnswer(""); setDraft(null); setError(""); }} style={{ background:mode==="capture"?K.gold:"transparent", color:mode==="capture"?K.bg:K.muted, border:`1px solid ${mode==="capture"?K.gold:K.border}`, borderRadius:999, padding:"8px 13px", fontFamily:sans, fontSize:12, fontWeight:700, cursor:"pointer" }}>Registrar algo</button>
-          <button onClick={() => { setMode("ask"); setAnswer(""); setDraft(null); setError(""); }} style={{ background:mode==="ask"?K.gold:"transparent", color:mode==="ask"?K.bg:K.muted, border:`1px solid ${mode==="ask"?K.gold:K.border}`, borderRadius:999, padding:"8px 13px", fontFamily:sans, fontSize:12, fontWeight:700, cursor:"pointer" }}>Perguntar à minha rede</button>
-        </div>
-
-        <textarea value={input} onChange={e => setInput(e.target.value)} rows={3}
-          placeholder={mode === "capture" ? "Ou escreva: encontrei João hoje..." : "Ou escreva sua pergunta..."}
-          style={{ width:"100%", boxSizing:"border-box", resize:"vertical", background:K.card2, border:`1px solid ${K.border}`, borderRadius:12, color:K.text, padding:14, fontFamily:sans, fontSize:14, lineHeight:1.55, outline:"none" }} />
-
-        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:10 }}>
-          <button onClick={submit} disabled={!input.trim() || busy} style={{ background:K.gold, color:K.bg, border:"none", borderRadius:10, padding:"10px 16px", fontFamily:sans, fontSize:12, fontWeight:800, cursor:"pointer", opacity:(!input.trim() || busy) ? 0.6 : 1 }}>
-            {busy ? "Entendendo..." : mode === "capture" ? "Entender texto" : "Perguntar por texto"}
-          </button>
-        </div>
-
-        {error && <div style={{ marginTop:12, color:K.red, fontFamily:sans, fontSize:12, lineHeight:1.5 }}>{error}</div>}
-        {saved && <div style={{ marginTop:12, color:K.green, fontFamily:sans, fontSize:12, fontWeight:700 }}>✓ {saved}</div>}
-
-        {draft && (
-          <div style={{ marginTop:16, background:K.card2, border:`1px solid ${K.gold}55`, borderRadius:14, padding:15 }}>
-            <div style={{ color:K.gold, fontFamily:sans, fontSize:10, fontWeight:800, letterSpacing:".1em", textTransform:"uppercase", marginBottom:10 }}>Entendi isso — confirme antes de salvar</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:9 }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:18 }}>
               {[
-                ["Pessoa", draft.contactName],
-                ["Empresa", draft.company],
-                ["Cargo", draft.role],
-                ["Tipo", draft.interactionType],
-                ["Próximo passo", draft.nextAction],
-                ["Data", draft.nextActionDate],
-              ].map(([label,value]) => value ? (
-                <div key={label} style={{ border:`1px solid ${K.border}`, borderRadius:9, padding:10 }}>
-                  <div style={{ color:K.muted, fontFamily:sans, fontSize:9, textTransform:"uppercase", letterSpacing:".08em" }}>{label}</div>
-                  <div style={{ color:K.text, fontFamily:sans, fontSize:12, marginTop:3 }}>{value}</div>
-                </div>
-              ) : null)}
+                draft.company && `Empresa: ${draft.company}`,
+                draft.role && `Cargo: ${draft.role}`,
+                draft.interactionType && `Tipo: ${draft.interactionType}`,
+                draft.nextAction && `Próximo passo: ${draft.nextAction}`,
+                draft.nextActionDate && `Data: ${draft.nextActionDate}`,
+              ].filter(Boolean).map((item) => (
+                <span key={item} style={{ border:`1px solid ${K.border}`, background:K.card2, color:K.text, borderRadius:999, padding:"7px 10px", fontFamily:sans, fontSize:11 }}>{item}</span>
+              ))}
             </div>
-            <div style={{ color:K.text, fontFamily:sans, fontSize:13, lineHeight:1.5, marginTop:11 }}>{draft.description}</div>
-            <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
-              <button onClick={confirmCapture} disabled={busy} style={{ background:K.green, color:"#0B0D0B", border:"none", borderRadius:9, padding:"9px 13px", fontFamily:sans, fontSize:12, fontWeight:800, cursor:"pointer" }}>Confirmar e salvar</button>
-              <button onClick={() => { setDraft(null); setAssistantLine(""); }} disabled={busy} style={{ background:"transparent", color:K.muted, border:`1px solid ${K.border}`, borderRadius:9, padding:"9px 13px", fontFamily:sans, fontSize:12, cursor:"pointer" }}>Corrigir</button>
-              <div style={{ color:K.muted, fontFamily:sans, fontSize:11, alignSelf:"center" }}>ou segure o botão e diga “sim” / “não”</div>
+
+            <div style={{ display:"flex", gap:9, flexWrap:"wrap" }}>
+              <button onClick={confirmCapture} disabled={busy} style={{ background:K.green, color:"#0B0D0B", border:"none", borderRadius:10, padding:"11px 16px", fontFamily:sans, fontSize:12, fontWeight:800, cursor:"pointer" }}>Confirmar e salvar</button>
+              <button onClick={() => { setDraft(null); setAssistantLine(""); }} disabled={busy} style={{ background:"transparent", color:K.muted, border:`1px solid ${K.border}`, borderRadius:10, padding:"11px 14px", fontFamily:sans, fontSize:12, cursor:"pointer" }}>Corrigir</button>
+              <button
+                onPointerDown={() => startPushToTalk("auto")}
+                onPointerUp={stopPushToTalk}
+                onPointerCancel={stopPushToTalk}
+                style={{ background:"transparent", color:K.gold, border:`1px solid ${K.gold}55`, borderRadius:10, padding:"11px 14px", fontFamily:sans, fontSize:12, fontWeight:700, cursor:"pointer", touchAction:"none" }}
+              >🎙 Dizer sim ou não</button>
+            </div>
+          </div>
+        ) : saved ? (
+          <div style={{ textAlign:"center" }}>
+            <div style={{ width:54, height:54, borderRadius:"50%", background:`${K.green}18`, border:`1px solid ${K.green}55`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px", color:K.green, fontSize:26 }}>✓</div>
+            <div style={{ color:K.text, fontFamily:serif, fontSize:27, fontWeight:700, marginBottom:6 }}>Registrado.</div>
+            <div style={{ color:K.muted, fontFamily:sans, fontSize:13, marginBottom:18 }}>{saved}</div>
+            <button onClick={resetConversation} style={{ background:K.gold, color:K.bg, border:"none", borderRadius:10, padding:"11px 16px", fontFamily:sans, fontSize:12, fontWeight:800, cursor:"pointer" }}>Continuar</button>
+          </div>
+        ) : assistantLine ? (
+          <div>
+            {input && (
+              <div style={{ marginLeft:"auto", maxWidth:"82%", background:K.card2, border:`1px solid ${K.border}`, borderRadius:"14px 14px 4px 14px", padding:"10px 12px", color:K.muted, fontFamily:sans, fontSize:12.5, lineHeight:1.5, marginBottom:12 }}>
+                {input}
+              </div>
+            )}
+            <div style={{ maxWidth:"90%", background:`${K.gold}0D`, border:`1px solid ${K.gold}35`, borderRadius:"14px 14px 14px 4px", padding:"14px 15px", marginBottom:16 }}>
+              <div style={{ color:K.gold, fontFamily:sans, fontSize:9, fontWeight:800, letterSpacing:".1em", textTransform:"uppercase", marginBottom:5 }}>CONÉXIA</div>
+              <div style={{ color:K.text, fontFamily:sans, fontSize:14, lineHeight:1.6 }}>{assistantLine}</div>
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <button
+                onPointerDown={() => startPushToTalk("auto")}
+                onPointerUp={stopPushToTalk}
+                onPointerCancel={stopPushToTalk}
+                disabled={isWorking}
+                style={{ background:K.gold, color:K.bg, border:"none", borderRadius:10, padding:"11px 15px", fontFamily:sans, fontSize:12, fontWeight:800, cursor:"pointer", touchAction:"none" }}
+              >🎙 Continuar falando</button>
+              <button onClick={resetConversation} style={{ background:"transparent", color:K.muted, border:`1px solid ${K.border}`, borderRadius:10, padding:"11px 14px", fontFamily:sans, fontSize:12, cursor:"pointer" }}>Nova conversa</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign:"center" }}>
+            <div style={{ color:K.text, fontFamily:serif, fontSize:24, fontWeight:700, marginBottom:5 }}>
+              {listening ? "Estou ouvindo..." : isWorking ? "Estou entendendo..." : "O que aconteceu?"}
+            </div>
+            <div style={{ color:K.muted, fontFamily:sans, fontSize:12, maxWidth:460, margin:"0 auto 18px", lineHeight:1.5 }}>
+              {listening ? "Pode falar naturalmente." : isWorking ? "Organizando contexto, pessoas e próximos passos." : "Conte uma interação ou pergunte algo sobre sua rede. Não precisa escolher o tipo antes."}
+            </div>
+
+            <button
+              onPointerDown={() => startPushToTalk("auto")}
+              onPointerUp={stopPushToTalk}
+              onPointerCancel={stopPushToTalk}
+              onPointerLeave={() => listening && stopPushToTalk()}
+              disabled={isWorking}
+              style={{
+                width:148, height:148, borderRadius:"50%",
+                background:listening ? `${K.gold}30` : K.card2,
+                border:`2px solid ${listening ? K.gold : K.gold+"88"}`,
+                boxShadow:listening ? `0 0 0 14px ${K.gold}10, 0 0 52px ${K.gold}28` : "0 10px 30px rgba(0,0,0,.30)",
+                color:listening ? K.gold : K.text,
+                fontFamily:sans, fontSize:13, fontWeight:800,
+                cursor:"pointer", transition:"all .18s ease", touchAction:"none",
+                opacity:isWorking ? .55 : 1,
+              }}
+            >
+              <div style={{ fontSize:35, marginBottom:6 }}>◉</div>
+              {listening ? "FALE..." : "SEGURE E FALE"}
+            </button>
+
+            <div style={{ marginTop:14 }}>
+              <button onClick={() => setShowTextInput(v => !v)} style={{ background:"transparent", border:"none", color:K.muted, fontFamily:sans, fontSize:11, cursor:"pointer", textDecoration:"underline" }}>
+                {showTextInput ? "Fechar texto" : "Prefiro escrever"}
+              </button>
             </div>
           </div>
         )}
 
-        {answer && (
-          <div style={{ marginTop:16, background:K.card2, border:`1px solid ${K.green}55`, borderRadius:14, padding:16 }}>
-            <div style={{ color:K.green, fontFamily:sans, fontSize:10, fontWeight:800, letterSpacing:".1em", textTransform:"uppercase", marginBottom:8 }}>O CONÉXIA encontrou</div>
-            <div style={{ color:K.text, fontFamily:sans, fontSize:14, lineHeight:1.65, whiteSpace:"pre-wrap" }}>{answer}</div>
+        {showTextInput && !draft && !saved && (
+          <div style={{ marginTop:18, paddingTop:16, borderTop:`1px solid ${K.border}` }}>
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              rows={3}
+              placeholder="Escreva naturalmente. Ex.: encontrei João hoje... ou quem merece minha atenção?"
+              style={{ width:"100%", boxSizing:"border-box", resize:"vertical", background:K.card2, border:`1px solid ${K.border}`, borderRadius:12, color:K.text, padding:13, fontFamily:sans, fontSize:13.5, lineHeight:1.5, outline:"none" }}
+            />
+            <div style={{ display:"flex", justifyContent:"flex-end", marginTop:8 }}>
+              <button onClick={() => routeVoice(input)} disabled={!input.trim() || isWorking} style={{ background:K.gold, color:K.bg, border:"none", borderRadius:9, padding:"9px 14px", fontFamily:sans, fontSize:12, fontWeight:800, cursor:"pointer", opacity:(!input.trim() || isWorking) ? .55 : 1 }}>Enviar</button>
+            </div>
           </div>
         )}
+
+        {error && <div style={{ marginTop:14, color:K.red, fontFamily:sans, fontSize:12, lineHeight:1.5 }}>{error}</div>}
       </div>
 
-      <div style={{ marginTop:12, color:K.muted, fontFamily:sans, fontSize:10, lineHeight:1.5 }}>
-        LAB: experiência restrita ao seu usuário. Preferências de conversa ficam salvas na sua conta.
+      <div style={{ marginTop:10, color:K.muted, fontFamily:sans, fontSize:10, textAlign:"center" }}>
+        Voz para conversar. Confirmação antes de alterar sua rede.
       </div>
     </div>
   );
