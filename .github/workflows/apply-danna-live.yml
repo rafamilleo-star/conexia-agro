@@ -11,8 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout latest main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync before patch
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
 
       - name: Apply Danna Live V2
         run: |
@@ -50,4 +58,6 @@ jobs:
           fi
 
           git commit -m "fix: Danna GPT-Live V2 voice and interruption"
-          git push
+
+          git pull --rebase origin main
+          git push origin HEAD:main
