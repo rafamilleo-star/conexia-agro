@@ -1,183 +1,110 @@
 export class DannaLive {
-  constructor({
-    onState,
-    onTranscript,
-    onUserTranscript,
-    onError,
-    onEvent,
-  } = {}) {
-    this.pc = null;
-    this.dc = null;
-    this.audio = null;
-    this.stream = null;
-    this.connected = false;
-
+  constructor({ onState, onTranscript, onUserTranscript, onError, onEvent } = {}) {
+    this.pc = null; this.dc = null; this.audio = null; this.stream = null;
+    this.connected = false; this.started = false;
     this.onState = onState || (() => {});
     this.onTranscript = onTranscript || (() => {});
     this.onUserTranscript = onUserTranscript || (() => {});
     this.onError = onError || (() => {});
     this.onEvent = onEvent || (() => {});
+    this.userBuffer = ""; this.userTimer = null; this.speakingTimer = null; this.interruptionTimer = null;
+  }
+
+  send(event) {
+    if (!this.dc || this.dc.readyState !== "open") return false;
+    this.dc.send(JSON.stringify(event));
+    return true;
   }
 
   async connect() {
     try {
       this.onState("connecting");
 
-      /*
-       * 1. Pede ao nosso backend um token temporário.
-       * A OPENAI_API_KEY nunca vai para o navegador.
-       */
-      const tokenResponse = await fetch(
-        "/api/openai-live-token",
-        {
-          method: "POST",
-        }
-      );
-
-      const tokenData = await tokenResponse.json();
-
-      if (!tokenResponse.ok) {
-        throw new Error(
-          tokenData?.details?.error?.message ||
-          tokenData?.error ||
-          "Não foi possível iniciar a Danna"
-        );
-      }
-
-      const ephemeralKey =
-        tokenData?.value ||
-        tokenData?.client_secret?.value;
-
-      if (!ephemeralKey) {
-        throw new Error(
-          "Token temporário da Danna não recebido."
-        );
-      }
-
-      /*
-       * 2. Abre conexão WebRTC.
-       */
       this.pc = new RTCPeerConnection();
 
-      /*
-       * 3. Áudio retornado pela Danna.
-       */
       this.audio = document.createElement("audio");
       this.audio.autoplay = true;
       this.audio.playsInline = true;
+      this.audio.setAttribute("playsinline", "");
 
       this.pc.ontrack = (event) => {
         const remoteStream = event.streams?.[0];
-
         if (remoteStream) {
           this.audio.srcObject = remoteStream;
+          this.audio.play().catch(() => {});
         }
       };
 
-      /*
-       * 4. Microfone do usuário.
-       */
-      this.stream =
-        await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        }
+      });
 
-      this.stream
-        .getAudioTracks()
-        .forEach((track) => {
-          this.pc.addTrack(track, this.stream);
-        });
+      for (const track of this.stream.getAudioTracks()) {
+        this.pc.addTrack(track, this.stream);
+      }
 
-      /*
-       * 5. Canal de eventos.
-       */
-      this.dc =
-        this.pc.createDataChannel("oai-events");
+      this.dc = this.pc.createDataChannel("oai-events");
 
       this.dc.addEventListener("open", () => {
         this.connected = true;
-        this.onState("listening");
       });
 
-      this.dc.addEventListener(
-        "message",
-        (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            this.handleEvent(data);
-          } catch (error) {
-            console.warn(
-              "[Danna Live] evento inválido",
-              error
-            );
-          }
+      this.dc.addEventListener("message", (event) => {
+        try {
+          this.handleEvent(JSON.parse(event.data));
+        } catch (e) {
+          console.warn("[Danna Live] evento inválido", e);
         }
-      );
+      });
 
       this.dc.addEventListener("close", () => {
         this.connected = false;
+        this.started = false;
         this.onState("idle");
       });
 
-      this.dc.addEventListener("error", () => {
-        this.onState("error");
-      });
+      this.dc.addEventListener("error", () => this.onState("error"));
 
-      /*
-       * 6. Oferta WebRTC.
-       */
-      const offer =
-        await this.pc.createOffer();
-
+      const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
 
-      /*
-       * 7. Entrega SDP à OpenAI usando
-       * SOMENTE o token temporário.
-       */
-      const sdpResponse = await fetch(
-        "https://api.openai.com/v1/realtime/calls",
-        {
-          method: "POST",
+      const response = await fetch("/api/openai-live-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sdp: offer.sdp })
+      });
 
-          body: offer.sdp,
+      const data = await response.json();
 
-          headers: {
-            Authorization: `Bearer ${ephemeralKey}`,
-            "Content-Type": "application/sdp",
-          },
-        }
-      );
-
-      if (!sdpResponse.ok) {
-        const message =
-          await sdpResponse.text();
-
+      if (!response.ok) {
         throw new Error(
-          message || "Falha na conexão WebRTC"
+          data?.details?.error?.message ||
+          data?.error ||
+          "Não foi possível iniciar a Danna Live"
         );
       }
 
-      const answer = {
-        type: "answer",
-        sdp: await sdpResponse.text(),
-      };
+      if (!data?.transport?.sdp) {
+        throw new Error("SDP de resposta da Danna não recebido.");
+      }
 
-      await this.pc.setRemoteDescription(answer);
+      await this.pc.setRemoteDescription({
+        type: "answer",
+        sdp: data.transport.sdp
+      });
 
       return true;
+
     } catch (error) {
       console.error("[Danna Live]", error);
-
       this.onState("error");
       this.onError(error);
-
       this.disconnect();
-
       return false;
     }
   }
@@ -185,221 +112,139 @@ export class DannaLive {
   handleEvent(event) {
     this.onEvent(event);
 
-    switch (event.type) {
-      /*
-       * Usuário começou a falar.
-       */
-      case "input_audio_buffer.speech_started":
-        this.onState("listening");
-        break;
-
-      /*
-       * Usuário terminou de falar.
-       */
-      case "input_audio_buffer.speech_stopped":
-        this.onState("thinking");
-        break;
-
-      /*
-       * A Danna começou a falar.
-       */
-      case "output_audio_buffer.started":
-        this.onState("speaking");
-        break;
-
-      /*
-       * Áudio terminou.
-       */
-      case "output_audio_buffer.stopped":
-        this.onState("listening");
-        break;
-
-      /*
-       * Usuário interrompeu.
-       */
-      case "output_audio_buffer.cleared":
-        this.onState("listening");
-        break;
-
-      /*
-       * Transcrição da Danna.
-       */
-      case "response.output_audio_transcript.delta":
-      case "response.audio_transcript.delta":
-        if (event.delta) {
-          this.onTranscript(event.delta);
-        }
-        break;
-
-      /*
-       * Transcrição do usuário.
-       */
-      case "conversation.item.input_audio_transcription.completed":
-        if (event.transcript) {
-          this.onUserTranscript(
-            event.transcript
-          );
-        }
-        break;
-
-      case "response.done":
-        this.onState("listening");
-        break;
-
-      case "error":
-        console.error(
-          "[Danna Live event]",
-          event
-        );
-
-        this.onError(
-          new Error(
-            event?.error?.message ||
-            "Erro na conversa com a Danna"
-          )
-        );
-        break;
-
-      default:
-        break;
-    }
-  }
-
-  /*
-   * Envia texto para a conversa.
-   * Útil como fallback ou para contexto adicional.
-   */
-  sendText(text) {
-    if (
-      !this.dc ||
-      this.dc.readyState !== "open"
-    ) {
+    if (event.type === "session.started") {
+      this.started = true;
+      this.onState("listening");
       return;
     }
 
-    const clean =
-      String(text || "").trim();
+    if (event.type === "session.input_transcript.delta") {
+      const delta = String(event.delta || "");
+      if (!delta) return;
 
-    if (!clean) return;
+      this.onState("listening");
 
-    this.dc.send(
-      JSON.stringify({
-        type: "conversation.item.create",
+      if (this.audio) {
+        this.audio.muted = true;
+        clearTimeout(this.interruptionTimer);
 
-        item: {
-          type: "message",
-          role: "user",
+        this.interruptionTimer = setTimeout(() => {
+          if (this.audio) this.audio.muted = false;
+        }, 260);
+      }
 
-          content: [
-            {
-              type: "input_text",
-              text: clean,
-            },
-          ],
-        },
-      })
-    );
+      this.userBuffer += delta;
+      clearTimeout(this.userTimer);
 
-    this.dc.send(
-      JSON.stringify({
-        type: "response.create",
-      })
-    );
+      this.userTimer = setTimeout(() => {
+        const text = this.userBuffer.trim();
+        this.userBuffer = "";
+
+        if (text) this.onUserTranscript(text);
+      }, 720);
+
+      return;
+    }
+
+    if (event.type === "session.output_transcript.delta") {
+      const delta = String(event.delta || "");
+      if (!delta) return;
+
+      this.onState("speaking");
+      this.onTranscript(delta);
+
+      clearTimeout(this.speakingTimer);
+      this.speakingTimer = setTimeout(
+        () => this.onState("listening"),
+        900
+      );
+
+      return;
+    }
+
+    if (event.type === "error") {
+      console.error("[Danna Live event]", event);
+
+      this.onError(
+        new Error(
+          event?.error?.message ||
+          "Erro na conversa com a Danna"
+        )
+      );
+    }
   }
 
-  /*
-   * Adiciona contexto à sessão.
-   */
   addContext(context) {
-    if (
-      !this.dc ||
-      this.dc.readyState !== "open"
-    ) {
-      return;
-    }
-
-    const clean =
-      String(context || "").trim();
-
+    const clean = String(context || "").trim();
     if (!clean) return;
 
-    this.dc.send(
-      JSON.stringify({
-        type: "session.update",
-
-        session: {
-          type: "realtime",
-
-          instructions: `
-Você é Danna, a inteligência relacional do CONÉXIA.
-
-Considere também este contexto relacional:
-
-${clean}
-
-REGRAS:
-- use somente fatos presentes no contexto;
-- não invente;
-- notas antigas podem estar desatualizadas;
-- diferencie histórico de situação atual;
-- destaque mudanças quando existirem;
-- priorize assuntos em aberto;
-- sugestões são sugestões, nunca fatos.
-          `.trim(),
-        },
-      })
-    );
+    this.send({
+      type: "session.thinking.append",
+      event_id: `ctx_${Date.now()}`,
+      delegation_id: null,
+      content: clean.slice(0, 3500)
+    });
   }
 
-  /*
-   * Interrompe imediatamente a Danna.
-   */
+  speak(text) {
+    const clean = String(text || "").trim();
+    if (!clean) return;
+
+    this.send({
+      type: "session.commentary.append",
+      event_id: `say_${Date.now()}`,
+      delegation_id: null,
+      content:
+        "Diga isto agora em português brasileiro, de forma natural e conversacional. " +
+        "Preserve o sentido, mas não leia como locução nem acrescente nova pergunta: " +
+        clean.slice(0, 2800)
+    });
+  }
+
+  sendText(text) {
+    this.speak(text);
+  }
+
   interrupt() {
-    if (
-      !this.dc ||
-      this.dc.readyState !== "open"
-    ) {
-      return;
+    if (this.audio) {
+      this.audio.muted = true;
+      clearTimeout(this.interruptionTimer);
+
+      this.interruptionTimer = setTimeout(() => {
+        if (this.audio) this.audio.muted = false;
+      }, 320);
     }
 
-    try {
-      this.dc.send(
-        JSON.stringify({
-          type: "response.cancel",
-        })
-      );
-
-      this.dc.send(
-        JSON.stringify({
-          type: "output_audio_buffer.clear",
-        })
-      );
-    } catch {}
+    this.send({
+      type: "session.instructions.append",
+      event_id: `interrupt_${Date.now()}`,
+      delegation_id: null,
+      content:
+        "Pare de falar imediatamente. Escute o usuário. Não retome a frase interrompida."
+    });
 
     this.onState("listening");
   }
 
   mute() {
-    this.stream
-      ?.getAudioTracks()
-      .forEach((track) => {
-        track.enabled = false;
-      });
+    this.stream?.getAudioTracks().forEach(t => {
+      t.enabled = false;
+    });
   }
 
   unmute() {
-    this.stream
-      ?.getAudioTracks()
-      .forEach((track) => {
-        track.enabled = true;
-      });
+    this.stream?.getAudioTracks().forEach(t => {
+      t.enabled = true;
+    });
   }
 
   disconnect() {
+    clearTimeout(this.userTimer);
+    clearTimeout(this.speakingTimer);
+    clearTimeout(this.interruptionTimer);
+
     try {
-      this.stream
-        ?.getTracks()
-        .forEach((track) => track.stop());
+      this.stream?.getTracks().forEach(t => t.stop());
     } catch {}
 
     try {
@@ -411,6 +256,10 @@ REGRAS:
     } catch {}
 
     if (this.audio) {
+      try {
+        this.audio.pause();
+      } catch {}
+
       this.audio.srcObject = null;
       this.audio.remove();
     }
@@ -419,8 +268,9 @@ REGRAS:
     this.dc = null;
     this.audio = null;
     this.stream = null;
-
     this.connected = false;
+    this.started = false;
+    this.userBuffer = "";
 
     this.onState("idle");
   }
