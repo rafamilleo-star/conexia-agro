@@ -11,24 +11,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Patch CONEXIA Live
-        run: python scripts/patch_conexia_live.py
+      - name: Apply Danna Live V2
+        run: |
+          python scripts/patch_conexia_live.py
 
-      - name: Validate
+      - name: Validate JavaScript
         run: |
           node --check src/lib/dannaLive.js
           node --check api/openai-live-session.js
-          grep -q 'import DannaLive from "../lib/dannaLive"' src/components/ConexiaLabHome.jsx
-          ! grep -q 'speechSynthesis' src/components/ConexiaLabHome.jsx
-          ! grep -q 'SpeechRecognition' src/components/ConexiaLabHome.jsx
 
-      - name: Commit patch
+      - name: Validate Bossa
+        run: |
+          grep -q 'voice: "bossa"' api/openai-live-session.js
+          ! grep -q 'process.env.OPENAI_LIVE_VOICE' api/openai-live-session.js
+
+      - name: Validate interruption
+        run: |
+          grep -q 'session.input_transcript.delta' src/lib/dannaLive.js
+          grep -q 'session.instructions.append' src/lib/dannaLive.js
+          ! grep -q 'audio.muted = true' src/lib/dannaLive.js
+          ! grep -q 'audio.muted = false' src/lib/dannaLive.js
+
+      - name: Commit Danna Live V2
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/components/ConexiaLabHome.jsx
-          git diff --cached --quiet && exit 0
-          git commit -m "fix: migrate CONEXIA Live UI to GPT-Live"
+
+          git add \
+            src/lib/dannaLive.js \
+            api/openai-live-session.js
+
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração necessária."
+            exit 0
+          fi
+
+          git commit -m "fix: Danna GPT-Live V2 voice and interruption"
           git push
