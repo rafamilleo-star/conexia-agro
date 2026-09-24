@@ -462,20 +462,23 @@ function TeamDimensionRadar({ observation, size = 128 }) {
 
 /* ═══ WELCOME ═════════════════════════════════════════════ */
 /* ═══ ONBOARDING ══════════════════════════════════════════ */
-function Onboard({ onDone, initialKey = "", authEmail = "" }) {
+function Onboard({ onDone, initialKey = "", authEmail = "", authName = "" }) {
+  const initialName = String(authName || "").trim();
   const [phase, setPhase] = useState("intro"); // intro | interview | review
   const [questionIndex, setQuestionIndex] = useState(0);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [processingAnswer, setProcessingAnswer] = useState(false);
   const [heard, setHeard] = useState("");
   const [textAnswer, setTextAnswer] = useState("");
   const [useText, setUseText] = useState(false);
   const [error, setError] = useState("");
   const [voucher, setVoucher] = useState(initialKey || "");
   const recognitionRef = useRef(null);
+  const processingRef = useRef(false);
 
   const [form, setForm] = useState({
-    name: "",
+    name: initialName,
     email: authEmail || "",
     role: "",
     company: "",
@@ -534,35 +537,36 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
     return "oportunidades";
   };
 
+  // O nome já vem da criação da conta. Só perguntamos novamente em contas
+  // antigas onde ele não esteja disponível.
   const questions = [
-    {
+    ...(!initialName ? [{
       key: "name",
-      prompt: "Primeiro, como você prefere que eu te chame?",
-      apply: (value) => setForm(p => ({ ...p, name: String(value || "").trim() })),
-    },
+      prompt: "Antes de tudo, como você prefere que eu te chame?",
+    }] : []),
     {
       key: "company",
       prompt: "Qual empresa faz parte do seu momento hoje?",
-      apply: (value) => setForm(p => ({ ...p, company: String(value || "").trim() })),
     },
     {
       key: "role",
       prompt: "E qual é o seu cargo ou função principal?",
-      apply: (value) => setForm(p => ({ ...p, role: String(value || "").trim() })),
     },
     {
       key: "segment",
       prompt: "Em que setor você atua hoje?",
-      apply: (value) => setForm(p => ({ ...p, segment: segmentFromSpeech(value) })),
     },
     {
       key: "objective",
-      prompt: "E o que você mais quer que o CONÉXIA te ajude a construir agora?",
-      apply: (value) => setForm(p => ({ ...p, objectives: [objectiveFromSpeech(value)] })),
+      prompt: "O que você mais quer que o CONÉXIA te ajude a construir agora?",
     },
   ];
 
   const currentQuestion = questions[questionIndex];
+
+  const firstNameForVoice = String(form.name || initialName || "")
+    .trim()
+    .split(/\s+/)[0] || "";
 
   const chooseVoice = () => {
     if (!("speechSynthesis" in window)) return null;
@@ -575,19 +579,22 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
       if (name.includes("microsoft")) s += 25;
       if (name.includes("natural")) s += 25;
       if (name.includes("neural")) s += 25;
+      if (/(compact|robot|child|espeak|festival)/.test(name)) s -= 50;
       return s;
     };
     return [...voices].sort((a,b) => score(b) - score(a))[0] || null;
   };
 
-  const speak = (text, after) => {
-    if (!("speechSynthesis" in window)) {
+  const speak = (value, after) => {
+    const line = String(value || "").trim();
+    if (!line || !("speechSynthesis" in window)) {
       after?.();
       return;
     }
     try {
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(String(text || ""));
+      window.speechSynthesis.resume();
+      const u = new SpeechSynthesisUtterance(line);
       const voice = chooseVoice();
       if (voice) {
         u.voice = voice;
@@ -595,8 +602,9 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
       } else {
         u.lang = "pt-BR";
       }
-      u.rate = 1.06;
+      u.rate = 1.08;
       u.pitch = 1.01;
+      u.volume = 1;
       u.onstart = () => setSpeaking(true);
       u.onend = () => {
         setSpeaking(false);
@@ -606,7 +614,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
         setSpeaking(false);
         after?.();
       };
-      window.speechSynthesis.speak(u);
+      setTimeout(() => window.speechSynthesis.speak(u), 20);
     } catch {
       setSpeaking(false);
       after?.();
@@ -626,7 +634,288 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
     };
   }, []);
 
+  const parseModelJson = (raw) => {
+    const source = String(raw || "");
+    const match = source.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try { return JSON.parse(match[0]); } catch { return null; }
+  };
+
+  const fallbackInterpretation = (question, value) => {
+    const clean = String(value || "").trim();
+    if (!clean) {
+      return {
+        intent: "clarify",
+        confidence: "low",
+        accepted: false,
+        reply: "Não consegui entender sua resposta. Me conta de outro jeito.",
+        value: null,
+        normalizedValue: null,
+      };
+    }
+
+    if (question.key === "segment") {
+      return {
+        intent: "answer",
+        confidence: "medium",
+        accepted: true,
+        reply: "Entendi.",
+        value: clean,
+        normalizedValue: segmentFromSpeech(clean),
+      };
+    }
+
+    if (question.key === "objective") {
+      return {
+        intent: "answer",
+        confidence: "medium",
+        accepted: true,
+        reply: "Entendi.",
+        value: clean,
+        normalizedValue: objectiveFromSpeech(clean),
+      };
+    }
+
+    return {
+      intent: "answer",
+      confidence: "medium",
+      accepted: true,
+      reply: "Entendi.",
+      value: clean,
+      normalizedValue: null,
+    };
+  };
+
+  // A Danna não trata qualquer fala como se fosse automaticamente uma resposta.
+  // Ela distingue resposta, pedido de explicação, recusa/pular e fala fora de
+  // contexto. Só avança sem confirmação quando há confiança suficiente.
+  const interpretAnswer = async (question, value) => {
+    const allowedSegments = SEGMENTS.map(s => s.value);
+    const allowedObjectives = OBJECTIVES.map(o => o.value);
+
+    const prompt = `
+Você é DANNA, a voz de onboarding do CONÉXIA, uma plataforma de inteligência relacional.
+
+Seu trabalho é interpretar UMA fala do usuário dentro de UMA pergunta de cadastro.
+Você deve funcionar bem independentemente do que o usuário disser: resposta direta,
+frase longa, dúvida, pedido de explicação, correção, recusa, brincadeira ou algo sem relação.
+
+CONTEXTO JÁ CAPTURADO:
+${JSON.stringify({
+  name: form.name || null,
+  company: form.company || null,
+  role: form.role || null,
+  segment: form.segment || null,
+  objective: form.objectives?.[0] || null,
+})}
+
+PERGUNTA ATUAL:
+${question.prompt}
+
+CAMPO ESPERADO:
+${question.key}
+
+FALA DO USUÁRIO:
+${value}
+
+VALORES VÁLIDOS PARA segment:
+${JSON.stringify(allowedSegments)}
+
+VALORES VÁLIDOS PARA objective:
+${JSON.stringify(allowedObjectives)}
+
+REGRAS:
+- nunca invente informação;
+- se a fala responder claramente, intent="answer";
+- se o usuário pedir explicação ("por quê?", "o que quer dizer?", "não entendi"),
+  intent="clarify" e responda a dúvida de modo curto, terminando de forma que ele possa responder;
+- se disser que prefere não responder, intent="skip";
+- se for irrelevante ou impossível extrair com segurança, intent="other";
+- confidence deve ser "high", "medium" ou "low";
+- accepted=true somente quando você pode armazenar o dado com segurança;
+- para company, role e name, "value" deve conter apenas o dado limpo extraído,
+  não a frase inteira;
+- para segment, normalizedValue deve ser exatamente um valor da lista de segmentos;
+- para objective, normalizedValue deve ser exatamente um valor da lista de objetivos;
+- se não houver base suficiente para normalizar, confidence="low" e accepted=false;
+- reply é o que DANNA vai FALAR. Deve soar humana, curta e específica.
+- Não bajule. Não diga "perfeito", "sensacional", "incrível" a cada resposta.
+- Para uma resposta aceita, reconheça em no máximo 12 palavras.
+- Não repita o que o usuário disse inteiro.
+- Para clarify/other/baixa confiança, explique ou faça UMA pergunta curta de esclarecimento.
+- Não fale sobre tecnologia, modelo, JSON ou classificação.
+
+Responda SOMENTE JSON válido:
+{
+  "intent":"answer|clarify|skip|other",
+  "confidence":"high|medium|low",
+  "accepted":true,
+  "reply":"frase curta da Danna",
+  "value":"valor extraído ou null",
+  "normalizedValue":"valor normalizado ou null"
+}
+`.trim();
+
+    try {
+      const res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          maxTokens: 350,
+          temperature: 0.15,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data?.error?.message ||
+          data?.error ||
+          `HTTP ${res.status}`
+        );
+      }
+
+      const parsed = parseModelJson(data.content?.[0]?.text || "");
+      if (!parsed) throw new Error("Resposta não estruturada.");
+
+      return {
+        intent: parsed.intent || "other",
+        confidence: parsed.confidence || "low",
+        accepted: parsed.accepted === true,
+        reply: String(parsed.reply || "").trim() || "Me conta de outro jeito.",
+        value: parsed.value == null ? null : String(parsed.value).trim(),
+        normalizedValue:
+          parsed.normalizedValue == null
+            ? null
+            : String(parsed.normalizedValue).trim(),
+      };
+    } catch (e) {
+      console.warn("[Danna onboarding] fallback de interpretação:", e);
+      return fallbackInterpretation(question, value);
+    }
+  };
+
+  const applyInterpretedAnswer = (question, result, originalValue) => {
+    const raw = String(result?.value || originalValue || "").trim();
+
+    if (question.key === "name") {
+      setForm(p => ({ ...p, name: raw }));
+      return;
+    }
+
+    if (question.key === "company") {
+      setForm(p => ({ ...p, company: raw }));
+      return;
+    }
+
+    if (question.key === "role") {
+      setForm(p => ({ ...p, role: raw }));
+      return;
+    }
+
+    if (question.key === "segment") {
+      const allowed = new Set(SEGMENTS.map(s => s.value));
+      const normalized =
+        allowed.has(result?.normalizedValue)
+          ? result.normalizedValue
+          : segmentFromSpeech(originalValue);
+      setForm(p => ({ ...p, segment: normalized }));
+      return;
+    }
+
+    if (question.key === "objective") {
+      const allowed = new Set(OBJECTIVES.map(o => o.value));
+      const normalized =
+        allowed.has(result?.normalizedValue)
+          ? result.normalizedValue
+          : objectiveFromSpeech(originalValue);
+      setForm(p => ({ ...p, objectives: [normalized] }));
+    }
+  };
+
+  const advanceAfterAcceptedAnswer = (reply) => {
+    setHeard("");
+    setTextAnswer("");
+    setUseText(false);
+    setError("");
+
+    if (questionIndex >= questions.length - 1) {
+      setPhase("review");
+      speak(
+        `${reply ? `${reply} ` : ""}Pronto. Eu organizei o essencial. Confere se está tudo certo.`
+      );
+      return;
+    }
+
+    const next = questionIndex + 1;
+    setQuestionIndex(next);
+
+    speak(
+      reply || "Entendi.",
+      () => setTimeout(() => speak(questions[next].prompt, beginListening), 60)
+    );
+  };
+
+  const processAnswer = async (value) => {
+    const clean = String(value || "").trim();
+    if (!clean || !currentQuestion || processingRef.current) return;
+
+    processingRef.current = true;
+    setProcessingAnswer(true);
+    setError("");
+    stopListening();
+
+    try {
+      const result = await interpretAnswer(currentQuestion, clean);
+
+      if (result.intent === "skip") {
+        const skippable = ["company", "segment", "objective"].includes(currentQuestion.key);
+
+        if (!skippable) {
+          const msg = result.reply || "Essa informação é importante para eu começar. Como você descreveria isso?";
+          setError(msg);
+          speak(msg, () => setTimeout(beginListening, 100));
+          return;
+        }
+
+        if (currentQuestion.key === "segment") {
+          setForm(p => ({ ...p, segment: "outros" }));
+        }
+        if (currentQuestion.key === "objective") {
+          setForm(p => ({ ...p, objectives: ["oportunidades"] }));
+        }
+
+        advanceAfterAcceptedAnswer(result.reply || "Tudo bem, seguimos.");
+        return;
+      }
+
+      const confidentEnough =
+        result.accepted &&
+        (result.confidence === "high" || result.confidence === "medium");
+
+      if (!confidentEnough || result.intent !== "answer") {
+        const msg =
+          result.reply ||
+          "Não quero presumir. Me conta isso de outro jeito.";
+        setError(msg);
+        setHeard(clean);
+        speak(msg, () => setTimeout(beginListening, 100));
+        return;
+      }
+
+      applyInterpretedAnswer(currentQuestion, result, clean);
+      advanceAfterAcceptedAnswer(result.reply);
+    } finally {
+      processingRef.current = false;
+      setProcessingAnswer(false);
+    }
+  };
+
   const beginListening = () => {
+    if (processingRef.current) return;
+
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
       setUseText(true);
@@ -645,18 +934,27 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
     rec.continuous = false;
 
     rec.onstart = () => setListening(true);
+
     rec.onresult = (event) => {
       let finalText = "";
       let interim = "";
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0]?.transcript || "";
         if (event.results[i].isFinal) finalText += `${t} `;
         else interim += `${t} `;
       }
+
       const value = (finalText || interim).trim();
       setHeard(value);
-      if (finalText.trim()) setTextAnswer(finalText.trim());
+
+      if (finalText.trim()) {
+        const finalValue = finalText.trim();
+        setTextAnswer(finalValue);
+        setTimeout(() => processAnswer(finalValue), 40);
+      }
     };
+
     rec.onerror = (e) => {
       recognitionRef.current = null;
       setListening(false);
@@ -664,20 +962,22 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
         setError("Não entendi bem. Você pode tentar de novo ou responder por texto.");
       }
     };
+
     rec.onend = () => {
       recognitionRef.current = null;
       setListening(false);
     };
 
-    try { rec.start(); }
-    catch {
+    try {
+      rec.start();
+    } catch {
       setUseText(true);
       setError("Não consegui abrir o microfone. Responda por texto.");
     }
   };
 
   const askCurrentQuestion = () => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || processingAnswer) return;
     speak(currentQuestion.prompt, beginListening);
   };
 
@@ -686,51 +986,32 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
     setQuestionIndex(0);
     setError("");
     setUseText(false);
+
+    const intro =
+      firstNameForVoice
+        ? `${firstNameForVoice}, eu sou a Danna, a voz do CONÉXIA. Vou te fazer algumas perguntas rápidas e organizar tudo para você.`
+        : "Eu sou a Danna, a voz do CONÉXIA. Vou te fazer algumas perguntas rápidas e organizar tudo para você.";
+
     setTimeout(() => {
       speak(
-        "Eu sou a Danna, a voz do CONÉXIA. Vou te fazer cinco perguntas rápidas. Você pode responder falando e eu organizo tudo para você.",
+        intro,
         () => speak(questions[0].prompt, beginListening)
       );
     }, 120);
   };
 
-  const acceptAnswer = () => {
+  const submitTypedAnswer = () => {
     const value = String(textAnswer || heard || "").trim();
     if (!value) {
       setError("Me diga uma resposta antes de continuar.");
       return;
     }
-
-    currentQuestion.apply(value);
-    stopListening();
-    setHeard("");
-    setTextAnswer("");
-    setError("");
-
-    if (questionIndex >= questions.length - 1) {
-      setPhase("review");
-      speak("Pronto. Eu organizei o essencial. Confere se está tudo certo.");
-      return;
-    }
-
-    const next = questionIndex + 1;
-    setQuestionIndex(next);
-    setTimeout(() => {
-      speak(questions[next].prompt, beginListening);
-    }, 180);
+    void processAnswer(value);
   };
 
   const updateField = (key, value) => {
     setForm(p => ({ ...p, [key]: value }));
   };
-
-  const objectiveLabel =
-    OBJECTIVES.find(o => o.value === form.objectives?.[0])?.label ||
-    "Encontrar oportunidades";
-
-  const segmentLabel =
-    SEGMENTS.find(s => s.value === form.segment)?.label ||
-    "Outros";
 
   const finish = () => {
     const ready = {
@@ -775,7 +1056,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
             margin: "14px 0 8px",
             lineHeight: 1.08,
           }}>
-            Vamos começar conversando.
+            {firstNameForVoice ? `${firstNameForVoice}, vamos começar conversando.` : "Vamos começar conversando."}
           </h2>
           <p style={{
             fontFamily: "'DM Sans'",
@@ -785,7 +1066,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
             margin: "0 auto 22px",
             maxWidth: 360,
           }}>
-            A Danna faz as perguntas, você responde falando e o CONÉXIA organiza o essencial. Se preferir, pode escrever a qualquer momento.
+            A Danna conversa com você, interpreta as respostas e organiza o essencial. Se algo não estiver claro, ela pergunta antes de salvar.
           </p>
           <Btn full onClick={startInterview}>Começar conversa</Btn>
         </div>
@@ -838,6 +1119,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
                 {questionIndex + 1} de {questions.length}
               </div>
             </div>
+
             <div style={{
               width: 42,
               height: 42,
@@ -864,6 +1146,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
 
           <button
             onClick={() => {
+              if (processingAnswer || speaking) return;
               if (listening) stopListening();
               else askCurrentQuestion();
             }}
@@ -877,11 +1160,14 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
               border: `1px solid ${listening ? C.gold : C.brd}`,
               background: listening ? `${C.gold}12` : C.sf,
               color: listening ? C.gold : C.txM,
-              cursor: "pointer",
+              cursor: processingAnswer ? "wait" : "pointer",
               boxShadow: listening ? `0 0 0 10px ${C.gold}08` : "none",
+              opacity: processingAnswer ? 0.7 : 1,
             }}
           >
-            <span style={{ fontSize: 28 }}>{listening ? "◉" : speaking ? "◌" : "●"}</span>
+            <span style={{ fontSize: 28 }}>
+              {processingAnswer ? "◌" : listening ? "◉" : speaking ? "◌" : "●"}
+            </span>
           </button>
 
           <div style={{
@@ -891,7 +1177,13 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
             color: C.txL,
             marginBottom: 16,
           }}>
-            {speaking ? "Danna falando..." : listening ? "Ouvindo..." : "Toque no círculo para responder"}
+            {processingAnswer
+              ? "Danna entendendo sua resposta..."
+              : speaking
+                ? "Danna falando..."
+                : listening
+                  ? "Ouvindo..."
+                  : "Toque no círculo para responder"}
           </div>
 
           {(heard || useText) && (
@@ -910,6 +1202,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
                 }}
                 placeholder="Sua resposta..."
                 rows={3}
+                disabled={processingAnswer}
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
@@ -942,22 +1235,45 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
             <Btn
               variant="ghost"
               onClick={() => setUseText(true)}
-              style={{ flex: 1 }}
+              disabled={processingAnswer}
             >
               Escrever
             </Btn>
-            <Btn
-              onClick={acceptAnswer}
-              disabled={!String(textAnswer || heard || "").trim()}
-              style={{ flex: 2 }}
-            >
-              Confirmar resposta
-            </Btn>
+
+            {useText && (
+              <Btn
+                onClick={submitTypedAnswer}
+                disabled={
+                  processingAnswer ||
+                  !String(textAnswer || heard || "").trim()
+                }
+              >
+                Enviar
+              </Btn>
+            )}
+          </div>
+
+          <div style={{
+            marginTop: 13,
+            fontFamily: "'DM Sans'",
+            fontSize: 10.5,
+            color: C.txL,
+            lineHeight: 1.5,
+          }}>
+            Respostas claras avançam automaticamente. Se a Danna tiver dúvida, ela pergunta antes de continuar.
           </div>
         </div>
       </div>
     );
   }
+
+  const objectiveLabel =
+    OBJECTIVES.find(o => o.value === form.objectives?.[0])?.label ||
+    "Encontrar oportunidades";
+
+  const segmentLabel =
+    SEGMENTS.find(s => s.value === form.segment)?.label ||
+    "Outros";
 
   return (
     <div style={{
@@ -977,6 +1293,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
         padding: 22,
       }}>
         <Tag>Confirmação</Tag>
+
         <h2 style={{
           fontFamily: "'Cormorant Garamond',serif",
           fontSize: 29,
@@ -985,6 +1302,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
         }}>
           Foi isso que eu entendi.
         </h2>
+
         <p style={{
           fontFamily: "'DM Sans'",
           color: C.txM,
@@ -992,7 +1310,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
           lineHeight: 1.55,
           margin: "0 0 18px",
         }}>
-          Ajuste qualquer coisa antes de continuarmos.
+          A Danna já organizou as respostas. Ajuste qualquer coisa antes de continuarmos.
         </p>
 
         <Inp label="Como devo te chamar" value={form.name} onChange={v => updateField("name", v)} />
@@ -1056,31 +1374,35 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
         </div>
 
         <div style={{
-          background: `${C.gold}08`,
-          border: `1px solid ${C.gL}`,
+          background: C.sf,
+          border: `1px solid ${C.brd}`,
           borderRadius: 10,
           padding: 12,
           marginBottom: 16,
-          fontFamily: "'DM Sans'",
-          fontSize: 12,
-          color: C.txM,
-          lineHeight: 1.55,
+          display: "grid",
+          gap: 5,
         }}>
-          <strong style={{ color: C.gold }}>Danna entendeu:</strong>{" "}
-          {segmentLabel} · {objectiveLabel}
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>
+            Leitura atual
+          </div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12.5, color: C.txt }}>
+            {segmentLabel} · {objectiveLabel}
+          </div>
         </div>
 
-        {voucher && (
-          <div style={{ marginBottom: 14 }}>
-            <Inp label="Chave PRO" value={voucher} onChange={setVoucher} />
-          </div>
-        )}
+        <Inp
+          label="Chave PRO (opcional)"
+          value={voucher}
+          onChange={setVoucher}
+          placeholder="Se você recebeu uma chave"
+        />
 
         {error && (
           <div style={{
             fontFamily: "'DM Sans'",
             color: C.cor,
             fontSize: 11,
+            lineHeight: 1.5,
             marginBottom: 10,
           }}>
             {error}
@@ -1091,14 +1413,12 @@ function Onboard({ onDone, initialKey = "", authEmail = "" }) {
           <Btn variant="ghost" onClick={() => {
             setPhase("interview");
             setQuestionIndex(0);
-            setUseText(false);
             setError("");
-          }} style={{ flex: 1 }}>
-            Refazer
+            setUseText(true);
+          }}>
+            Rever conversa
           </Btn>
-          <Btn onClick={finish} style={{ flex: 2 }}>
-            Está certo · continuar
-          </Btn>
+          <Btn onClick={finish}>Está certo →</Btn>
         </div>
       </div>
     </div>
@@ -6636,7 +6956,19 @@ function App() {
       {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
       {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
       {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
-      {state === "onboard"      && user && <Onboard onDone={handleOnboard} initialKey={pendingKey} authEmail={user?.email || ""} />}
+      {state === "onboard"      && user && (
+        <Onboard
+          onDone={handleOnboard}
+          initialKey={pendingKey}
+          authEmail={user?.email || ""}
+          authName={
+            user?.user_metadata?.name ||
+            profile?.first_name ||
+            profile?.name ||
+            ""
+          }
+        />
+      )}
       {state === "assess"       && user && <Assess profile={profile} onDone={handleAssess} />}
       {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} onProfileUpdate={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))} />}
     </>
