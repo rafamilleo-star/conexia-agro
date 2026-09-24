@@ -671,29 +671,23 @@ print("✓ openai-live-session.js corrigido")
 # VERIFICAÇÕES
 # ============================================================
 
-danna_check =
-    danna_path.read_text(
-        encoding="utf-8"
-    )
-
-session_check =
-    session_path.read_text(
-        encoding="utf-8"
-    )
+danna_check = danna_path.read_text(encoding="utf-8")
+session_check = session_path.read_text(encoding="utf-8")
 
 assert "audio.muted = true" not in danna_check
 assert "audio.muted = false" not in danna_check
 assert "session.input_transcript.delta" in danna_check
 assert "session.instructions.append" in danna_check
+
 assert 'voice: "bossa"' in session_check
 assert 'model: "gpt-live-1"' in session_check
 assert "process.env.OPENAI_LIVE_VOICE" not in session_check
 
 print("")
 print("====================================")
-print("✓ DANNA GPT-LIVE V2 PRONTA")
-print("✓ Bossa BR forçada")
-print("✓ mute/unmute antigo removido")
-print("✓ interrupção antecipada")
-print("✓ WebRTC mantido full-duplex")
+print("DANNA GPT-LIVE V2 PRONTA")
+print("Bossa BR forcada")
+print("mute/unmute antigo removido")
+print("interrupcao antecipada")
+print("WebRTC mantido full-duplex")
 print("====================================")
