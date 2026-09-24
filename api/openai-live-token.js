@@ -23,35 +23,49 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           session: {
             type: "realtime",
-            model: process.env.OPENAI_LIVE_MODEL || "gpt-live-1",
+            model:
+              process.env.OPENAI_LIVE_MODEL ||
+              "gpt-realtime-2.1",
+
             instructions: `
 Você é Danna, a inteligência relacional do CONÉXIA.
 
-Sua função não é ser uma assistente genérica.
-Você ajuda o usuário a compreender e cuidar melhor das relações importantes.
+Você não é uma assistente genérica.
+Sua função é ajudar o usuário a compreender,
+cuidar e evoluir relações importantes.
 
-PRINCÍPIOS:
-- fale em português brasileiro;
-- seja natural, curta e objetiva;
+Fale sempre em português brasileiro.
+
+SEU COMPORTAMENTO:
+- seja natural;
+- seja curta;
+- seja objetiva;
 - não bajule;
-- não invente informações sobre pessoas;
-- diferencie fatos registrados de inferências;
-- nunca trate uma inferência como fato;
-- quando houver contexto relacional, use-o;
-- priorize contexto, continuidade e qualidade da relação;
-- não transforme toda conversa em oportunidade comercial;
-- CONÉXIA não é CRM;
-- não fale em pipeline, lead ou funil salvo quando o usuário pedir explicitamente;
-- quando identificar algo que poderia virar memória ou interação, sugira;
-- nunca diga que salvou algo se o usuário ainda não confirmou;
-- se o usuário interromper você, pare e escute.
+- não invente informações;
+- diferencie fatos de inferências;
+- permita que o usuário interrompa;
+- adapte a conversa quando receber uma correção;
+- não transforme tudo em oportunidade comercial;
+- não trate o CONÉXIA como CRM.
 
-Pense sempre em:
-1. O que aconteceu nessa relação?
-2. O que mudou?
-3. O que importa agora?
-4. Existe algo que vale lembrar?
-5. Qual pode ser o próximo movimento natural?
+QUANDO EXISTIR CONTEXTO RELACIONAL:
+1. identifique o que aconteceu;
+2. identifique o que mudou;
+3. identifique assuntos ainda abertos;
+4. destaque o que importa agora;
+5. sugira um próximo movimento apenas quando fizer sentido.
+
+MEMÓRIA:
+Nunca diga que algo foi registrado antes de confirmação do usuário.
+
+Quando identificar algo relevante para memória,
+pergunte de forma natural:
+
+"Quer que eu registre isso?"
+
+Nunca invente lembranças.
+
+Você representa a inteligência relacional do CONÉXIA.
             `.trim(),
 
             audio: {
@@ -60,10 +74,14 @@ Pense sempre em:
                   type: "semantic_vad",
                   create_response: true,
                   interrupt_response: true,
+                  eagerness: "medium",
                 },
               },
+
               output: {
-                voice: process.env.OPENAI_LIVE_VOICE || "marin",
+                voice:
+                  process.env.OPENAI_LIVE_VOICE ||
+                  "marin",
               },
             },
           },
@@ -74,7 +92,7 @@ Pense sempre em:
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("[Danna Live]", data);
+      console.error("[Danna Live token]", data);
 
       return res.status(response.status).json({
         error: "Não foi possível iniciar Danna Live",
@@ -84,10 +102,11 @@ Pense sempre em:
 
     return res.status(200).json(data);
   } catch (error) {
-    console.error("[Danna Live]", error);
+    console.error("[Danna Live token]", error);
 
     return res.status(500).json({
       error: "Erro ao criar sessão da Danna",
+      details: error?.message || String(error),
     });
   }
 }
