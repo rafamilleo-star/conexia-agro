@@ -4,6 +4,7 @@ import { supabase } from "../utils/supabase";
 import { computePriorities } from "../../shared/priorityEngine.js";
 import { detectPatterns, PATTERN_NOTES } from "../../shared/relationshipPatternDetector.js";
 import conexiaIcon from "../assets/brand/conexia_icone_transparente.svg";
+import DannaLive from "../lib/dannaLive";
 
 const K = {
   bg: "#0D0D0F",
@@ -538,8 +539,7 @@ export default function ConexiaLabHome({
   const [showText, setShowText] = useState(false);
   const [textInput, setTextInput] = useState("");
 
-  const recRef = useRef(null);
-  const transcriptRef = useRef("");
+  const liveRef = useRef(null);
   const conversationActiveRef = useRef(false);
   const greetedThisSessionRef = useRef(false);
 
@@ -674,201 +674,43 @@ export default function ConexiaLabHome({
     };
   }, [priorities, pending, patterns, onOpenContact]);
 
-  const chooseVoice = () => {
-    if (!("speechSynthesis" in window)) return null;
-
-    const voices = window.speechSynthesis.getVoices() || [];
-
-    const score = (voice) => {
-      const n = normalize(voice?.name);
-      const l = normalize(voice?.lang);
-
-      let s = l === "pt-br" ? 100 : l.startsWith("pt") ? 60 : -100;
-
-      if (n.includes("google")) s += 30;
-      if (n.includes("microsoft")) s += 25;
-      if (n.includes("natural")) s += 25;
-      if (n.includes("neural")) s += 25;
-      if (/(compact|robot|child|espeak|festival)/.test(n)) s -= 50;
-
-      return s;
-    };
-
-    return [...voices].sort((a,b) => score(b) - score(a))[0] || null;
-  };
-
   const speak = (text, resumeListening = true) => {
     const raw = String(text || "").trim();
 
-    if (!raw || !("speechSynthesis" in window)) {
-      if (resumeListening && conversationActiveRef.current) {
-        startListening();
-      }
-      return;
-    }
+    if (!raw) return;
 
     addTurn("assistant", raw);
 
-    // O navegador lê markdown, listas e pontuação pesada de forma pausada.
-    // Limpa apenas a forma falada; o texto original continua preservado no contexto.
-    const line = raw
-      .replace(/[*_#>`]/g, "")
-      .replace(/\s*[-–—]\s*/g, ", ")
-      .replace(/\s*[:;]\s*/g, ", ")
-      .replace(/\n+/g, ". ")
-      .replace(/\.{2,}/g, ".")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    try {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume();
-    } catch {}
-
-    setVoiceState("speaking");
-
-    const utterance = new SpeechSynthesisUtterance(line);
-    const voice = chooseVoice();
-
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang || "pt-BR";
-    } else {
-      utterance.lang = "pt-BR";
+    if (!liveRef.current?.connected) {
+      setAnswer(raw);
+      setVoiceState("idle");
+      return;
     }
 
-    // Mais próximo de conversa normal; 0.96 estava perceptivelmente lento.
-    utterance.rate = 1.08;
-    utterance.pitch = 1.01;
-    utterance.volume = 1;
-
-    utterance.onstart = () => setVoiceState("speaking");
-
-    utterance.onend = () => {
-      if (conversationActiveRef.current && resumeListening) {
-        setTimeout(() => startListening(), 110);
-      } else {
-        setVoiceState("idle");
-      }
-    };
-
-    utterance.onerror = () => {
-      setVoiceState("idle");
-
-      if (conversationActiveRef.current && resumeListening) {
-        setTimeout(() => startListening(), 180);
-      }
-    };
-
-    setTimeout(() => {
-      try {
-        window.speechSynthesis.speak(utterance);
-      } catch {
-        setVoiceState("idle");
-      }
-    }, 20);
+    liveRef.current.speak(raw);
   };
 
-  const stopListening = () => {
-    try {
-      recRef.current?.stop();
-    } catch {}
+  const stopListening = () => {};
 
-    recRef.current = null;
+  const startListening = () => {
+    if (conversationActiveRef.current) {
+      setVoiceState("listening");
+    }
   };
 
   const stopConversation = () => {
     conversationActiveRef.current = false;
     greetedThisSessionRef.current = false;
-    setConversationActive(false);
-    stopListening();
 
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
+    setConversationActive(false);
+
+    try {
+      liveRef.current?.disconnect();
+    } catch {}
+
+    liveRef.current = null;
 
     setVoiceState("idle");
-  };
-
-  const startListening = () => {
-    if (!conversationActiveRef.current) return;
-    if (recRef.current) return;
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SR) {
-      setError(
-        "Este navegador não liberou reconhecimento de voz. Use o campo de texto abaixo."
-      );
-      setVoiceState("idle");
-      return;
-    }
-
-    setError("");
-    transcriptRef.current = "";
-
-    const rec = new SR();
-    recRef.current = rec;
-
-    rec.lang = "pt-BR";
-    rec.interimResults = true;
-    rec.continuous = false;
-
-    rec.onstart = () => setVoiceState("listening");
-
-    rec.onresult = (event) => {
-      let finalText = "";
-      let interim = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0]?.transcript || "";
-
-        if (event.results[i].isFinal) {
-          finalText += t + " ";
-        } else {
-          interim += t + " ";
-        }
-      }
-
-      if (finalText) transcriptRef.current += finalText;
-
-      setInput(
-        (transcriptRef.current + interim).trim()
-      );
-    };
-
-    rec.onerror = (e) => {
-      recRef.current = null;
-
-      if (e?.error !== "no-speech" && e?.error !== "aborted") {
-        setError("Não consegui ouvir. Tente novamente ou escreva.");
-      }
-
-      setVoiceState("idle");
-    };
-
-    rec.onend = () => {
-      recRef.current = null;
-
-      const spoken = transcriptRef.current.trim();
-
-      if (spoken) {
-        handleUserTurn(spoken);
-      } else if (conversationActiveRef.current) {
-        setVoiceState("idle");
-
-        setTimeout(() => {
-          if (
-            conversationActiveRef.current &&
-            !recRef.current
-          ) {
-            startListening();
-          }
-        }, 260);
-      }
-    };
-
-    rec.start();
   };
 
   const markFirstContactCompleted = async () => {
@@ -902,27 +744,73 @@ export default function ConexiaLabHome({
     }
   };
 
-  const beginConversation = () => {
+  const beginConversation = async () => {
     if (conversationActiveRef.current) {
       stopConversation();
       return;
     }
 
-    conversationActiveRef.current = true;
-    setConversationActive(true);
+    setCurrentView(v =>
+      v === "saved" ? "today" : v
+    );
 
-    setCurrentView(v => v === "saved" ? "today" : v);
     setInput("");
     setError("");
+    setVoiceState("connecting");
 
-    try {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume();
+    const live = new DannaLive({
+      onState: setVoiceState,
 
-      const unlock = new SpeechSynthesisUtterance("");
-      unlock.volume = 0.01;
-      window.speechSynthesis.speak(unlock);
-    } catch {}
+      onUserTranscript: (spoken) => {
+        const clean =
+          String(spoken || "").trim();
+
+        if (
+          !clean ||
+          !conversationActiveRef.current
+        ) {
+          return;
+        }
+
+        live.interrupt();
+
+        setInput(clean);
+
+        void handleUserTurn(clean);
+      },
+
+      onTranscript: () => {},
+
+      onError: (err) => {
+        setError(
+          err?.message ||
+          "Não consegui manter a conversa por voz."
+        );
+
+        setVoiceState("idle");
+      }
+    });
+
+    liveRef.current = live;
+
+    const ok = await live.connect();
+
+    if (!ok) {
+      conversationActiveRef.current = false;
+      setConversationActive(false);
+      return;
+    }
+
+    conversationActiveRef.current = true;
+
+    setConversationActive(true);
+    setVoiceState("listening");
+
+    live.addContext(
+      "Conversa de inteligência relacional no CONÉXIA. " +
+      "Escute e aguarde o aplicativo enviar o conteúdo falado. " +
+      "Nunca use a expressão 'o usuário'."
+    );
 
     if (!greetedThisSessionRef.current) {
       greetedThisSessionRef.current = true;
@@ -930,24 +818,20 @@ export default function ConexiaLabHome({
       if (!firstContactCompleted) {
         void markFirstContactCompleted();
 
-        const introName = displayName ? `${displayName}, ` : "";
+        const introName =
+          displayName
+            ? `${displayName}, `
+            : "";
 
-        setTimeout(() => {
-          speak(
-            `${introName}eu sou o CONÉXIA. A partir daqui, vou usar as relações e interações que você registrar para te ajudar a perceber quem merece sua atenção, o que está mudando na sua rede e qual pode ser o próximo movimento. Para começar, me conta uma pessoa importante para você hoje.`,
-            true
-          );
-        }, 70);
+        speak(
+          `${introName}eu sou a Danna, a inteligência relacional do CONÉXIA. ` +
+          `Me conta uma pessoa importante para você hoje.`,
+          true
+        );
+
       } else {
-        setTimeout(() => {
-          speak(
-            "Estou ouvindo.",
-            true
-          );
-        }, 70);
+        speak("Estou ouvindo.", true);
       }
-    } else {
-      setTimeout(() => startListening(), 50);
     }
   };
 
@@ -978,6 +862,10 @@ Você é o motor de captura do CONÉXIA.
 
 Extraia apenas o que está explícito.
 Não invente.
+A descrição será exibida como memória pessoal do dono da rede:
+escreva em primeira pessoa.
+
+É proibido narrar como observador externo usando "o usuário".
 
 CONTATOS:
 ${JSON.stringify(existing)}
@@ -995,7 +883,7 @@ Responda SOMENTE JSON válido:
   "company":"empresa explícita ou null",
   "role":"cargo explícito ou null",
   "interactionType":"reuniao|ligacao|mensagem|encontro|evento|outro",
-  "description":"resumo fiel em 1 ou 2 frases",
+  "description":"resumo fiel em 1 ou 2 frases, SEMPRE na primeira pessoa do dono da relação. Ex.: 'Enviei ao Rafael um resumo para análise.' Nunca escreva 'o usuário enviou', 'o usuário pediu' ou 'o usuário informou'.",
   "sentiment":"positivo|neutro|negativo",
   "tags":["até 5 temas explícitos"],
   "nextAction":"próximo passo explícito ou null",
