@@ -25,7 +25,10 @@ export class DannaLive {
     this.userBuffer = "";
     this.userTimer = null;
     this.speakingTimer = null;
-    this.interruptResetTimer = null;
+
+    // Danna 3
+    this.relationalContext = "";
+    this.lastInterruptAt = 0;
   }
 
   send(event) {
@@ -33,8 +36,13 @@ export class DannaLive {
       return false;
     }
 
-    this.dc.send(JSON.stringify(event));
-    return true;
+    try {
+      this.dc.send(JSON.stringify(event));
+      return true;
+    } catch (error) {
+      console.warn("[Danna 3] falha ao enviar evento", error);
+      return false;
+    }
   }
 
   async connect() {
@@ -43,9 +51,12 @@ export class DannaLive {
 
       this.pc = new RTCPeerConnection();
 
-      // Áudio remoto do GPT-Live.
-      // NÃO mutamos/desmutamos durante interrupções.
-      // GPT-Live/WebRTC deve manter entrada e saída ativas.
+      /*
+       * Áudio remoto da Danna.
+       *
+       * Não mutamos/desmutamos o elemento durante a conversa.
+       * O microfone permanece aberto para permitir full-duplex.
+       */
       this.audio = document.createElement("audio");
       this.audio.autoplay = true;
       this.audio.playsInline = true;
@@ -54,20 +65,21 @@ export class DannaLive {
       this.pc.ontrack = (event) => {
         const remoteStream = event.streams?.[0];
 
-        if (remoteStream) {
-          this.audio.srcObject = remoteStream;
+        if (!remoteStream) return;
 
-          this.audio.play().catch((err) => {
-            console.warn(
-              "[Danna Live] autoplay:",
-              err
-            );
-          });
-        }
+        this.audio.srcObject = remoteStream;
+
+        this.audio.play().catch((error) => {
+          console.warn("[Danna 3] autoplay:", error);
+        });
       };
 
-      // Mantemos processamento padrão do navegador apenas
-      // no MICROFONE. Isso não altera a voz da Danna.
+      /*
+       * Microfone.
+       *
+       * Echo cancellation é especialmente importante porque a Danna
+       * precisa continuar ouvindo enquanto fala.
+       */
       this.stream =
         await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -78,9 +90,7 @@ export class DannaLive {
           }
         });
 
-      for (
-        const track of this.stream.getAudioTracks()
-      ) {
+      for (const track of this.stream.getAudioTracks()) {
         this.pc.addTrack(track, this.stream);
       }
 
@@ -91,31 +101,29 @@ export class DannaLive {
         this.connected = true;
       });
 
-      this.dc.addEventListener(
-        "message",
-        (event) => {
-          try {
-            this.handleEvent(
-              JSON.parse(event.data)
-            );
-          } catch (e) {
-            console.warn(
-              "[Danna Live] evento inválido",
-              e
-            );
-          }
+      this.dc.addEventListener("message", (event) => {
+        try {
+          const parsed = JSON.parse(event.data);
+          this.handleEvent(parsed);
+        } catch (error) {
+          console.warn(
+            "[Danna 3] evento inválido",
+            error
+          );
         }
-      );
+      });
 
       this.dc.addEventListener("close", () => {
         this.connected = false;
         this.started = false;
         this.isSpeaking = false;
+        this.interruptSent = false;
 
         this.onState("idle");
       });
 
-      this.dc.addEventListener("error", () => {
+      this.dc.addEventListener("error", (event) => {
+        console.error("[Danna 3] data channel", event);
         this.onState("error");
       });
 
@@ -129,8 +137,7 @@ export class DannaLive {
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json"
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             sdp: offer.sdp
@@ -144,7 +151,7 @@ export class DannaLive {
         throw new Error(
           data?.details?.error?.message ||
           data?.error ||
-          "Não foi possível iniciar a Danna Live"
+          "Não foi possível iniciar a Danna 3"
         );
       }
 
@@ -162,10 +169,7 @@ export class DannaLive {
       return true;
 
     } catch (error) {
-      console.error(
-        "[Danna Live]",
-        error
-      );
+      console.error("[Danna 3]", error);
 
       this.onState("error");
       this.onError(error);
@@ -179,22 +183,52 @@ export class DannaLive {
   handleEvent(event) {
     this.onEvent(event);
 
+    /*
+     * Sessão pronta.
+     */
     if (event.type === "session.started") {
       this.started = true;
+      this.onState("listening");
+
+      // Contexto relacional preparado antes da conexão.
+      if (this.relationalContext) {
+        this.addContext(this.relationalContext);
+      }
+
+      return;
+    }
+
+    /*
+     * =====================================================
+     * BARGE-IN — DANNA 3
+     * =====================================================
+     *
+     * O principal erro da implementação anterior era esperar
+     * a TRANSCRIÇÃO do usuário para descobrir que ele havia
+     * começado a falar.
+     *
+     * Agora também reagimos aos eventos de atividade de voz,
+     * quando fornecidos pela sessão.
+     */
+
+    if (
+      event.type === "input_audio_buffer.speech_started" ||
+      event.type === "session.input_audio.speech_started" ||
+      event.type === "session.input_audio_buffer.speech_started"
+    ) {
+      if (this.isSpeaking) {
+        this.interrupt();
+      }
+
       this.onState("listening");
       return;
     }
 
-    // ======================================================
-    // USUÁRIO COMEÇOU A SER TRANSCRITO
-    //
-    // Se Danna estava falando, mandamos a instrução
-    // IMEDIATAMENTE no primeiro fragmento.
-    //
-    // Não esperamos os 720 ms necessários para formar
-    // a frase completa.
-    // ======================================================
-
+    /*
+     * Fallback:
+     * se o servidor não entregar speech_started, o primeiro
+     * fragmento de transcrição ainda interrompe a Danna.
+     */
     if (
       event.type ===
       "session.input_transcript.delta"
@@ -204,12 +238,10 @@ export class DannaLive {
 
       if (!delta) return;
 
-      // BARGE-IN
       if (
         this.isSpeaking &&
         !this.interruptSent
       ) {
-        this.interruptSent = true;
         this.interrupt();
       }
 
@@ -219,27 +251,31 @@ export class DannaLive {
 
       clearTimeout(this.userTimer);
 
-      // A frase completa continua sendo agrupada
-      // para o backend relacional.
+      /*
+       * A interrupção é imediata.
+       * O agrupamento abaixo serve SOMENTE para entregar
+       * uma frase coerente ao backend relacional.
+       */
       this.userTimer = setTimeout(() => {
         const text =
           this.userBuffer.trim();
 
         this.userBuffer = "";
-
         this.interruptSent = false;
 
         if (text) {
           this.onUserTranscript(text);
         }
-      }, 650);
+      }, 550);
 
       return;
     }
 
-    // ======================================================
-    // DANNA COMEÇOU / CONTINUA FALANDO
-    // ======================================================
+    /*
+     * =====================================================
+     * DANNA FALANDO
+     * =====================================================
+     */
 
     if (
       event.type ===
@@ -251,20 +287,35 @@ export class DannaLive {
       if (!delta) return;
 
       this.isSpeaking = true;
+      this.interruptSent = false;
+
       this.onState("speaking");
       this.onTranscript(delta);
 
-      clearTimeout(
-        this.speakingTimer
-      );
+      clearTimeout(this.speakingTimer);
 
       this.speakingTimer =
         setTimeout(() => {
           this.isSpeaking = false;
           this.interruptSent = false;
           this.onState("listening");
-        }, 1000);
+        }, 850);
 
+      return;
+    }
+
+    /*
+     * Algumas versões do protocolo fornecem eventos
+     * explícitos de término da resposta.
+     */
+    if (
+      event.type === "response.done" ||
+      event.type === "session.response.done" ||
+      event.type === "session.output_audio.done"
+    ) {
+      this.isSpeaking = false;
+      this.interruptSent = false;
+      this.onState("listening");
       return;
     }
 
@@ -272,13 +323,15 @@ export class DannaLive {
       this.isSpeaking = false;
       this.started = false;
       this.connected = false;
+      this.interruptSent = false;
+
       this.onState("idle");
       return;
     }
 
     if (event.type === "error") {
       console.error(
-        "[Danna Live event]",
+        "[Danna 3 event]",
         event
       );
 
@@ -291,17 +344,97 @@ export class DannaLive {
     }
   }
 
+  /*
+   * =======================================================
+   * LONG-TERM MEMORY / RELATIONAL BRIEF
+   * =======================================================
+   */
+
+  setRelationalContext(context) {
+    const clean =
+      String(context || "").trim();
+
+    this.relationalContext =
+      clean.slice(0, 6000);
+
+    /*
+     * Se a sessão já estiver ativa, atualizamos imediatamente.
+     */
+    if (
+      this.started &&
+      this.relationalContext
+    ) {
+      this.addContext(
+        this.relationalContext
+      );
+    }
+  }
+
   addContext(context) {
     const clean =
       String(context || "").trim();
 
-    if (!clean) return;
+    if (!clean) return false;
 
-    this.send({
+    return this.send({
       type: "session.thinking.append",
       event_id: `ctx_${Date.now()}`,
       delegation_id: null,
-      content: clean.slice(0, 3000)
+
+      content:
+        [
+          "CONTEXTO RELACIONAL SILENCIOSO DO CONÉXIA.",
+          "",
+          "Use estas informações somente quando forem relevantes.",
+          "Não recite este contexto.",
+          "Não diga que consultou banco de dados.",
+          "Não invente informações ausentes.",
+          "Não transforme a conversa em relatório.",
+          "Se houver uma continuidade natural com uma conversa anterior,",
+          "você pode demonstrar que se lembra dela de forma humana.",
+          "",
+          clean.slice(0, 6000)
+        ].join("\n")
+    });
+  }
+
+  /*
+   * Abertura contextual da Danna 3.
+   *
+   * Recebe o Relational Brief já produzido pelo CONÉXIA.
+   */
+  openWithRelationalBrief(brief) {
+    const clean =
+      String(brief || "").trim();
+
+    if (!clean) {
+      return this.speak(
+        "Cumprimente Rafael de forma breve e natural e pergunte como pode ajudá-lo."
+      );
+    }
+
+    return this.send({
+      type: "session.commentary.append",
+      event_id: `opening_${Date.now()}`,
+      delegation_id: null,
+
+      content:
+        [
+          "Faça a abertura da conversa usando o contexto abaixo.",
+          "",
+          "REGRAS:",
+          "- seja breve;",
+          "- soe como alguém que realmente se lembra da conversa;",
+          "- não leia um relatório;",
+          "- não enumere informações;",
+          "- use no máximo um ou dois fatos relevantes;",
+          "- se houver pendência importante, mencione-a naturalmente;",
+          "- termine dando espaço para Rafael falar;",
+          "- não invente nenhum fato.",
+          "",
+          "RELATIONAL BRIEF:",
+          clean.slice(0, 3500)
+        ].join("\n")
     });
   }
 
@@ -309,62 +442,98 @@ export class DannaLive {
     const clean =
       String(text || "").trim();
 
-    if (!clean) return;
+    if (!clean) return false;
 
-    this.send({
+    return this.send({
       type: "session.commentary.append",
       event_id: `say_${Date.now()}`,
       delegation_id: null,
 
       content:
-        "Comunique naturalmente esta informação ao interlocutor, " +
-        "em português brasileiro. " +
-        "Fale como numa conversa presencial: frases curtas, " +
-        "ritmo humano, sem voz de locução e sem anunciar que está lendo. " +
-        "Não acrescente fatos: " +
-        clean.slice(0, 2200)
+        [
+          "Comunique naturalmente a informação abaixo.",
+          "Fale em português brasileiro.",
+          "Use frases curtas.",
+          "Não use voz de apresentação.",
+          "Não anuncie que está lendo.",
+          "Não acrescente fatos.",
+          "",
+          clean.slice(0, 2200)
+        ].join("\n")
     });
   }
 
   sendText(text) {
-    this.speak(text);
+    return this.speak(text);
   }
 
-  // ========================================================
-  // INTERRUPÇÃO REAL DA CONVERSA
-  //
-  // Não mutamos o elemento <audio>.
-  // Não criamos timer para voltar áudio antigo.
-  //
-  // GPT-Live continua recebendo o microfone durante
-  // toda a fala da Danna.
-  // ========================================================
+  /*
+   * =======================================================
+   * INTERRUPÇÃO
+   * =======================================================
+   *
+   * Aqui não esperamos 650 ms de transcrição.
+   * Assim que detectamos speech_started, sinalizamos
+   * interrupção da resposta atual.
+   */
 
   interrupt() {
+    const now = Date.now();
+
+    /*
+     * Evita uma tempestade de eventos de cancelamento.
+     */
+    if (
+      this.interruptSent &&
+      now - this.lastInterruptAt < 400
+    ) {
+      return;
+    }
+
+    this.lastInterruptAt = now;
+    this.interruptSent = true;
     this.isSpeaking = false;
+
+    clearTimeout(this.speakingTimer);
 
     this.onState("listening");
 
-    this.send({
-      type: "session.instructions.append",
-      event_id:
-        `interrupt_${Date.now()}`,
-      delegation_id: null,
+    /*
+     * Cancelamento explícito da resposta.
+     *
+     * Se o protocolo ativo aceitar response.cancel,
+     * a geração em andamento é encerrada.
+     */
+    const cancelled =
+      this.send({
+        type: "response.cancel",
+        event_id: `cancel_${now}`
+      });
 
-      content:
-        "O interlocutor começou a falar. " +
-        "Interrompa sua fala atual imediatamente. " +
-        "Ceda o turno. " +
-        "Não termine a frase interrompida. " +
-        "Não repita o trecho anterior. " +
-        "Escute a fala completa antes de voltar a falar."
-    });
+    /*
+     * Mantemos também a instrução conversacional como fallback.
+     *
+     * Ela NÃO é mais o mecanismo principal de interrupção.
+     */
+    if (!cancelled) {
+      this.send({
+        type: "session.instructions.append",
+        event_id: `interrupt_${now}`,
+        delegation_id: null,
+
+        content:
+          "O interlocutor começou a falar. " +
+          "Ceda o turno imediatamente. " +
+          "Não termine a frase anterior. " +
+          "Escute antes de responder."
+      });
+    }
   }
 
   mute() {
     this.stream
       ?.getAudioTracks()
-      .forEach(track => {
+      .forEach((track) => {
         track.enabled = false;
       });
   }
@@ -372,7 +541,7 @@ export class DannaLive {
   unmute() {
     this.stream
       ?.getAudioTracks()
-      .forEach(track => {
+      .forEach((track) => {
         track.enabled = true;
       });
   }
@@ -380,11 +549,7 @@ export class DannaLive {
   disconnect() {
     clearTimeout(this.userTimer);
     clearTimeout(this.speakingTimer);
-    clearTimeout(
-      this.interruptResetTimer
-    );
 
-    // Encerramento gracioso quando possível.
     if (
       this.dc &&
       this.dc.readyState === "open"
@@ -399,7 +564,7 @@ export class DannaLive {
     try {
       this.stream
         ?.getTracks()
-        .forEach(track =>
+        .forEach((track) =>
           track.stop()
         );
     } catch {}
