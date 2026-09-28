@@ -1,0 +1,27 @@
+name: Apply Danna Central Brain
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply Danna Central Brain
+        run: python scripts/patch_danna_brain.py
+      - name: Validate expected integration
+        run: |
+          grep -q 'const loadDannaKnowledge = async' src/components/ConexiaLabHome.jsx
+          grep -q 'relational_memory' src/components/ConexiaLabHome.jsx
+          grep -q 'scheduled_events' src/components/ConexiaLabHome.jsx
+          grep -q 'SNAPSHOT FRESCO DO CONÉXIA' src/components/ConexiaLabHome.jsx
+          grep -q 'week_overview' src/components/ConexiaLabHome.jsx
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ConexiaLabHome.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: make Danna central query the full Conexia brain"
+          git push
