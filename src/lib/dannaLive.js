@@ -14,6 +14,7 @@
 
 export default class DannaLive {
   constructor({
+    userName = "",
     onStatus,
     onUserTranscript,
     onAssistantTranscript,
@@ -39,6 +40,8 @@ export default class DannaLive {
     this.speakingTimer = null;
 
     this.relationalContext = null;
+
+    this.userName = String(userName || "").trim().slice(0, 40);
 
     this.onStatus =
       typeof onStatus === "function" ? onStatus : () => {};
@@ -206,7 +209,7 @@ export default class DannaLive {
       );
 
       const response = await fetch(
-        "/api/openai-live-session",
+        `/api/openai-live-session${this.userName ? `?name=${encodeURIComponent(this.userName)}` : ""}`,
         {
           method: "POST",
           headers: {
@@ -687,7 +690,7 @@ Não invente assunto, pessoa, compromisso ou acontecimento.
 
 Se houver algo realmente relevante, comece pela continuidade natural desse assunto.
 
-Se não houver nada suficientemente relevante, faça uma abertura humana, curta e natural e deixe Rafael conduzir.
+Se não houver nada suficientemente relevante, faça uma abertura humana, curta e natural e deixe a pessoa conduzir.
 
 Fale como alguém que acompanha a história, não como um CRM lendo registros.
       `.trim(),

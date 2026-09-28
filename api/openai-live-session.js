@@ -76,6 +76,15 @@ export default async function handler(
         });
     }
 
+    // Nome de quem está conversando (vem do app). Sanitizado: só letras,
+    // espaços, hífen e apóstrofo; até 40 caracteres.
+    const rawName = String(req.query?.name || "")
+      .normalize("NFC")
+      .replace(/[^\p{L}\s'-]/gu, "")
+      .trim()
+      .slice(0, 40);
+    const personName = rawName || "a pessoa com quem você conversa";
+
     const sessionConfig = {
       model: "gpt-live-1",
 
@@ -400,7 +409,7 @@ Sem inventar memória.
 Sem virar CRM.
 
 Converse como alguém que entende relações.
-      `.trim(),
+      `.trim().replace(/Rafael/g, personName),
 
       audio: {
         output: {

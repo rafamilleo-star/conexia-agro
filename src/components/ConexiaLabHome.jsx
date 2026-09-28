@@ -608,6 +608,9 @@ export default function ConexiaLabHome({
     firstName ||
     "";
 
+  // Primeiro nome para uso falado (ex.: "Rafael Milléo" -> "Rafael").
+  const spokenName = String(displayName || "").trim().split(/\s+/)[0] || "";
+
   const firstContactStorageKey = userId
     ? `conexia_first_contact_completed_${userId}`
     : "";
@@ -759,6 +762,7 @@ export default function ConexiaLabHome({
     setVoiceState("connecting");
 
     const live = new DannaLive({
+      userName: spokenName,
       onState: setVoiceState,
 
       onUserTranscript: (spoken) => {
@@ -1559,8 +1563,8 @@ Responda SOMENTE JSON:
 
       const response =
         /obrigad/.test(n)
-          ? "Por nada, Milléo. Até mais."
-          : "Até mais, Milléo.";
+          ? `Por nada${spokenName ? `, ${spokenName}` : ""}. Até mais.`
+          : `Até mais${spokenName ? `, ${spokenName}` : ""}.`;
 
       setAnswer(response);
       setCurrentView("answer");

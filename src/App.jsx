@@ -2951,10 +2951,26 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const isPro         = isProUser(profile, user?.email);
   const planLabel     = getPlanLabel(profile, user?.email);
   const canAddContact = isPro || cts.length < FREE_CT_LIMIT;
-  // Nova experiência CONÉXIA liberada para todos os usuários autenticados.
-  // Gemini Live permanece separado/beta; esta flag controla apenas
-  // o Relationship Brain e a experiência conversacional atual.
-  const isConexiaLab = Boolean(user?.id);
+  // Caminho B (28/09): a Home padrão volta a ser o painel <HomeToday>.
+  // A Danna (conversa por voz) vira opt-in: ligada por padrão só para a
+  // conta do laboratório; qualquer usuário pode ativar/desativar pela Home.
+  // Preferência salva por usuário no navegador ("on" | "off" | null).
+  const CONEXIA_LAB_USER_ID = "848ebde1-dd60-4652-8f9a-3e86dd31482f";
+  const dannaPrefKey = user?.id ? `conexia_danna_home_${user.id}` : "";
+  const [dannaPref, setDannaPref] = useState(null);
+  useEffect(() => {
+    if (!dannaPrefKey) { setDannaPref(null); return; }
+    try { setDannaPref(window.localStorage.getItem(dannaPrefKey)); } catch { setDannaPref(null); }
+  }, [dannaPrefKey]);
+  const setDannaHome = (on) => {
+    const value = on ? "on" : "off";
+    setDannaPref(value);
+    try { if (dannaPrefKey) window.localStorage.setItem(dannaPrefKey, value); } catch {}
+  };
+  const isConexiaLab = Boolean(user?.id) && (
+    dannaPref === "on" ||
+    (dannaPref !== "off" && user?.id === CONEXIA_LAB_USER_ID)
+  );
 
 
   // Observação comportamental por dimensão (declarado vs. observado) —
@@ -3999,6 +4015,15 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
     if (isConexiaLab) {
       return (
+        <div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <button
+              onClick={() => setDannaHome(false)}
+              style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "6px 12px", fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, cursor: "pointer" }}
+            >
+              ← Voltar ao painel
+            </button>
+          </div>
         <ConexiaLabHome
           userId={user?.id}
           firstName={profile?.first_name || profile?.name || ""}
@@ -4011,6 +4036,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           }}
           onDataChanged={load}
         />
+        </div>
       );
     }
 
@@ -4025,6 +4051,24 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             Sua organização tem acesso a um resumo categórico da sua tendência comportamental semanal (ex.: "Presença: Evoluindo") e à quantidade de contatos e interações que você registra. A identidade dos seus contatos e o conteúdo de conversas continuam privados.
           </div>
         )}
+
+
+        {/* Danna (beta): convite opt-in para a conversa por voz. */}
+        <div
+          onClick={() => setDannaHome(true)}
+          style={{ cursor: "pointer", background: `linear-gradient(135deg, ${C.gold}18, ${C.gold}06)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "16px 20px", marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}
+        >
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: `radial-gradient(circle at 35% 35%, ${C.gold}, ${C.gold}40)`, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.gold, marginBottom: 3 }}>
+              Converse com a Danna <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: C.txM, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "1px 6px", marginLeft: 6, verticalAlign: "middle" }}>BETA</span>
+            </div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>
+              Fale sobre uma pessoa, prepare uma reunião ou registre uma conversa usando a voz. Você pode voltar ao painel quando quiser.
+            </div>
+          </div>
+          <span style={{ fontSize: 18, color: C.gold, flexShrink: 0 }}>→</span>
+        </div>
 
 
         {/* Removido: "{pf.emoji} {pf.name}" ocupava a posição mais nobre da
