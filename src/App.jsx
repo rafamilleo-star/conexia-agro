@@ -1,3 +1,11 @@
+  };
+
+
+  const acceptConsentNow = async () => {
+    if (!user) return;
+    setConsentBusy(true);
+    try {
+      await supabase.from("consent_logs").insert({
         user_id: user.id,
         email: user.email,
         name: profile?.name || "",
