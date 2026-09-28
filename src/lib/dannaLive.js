@@ -263,6 +263,14 @@ export default class DannaLive {
         error
       );
 
+      try {
+        fetch("/api/openai-live-session?clientlog=1", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: `${error?.name || "Error"}: ${error?.message || String(error)} | UA: ${typeof navigator !== "undefined" ? navigator.userAgent : ""}`,
+        }).catch(() => {});
+      } catch (_) {}
+
       this.setStatus("error");
 
       try {

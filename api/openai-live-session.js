@@ -29,6 +29,31 @@ async function readRawBody(req) {
   );
 }
 
+// Diagnóstico: grava cada tentativa em public.danna_session_logs (service role).
+async function logDanna(stage, status, detail) {
+  try {
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const key =
+      process.env.SUPABASE_SERVICE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return;
+    await fetch(`${url}/rest/v1/danna_session_logs`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        stage: String(stage).slice(0, 80),
+        status: Number.isFinite(status) ? status : null,
+        detail: String(detail ?? "").slice(0, 4000),
+      }),
+    });
+  } catch (_) {}
+}
+
 export default async function handler(
   req,
   res
@@ -47,6 +72,12 @@ export default async function handler(
       });
   }
 
+  if (req.query?.clientlog) {
+    const text = await readRawBody(req);
+    await logDanna("client_error", null, text);
+    return res.status(204).end();
+  }
+
   const apiKey =
     process.env.OPENAI_API_KEY;
 
@@ -54,6 +85,7 @@ export default async function handler(
     console.error(
       "[Danna] OPENAI_API_KEY ausente."
     );
+    await logDanna("no_api_key", 500, "OPENAI_API_KEY ausente");
 
     return res
       .status(500)
@@ -438,6 +470,7 @@ Converse como alguém que entende relações.
 
     let openAIResponse = await createSession(sessionConfig);
     let responseText = await openAIResponse.text();
+    await logDanna("attempt_1", openAIResponse.status, responseText);
 
     // Fallback de voz: se a voz preferida não for aceita, tenta "marin".
     if (
@@ -451,6 +484,19 @@ Converse como alguém que entende relações.
         audio: { output: { voice: "marin" } },
       });
       responseText = await openAIResponse.text();
+      await logDanna("attempt_voice_marin", openAIResponse.status, responseText);
+    }
+
+    // Fallback de schema: se o bloco de áudio for recusado, tenta sem ele.
+    if (
+      !openAIResponse.ok &&
+      openAIResponse.status === 400 &&
+      /audio|unknown|unrecognized|parameter/i.test(responseText)
+    ) {
+      const { audio, ...withoutAudio } = sessionConfig;
+      openAIResponse = await createSession(withoutAudio);
+      responseText = await openAIResponse.text();
+      await logDanna("attempt_no_audio", openAIResponse.status, responseText);
     }
 
     if (!openAIResponse.ok) {
@@ -498,6 +544,7 @@ Converse como alguém que entende relações.
       "[Danna] Falha ao criar sessão:",
       error
     );
+    await logDanna("exception", 500, error?.stack || error?.message || String(error));
 
     return res
       .status(500)
