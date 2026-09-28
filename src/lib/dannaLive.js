@@ -41,6 +41,8 @@ export default class DannaLive {
 
     this.relationalContext = null;
 
+    this.sessionReady = false;
+
     this.userName = String(userName || "").trim().slice(0, 40);
 
     this.onStatus =
@@ -101,6 +103,7 @@ export default class DannaLive {
     }
 
     this.connecting = true;
+    this.sessionReady = false;
     this.setStatus("connecting");
 
     try {
@@ -238,6 +241,18 @@ export default class DannaLive {
         sdp: answerSdp,
       });
 
+      // GPT-Live: comandos só depois de "session.started".
+      // Espera até 8s; se o evento não vier, segue com o canal aberto.
+      await new Promise((resolve) => {
+        const started = Date.now();
+        const tick = () => {
+          if (this.sessionReady) return resolve();
+          if (Date.now() - started > 8000) return resolve();
+          setTimeout(tick, 100);
+        };
+        tick();
+      });
+
       return true;
     } catch (error) {
       this.connecting = false;
@@ -279,6 +294,7 @@ export default class DannaLive {
       case "session.started":
       case "session.created":
       case "session.updated": {
+        this.sessionReady = true;
         this.setStatus("connected");
         break;
       }

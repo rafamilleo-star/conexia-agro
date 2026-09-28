@@ -85,6 +85,9 @@ export default async function handler(
       .slice(0, 40);
     const personName = rawName || "a pessoa com quem você conversa";
 
+    const preferredVoice =
+      process.env.OPENAI_LIVE_VOICE || "bossa";
+
     const sessionConfig = {
       model: "gpt-live-1",
 
@@ -413,46 +416,42 @@ Converse como alguém que entende relações.
 
       audio: {
         output: {
-          voice: "bossa",
+          voice: preferredVoice,
         },
-      },
-
-      transport: {
-        type: "webrtc",
       },
     };
 
-    const formData =
-      new FormData();
+    // GPT-Live: POST /v1/live/sessions com JSON { session, transport }.
+    // (O formato antigo multipart/form-data é rejeitado pela API.)
+    const createSession = (session) =>
+      fetch("https://api.openai.com/v1/live/sessions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session,
+          transport: { type: "webrtc", sdp },
+        }),
+      });
 
-    formData.set(
-      "sdp",
-      sdp
-    );
+    let openAIResponse = await createSession(sessionConfig);
+    let responseText = await openAIResponse.text();
 
-    formData.set(
-      "session",
-      JSON.stringify(
-        sessionConfig
-      )
-    );
-
-    const openAIResponse =
-      await fetch(
-        "https://api.openai.com/v1/live/sessions",
-        {
-          method: "POST",
-
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-
-          body: formData,
-        }
-      );
-
-    const responseText =
-      await openAIResponse.text();
+    // Fallback de voz: se a voz preferida não for aceita, tenta "marin".
+    if (
+      !openAIResponse.ok &&
+      preferredVoice !== "marin" &&
+      /voice/i.test(responseText)
+    ) {
+      console.warn("[Danna] Voz não aceita, usando marin:", responseText);
+      openAIResponse = await createSession({
+        ...sessionConfig,
+        audio: { output: { voice: "marin" } },
+      });
+      responseText = await openAIResponse.text();
+    }
 
     if (!openAIResponse.ok) {
       console.error(
@@ -462,10 +461,28 @@ Converse como alguém que entende relações.
       );
 
       return res
-        .status(
-          openAIResponse.status
-        )
+        .status(openAIResponse.status)
         .send(responseText);
+    }
+
+    let answerSdp = "";
+    try {
+      const payload = JSON.parse(responseText);
+      answerSdp =
+        payload?.transport?.sdp ||
+        payload?.sdp ||
+        payload?.answer?.sdp ||
+        "";
+    } catch {
+      // Algumas versões podem devolver SDP puro.
+      answerSdp = responseText.trim().startsWith("v=") ? responseText : "";
+    }
+
+    if (!answerSdp) {
+      console.error("[Danna] Resposta sem SDP:", responseText.slice(0, 500));
+      return res.status(502).json({
+        error: "A sessão de voz não retornou SDP de resposta.",
+      });
     }
 
     res.setHeader(
@@ -475,7 +492,7 @@ Converse como alguém que entende relações.
 
     return res
       .status(200)
-      .send(responseText);
+      .send(answerSdp);
   } catch (error) {
     console.error(
       "[Danna] Falha ao criar sessão:",
