@@ -54,6 +54,52 @@ async function logDanna(stage, status, detail) {
   } catch (_) {}
 }
 
+function supabaseServer() {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return url && key ? { url, key } : null;
+}
+
+// Valida o token do Supabase enviado pelo app e devolve o usuário.
+async function getAuthUser(req) {
+  const sb = supabaseServer();
+  const auth = String(req.headers?.authorization || "");
+  if (!sb || !auth.startsWith("Bearer ")) return null;
+  try {
+    const r = await fetch(`${sb.url}/auth/v1/user`, {
+      headers: { apikey: sb.key, Authorization: auth },
+    });
+    if (!r.ok) return null;
+    const user = await r.json();
+    return user?.id ? user : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Voz BETA: somente admin da plataforma ou assinatura paga ativa.
+async function hasPaidVoiceAccess(uid) {
+  const sb = supabaseServer();
+  if (!sb || !uid) return false;
+  try {
+    const r = await fetch(`${sb.url}/rest/v1/rpc/has_paid_voice_access`, {
+      method: "POST",
+      headers: {
+        apikey: sb.key,
+        Authorization: `Bearer ${sb.key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ uid }),
+    });
+    if (!r.ok) return false;
+    return (await r.json()) === true;
+  } catch (_) {
+    return false;
+  }
+}
+
 export default async function handler(
   req,
   res
@@ -76,6 +122,53 @@ export default async function handler(
     const text = await readRawBody(req);
     await logDanna("client_error", null, text);
     return res.status(204).end();
+  }
+
+  const authUser = await getAuthUser(req);
+
+  if (!authUser) {
+    return res.status(401).json({
+      error: "Sessão expirada. Entre novamente no app.",
+      code: "unauthenticated",
+    });
+  }
+
+  // Registro de duração da sessão (enviado pelo app ao encerrar).
+  if (req.query?.sessionlog) {
+    try {
+      const body = JSON.parse((await readRawBody(req)) || "{}");
+      const sb = supabaseServer();
+      const seconds = Math.max(0, Math.min(7200, Math.round(Number(body.seconds) || 0)));
+      if (sb) {
+        await fetch(`${sb.url}/rest/v1/danna_sessions`, {
+          method: "POST",
+          headers: {
+            apikey: sb.key,
+            Authorization: `Bearer ${sb.key}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            user_id: authUser.id,
+            started_at: body.started_at || new Date(Date.now() - seconds * 1000).toISOString(),
+            ended_at: new Date().toISOString(),
+            seconds,
+            end_reason: String(body.end_reason || "").slice(0, 40) || null,
+            user_turns: Math.max(0, Math.round(Number(body.user_turns) || 0)),
+            model: "gpt-live-1",
+          }),
+        });
+      }
+    } catch (_) {}
+    return res.status(204).end();
+  }
+
+  if (!(await hasPaidVoiceAccess(authUser.id))) {
+    await logDanna("forbidden_unpaid", 403, authUser.id);
+    return res.status(403).json({
+      error: "A conversa por voz (BETA) é exclusiva para assinantes.",
+      code: "voice_requires_paid",
+    });
   }
 
   const apiKey =

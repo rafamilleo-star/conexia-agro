@@ -763,6 +763,35 @@ export default function ConexiaLabHome({
 
     const live = new DannaLive({
       userName: spokenName,
+
+      getAccessToken: async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+          return data?.session?.access_token || null;
+        } catch {
+          return null;
+        }
+      },
+
+      // Travas de custo: encerra sozinha após 60s de silêncio,
+      // 10 min de sessão ou quando o app vai para segundo plano.
+      onAutoStop: (reason) => {
+        conversationActiveRef.current = false;
+        greetedThisSessionRef.current = false;
+        liveRef.current = null;
+        setConversationActive(false);
+        setVoiceState("idle");
+
+        const notice =
+          reason === "max_duration"
+            ? "Encerrei a conversa por voz depois de 10 minutos. Toque para continuar."
+            : reason === "idle"
+              ? "Encerrei a conversa por voz por falta de atividade. Toque para retomar."
+              : "Conversa por voz encerrada.";
+
+        setAnswer(notice);
+        setCurrentView("answer");
+      },
       onState: setVoiceState,
 
       onUserTranscript: (spoken) => {
@@ -797,9 +826,17 @@ export default function ConexiaLabHome({
 
     liveRef.current = live;
 
-    const ok = await live.connect();
+    let ok = false;
+    try {
+      ok = await live.connect();
+    } catch (e) {
+      ok = false;
+      setError(e?.message || "Não consegui abrir a conversa por voz.");
+      setVoiceState("idle");
+    }
 
     if (!ok) {
+      liveRef.current = null;
       conversationActiveRef.current = false;
       setConversationActive(false);
       return;

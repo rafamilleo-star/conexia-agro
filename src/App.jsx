@@ -2967,7 +2967,20 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     setDannaPref(value);
     try { if (dannaPrefKey) window.localStorage.setItem(dannaPrefKey, value); } catch {}
   };
-  const isConexiaLab = Boolean(user?.id) && (
+  // Voz BETA: somente pagantes (assinatura Stripe ativa) e admins.
+  // Mesma regra validada no servidor (public.has_paid_voice_access).
+  const [hasVoiceAccess, setHasVoiceAccess] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (!user?.id) { setHasVoiceAccess(false); return; }
+    supabase.rpc("my_voice_access").then(({ data, error }) => {
+      if (!alive) return;
+      if (error) console.warn("[Danna] my_voice_access", error);
+      setHasVoiceAccess(data === true);
+    });
+    return () => { alive = false; };
+  }, [user?.id]);
+  const isConexiaLab = Boolean(user?.id) && hasVoiceAccess && (
     dannaPref === "on" ||
     (dannaPref !== "off" && user?.id === CONEXIA_LAB_USER_ID)
   );
@@ -4053,7 +4066,8 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         )}
 
 
-        {/* Danna (beta): convite opt-in para a conversa por voz. */}
+        {/* Danna (beta): convite opt-in para a conversa por voz (somente pagantes). */}
+        {hasVoiceAccess ? (
         <div
           onClick={() => setDannaHome(true)}
           style={{ cursor: "pointer", background: `linear-gradient(135deg, ${C.gold}18, ${C.gold}06)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "16px 20px", marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}
@@ -4069,6 +4083,25 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
           <span style={{ fontSize: 18, color: C.gold, flexShrink: 0 }}>→</span>
         </div>
+        ) : (
+        <a
+          href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)}
+          target="_blank"
+          rel="noreferrer"
+          style={{ textDecoration: "none", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "14px 20px", marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}
+        >
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: `radial-gradient(circle at 35% 35%, ${C.gold}80, ${C.gold}20)`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🔒</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 3 }}>
+              Converse com a Danna <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: C.txM, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "1px 6px", marginLeft: 6, verticalAlign: "middle" }}>BETA</span>
+            </div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
+              A conversa por voz é exclusiva para assinantes. Toque para assinar.
+            </div>
+          </div>
+          <span style={{ fontSize: 16, color: C.txM, flexShrink: 0 }}>→</span>
+        </a>
+        )}
 
 
         {/* Removido: "{pf.emoji} {pf.name}" ocupava a posição mais nobre da

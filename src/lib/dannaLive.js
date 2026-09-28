@@ -15,6 +15,11 @@
 export default class DannaLive {
   constructor({
     userName = "",
+    getAccessToken,
+    onAutoStop,
+    idleMs = 60000,
+    maxSessionMs = 600000,
+    onState,
     onStatus,
     onUserTranscript,
     onAssistantTranscript,
@@ -45,8 +50,27 @@ export default class DannaLive {
 
     this.userName = String(userName || "").trim().slice(0, 40);
 
-    this.onStatus =
-      typeof onStatus === "function" ? onStatus : () => {};
+    // Travas de custo (gpt-live-1 é cobrado por minuto de sessão aberta).
+    this.getAccessToken =
+      typeof getAccessToken === "function" ? getAccessToken : async () => null;
+    this.onAutoStop =
+      typeof onAutoStop === "function" ? onAutoStop : () => {};
+    this.idleMs = idleMs;
+    this.maxSessionMs = maxSessionMs;
+    this.sessionStartedAt = null;
+    this.lastActivityAt = 0;
+    this.userTurns = 0;
+    this.watchdog = null;
+    this.onVisibility = null;
+
+    const statusHandler =
+      typeof onStatus === "function"
+        ? onStatus
+        : typeof onState === "function"
+          ? onState
+          : null;
+
+    this.onStatus = statusHandler || (() => {});
 
     this.onUserTranscript =
       typeof onUserTranscript === "function"
@@ -211,6 +235,8 @@ export default class DannaLive {
         offer
       );
 
+      const accessToken = await this.getAccessToken();
+
       const response = await fetch(
         `/api/openai-live-session${this.userName ? `?name=${encodeURIComponent(this.userName)}` : ""}`,
         {
@@ -218,19 +244,37 @@ export default class DannaLive {
           headers: {
             "Content-Type":
               "application/sdp",
+            ...(accessToken
+              ? { Authorization: `Bearer ${accessToken}` }
+              : {}),
           },
           body: offer.sdp,
         }
       );
 
       if (!response.ok) {
-        const message =
-          await response.text();
+        const raw = await response.text();
+        let payload = null;
+        try { payload = JSON.parse(raw); } catch (_) {}
 
-        throw new Error(
-          message ||
-            `Falha ao abrir sessão Danna (${response.status}).`
-        );
+        const code =
+          payload?.code || payload?.error?.code || "";
+
+        let friendly;
+        if (response.status === 403 || code === "voice_requires_paid") {
+          friendly = "A conversa por voz (BETA) é exclusiva para assinantes.";
+        } else if (response.status === 401) {
+          friendly = "Sua sessão expirou. Entre novamente no app para conversar com a Danna.";
+        } else if (response.status === 429 || /quota|credit/i.test(code)) {
+          friendly = "A voz da Danna está indisponível no momento. Tente novamente mais tarde.";
+        } else {
+          friendly = `Não consegui abrir a conversa por voz agora (${response.status}).`;
+        }
+
+        const err = new Error(friendly);
+        err.status = response.status;
+        err.detail = raw.slice(0, 1000);
+        throw err;
       }
 
       const answerSdp =
@@ -253,6 +297,8 @@ export default class DannaLive {
         tick();
       });
 
+      this.startCostGuards();
+
       return true;
     } catch (error) {
       this.connecting = false;
@@ -267,7 +313,8 @@ export default class DannaLive {
         fetch("/api/openai-live-session?clientlog=1", {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
-          body: `${error?.name || "Error"}: ${error?.message || String(error)} | UA: ${typeof navigator !== "undefined" ? navigator.userAgent : ""}`,
+          keepalive: true,
+          body: `${error?.name || "Error"}: ${error?.message || String(error)} | status: ${error?.status || ""} | detail: ${error?.detail || ""} | UA: ${typeof navigator !== "undefined" ? navigator.userAgent : ""}`,
         }).catch(() => {});
       } catch (_) {}
 
@@ -297,6 +344,10 @@ export default class DannaLive {
     }
 
     if (!data?.type) return;
+
+    if (/speech_started|transcript|output_audio|audio\.delta|response\./.test(data.type)) {
+      this.markActivity();
+    }
 
     switch (data.type) {
       case "session.started":
@@ -507,6 +558,9 @@ export default class DannaLive {
     this.userTranscriptBuffer = "";
 
     if (!text) return;
+
+    this.userTurns += 1;
+    this.markActivity();
 
     try {
       this.onUserTranscript(text);
@@ -779,7 +833,91 @@ Fale como alguém que acompanha a história, não como um CRM lendo registros.
      ENCERRAMENTO
   ───────────────────────────────────────────── */
 
-  disconnect() {
+  /* ─────────────────────────────────────────────
+     TRAVAS DE CUSTO
+  ───────────────────────────────────────────── */
+
+  markActivity() {
+    this.lastActivityAt = Date.now();
+  }
+
+  startCostGuards() {
+    this.sessionStartedAt = Date.now();
+    this.lastActivityAt = Date.now();
+    this.userTurns = 0;
+
+    clearInterval(this.watchdog);
+    this.watchdog = setInterval(() => {
+      if (!this.sessionStartedAt) return;
+      const now = Date.now();
+
+      if (now - this.sessionStartedAt >= this.maxSessionMs) {
+        this.autoStop("max_duration");
+        return;
+      }
+
+      if (!this.isSpeaking && now - this.lastActivityAt >= this.idleMs) {
+        this.autoStop("idle");
+      }
+    }, 5000);
+
+    if (typeof document !== "undefined") {
+      this.onVisibility = () => {
+        if (document.visibilityState === "hidden") {
+          this.autoStop("app_hidden");
+        }
+      };
+      document.addEventListener("visibilitychange", this.onVisibility);
+    }
+  }
+
+  autoStop(reason) {
+    if (!this.sessionStartedAt) return;
+    try {
+      this.onAutoStop(reason);
+    } catch (_) {}
+    this.disconnect(reason);
+  }
+
+  async reportSession(reason) {
+    if (!this.sessionStartedAt) return;
+
+    const startedAt = this.sessionStartedAt;
+    const payload = {
+      started_at: new Date(startedAt).toISOString(),
+      seconds: Math.round((Date.now() - startedAt) / 1000),
+      end_reason: reason || "manual",
+      user_turns: this.userTurns,
+    };
+
+    this.sessionStartedAt = null;
+
+    try {
+      const token = await this.getAccessToken();
+      if (!token) return;
+      await fetch("/api/openai-live-session?sessionlog=1", {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (_) {}
+  }
+
+  disconnect(reason = "manual") {
+    clearInterval(this.watchdog);
+    this.watchdog = null;
+
+    if (this.onVisibility && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.onVisibility);
+      this.onVisibility = null;
+    }
+
+    void this.reportSession(reason);
+
     clearTimeout(
       this.userTranscriptTimer
     );
