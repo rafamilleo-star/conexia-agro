@@ -546,6 +546,12 @@ export default function ConexiaLabHome({
   const greetedThisSessionRef = useRef(false);
 
   const recentTurnsRef = useRef([]);
+
+  // Turno vigente: cada fala nova incrementa. Respostas de turnos antigos
+  // (ex.: você interrompeu enquanto a Danna pensava) são descartadas.
+  const turnSeqRef = useRef(0);
+  const isStaleTurn = (turnId) =>
+    Boolean(turnId) && turnId !== turnSeqRef.current;
   const lastSavedContextRef = useRef(null);
 
   const sessionContextRef = useRef({
@@ -906,7 +912,7 @@ export default function ConexiaLabHome({
     );
   };
 
-  const analyzeCapture = async (text) => {
+  const analyzeCapture = async (text, turnId = null) => {
     const existing = contacts.map(c => ({
       id: c.id,
       name: c.name,
@@ -989,6 +995,8 @@ Responda SOMENTE JSON válido:
         parsed.existingContactId = local.id;
       }
     }
+
+    if (isStaleTurn(turnId)) return;
 
     setDraft(parsed);
     setCurrentView("capture");
@@ -1280,7 +1288,7 @@ Responda SOMENTE JSON válido:
     };
   };
 
-  const askNetwork = async (text) => {
+  const askNetwork = async (text, turnId = null) => {
     let brain = null;
     try {
       brain = await loadDannaKnowledge();
@@ -1473,6 +1481,8 @@ REGRAS DE RESPOSTA:
       parsed.answer ||
       "Não encontrei evidência suficiente.";
 
+    if (isStaleTurn(turnId)) return;
+
     setAnswer(finalAnswer);
 
     sessionContextRef.current.lastQuestion =
@@ -1573,6 +1583,8 @@ Responda SOMENTE JSON:
     const line = String(text || "").trim();
     if (!line) return;
 
+    const turnId = ++turnSeqRef.current;
+
     addTurn("user", line);
 
     setLastQuestion(line);
@@ -1643,8 +1655,10 @@ Responda SOMENTE JSON:
     try {
       const intent = await classifyIntent(line);
 
+      if (isStaleTurn(turnId)) return;
+
       if (intent === "capture") {
-        await analyzeCapture(line);
+        await analyzeCapture(line, turnId);
         return;
       }
 
@@ -1658,8 +1672,9 @@ Responda SOMENTE JSON:
         return;
       }
 
-      await askNetwork(line);
+      await askNetwork(line, turnId);
     } catch (e) {
+      if (isStaleTurn(turnId)) return;
       setError(
         `Não consegui processar agora: ${e.message}`
       );

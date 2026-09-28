@@ -346,6 +346,15 @@ export default class DannaGeminiLive {
       return;
     }
 
+    // Interrupção durante o "pensar": o Gemini cancela a chamada antiga.
+    if (msg.toolCallCancellation?.ids?.length) {
+      if (this.pendingTool && msg.toolCallCancellation.ids.includes(this.pendingTool.id)) {
+        this.pendingTool = null;
+        clearTimeout(this.toolTimer);
+      }
+      return;
+    }
+
     if (msg.goAway) {
       this.autoStop("server_limit");
       return;
