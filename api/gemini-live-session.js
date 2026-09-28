@@ -47,13 +47,18 @@ COMO FUNCIONA:
 `.trim();
 }
 
-function buildLiveConfig(personName) {
+// Formato REST BidiGenerateContentSetup: responseModalities e speechConfig
+// ficam dentro de generationConfig.
+function buildSetup(personName) {
   return {
-    responseModalities: ["AUDIO"],
-    speechConfig: {
-      voiceConfig: {
-        prebuiltVoiceConfig: {
-          voiceName: process.env.GEMINI_LIVE_VOICE || "Kore",
+    model: `models/${GEMINI_LIVE_MODEL}`,
+    generationConfig: {
+      responseModalities: ["AUDIO"],
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: process.env.GEMINI_LIVE_VOICE || "Kore",
+          },
         },
       },
     },
@@ -128,7 +133,7 @@ export default async function handler(req, res) {
     const personName =
       sanitizeName(req.query?.name) || "a pessoa com quem você conversa";
 
-    const liveConfig = buildLiveConfig(personName);
+    const setup = buildSetup(personName);
     const now = Date.now();
 
     const tokenBody = {
@@ -137,10 +142,8 @@ export default async function handler(req, res) {
       expireTime: new Date(now + 11 * 60 * 1000).toISOString(),
       // a sessão precisa começar em até 1 minuto
       newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
-      liveConnectConstraints: {
-        model: `models/${GEMINI_LIVE_MODEL}`,
-        config: liveConfig,
-      },
+      // Trava a sessão nesta configuração (o navegador não consegue alterá-la).
+      bidiGenerateContentSetup: setup,
     };
 
     const r = await fetch(
@@ -173,10 +176,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       token,
       model: GEMINI_LIVE_MODEL,
-      setup: {
-        model: `models/${GEMINI_LIVE_MODEL}`,
-        ...liveConfig,
-      },
+      setup,
     });
   } catch (error) {
     await logDanna("gemini_exception", 500, error?.stack || error?.message || String(error));
