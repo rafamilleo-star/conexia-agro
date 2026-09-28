@@ -5,6 +5,7 @@ import { computePriorities } from "../../shared/priorityEngine.js";
 import { detectPatterns, PATTERN_NOTES } from "../../shared/relationshipPatternDetector.js";
 import conexiaIcon from "../assets/brand/conexia_icone_transparente.svg";
 import DannaLive from "../lib/dannaLive";
+import DannaGeminiLive from "../lib/dannaGeminiLive";
 
 const K = {
   bg: "#0D0D0F",
@@ -522,6 +523,7 @@ export default function ConexiaLabHome({
   interactions = [],
   onOpenContact,
   onDataChanged,
+  voiceEngine = "openai",
 }) {
   const [prefs, setPrefs] = useState(null);
   const [profileSnapshot, setProfileSnapshot] = useState(null);
@@ -554,6 +556,15 @@ export default function ConexiaLabHome({
     lastQuestion: "",
     lastSavedInteraction: null,
   });
+
+  // Ao sair da tela (voltar ao painel, trocar de motor), encerra a voz na hora:
+  // sessão aberta é cobrada por minuto.
+  useEffect(() => {
+    return () => {
+      try { liveRef.current?.disconnect("unmount"); } catch {}
+      liveRef.current = null;
+    };
+  }, []);
 
   const addTurn = (role, content) => {
     const line = String(content || "").trim();
@@ -761,7 +772,12 @@ export default function ConexiaLabHome({
     setError("");
     setVoiceState("connecting");
 
-    const live = new DannaLive({
+    // Motor de voz: "gemini" (Gemini Live) ou "openai" (GPT-Live).
+    // Mesmo cérebro (roteador + Central Brain + captura) nos dois.
+    const VoiceEngine =
+      voiceEngine === "gemini" ? DannaGeminiLive : DannaLive;
+
+    const live = new VoiceEngine({
       userName: spokenName,
 
       getAccessToken: async () => {

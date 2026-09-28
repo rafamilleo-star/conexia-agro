@@ -13,92 +13,14 @@ export const config = {
   },
 };
 
-async function readRawBody(req) {
-  const chunks = [];
-
-  for await (const chunk of req) {
-    chunks.push(
-      Buffer.isBuffer(chunk)
-        ? chunk
-        : Buffer.from(chunk)
-    );
-  }
-
-  return Buffer.concat(chunks).toString(
-    "utf8"
-  );
-}
-
-// Diagnóstico: grava cada tentativa em public.danna_session_logs (service role).
-async function logDanna(stage, status, detail) {
-  try {
-    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const key =
-      process.env.SUPABASE_SERVICE_KEY ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) return;
-    await fetch(`${url}/rest/v1/danna_session_logs`, {
-      method: "POST",
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        stage: String(stage).slice(0, 80),
-        status: Number.isFinite(status) ? status : null,
-        detail: String(detail ?? "").slice(0, 4000),
-      }),
-    });
-  } catch (_) {}
-}
-
-function supabaseServer() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return url && key ? { url, key } : null;
-}
-
-// Valida o token do Supabase enviado pelo app e devolve o usuário.
-async function getAuthUser(req) {
-  const sb = supabaseServer();
-  const auth = String(req.headers?.authorization || "");
-  if (!sb || !auth.startsWith("Bearer ")) return null;
-  try {
-    const r = await fetch(`${sb.url}/auth/v1/user`, {
-      headers: { apikey: sb.key, Authorization: auth },
-    });
-    if (!r.ok) return null;
-    const user = await r.json();
-    return user?.id ? user : null;
-  } catch (_) {
-    return null;
-  }
-}
-
-// Voz BETA: somente admin da plataforma ou assinatura paga ativa.
-async function hasPaidVoiceAccess(uid) {
-  const sb = supabaseServer();
-  if (!sb || !uid) return false;
-  try {
-    const r = await fetch(`${sb.url}/rest/v1/rpc/has_paid_voice_access`, {
-      method: "POST",
-      headers: {
-        apikey: sb.key,
-        Authorization: `Bearer ${sb.key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ uid }),
-    });
-    if (!r.ok) return false;
-    return (await r.json()) === true;
-  } catch (_) {
-    return false;
-  }
-}
+import {
+  readRawBody,
+  logDanna,
+  getAuthUser,
+  hasPaidVoiceAccess,
+  recordSession,
+  sanitizeName,
+} from "./_lib/dannaAccess.js";
 
 export default async function handler(
   req,
@@ -137,28 +59,7 @@ export default async function handler(
   if (req.query?.sessionlog) {
     try {
       const body = JSON.parse((await readRawBody(req)) || "{}");
-      const sb = supabaseServer();
-      const seconds = Math.max(0, Math.min(7200, Math.round(Number(body.seconds) || 0)));
-      if (sb) {
-        await fetch(`${sb.url}/rest/v1/danna_sessions`, {
-          method: "POST",
-          headers: {
-            apikey: sb.key,
-            Authorization: `Bearer ${sb.key}`,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
-          },
-          body: JSON.stringify({
-            user_id: authUser.id,
-            started_at: body.started_at || new Date(Date.now() - seconds * 1000).toISOString(),
-            ended_at: new Date().toISOString(),
-            seconds,
-            end_reason: String(body.end_reason || "").slice(0, 40) || null,
-            user_turns: Math.max(0, Math.round(Number(body.user_turns) || 0)),
-            model: "gpt-live-1",
-          }),
-        });
-      }
+      await recordSession(authUser.id, body);
     } catch (_) {}
     return res.status(204).end();
   }
@@ -203,11 +104,7 @@ export default async function handler(
 
     // Nome de quem está conversando (vem do app). Sanitizado: só letras,
     // espaços, hífen e apóstrofo; até 40 caracteres.
-    const rawName = String(req.query?.name || "")
-      .normalize("NFC")
-      .replace(/[^\p{L}\s'-]/gu, "")
-      .trim()
-      .slice(0, 40);
+    const rawName = sanitizeName(req.query?.name);
     const personName = rawName || "a pessoa com quem você conversa";
 
     const preferredVoice =

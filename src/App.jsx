@@ -2980,6 +2980,24 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     });
     return () => { alive = false; };
   }, [user?.id]);
+  // Motor de voz (BETA): admins escolhem entre Gemini e OpenAI para comparar.
+  // Demais pagantes usam o padrão abaixo.
+  const DEFAULT_VOICE_ENGINE = "gemini";
+  const voiceEngineKey = user?.id ? `conexia_danna_engine_${user.id}` : "";
+  const [voiceEngine, setVoiceEngineState] = useState(DEFAULT_VOICE_ENGINE);
+  useEffect(() => {
+    if (!voiceEngineKey) return;
+    try {
+      const saved = window.localStorage.getItem(voiceEngineKey);
+      if (saved === "gemini" || saved === "openai") setVoiceEngineState(saved);
+    } catch {}
+  }, [voiceEngineKey]);
+  const setVoiceEngine = (engine) => {
+    setVoiceEngineState(engine);
+    try { if (voiceEngineKey) window.localStorage.setItem(voiceEngineKey, engine); } catch {}
+  };
+  const canPickVoiceEngine = ADMIN_EMAILS.includes(user?.email);
+
   const isConexiaLab = Boolean(user?.id) && hasVoiceAccess && (
     dannaPref === "on" ||
     (dannaPref !== "off" && user?.id === CONEXIA_LAB_USER_ID)
@@ -4029,7 +4047,21 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     if (isConexiaLab) {
       return (
         <div>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: canPickVoiceEngine ? "space-between" : "flex-end", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            {canPickVoiceEngine && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, letterSpacing: ".06em", textTransform: "uppercase" }}>Voz</span>
+                {[["gemini", "Gemini"], ["openai", "OpenAI"]].map(([id, label]) => (
+                  <button
+                    key={id}
+                    onClick={() => setVoiceEngine(id)}
+                    style={{ background: voiceEngine === id ? `${C.gold}22` : "none", border: `1px solid ${voiceEngine === id ? C.gL : C.brd}`, borderRadius: 8, padding: "5px 10px", fontFamily: "'DM Sans'", fontSize: 11, fontWeight: voiceEngine === id ? 700 : 400, color: voiceEngine === id ? C.gold : C.txM, cursor: "pointer" }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               onClick={() => setDannaHome(false)}
               style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "6px 12px", fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, cursor: "pointer" }}
@@ -4048,6 +4080,8 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             setView("contacts");
           }}
           onDataChanged={load}
+          voiceEngine={voiceEngine}
+          key={`danna-${voiceEngine}`}
         />
         </div>
       );
