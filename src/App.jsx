@@ -5436,7 +5436,14 @@ ${MENTORIA_LINK || true ? `
             )}
             <button onClick={() => { setView("perfil"); setSelId(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: 6 }}>
               <span style={{ fontSize: 14 }}>👤</span>
-              <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: view === "perfil" ? C.gold : C.txL, fontWeight: view === "perfil" ? 700 : 400 }}>{profile?.name || "Perfil"}</span>
+              <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: view === "perfil" ? C.gold : C.txL, fontWeight: view === "perfil" ? 700 : 400, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile?.name || "Perfil"}</span>
+            </button>
+            <button
+              onClick={() => { if (window.confirm(`Sair do ${BRAND.name}?`)) onReset(); }}
+              aria-label="Sair"
+              style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 6, padding: "4px 9px", fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, cursor: "pointer" }}
+            >
+              Sair
             </button>
           </div>
         </div>
