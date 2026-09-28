@@ -1,96 +1,112 @@
-import { AbaIA } from './components/AbaIA';
-import HomeToday from './components/HomeToday';
-import ConexiaLabHome from './components/ConexiaLabHome';
-import ConexiaTeiaEvolutiva from "./components/ConexiaTeiaEvolutiva";
-import GuidedNetworkStart from './components/GuidedNetworkStart';
-import { computePriorities, calculateRelevance as calculateRelevanceCanonical, relationshipMomentum } from '../shared/priorityEngine.js';
-import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { buildDimensionInsight } from "../shared/dimensionObservation.js";
-import { supabase } from "./utils/supabase";
-import { C, MOTION, TYPE, ADMIN_EMAIL, ENABLE_ADMIN_TOOLS, isAdmin } from "./utils/theme";
-import { BRAND } from "./config/brand";
-import { DIMS, QS, SEGMENTS, OBJECTIVES, UFS, CATS, ITYPES, SENTS } from "./data/constants";
-import { buildTaskMicroresponse, buildMetaMicroresponse } from "./lib/evolutionCopy";
-import DannaLive from "./lib/dannaLive";
-import iconeDark from "./assets/brand/conexia_icone_fundo-escuro.svg";
-import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
-import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transparente.webp";
+        user_id: user.id,
+        email: user.email,
+        name: profile?.name || "",
+        accepted_at: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        version: "v1.0",
+      });
+      setNeedsConsent(false);
+    } catch (e) {
+      console.error("[Consent]", e);
+    }
+    setConsentBusy(false);
+  };
 
 
-/* ─── Logo Components ─────────────────────────────────── */
-// Ícone isolado (para splash, headers, favicons)
-const ConexiaIcon = ({ size = 64, dark = true, style = {} }) => (
-  <img
-    src={dark ? iconeDark : iconeTransp}
-    alt={BRAND.name}
-    style={{ width: size, height: size, objectFit: 'contain', ...style }}
-  />
-);
-// Logo completo com texto dourado (para landing, onboarding)
-const ConexiaLogo = ({ height = 48, style = {} }) => (
-  <img
-    src={logoTexto}
-    alt={`${BRAND.name} — Diagnóstico Relacional`}
-    style={{ height, objectFit: 'contain', ...style }}
-  />
-);
+  const saveObjectivesFix = async () => {
+    if (!user || objectivesFixSel.length === 0) return;
+    setObjectivesFixBusy(true);
+    try {
+      const { error } = await supabase.from("profiles").update({ objectives: objectivesFixSel }).eq("id", user.id);
+      if (error) {
+        console.error("[ObjectivesFix]", error);
+        setObjectivesFixBusy(false);
+        return;
+      }
+      setProfile(prev => ({ ...(prev || {}), objectives: objectivesFixSel }));
+      setNeedsObjectivesFix(false);
+    } catch (e) {
+      console.error("[ObjectivesFix]", e);
+    }
+    setObjectivesFixBusy(false);
+  };
 
 
-/* ─── Profiles ────────────────────────────────────────── */
-const PROFILES = {
-  estrategista: { name: "O Estrategista", emoji: "🎯", tagline: "Você joga xadrez relacional.", desc: "Você não faz networking por acaso. Sabe exatamente quem precisa na sua rede, por quê, e cultiva com disciplina. Sua força está na clareza de intenção combinada com consistência.", strengths: ["Visão estratégica de longo prazo", "Disciplina no follow-up", "Capacidade de priorizar relações"], risks: ["Pode parecer transacional", "Subestima conexões sem utilidade imediata"], actions: ["Liste 3 pessoas que mantém contato por obrigação — existe algo genuíno ali?", "Tenha 1 conversa sem agenda nas próximas 2 semanas.", "Envie reconhecimento para alguém que te ajudou, sem pedir nada."] },
-  influenciador: { name: "O Influenciador", emoji: "🌟", tagline: "Onde você está, as coisas acontecem.", desc: "Presença de mercado e generosidade natural. As pessoas te procuram porque sabem que você conecta, indica e gera valor. Rede viva e diversa.", strengths: ["Alta visibilidade", "Generosidade natural", "Confiança rápida"], risks: ["Pode se sobrecarregar", "Rede ampla mas nem sempre profunda"], actions: ["Transforme 2 contatos superficiais em relações profundas.", "Crie critério claro para dizer não sem culpa.", "Documente os 10 contatos que mais geram valor mútuo."] },
-  conector: { name: "O Conector", emoji: "🔗", tagline: "Você tece redes vivas.", desc: "Escuta de verdade e conecta A com B criando valor para ambos. Confiança natural porque se importa genuinamente.", strengths: ["Escuta ativa genuína", "Conecta pessoas certas", "Alta reciprocidade"], risks: ["Falta de direcionamento estratégico", "Pode dar mais do que recebe"], actions: ["Liste 10 conexões valiosas que fez para outros — peça algo para 3.", "Defina 3 objetivos para sua rede nos próximos 90 dias.", "Para cada conexão: isso me aproxima de qual objetivo?"] },
-  tecnico_invisivel: { name: "O Técnico Invisível", emoji: "🔬", tagline: "Competente demais para ser ignorado — mas é o que acontece.", desc: "Competência inquestionável. Mas sua rede não sabe porque você não aparece. Confiança alta, presença baixa.", strengths: ["Competência reconhecida por quem convive", "Autenticidade", "Relações profundas"], risks: ["Invisibilidade profissional", "Perde oportunidades"], actions: ["Participe de 1 evento do setor nos próximos 30 dias.", "Publique 1 conteúdo técnico no LinkedIn esta semana.", "Peça a 3 pessoas: me indica para uma conversa importante."] },
-  relacional_intuitivo: { name: "O Relacional Intuitivo", emoji: "💫", tagline: "Você sente as pessoas. Falta transformar em sistema.", desc: "Dom natural para relações, opera por intuição. Quando a vida aperta, networking cai primeiro — porque não tem estrutura.", strengths: ["Inteligência emocional alta", "Relações autênticas", "Confiança rápida"], risks: ["Networking inconsistente", "Reativo — só cultiva quando precisa"], actions: [`Configure o ${BRAND.name} com 10 contatos mais importantes.`, "Ritual semanal: toda segunda, escolha 2 pessoas para contatar.", "Escreva o que cada contato precisa. Envie algo relevante sem pedir nada."] },
-  ativador_intermitente: { name: "O Ativador Intermitente", emoji: "⚡", tagline: "Quando ativa, é poderoso. O problema é que nem sempre ativa.", desc: "Visão e presença. Mas a inconsistência faz sua rede nunca saber se pode contar com você.", strengths: ["Alta capacidade quando engajado", "Boa visão estratégica", "Presença forte"], risks: ["Inconsistência crônica", "Perde credibilidade pela oscilação"], actions: ["Ative alertas para contatos com mais de 15 dias sem interação.", "Comprometa-se com 3 interações por semana.", "Agende networking como reunião fixa no calendário."] },
-  construtor_confianca: { name: "O Construtor de Confiança", emoji: "🏛️", tagline: "Você constrói devagar, mas o que constrói não cai.", desc: "Rede sólida. Cultiva com consistência e autenticidade. O que falta é expandir.", strengths: ["Alta confiabilidade", "Consistência no cultivo", "Autenticidade reconhecida"], risks: ["Rede pode ser pequena demais", "Dificuldade em expandir zona de conforto"], actions: ["Identifique 3 pessoas FORA do seu círculo que seriam estratégicas.", "Peça a um aliado para te apresentar a alguém novo.", "Participe de 1 evento onde não conhece ninguém."] },
-  explorador_rede: { name: "O Explorador de Rede", emoji: "🧭", tagline: "Você está no começo. E isso é vantagem.", desc: `Sem padrão dominante — pode construir do zero, com método, sem vícios. O ${BRAND.name} será sua fundação.`, strengths: ["Mente aberta", "Sem vícios de networking", "Alto potencial"], risks: ["Pode se sentir perdido", "Risco de desistir cedo"], actions: [`Liste 15 pessoas que importam — classifique cada uma no ${BRAND.name}.`, "Escolha 3 e envie mensagem genuína esta semana.", "Leia o capítulo 1 do livro e aplique 1 conceito."] },
-};
+  // Splash aparece imediatamente na primeira abertura, independente do estado de auth
+  if (!splashShown) return <SplashScreen onDone={() => setSplashShown(true)} />;
 
 
-const PLAN = [
-  { week: 1, title: "Mapear contatos", icon: "🗺️", goal: "Construir a fundação da sua rede.", tasks: ["Cadastre 10 contatos estratégicos", "Classifique cada um", "Defina frequência ideal", "Escreva notas sobre cada pessoa"], metric: "10 contatos cadastrados" },
-  { week: 2, title: "Reativar relações", icon: "🔄", goal: "Reconectar com quem esfriou.", tasks: ["Identifique 3 contatos com menor health", "Envie mensagem genuína para cada um", `Registre cada interação no ${BRAND.name}`], metric: "3 relações reativadas" },
-  { week: 3, title: "Gerar valor", icon: "💎", goal: "Dar antes de pedir.", tasks: ["Para cada contato-chave: o que posso oferecer?", "Faça 2 indicações", "Compartilhe conteúdo com 3 contatos"], metric: "2 indicações + 3 conteúdos" },
-  { week: 4, title: "Criar sistema", icon: "⚙️", goal: "Transformar ação em hábito.", tasks: ["Defina ritual semanal", "Configure alertas", "Defina 3 metas para 90 dias"], metric: "Ritual + metas documentadas" },
-];
+  if (state === "loading") return (
+    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
+      <div style={{ width:44, height:44, borderRadius:11, background:`linear-gradient(135deg,${C.gold},${C.gB})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.bg }}>C</div>
+      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, color:C.gold, letterSpacing:".06em" }}>{BRAND.name}</div>
+      <div style={{ width:32, height:2, borderRadius:1, background:C.gD, animation:"none", marginTop:4 }}/>
+      <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".08em" }}>Verificando acesso...</div>
+    </div>
+  );
 
 
-/* ─── Culturas Agro ───────────────────────────────────── */
-const MAIN_CULTURES = [
-  { value: "soja",        label: "🌱 Soja" },
-  { value: "milho",       label: "🌽 Milho" },
-  { value: "cafe",        label: "☕ Café" },
-  { value: "algodao",     label: "🌿 Algodão" },
-  { value: "cana",        label: "🎋 Cana-de-açúcar" },
-  { value: "trigo",       label: "🌾 Trigo" },
-  { value: "hortifruti",  label: "🥦 Hortifruti" },
-  { value: "pecuaria",    label: "🐄 Pecuária" },
-  { value: "citrus",      label: "🍊 Citrus" },
-  { value: "cacau",       label: "🍫 Cacau" },
-  { value: "feijao",      label: "🫘 Feijão" },
-  { value: "arroz",       label: "🍚 Arroz" },
-  { value: "outro",       label: "🌍 Outro" },
-];
+  return (
+    <>
+      {needsConsent && user && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:99999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
+            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Atualizamos nossa Política de Privacidade</h2>
+            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Pra continuar usando o {BRAND.name}, precisamos que você confirme sua ciência sobre o tratamento dos seus dados, conforme a LGPD.</p>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7, marginBottom:16 }}>
+              <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligência relacional para profissionais do agronegócio.</p>
+              <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
+              <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
+              <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>Consentimento do titular (Art. 7º, I) e execução do contrato de uso da plataforma (Art. 7º, V).</p>
+              <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados não são vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
+              <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento: <strong>{BRAND.supportEmail}</strong>.</p>
+            </div>
+            <button onClick={acceptConsentNow} disabled={consentBusy} style={{ width:"100%", background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer" }}>{consentBusy ? "Aguarde..." : "Li e aceito"}</button>
+          </div>
+        </div>
+      )}
+      {needsObjectivesFix && user && !needsConsent && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:99998, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
+            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Só falta um detalhe</h2>
+            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Seus objetivos de networking não foram salvos por uma falha técnica. Selecione de novo pra deixar seu diagnóstico completo.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:20 }}>
+              {OBJECTIVES.map(o => {
+                const sel = objectivesFixSel.includes(o.value);
+                return (
+                  <button key={o.value} onClick={() => setObjectivesFixSel(p => p.includes(o.value) ? p.filter(x => x !== o.value) : [...p, o.value])} style={{ background: sel ? C.gD : C.sf, border: `1px solid ${sel ? C.gL : C.brd}`, borderRadius: 10, padding: 14, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{o.icon}</span>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: sel ? 600 : 400, color: sel ? C.gold : C.txM }}>{o.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button onClick={saveObjectivesFix} disabled={objectivesFixBusy || objectivesFixSel.length === 0} style={{ width:"100%", background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer", opacity: objectivesFixSel.length === 0 ? 0.6 : 1 }}>{objectivesFixBusy ? "Salvando..." : "Salvar e continuar"}</button>
+          </div>
+        </div>
+      )}
+      {state === "reset_password" && <ResetPassword onDone={handlePasswordUpdated} />}
+      {state === "landing"      && <PublicLanding onSignup={() => setState("auth_signup")} onLogin={() => setState("auth_login")} urlKey={urlKey} />}
+      {state === "auth_signup"  && <Auth onAuth={handleAuth} initialMode="signup" />}
+      {state === "auth_login"   && <Auth onAuth={handleAuth} initialMode="login" />}
+      {state === "onboard"      && user && (
+        <Onboard
+          onDone={handleOnboard}
+          initialKey={pendingKey}
+          authEmail={user?.email || ""}
+          authName={
+            user?.user_metadata?.name ||
+            profile?.first_name ||
+            profile?.name ||
+            ""
+          }
+        />
+      )}
+      {state === "assess"       && user && <Assess profile={profile} onDone={handleAssess} />}
+      {state === "app"          && user && <CRM profile={profile} assessment={assessment} onReset={handleLogout} user={user} onProfileUpdate={(updated) => setProfile(prev => ({ ...(prev || {}), ...updated }))} />}
+    </>
+  );
+}
 
 
-/* ─── Helpers ─────────────────────────────────────────── */
-const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999;
-const hScore = (last, freq) => { const d = dSince(last); if (!last || d > freq * 3) return 0; return Math.max(0, Math.round((1 - d / (freq * 1.5)) * 100)); };
-const fD = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—";
-// Gera um arquivo .ics padrão (RFC 5545) — funciona igual em Outlook, Google Calendar
-// e Apple Calendar, sem precisar de OAuth nem integração com nenhuma API externa.
-const buildICS = ({ title, description, location, start, durationMinutes }) => {
-  const pad = (n) => String(n).padStart(2, "0");
-  const fmt = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
-  const dtStart = new Date(start);
-  const dtEnd = new Date(dtStart.getTime() + (durationMinutes || 30) * 60000);
-  const esc = (s = "") => String(s).replace(/[\\;,]/g, (m) => "\\" + m).replace(/\n/g, "\\n");
-  return [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CONEXIA//Agendamento//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-    "BEGIN:VEVENT",
-    `UID:${Date.now()}-${Math.round(Math.random() * 1e6)}@conexia-agro`,
-    `DTSTAMP:${fmt(new Date())}`,
-    `DTSTART:${fmt(dtStart)}`,
+export default App;
