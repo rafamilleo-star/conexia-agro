@@ -26,8 +26,11 @@ jobs:
       - name: Aplicar ajuste
         run: python scripts/patch_danna_single_click.py
 
+      - name: Sincronizar lock de dependencias
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
       - name: Instalar dependencias
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Validar compilacao
         run: npm run build
@@ -36,10 +39,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/App.jsx src/components/ConexiaLabHome.jsx
+          git add src/App.jsx src/components/ConexiaLabHome.jsx package-lock.json
           if git diff --cached --quiet; then
             echo "Ajuste ja aplicado."
           else
-            git commit -m "Start Danna voice and greeting from beta click"
+            git commit -m "Fix dependency lock and start Danna from beta click"
             git push origin HEAD:main
           fi
