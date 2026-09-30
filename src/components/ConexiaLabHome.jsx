@@ -1,11 +1,15 @@
-// src/components/ConexiaLabHome.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { computePriorities } from "../../shared/priorityEngine.js";
-import { detectPatterns, PATTERN_NOTES } from "../../shared/relationshipPatternDetector.js";
+import {
+  detectPatterns,
+  PATTERN_NOTES,
+} from "../../shared/relationshipPatternDetector.js";
 import conexiaIcon from "../assets/brand/conexia_icone_transparente.svg";
 import DannaLive from "../lib/dannaLive";
 import DannaGeminiLive from "../lib/dannaGeminiLive";
+import DannaFishLive from "../lib/dannaFishLive";
+import { buildDannaGreeting } from "../lib/dannaGreeting.js";
 
 const K = {
   bg: "#0D0D0F",
@@ -22,20 +26,26 @@ const K = {
 const sans = "'DM Sans', sans-serif";
 const serif = "'Cormorant Garamond', serif";
 
-const normalize = (value) =>
+const normalize = value =>
   String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
 
-const interactionDate = (i) => i?.created_at || i?.createdAt || null;
-const interactionContactId = (i) => i?.contact_id || i?.contactId || null;
+const interactionDate = i => i?.created_at || i?.createdAt || null;
+const interactionContactId = i => i?.contact_id || i?.contactId || null;
 
 function firstJson(text) {
   const match = String(text || "").match(/\{[\s\S]*\}/);
+
   if (!match) return null;
-  try { return JSON.parse(match[0]); } catch { return null; }
+
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
 }
 
 function getHourInTimezone(timeZone = "America/Sao_Paulo") {
@@ -45,7 +55,11 @@ function getHourInTimezone(timeZone = "America/Sao_Paulo") {
       hour: "2-digit",
       hour12: false,
     }).formatToParts(new Date());
-    const hour = Number(parts.find(p => p.type === "hour")?.value);
+
+    const hour = Number(
+      parts.find(p => p.type === "hour")?.value
+    );
+
     return Number.isFinite(hour) ? hour : new Date().getHours();
   } catch {
     return new Date().getHours();
@@ -55,23 +69,37 @@ function getHourInTimezone(timeZone = "America/Sao_Paulo") {
 function greetingForNow(name = "", timeZone = "America/Sao_Paulo") {
   const h = getHourInTimezone(timeZone);
   const g = h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+
   return `${g}${name ? `, ${name}` : ""}.`;
 }
 
 function daysSince(value) {
   if (!value) return null;
+
   const d = new Date(value);
+
   if (Number.isNaN(d.getTime())) return null;
+
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
 function pickInvisiblePending(interactions, contacts) {
-  const contactMap = new Map((contacts || []).map(c => [c.id, c]));
-  const signal = /(vou\s+(mandar|enviar|apresentar|verificar|retornar|ligar)|vamos\s+(falar|marcar|combinar)|combin(ei|amos)|me\s+lembra|ficou\s+de|interessad[oa]|precisa\s+de|est[aá]\s+procurando|quer\s+conhecer|depois\s+(falamos|vemos))/i;
+  const contactMap = new Map(
+    (contacts || []).map(c => [c.id, c])
+  );
+
+  const signal =
+    /(vou\s+(mandar|enviar|apresentar|verificar|retornar|ligar)|vamos\s+(falar|marcar|combinar)|combin(ei|amos)|me\s+lembra|ficou\s+de|interessad[oa]|precisa\s+de|est[aá]\s+procurando|quer\s+conhecer|depois\s+(falamos|vemos))/i;
 
   return [...(interactions || [])]
-    .filter(i => signal.test(i?.description || i?.note || i?.notes || ""))
-    .sort((a,b) => new Date(interactionDate(b) || 0) - new Date(interactionDate(a) || 0))
+    .filter(i =>
+      signal.test(i?.description || i?.note || i?.notes || "")
+    )
+    .sort(
+      (a, b) =>
+        new Date(interactionDate(b) || 0) -
+        new Date(interactionDate(a) || 0)
+    )
     .map(i => ({
       interaction: i,
       contact: contactMap.get(interactionContactId(i)),
@@ -86,16 +114,15 @@ function VoiceOrb({ state, active, onClick }) {
   const thinking = state === "thinking";
   const speaking = state === "speaking";
 
-  const label =
-    listening
-      ? "Ouvindo"
-      : thinking
-        ? "Pensando"
-        : speaking
-          ? "Falando"
-          : active
-            ? "Conversando"
-            : "Conversar";
+  const label = listening
+    ? "Ouvindo"
+    : thinking
+      ? "Pensando"
+      : speaking
+        ? "Falando"
+        : active
+          ? "Conversando"
+          : "Conversar";
 
   return (
     <>
@@ -104,40 +131,29 @@ function VoiceOrb({ state, active, onClick }) {
           0%,100% { transform: scale(1); opacity:.94; }
           50% { transform: scale(1.055); opacity:1; }
         }
-
         @keyframes conexiaThink {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-
         @keyframes conexiaSpeak {
           0%,100% { transform: scale(1); }
           35% { transform: scale(1.045); }
           68% { transform: scale(.985); }
         }
-
         @keyframes conexiaRing {
-          0%,100% {
-            transform: scale(1);
-            opacity:.45;
-          }
-          50% {
-            transform: scale(1.045);
-            opacity:.9;
-          }
+          0%,100% { transform: scale(1); opacity:.45; }
+          50% { transform: scale(1.045); opacity:.9; }
         }
       `}</style>
 
-      <div
-        style={{
-          width: 216,
-          minHeight: 248,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-        }}
-      >
+      <div style={{
+        width: 216,
+        minHeight: 248,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-start",
+      }}>
         <button
           onClick={onClick}
           aria-label={active ? "Encerrar conversa" : "Iniciar conversa"}
@@ -155,52 +171,46 @@ function VoiceOrb({ state, active, onClick }) {
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              inset: 5,
-              borderRadius: "50%",
-              border: `1px solid ${active ? `${K.gold}B8` : `${K.gold}55`}`,
-              boxShadow: active
-                ? `0 0 46px ${K.gold}16, inset 0 0 34px ${K.gold}0B`
-                : `0 0 26px rgba(0,0,0,.25)`,
-              animation: active ? "conexiaRing 2.2s ease-in-out infinite" : "none",
-              transition: "border-color .25s ease, box-shadow .25s ease",
-            }}
-          />
+          <div style={{
+            position: "absolute",
+            inset: 5,
+            borderRadius: "50%",
+            border: `1px solid ${active ? `${K.gold}B8` : `${K.gold}55`}`,
+            boxShadow: active
+              ? `0 0 46px ${K.gold}16, inset 0 0 34px ${K.gold}0B`
+              : "0 0 26px rgba(0,0,0,.25)",
+            animation: active ? "conexiaRing 2.2s ease-in-out infinite" : "none",
+            transition: "border-color .25s ease, box-shadow .25s ease",
+          }} />
 
-          <div
-            style={{
-              position: "absolute",
-              inset: 18,
-              borderRadius: "50%",
-              background: `radial-gradient(circle at 50% 45%, ${K.gold}10 0%, ${K.card} 50%, ${K.bg} 100%)`,
-              border: `1px solid ${K.gold}24`,
-            }}
-          />
+          <div style={{
+            position: "absolute",
+            inset: 18,
+            borderRadius: "50%",
+            background: `radial-gradient(circle at 50% 45%, ${K.gold}10 0%, ${K.card} 50%, ${K.bg} 100%)`,
+            border: `1px solid ${K.gold}24`,
+          }} />
 
-          <div
-            style={{
-              position: "relative",
-              width: 104,
-              height: 104,
-              display: "grid",
-              placeItems: "center",
-              animation: thinking
-                ? "conexiaThink 6.5s linear infinite"
-                : speaking
-                  ? "conexiaSpeak 1.25s ease-in-out infinite"
-                  : listening
-                    ? "conexiaBreath 1.65s ease-in-out infinite"
-                    : active
-                      ? "conexiaBreath 3.2s ease-in-out infinite"
-                      : "none",
-              filter: active
-                ? "drop-shadow(0 0 14px rgba(201,168,76,.34))"
-                : "drop-shadow(0 0 6px rgba(201,168,76,.12))",
-              transformOrigin: "50% 50%",
-            }}
-          >
+          <div style={{
+            position: "relative",
+            width: 104,
+            height: 104,
+            display: "grid",
+            placeItems: "center",
+            animation: thinking
+              ? "conexiaThink 6.5s linear infinite"
+              : speaking
+                ? "conexiaSpeak 1.25s ease-in-out infinite"
+                : listening
+                  ? "conexiaBreath 1.65s ease-in-out infinite"
+                  : active
+                    ? "conexiaBreath 3.2s ease-in-out infinite"
+                    : "none",
+            filter: active
+              ? "drop-shadow(0 0 14px rgba(201,168,76,.34))"
+              : "drop-shadow(0 0 6px rgba(201,168,76,.12))",
+            transformOrigin: "50% 50%",
+          }}>
             <img
               src={conexiaIcon}
               alt=""
@@ -215,27 +225,23 @@ function VoiceOrb({ state, active, onClick }) {
           </div>
         </button>
 
-        <div
-          style={{
-            color: active ? K.gold : K.text,
-            fontFamily: sans,
-            fontSize: 18,
-            fontWeight: 800,
-            marginTop: 4,
-            letterSpacing: "-.01em",
-          }}
-        >
+        <div style={{
+          color: active ? K.gold : K.text,
+          fontFamily: sans,
+          fontSize: 18,
+          fontWeight: 800,
+          marginTop: 4,
+          letterSpacing: "-.01em",
+        }}>
           {label}
         </div>
 
-        <div
-          style={{
-            color: K.muted,
-            fontFamily: sans,
-            fontSize: 11,
-            marginTop: 5,
-          }}
-        >
+        <div style={{
+          color: K.muted,
+          fontFamily: sans,
+          fontSize: 11,
+          marginTop: 5,
+        }}>
           {active ? "toque para encerrar" : "toque para iniciar"}
         </div>
       </div>
@@ -248,7 +254,7 @@ function PersonMini({ person }) {
     .split(/\s+/)
     .map(x => x[0])
     .join("")
-    .slice(0,2)
+    .slice(0, 2)
     .toUpperCase();
 
   return (
@@ -270,19 +276,36 @@ function PersonMini({ person }) {
         {initials}
       </div>
 
-      <div style={{ color: K.text, fontFamily: sans, fontSize: 13, fontWeight: 800 }}>
+      <div style={{
+        color: K.text,
+        fontFamily: sans,
+        fontSize: 13,
+        fontWeight: 800,
+      }}>
         {person?.name || "Pessoa"}
       </div>
 
-      <div style={{ color: K.muted, fontFamily: sans, fontSize: 10, marginTop: 2 }}>
+      <div style={{
+        color: K.muted,
+        fontFamily: sans,
+        fontSize: 10,
+        marginTop: 2,
+      }}>
         {[person?.company, person?.role].filter(Boolean).join(" · ") || "sua rede"}
       </div>
     </div>
   );
 }
 
-function ConnectionView({ people = [], topics = [], answer, onWhy, onCreateBridge, onTomorrow }) {
-  const [a,b] = people;
+function ConnectionView({
+  people = [],
+  topics = [],
+  answer,
+  onWhy,
+  onCreateBridge,
+  onTomorrow,
+}) {
+  const [a, b] = people;
 
   return (
     <div>
@@ -317,23 +340,31 @@ function ConnectionView({ people = [], topics = [], answer, onWhy, onCreateBridg
             marginBottom: 8,
           }} />
 
-          <div style={{ color: K.gold, fontFamily: sans, fontSize: 10, fontWeight: 800 }}>
+          <div style={{
+            color: K.gold,
+            fontFamily: sans,
+            fontSize: 10,
+            fontWeight: 800,
+          }}>
             CONEXÃO POR
           </div>
 
-          <div style={{ display: "flex", gap: 5, justifyContent: "center", flexWrap: "wrap", marginTop: 6 }}>
-            {(topics.length ? topics : ["contexto"]).slice(0,3).map(t => (
-              <span
-                key={t}
-                style={{
-                  border: `1px solid ${K.gold}50`,
-                  borderRadius: 999,
-                  padding: "4px 7px",
-                  color: K.text,
-                  fontFamily: sans,
-                  fontSize: 10,
-                }}
-              >
+          <div style={{
+            display: "flex",
+            gap: 5,
+            justifyContent: "center",
+            flexWrap: "wrap",
+            marginTop: 6,
+          }}>
+            {(topics.length ? topics : ["contexto"]).slice(0, 3).map(t => (
+              <span key={t} style={{
+                border: `1px solid ${K.gold}50`,
+                borderRadius: 999,
+                padding: "4px 7px",
+                color: K.text,
+                fontFamily: sans,
+                fontSize: 10,
+              }}>
                 {t}
               </span>
             ))}
@@ -344,12 +375,23 @@ function ConnectionView({ people = [], topics = [], answer, onWhy, onCreateBridg
       </div>
 
       {answer && (
-        <div style={{ color: K.text, fontFamily: sans, fontSize: 13.5, lineHeight: 1.6, marginTop: 14 }}>
+        <div style={{
+          color: K.text,
+          fontFamily: sans,
+          fontSize: 13.5,
+          lineHeight: 1.6,
+          marginTop: 14,
+        }}>
           {answer}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+      <div style={{
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap",
+        marginTop: 14,
+      }}>
         <button onClick={onWhy} style={secondaryButton}>Por quê?</button>
         <button onClick={onCreateBridge} style={primaryButton}>Criar ponte</button>
         <button onClick={onTomorrow} style={secondaryButton}>Lembrar amanhã</button>
@@ -373,15 +415,31 @@ function CaptureView({ draft, onConfirm, onCorrect }) {
         ENTENDI ISTO
       </div>
 
-      <div style={{ color: K.text, fontFamily: serif, fontSize: 28, fontWeight: 700, marginBottom: 7 }}>
+      <div style={{
+        color: K.text,
+        fontFamily: serif,
+        fontSize: 28,
+        fontWeight: 700,
+        marginBottom: 7,
+      }}>
         {draft?.contactName || "Nova interação"}
       </div>
 
-      <div style={{ color: K.muted, fontFamily: sans, fontSize: 13, lineHeight: 1.6 }}>
+      <div style={{
+        color: K.muted,
+        fontFamily: sans,
+        fontSize: 13,
+        lineHeight: 1.6,
+      }}>
         {draft?.description}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 14 }}>
+      <div style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 7,
+        marginTop: 14,
+      }}>
         {[
           draft?.company && `Empresa: ${draft.company}`,
           draft?.role && `Cargo: ${draft.role}`,
@@ -393,8 +451,16 @@ function CaptureView({ draft, onConfirm, onCorrect }) {
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-        <button onClick={onConfirm} style={{ ...primaryButton, background: K.green, color: "#0A0D0B" }}>
+      <div style={{
+        display: "flex",
+        gap: 8,
+        marginTop: 16,
+        flexWrap: "wrap",
+      }}>
+        <button
+          onClick={onConfirm}
+          style={{ ...primaryButton, background: K.green, color: "#0A0D0B" }}
+        >
           Confirmar e salvar
         </button>
         <button onClick={onCorrect} style={secondaryButton}>Corrigir</button>
@@ -442,7 +508,12 @@ function AnswerView({ question, answer }) {
           CONÉXIA
         </div>
 
-        <div style={{ color: K.text, fontFamily: sans, fontSize: 14, lineHeight: 1.65 }}>
+        <div style={{
+          color: K.text,
+          fontFamily: sans,
+          fontSize: 14,
+          lineHeight: 1.65,
+        }}>
           {answer}
         </div>
       </div>
@@ -465,16 +536,30 @@ function InsightView({ title, body, onOpen }) {
         OLHE ISSO
       </div>
 
-      <div style={{ color: K.text, fontFamily: serif, fontSize: 27, fontWeight: 700 }}>
+      <div style={{
+        color: K.text,
+        fontFamily: serif,
+        fontSize: 27,
+        fontWeight: 700,
+      }}>
         {title}
       </div>
 
-      <div style={{ color: K.muted, fontFamily: sans, fontSize: 13, lineHeight: 1.6, marginTop: 7 }}>
+      <div style={{
+        color: K.muted,
+        fontFamily: sans,
+        fontSize: 13,
+        lineHeight: 1.6,
+        marginTop: 7,
+      }}>
         {body}
       </div>
 
       {onOpen && (
-        <button onClick={onOpen} style={{ ...secondaryButton, marginTop: 13 }}>
+        <button
+          onClick={onOpen}
+          style={{ ...secondaryButton, marginTop: 13 }}
+        >
           Abrir pessoa
         </button>
       )}
@@ -526,6 +611,7 @@ export default function ConexiaLabHome({
   voiceEngine = "openai",
 }) {
   const [prefs, setPrefs] = useState(null);
+  const [selectedVoiceEngine, setSelectedVoiceEngine] = useState(voiceEngine);
   const [profileSnapshot, setProfileSnapshot] = useState(null);
   const [prefsLoading, setPrefsLoading] = useState(true);
 
@@ -544,15 +630,12 @@ export default function ConexiaLabHome({
   const liveRef = useRef(null);
   const conversationActiveRef = useRef(false);
   const greetedThisSessionRef = useRef(false);
-
   const recentTurnsRef = useRef([]);
-
-  // Turno vigente: cada fala nova incrementa. Respostas de turnos antigos
-  // (ex.: você interrompeu enquanto a Danna pensava) são descartadas.
   const turnSeqRef = useRef(0);
-  const isStaleTurn = (turnId) =>
-    Boolean(turnId) && turnId !== turnSeqRef.current;
   const lastSavedContextRef = useRef(null);
+
+  const isStaleTurn = turnId =>
+    Boolean(turnId) && turnId !== turnSeqRef.current;
 
   const sessionContextRef = useRef({
     activePerson: null,
@@ -563,8 +646,6 @@ export default function ConexiaLabHome({
     lastSavedInteraction: null,
   });
 
-  // Ao sair da tela (voltar ao painel, trocar de motor), encerra a voz na hora:
-  // sessão aberta é cobrada por minuto.
   useEffect(() => {
     return () => {
       try { liveRef.current?.disconnect("unmount"); } catch {}
@@ -574,6 +655,7 @@ export default function ConexiaLabHome({
 
   const addTurn = (role, content) => {
     const line = String(content || "").trim();
+
     if (!line) return;
 
     recentTurnsRef.current = [
@@ -616,7 +698,8 @@ export default function ConexiaLabHome({
     };
   }, [userId]);
 
-  const timeZone = profileSnapshot?.timezone || "America/Sao_Paulo";
+  const timeZone =
+    profileSnapshot?.timezone || "America/Sao_Paulo";
 
   const displayName =
     prefs?.preferred_name ||
@@ -625,8 +708,8 @@ export default function ConexiaLabHome({
     firstName ||
     "";
 
-  // Primeiro nome para uso falado (ex.: "Rafael Milléo" -> "Rafael").
-  const spokenName = String(displayName || "").trim().split(/\s+/)[0] || "";
+  const spokenName =
+    String(displayName || "").trim().split(/\s+/)[0] || "";
 
   const firstContactStorageKey = userId
     ? `conexia_first_contact_completed_${userId}`
@@ -641,13 +724,12 @@ export default function ConexiaLabHome({
     );
 
   const priorities = useMemo(
-    () =>
-      computePriorities(
-        contacts,
-        {},
-        new Date().toISOString().slice(0,10),
-        interactions
-      ),
+    () => computePriorities(
+      contacts,
+      {},
+      new Date().toISOString().slice(0, 10),
+      interactions
+    ),
     [contacts, interactions]
   );
 
@@ -673,7 +755,13 @@ export default function ConexiaLabHome({
     if (pending) {
       return {
         title: pending.contact?.name || "Uma conversa merece revisão",
-        body: `${pending.age === 0 ? "Hoje" : pending.age === 1 ? "Ontem" : `Há ${pending.age} dias`}: ${pending.text.slice(0,160)}`,
+        body: `${
+          pending.age === 0
+            ? "Hoje"
+            : pending.age === 1
+              ? "Ontem"
+              : `Há ${pending.age} dias`
+        }: ${pending.text.slice(0, 160)}`,
         onOpen: () => onOpenContact?.(pending.contact?.id),
       };
     }
@@ -719,17 +807,15 @@ export default function ConexiaLabHome({
   };
 
   const stopConversation = () => {
+    turnSeqRef.current += 1;
     conversationActiveRef.current = false;
     greetedThisSessionRef.current = false;
 
     setConversationActive(false);
 
-    try {
-      liveRef.current?.disconnect();
-    } catch {}
+    try { liveRef.current?.disconnect(); } catch {}
 
     liveRef.current = null;
-
     setVoiceState("idle");
   };
 
@@ -760,28 +846,32 @@ export default function ConexiaLabHome({
           { onConflict: "user_id" }
         );
     } catch (e) {
-      console.warn("[CONÉXIA Live] Não consegui persistir first_contact_completed:", e);
+      console.warn(
+        "[CONÉXIA Live] Não consegui persistir first_contact_completed:",
+        e
+      );
     }
   };
 
   const beginConversation = async () => {
+    if (liveRef.current?.connecting) return;
+
     if (conversationActiveRef.current) {
       stopConversation();
       return;
     }
 
-    setCurrentView(v =>
-      v === "saved" ? "today" : v
-    );
-
+    setCurrentView(v => v === "saved" ? "today" : v);
     setInput("");
     setError("");
     setVoiceState("connecting");
 
-    // Motor de voz: "gemini" (Gemini Live) ou "openai" (GPT-Live).
-    // Mesmo cérebro (roteador + Central Brain + captura) nos dois.
     const VoiceEngine =
-      voiceEngine === "gemini" ? DannaGeminiLive : DannaLive;
+      selectedVoiceEngine === "fish"
+        ? DannaFishLive
+        : selectedVoiceEngine === "gemini"
+          ? DannaGeminiLive
+          : DannaLive;
 
     const live = new VoiceEngine({
       userName: spokenName,
@@ -789,15 +879,14 @@ export default function ConexiaLabHome({
       getAccessToken: async () => {
         try {
           const { data } = await supabase.auth.getSession();
+
           return data?.session?.access_token || null;
         } catch {
           return null;
         }
       },
 
-      // Travas de custo: encerra sozinha após 60s de silêncio,
-      // 10 min de sessão ou quando o app vai para segundo plano.
-      onAutoStop: (reason) => {
+      onAutoStop: reason => {
         conversationActiveRef.current = false;
         greetedThisSessionRef.current = false;
         liveRef.current = null;
@@ -814,21 +903,22 @@ export default function ConexiaLabHome({
         setAnswer(notice);
         setCurrentView("answer");
       },
+
       onState: setVoiceState,
 
-      onUserTranscript: (spoken) => {
-        const clean =
-          String(spoken || "").trim();
+      onUserSpeechStart: () => {
+        turnSeqRef.current += 1;
+        setVoiceState("listening");
+      },
 
-        if (
-          !clean ||
-          !conversationActiveRef.current
-        ) {
+      onUserTranscript: spoken => {
+        const clean = String(spoken || "").trim();
+
+        if (!clean || !conversationActiveRef.current) {
           return;
         }
 
         live.interrupt();
-
         setInput(clean);
 
         void handleUserTurn(clean);
@@ -836,24 +926,27 @@ export default function ConexiaLabHome({
 
       onTranscript: () => {},
 
-      onError: (err) => {
+      onError: err => {
         setError(
           err?.message ||
           "Não consegui manter a conversa por voz."
         );
 
         setVoiceState("idle");
-      }
+      },
     });
 
     liveRef.current = live;
 
     let ok = false;
+
     try {
       ok = await live.connect();
     } catch (e) {
       ok = false;
-      setError(e?.message || "Não consegui abrir a conversa por voz.");
+      setError(
+        e?.message || "Não consegui abrir a conversa por voz."
+      );
       setVoiceState("idle");
     }
 
@@ -881,33 +974,50 @@ export default function ConexiaLabHome({
       if (!firstContactCompleted) {
         void markFirstContactCompleted();
 
-        const introName =
-          displayName
-            ? `${displayName}, `
-            : "";
+        const introName = displayName ? `${displayName}, ` : "";
 
         speak(
           `${introName}eu sou a Danna, a inteligência relacional do CONÉXIA. ` +
-          `Me conta uma pessoa importante para você hoje.`,
+          "Me conta uma pessoa importante para você hoje.",
           true
         );
-
       } else {
-        speak("Estou ouvindo.", true);
+        const greetingTurn = ++turnSeqRef.current;
+
+        let brain = null;
+
+        try {
+          brain = await loadDannaKnowledge();
+        } catch (e) {
+          console.warn("[Danna] Abertura sem snapshot:", e.message);
+        }
+
+        if (
+          isStaleTurn(greetingTurn) ||
+          liveRef.current !== live ||
+          !conversationActiveRef.current
+        ) {
+          return;
+        }
+
+        speak(
+          buildDannaGreeting(brain, spokenName, timeZone),
+          true
+        );
       }
     }
   };
 
-  const findContactByName = (name) => {
+  const findContactByName = name => {
     const n = normalize(name);
+
     if (!n) return null;
 
     return (
       contacts.find(c => normalize(c.name) === n) ||
-      contacts.find(
-        c =>
-          normalize(c.name).includes(n) ||
-          n.includes(normalize(c.name))
+      contacts.find(c =>
+        normalize(c.name).includes(n) ||
+        n.includes(normalize(c.name))
       )
     );
   };
@@ -973,27 +1083,16 @@ Responda SOMENTE JSON válido:
       );
     }
 
-    const parsed = firstJson(
-      data.content?.[0]?.text || ""
-    );
+    const parsed = firstJson(data.content?.[0]?.text || "");
 
     if (!parsed) {
-      throw new Error(
-        "Não consegui estruturar a interação."
-      );
+      throw new Error("Não consegui estruturar a interação.");
     }
 
-    if (
-      !parsed.existingContactId &&
-      parsed.contactName
-    ) {
-      const local = findContactByName(
-        parsed.contactName
-      );
+    if (!parsed.existingContactId && parsed.contactName) {
+      const local = findContactByName(parsed.contactName);
 
-      if (local) {
-        parsed.existingContactId = local.id;
-      }
+      if (local) parsed.existingContactId = local.id;
     }
 
     if (isStaleTurn(turnId)) return;
@@ -1016,15 +1115,16 @@ Responda SOMENTE JSON válido:
     );
   };
 
-  // Danna Central Brain: consulta o CONÉXIA inteiro sob demanda.
-  // A Home continua leve; os dados completos só são buscados quando Rafael pergunta algo.
   const loadDannaKnowledge = async () => {
-    if (!userId) throw new Error("Sessão não autenticada.");
+    if (!userId) {
+      throw new Error("Sessão não autenticada.");
+    }
 
     const now = new Date();
     const nowIso = now.toISOString();
     const today = nowIso.slice(0, 10);
-    const horizon = new Date(now.getTime() + 45 * 86400000).toISOString();
+    const horizon =
+      new Date(now.getTime() + 45 * 86400000).toISOString();
 
     const [
       contactsRes,
@@ -1039,7 +1139,10 @@ Responda SOMENTE JSON válido:
         .from("contacts")
         .select("id,name,company,role,category,city,state_code,birthday,hobbies,main_culture,personal_notes,notes,next_action,next_action_date,last_interaction_at,status,ideal_frequency_days")
         .eq("user_id", userId)
-        .order("last_interaction_at", { ascending: false, nullsFirst: false }),
+        .order("last_interaction_at", {
+          ascending: false,
+          nullsFirst: false,
+        }),
 
       supabase
         .from("interactions")
@@ -1068,7 +1171,10 @@ Responda SOMENTE JSON válido:
         .from("scheduled_events")
         .select("id,contact_id,type,scheduled_at,duration_minutes,location,notes,status,source,created_at")
         .eq("user_id", userId)
-        .gte("scheduled_at", new Date(now.getTime() - 7 * 86400000).toISOString())
+        .gte(
+          "scheduled_at",
+          new Date(now.getTime() - 7 * 86400000).toISOString()
+        )
         .lte("scheduled_at", horizon)
         .order("scheduled_at", { ascending: true })
         .limit(150),
@@ -1088,14 +1194,29 @@ Responda SOMENTE JSON válido:
         .maybeSingle(),
     ]);
 
-    const critical = [contactsRes, interactionsRes, memoryRes, eventsRes];
-    const criticalError = critical.find(x => x?.error)?.error;
+    const critical = [
+      contactsRes,
+      interactionsRes,
+      memoryRes,
+      eventsRes,
+    ];
+
+    const criticalError =
+      critical.find(x => x?.error)?.error;
+
     if (criticalError) throw criticalError;
 
-    // Alerts/signals são enriquecimento. Se uma dessas fontes falhar, a Danna continua.
-    if (alertsRes.error) console.warn("[Danna Brain] alerts indisponível", alertsRes.error);
-    if (signalsRes.error) console.warn("[Danna Brain] signals indisponível", signalsRes.error);
-    if (profileRes.error) console.warn("[Danna Brain] profile indisponível", profileRes.error);
+    if (alertsRes.error) {
+      console.warn("[Danna Brain] alerts indisponível", alertsRes.error);
+    }
+
+    if (signalsRes.error) {
+      console.warn("[Danna Brain] signals indisponível", signalsRes.error);
+    }
+
+    if (profileRes.error) {
+      console.warn("[Danna Brain] profile indisponível", profileRes.error);
+    }
 
     const people = contactsRes.data || [];
     const contactById = new Map(people.map(c => [c.id, c]));
@@ -1119,16 +1240,17 @@ Responda SOMENTE JSON válido:
       status: c.status || null,
     }));
 
-    // Interações: 500 lidas, 200 enviadas à IA (controle de tamanho do prompt).
-    const interactionsForAI = (interactionsRes.data || []).slice(0, 200).map(i => ({
-      person: contactName(i.contact_id) || "desconhecido",
-      date: i.created_at,
-      type: i.type || "",
-      description: (i.description || "").slice(0, 400),
-      tags: i.tags || [],
-      sentiment: i.sentiment || "",
-      valueGenerated: i.value_generated || null,
-    }));
+    const interactionsForAI = (interactionsRes.data || [])
+      .slice(0, 200)
+      .map(i => ({
+        person: contactName(i.contact_id) || "desconhecido",
+        date: i.created_at,
+        type: i.type || "",
+        description: (i.description || "").slice(0, 400),
+        tags: i.tags || [],
+        sentiment: i.sentiment || "",
+        valueGenerated: i.value_generated || null,
+      }));
 
     const memoryForAI = (memoryRes.data || []).map(m => ({
       person: contactName(m.contact_id),
@@ -1159,24 +1281,44 @@ Responda SOMENTE JSON válido:
       status: sg.status,
     }));
 
-    const tz = profileRes.data?.timezone || timeZone || "America/Sao_Paulo";
+    const tz =
+      profileRes.data?.timezone ||
+      timeZone ||
+      "America/Sao_Paulo";
+
     const dayKey = d => {
       try {
-        return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(d));
+        return new Intl.DateTimeFormat("en-CA", {
+          timeZone: tz,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date(d));
       } catch {
         return new Date(d).toISOString().slice(0, 10);
       }
     };
+
     const timeLabel = d => {
       try {
-        return new Intl.DateTimeFormat("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date(d));
+        return new Intl.DateTimeFormat("pt-BR", {
+          timeZone: tz,
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(d));
       } catch {
         return "";
       }
     };
+
     const weekdayLabel = d => {
       try {
-        return new Intl.DateTimeFormat("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit" }).format(new Date(d));
+        return new Intl.DateTimeFormat("pt-BR", {
+          timeZone: tz,
+          weekday: "long",
+          day: "2-digit",
+          month: "2-digit",
+        }).format(new Date(d));
       } catch {
         return dayKey(d);
       }
@@ -1200,48 +1342,93 @@ Responda SOMENTE JSON válido:
     const upcomingEvents = events.filter(e => e.at >= nowIso);
     const recentPastEvents = events.filter(e => e.at < nowIso);
 
-    // Visão da semana: hoje + 6 dias, dia a dia (inclusive dias livres).
-    const week_overview = Array.from({ length: 7 }, (_, idx) => {
-      const ref = new Date(now.getTime() + idx * 86400000);
-      const key = dayKey(ref);
-      const dayEvents = upcomingEvents.filter(e => e.day === key);
-      return {
-        date: key,
-        label: idx === 0 ? `hoje (${weekdayLabel(ref)})` : idx === 1 ? `amanhã (${weekdayLabel(ref)})` : weekdayLabel(ref),
-        eventCount: dayEvents.length,
-        events: dayEvents.map(({ day, ...rest }) => rest),
-      };
-    });
+    const week_overview = Array.from(
+      { length: 7 },
+      (_, idx) => {
+        const ref = new Date(now.getTime() + idx * 86400000);
+        const key = dayKey(ref);
+        const dayEvents = upcomingEvents.filter(e => e.day === key);
 
-    // Sinais de atenção calculados localmente (fatos, não inferência).
+        return {
+          date: key,
+          label: idx === 0
+            ? `hoje (${weekdayLabel(ref)})`
+            : idx === 1
+              ? `amanhã (${weekdayLabel(ref)})`
+              : weekdayLabel(ref),
+          eventCount: dayEvents.length,
+          events: dayEvents.map(({ day, ...rest }) => rest),
+        };
+      }
+    );
+
     const todayKey = dayKey(now);
+
     const overdueNextActions = people
-      .filter(c => c.next_action && c.next_action_date && String(c.next_action_date).slice(0, 10) < todayKey)
-      .map(c => ({ person: c.name, nextAction: c.next_action, dueDate: c.next_action_date }))
+      .filter(c =>
+        c.next_action &&
+        c.next_action_date &&
+        String(c.next_action_date).slice(0, 10) < todayKey
+      )
+      .map(c => ({
+        person: c.name,
+        nextAction: c.next_action,
+        dueDate: c.next_action_date,
+      }))
       .slice(0, 30);
 
     const upcomingBirthdays = people
       .map(c => {
-        const m = String(c.birthday || "").match(/(\d{4})-(\d{2})-(\d{2})/);
+        const m = String(c.birthday || "")
+          .match(/(\d{4})-(\d{2})-(\d{2})/);
+
         if (!m) return null;
+
         const year = now.getFullYear();
-        let next = new Date(`${year}-${m[2]}-${m[3]}T12:00:00`);
-        if (next.getTime() < now.getTime() - 86400000) next = new Date(`${year + 1}-${m[2]}-${m[3]}T12:00:00`);
-        const inDays = Math.round((next.getTime() - now.getTime()) / 86400000);
-        return inDays >= 0 && inDays <= 30 ? { person: c.name, date: `${m[3]}/${m[2]}`, inDays } : null;
+
+        let next = new Date(
+          `${year}-${m[2]}-${m[3]}T12:00:00`
+        );
+
+        if (next.getTime() < now.getTime() - 86400000) {
+          next = new Date(
+            `${year + 1}-${m[2]}-${m[3]}T12:00:00`
+          );
+        }
+
+        const inDays = Math.round(
+          (next.getTime() - now.getTime()) / 86400000
+        );
+
+        return inDays >= 0 && inDays <= 30
+          ? {
+              person: c.name,
+              date: `${m[3]}/${m[2]}`,
+              inDays,
+            }
+          : null;
       })
       .filter(Boolean)
       .sort((a, b) => a.inDays - b.inDays);
 
     const coolingContacts = people
-      .filter(c => c.ideal_frequency_days && c.last_interaction_at)
+      .filter(c =>
+        c.ideal_frequency_days && c.last_interaction_at
+      )
       .map(c => ({
         person: c.name,
-        daysSinceLast: Math.floor((now.getTime() - new Date(c.last_interaction_at).getTime()) / 86400000),
+        daysSinceLast: Math.floor(
+          (now.getTime() - new Date(c.last_interaction_at).getTime()) /
+          86400000
+        ),
         idealFrequencyDays: c.ideal_frequency_days,
       }))
       .filter(x => x.daysSinceLast > x.idealFrequencyDays)
-      .sort((a, b) => (b.daysSinceLast - b.idealFrequencyDays) - (a.daysSinceLast - a.idealFrequencyDays))
+      .sort(
+        (a, b) =>
+          (b.daysSinceLast - b.idealFrequencyDays) -
+          (a.daysSinceLast - a.idealFrequencyDays)
+      )
       .slice(0, 20);
 
     const profile = profileRes.data || null;
@@ -1260,8 +1447,10 @@ Responda SOMENTE JSON válido:
               role: profile.role || null,
               city: profile.city || null,
               segment: profile.segment || null,
-              lastDiscussedPerson: contactName(profile.last_discussed_contact_id),
-              lastDiscussedAt: profile.last_discussed_contact_at || null,
+              lastDiscussedPerson:
+                contactName(profile.last_discussed_contact_id),
+              lastDiscussedAt:
+                profile.last_discussed_contact_at || null,
               calendarConnected: Boolean(profile.calendar_ics_url),
             }
           : null,
@@ -1274,8 +1463,10 @@ Responda SOMENTE JSON válido:
           activeSignals: signalsForAI.length,
         },
         week_overview,
-        upcoming_events: upcomingEvents.map(({ day, ...rest }) => rest),
-        recent_past_events: recentPastEvents.map(({ day, ...rest }) => rest),
+        upcoming_events:
+          upcomingEvents.map(({ day, ...rest }) => rest),
+        recent_past_events:
+          recentPastEvents.map(({ day, ...rest }) => rest),
         relational_memory: memoryForAI,
         open_alerts: alertsForAI,
         signals: signalsForAI,
@@ -1290,10 +1481,14 @@ Responda SOMENTE JSON válido:
 
   const askNetwork = async (text, turnId = null) => {
     let brain = null;
+
     try {
       brain = await loadDannaKnowledge();
     } catch (e) {
-      console.warn("[Danna Brain] snapshot indisponível; usando dados da Home.", e);
+      console.warn(
+        "[Danna Brain] snapshot indisponível; usando dados da Home.",
+        e
+      );
     }
 
     const people = brain?.contacts || contacts.map(c => ({
@@ -1303,10 +1498,11 @@ Responda SOMENTE JSON válido:
       role: c.role || "",
       category: c.category || "",
       city: c.city || "",
-      notes: (c.personal_notes || c.notes || "").slice(0,400),
+      notes: (c.personal_notes || c.notes || "").slice(0, 400),
       nextAction: c.next_action || c.nextAction || null,
       nextActionDate: c.next_action_date || c.nextActionDate || null,
-      lastInteractionAt: c.last_interaction_at || c.lastInteractionAt || null,
+      lastInteractionAt:
+        c.last_interaction_at || c.lastInteractionAt || null,
     }));
 
     const contactMap = new Map(
@@ -1315,11 +1511,11 @@ Responda SOMENTE JSON válido:
 
     const recent = brain?.interactions || [...interactions]
       .sort(
-        (a,b) =>
+        (a, b) =>
           new Date(interactionDate(b) || 0) -
           new Date(interactionDate(a) || 0)
       )
-      .slice(0,120)
+      .slice(0, 120)
       .map(i => ({
         person:
           contactMap.get(interactionContactId(i)) ||
@@ -1328,7 +1524,7 @@ Responda SOMENTE JSON válido:
         type: i.type || "",
         description:
           (i.description || i.note || i.notes || "")
-            .slice(0,500),
+            .slice(0, 500),
         tags: i.tags || [],
         sentiment: i.sentiment || "",
       }));
@@ -1460,46 +1656,32 @@ REGRAS DE RESPOSTA:
       );
     }
 
-    const parsed = firstJson(
-      data.content?.[0]?.text || ""
-    );
+    const parsed = firstJson(data.content?.[0]?.text || "");
 
     if (!parsed) {
-      throw new Error(
-        "Não consegui estruturar a resposta."
-      );
+      throw new Error("Não consegui estruturar a resposta.");
     }
 
-    const resolvedPeople = (
-      parsed.people || []
-    )
+    const resolvedPeople = (parsed.people || [])
       .map(name => findContactByName(name))
       .filter(Boolean)
-      .slice(0,2);
+      .slice(0, 2);
 
     const finalAnswer =
-      parsed.answer ||
-      "Não encontrei evidência suficiente.";
+      parsed.answer || "Não encontrei evidência suficiente.";
 
     if (isStaleTurn(turnId)) return;
 
     setAnswer(finalAnswer);
 
-    sessionContextRef.current.lastQuestion =
-      text;
-
+    sessionContextRef.current.lastQuestion = text;
     sessionContextRef.current.activePeople =
       resolvedPeople.map(p => p.name);
-
-    sessionContextRef.current.activeTopics =
-      parsed.topics || [];
-
-    sessionContextRef.current.lastView =
-      parsed.view || "answer";
+    sessionContextRef.current.activeTopics = parsed.topics || [];
+    sessionContextRef.current.lastView = parsed.view || "answer";
 
     if (parsed.activePerson) {
-      sessionContextRef.current.activePerson =
-        parsed.activePerson;
+      sessionContextRef.current.activePerson = parsed.activePerson;
     }
 
     if (
@@ -1520,7 +1702,7 @@ REGRAS DE RESPOSTA:
     speak(finalAnswer, true);
   };
 
-  const classifyIntent = async (text) => {
+  const classifyIntent = async text => {
     const prompt = `
 Você é o roteador do CONÉXIA, especializado em inteligência relacional.
 
@@ -1576,23 +1758,39 @@ Responda SOMENTE JSON:
 
     if (parsed?.intent === "capture") return "capture";
     if (parsed?.intent === "out_of_scope") return "out_of_scope";
+
     return "relational";
   };
 
-  const handleUserTurn = async (text) => {
+  const handleUserTurn = async text => {
     const line = String(text || "").trim();
+
     if (!line) return;
 
     const turnId = ++turnSeqRef.current;
 
     addTurn("user", line);
-
     setLastQuestion(line);
     setInput(line);
     setVoiceState("thinking");
     setError("");
 
     const n = normalize(line);
+
+    if (
+      /^(para|pare|parar|stop|silencio|fica quieta|pode parar|pare de falar|para de falar)[.! ]*$/.test(n)
+    ) {
+      const live = liveRef.current;
+
+      if (typeof live?.silence === "function") {
+        live.silence();
+      } else {
+        live?.interrupt();
+      }
+
+      setVoiceState("listening");
+      return;
+    }
 
     if (currentView === "capture" && draft) {
       if (
@@ -1602,9 +1800,7 @@ Responda SOMENTE JSON:
         return;
       }
 
-      if (
-        /^(nao|não|corrige|corrigir|cancela|cancelar)/.test(n)
-      ) {
+      if (/^(nao|não|corrige|corrigir|cancela|cancelar)/.test(n)) {
         setDraft(null);
         setCurrentView("today");
 
@@ -1626,10 +1822,9 @@ Responda SOMENTE JSON:
       setConversationActive(false);
       stopListening();
 
-      const response =
-        /obrigad/.test(n)
-          ? `Por nada${spokenName ? `, ${spokenName}` : ""}. Até mais.`
-          : `Até mais${spokenName ? `, ${spokenName}` : ""}.`;
+      const response = /obrigad/.test(n)
+        ? `Por nada${spokenName ? `, ${spokenName}` : ""}. Até mais.`
+        : `Até mais${spokenName ? `, ${spokenName}` : ""}.`;
 
       setAnswer(response);
       setCurrentView("answer");
@@ -1642,7 +1837,8 @@ Responda SOMENTE JSON:
 
     if (isPureGreeting) {
       const response =
-        sessionContextRef.current.activePerson || lastSavedContextRef.current
+        sessionContextRef.current.activePerson ||
+        lastSavedContextRef.current
           ? "Estou aqui. Pode continuar de onde paramos."
           : "Estou aqui. Pode falar sobre uma pessoa, relação, reunião ou situação da sua rede.";
 
@@ -1675,9 +1871,8 @@ Responda SOMENTE JSON:
       await askNetwork(line, turnId);
     } catch (e) {
       if (isStaleTurn(turnId)) return;
-      setError(
-        `Não consegui processar agora: ${e.message}`
-      );
+
+      setError(`Não consegui processar agora: ${e.message}`);
       setVoiceState("idle");
     }
   };
@@ -1689,26 +1884,23 @@ Responda SOMENTE JSON:
     setError("");
 
     try {
-      let contactId =
-        draft.existingContactId || null;
+      let contactId = draft.existingContactId || null;
 
       let contact =
-        contacts.find(c => c.id === contactId) ||
-        null;
+        contacts.find(c => c.id === contactId) || null;
 
       if (!contactId) {
-        const { data, error } =
-          await supabase
-            .from("contacts")
-            .insert({
-              user_id: userId,
-              name: draft.contactName,
-              company: draft.company || null,
-              role: draft.role || null,
-              status: "active",
-            })
-            .select("id,name,company,role")
-            .single();
+        const { data, error } = await supabase
+          .from("contacts")
+          .insert({
+            user_id: userId,
+            name: draft.contactName,
+            company: draft.company || null,
+            role: draft.role || null,
+            status: "active",
+          })
+          .select("id,name,company,role")
+          .single();
 
         if (error) throw error;
 
@@ -1718,67 +1910,35 @@ Responda SOMENTE JSON:
 
       const savedContext = {
         contactId,
-        contactName:
-          draft.contactName ||
-          contact?.name ||
-          null,
-        company:
-          draft.company ||
-          contact?.company ||
-          null,
-        role:
-          draft.role ||
-          contact?.role ||
-          null,
-        interactionType:
-          draft.interactionType ||
-          "outro",
-        description:
-          draft.description ||
-          lastQuestion,
-        sentiment:
-          draft.sentiment ||
-          "neutro",
-        tags:
-          Array.isArray(draft.tags)
-            ? draft.tags.slice(0,5)
-            : [],
-        nextAction:
-          draft.nextAction ||
-          null,
-        nextActionDate:
-          draft.nextActionDate ||
-          null,
-        savedAt:
-          new Date().toISOString(),
+        contactName: draft.contactName || contact?.name || null,
+        company: draft.company || contact?.company || null,
+        role: draft.role || contact?.role || null,
+        interactionType: draft.interactionType || "outro",
+        description: draft.description || lastQuestion,
+        sentiment: draft.sentiment || "neutro",
+        tags: Array.isArray(draft.tags) ? draft.tags.slice(0, 5) : [],
+        nextAction: draft.nextAction || null,
+        nextActionDate: draft.nextActionDate || null,
+        savedAt: new Date().toISOString(),
       };
 
-      const { error: intErr } =
-        await supabase
-          .from("interactions")
-          .insert({
-            user_id: userId,
-            contact_id: contactId,
-            type:
-              draft.interactionType ||
-              "outro",
-            description:
-              draft.description ||
-              lastQuestion,
-            sentiment:
-              draft.sentiment ||
-              "neutro",
-            tags:
-              Array.isArray(draft.tags)
-                ? draft.tags.slice(0,5)
-                : [],
-          });
+      const { error: intErr } = await supabase
+        .from("interactions")
+        .insert({
+          user_id: userId,
+          contact_id: contactId,
+          type: draft.interactionType || "outro",
+          description: draft.description || lastQuestion,
+          sentiment: draft.sentiment || "neutro",
+          tags: Array.isArray(draft.tags)
+            ? draft.tags.slice(0, 5)
+            : [],
+        });
 
       if (intErr) throw intErr;
 
       const patch = {
-        last_interaction_at:
-          new Date().toISOString(),
+        last_interaction_at: new Date().toISOString(),
       };
 
       if (draft.nextAction) {
@@ -1786,8 +1946,7 @@ Responda SOMENTE JSON:
       }
 
       if (draft.nextActionDate) {
-        patch.next_action_date =
-          draft.nextActionDate;
+        patch.next_action_date = draft.nextActionDate;
       }
 
       if (!contact?.company && draft.company) {
@@ -1798,46 +1957,29 @@ Responda SOMENTE JSON:
         patch.role = draft.role;
       }
 
-      const { error: upErr } =
-        await supabase
-          .from("contacts")
-          .update(patch)
-          .eq("id", contactId)
-          .eq("user_id", userId);
+      const { error: upErr } = await supabase
+        .from("contacts")
+        .update(patch)
+        .eq("id", contactId)
+        .eq("user_id", userId);
 
       if (upErr) throw upErr;
 
-      lastSavedContextRef.current =
-        savedContext;
+      lastSavedContextRef.current = savedContext;
 
-      sessionContextRef.current.lastSavedInteraction =
-        savedContext;
-
-      sessionContextRef.current.activePerson =
-        savedContext.contactName;
-
+      sessionContextRef.current.lastSavedInteraction = savedContext;
+      sessionContextRef.current.activePerson = savedContext.contactName;
       sessionContextRef.current.activePeople =
-        savedContext.contactName
-          ? [savedContext.contactName]
-          : [];
+        savedContext.contactName ? [savedContext.contactName] : [];
+      sessionContextRef.current.activeTopics = savedContext.tags || [];
+      sessionContextRef.current.lastView = "saved";
+      sessionContextRef.current.lastQuestion = lastQuestion;
 
-      sessionContextRef.current.activeTopics =
-        savedContext.tags || [];
-
-      sessionContextRef.current.lastView =
-        "saved";
-
-      sessionContextRef.current.lastQuestion =
-        lastQuestion;
-
-      const who =
-        savedContext.contactName ||
-        "essa pessoa";
+      const who = savedContext.contactName || "essa pessoa";
 
       setDraft(null);
 
-      const confirmation =
-        `Pronto. Registrei com ${who}.`;
+      const confirmation = `Pronto. Registrei com ${who}.`;
 
       setAnswer(confirmation);
       setCurrentView("saved");
@@ -1849,29 +1991,23 @@ Responda SOMENTE JSON:
         true
       );
     } catch (e) {
-      setError(
-        `Não salvei nada: ${e.message}`
-      );
-
+      setError(`Não salvei nada: ${e.message}`);
       setVoiceState("idle");
     }
   };
 
   const askWhy = () => {
-    const text =
-      connectionData?.people?.length === 2
-        ? `Por que você acha que ${connectionData.people[0].name} e ${connectionData.people[1].name} deveriam se conectar?`
-        : "Por quê?";
+    const text = connectionData?.people?.length === 2
+      ? `Por que você acha que ${connectionData.people[0].name} e ${connectionData.people[1].name} deveriam se conectar?`
+      : "Por quê?";
 
     handleUserTurn(text);
   };
 
   const createBridge = () => {
-    if (!connectionData?.people?.length) {
-      return;
-    }
+    if (!connectionData?.people?.length) return;
 
-    const [a,b] = connectionData.people;
+    const [a, b] = connectionData.people;
 
     const response =
       `A melhor próxima ação é você fazer a ponte entre ${a.name} e ${b.name}. Posso deixar isso como próximo movimento.`;
@@ -1882,36 +2018,28 @@ Responda SOMENTE JSON:
   };
 
   const remindTomorrow = async () => {
-    const person =
-      connectionData?.people?.[0];
+    const person = connectionData?.people?.[0];
 
     if (!person) return;
 
     const tomorrow = new Date();
-    tomorrow.setDate(
-      tomorrow.getDate() + 1
-    );
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const date =
-      tomorrow.toISOString().slice(0,10);
+    const date = tomorrow.toISOString().slice(0, 10);
+    const other = connectionData?.people?.[1]?.name;
 
-    const other =
-      connectionData?.people?.[1]?.name;
+    const action = other
+      ? `Apresentar ${person.name} a ${other}`
+      : `Retomar ${person.name}`;
 
-    const action =
-      other
-        ? `Apresentar ${person.name} a ${other}`
-        : `Retomar ${person.name}`;
-
-    const { error } =
-      await supabase
-        .from("contacts")
-        .update({
-          next_action: action,
-          next_action_date: date,
-        })
-        .eq("id", person.id)
-        .eq("user_id", userId);
+    const { error } = await supabase
+      .from("contacts")
+      .update({
+        next_action: action,
+        next_action_date: date,
+      })
+      .eq("id", person.id)
+      .eq("user_id", userId);
 
     if (error) {
       setError(error.message);
@@ -1926,14 +2054,12 @@ Responda SOMENTE JSON:
 
     await onDataChanged?.();
 
-    speak(
-      "Fechado. Deixei isso para amanhã.",
-      true
-    );
+    speak("Fechado. Deixei isso para amanhã.", true);
   };
 
   const submitText = () => {
     const t = textInput.trim();
+
     if (!t) return;
 
     setTextInput("");
@@ -1954,12 +2080,11 @@ Responda SOMENTE JSON:
     );
   }
 
-  const greeting =
-    !firstContactCompleted
-      ? `Bem-vindo${displayName ? `, ${displayName}` : ""}.`
-      : prefs?.greeting_mode === "direto"
-        ? `${displayName ? `${displayName}, ` : ""}vamos cuidar da sua rede.`
-        : greetingForNow(displayName, timeZone);
+  const greeting = !firstContactCompleted
+    ? `Bem-vindo${displayName ? `, ${displayName}` : ""}.`
+    : prefs?.greeting_mode === "direto"
+      ? `${displayName ? `${displayName}, ` : ""}vamos cuidar da sua rede.`
+      : greetingForNow(displayName, timeZone);
 
   return (
     <div style={{
@@ -2093,6 +2218,54 @@ Responda SOMENTE JSON:
           alignItems: "center",
           marginTop: 22,
         }}>
+          <label style={{
+            color: K.muted,
+            fontFamily: sans,
+            fontSize: 12,
+            marginBottom: 14,
+          }}>
+            Voz da Danna:{" "}
+            <select
+              aria-label="Voz da Danna"
+              value={selectedVoiceEngine}
+              disabled={
+                conversationActive ||
+                voiceState === "connecting"
+              }
+              onChange={e => setSelectedVoiceEngine(e.target.value)}
+              style={{
+                background: K.card2,
+                color: K.text,
+                border: `1px solid ${K.border}`,
+                borderRadius: 8,
+                padding: 8,
+              }}
+            >
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Gemini</option>
+              <option value="fish">Fish Audio — teste</option>
+            </select>
+          </label>
+
+          {conversationActive && (
+            <button
+              onClick={() => {
+                turnSeqRef.current += 1;
+
+                speak(
+                  `Oi${spokenName ? `, ${spokenName}` : ""}. Como vai? Estou aqui para ajudar você a cuidar das suas conexões. Pode me interromper quando quiser. Por onde vamos começar?`,
+                  true
+                );
+              }}
+              style={{
+                ...secondaryButton,
+                marginBottom: 12,
+              }}
+            >
+              Ouvir frase de teste
+            </button>
+          )}
+
           <VoiceOrb
             state={voiceState}
             active={conversationActive}
@@ -2116,16 +2289,14 @@ Responda SOMENTE JSON:
               color: K.text,
               fontFamily: sans,
               fontSize: 12.5,
-              opacity: .85,
+              opacity: 0.85,
             }}>
               “{input}”
             </div>
           )}
 
           <button
-            onClick={() =>
-              setShowText(v => !v)
-            }
+            onClick={() => setShowText(v => !v)}
             style={{
               marginTop: 10,
               background: "transparent",
@@ -2137,9 +2308,7 @@ Responda SOMENTE JSON:
               textDecoration: "underline",
             }}
           >
-            {showText
-              ? "Fechar texto"
-              : "Prefiro escrever"}
+            {showText ? "Fechar texto" : "Prefiro escrever"}
           </button>
         </div>
 
@@ -2151,9 +2320,7 @@ Responda SOMENTE JSON:
           }}>
             <textarea
               value={textInput}
-              onChange={e =>
-                setTextInput(e.target.value)
-              }
+              onChange={e => setTextInput(e.target.value)}
               rows={3}
               placeholder="Fale comigo por texto..."
               style={{
@@ -2177,10 +2344,7 @@ Responda SOMENTE JSON:
               justifyContent: "flex-end",
               marginTop: 8,
             }}>
-              <button
-                onClick={submitText}
-                style={primaryButton}
-              >
+              <button onClick={submitText} style={primaryButton}>
                 Enviar
               </button>
             </div>
