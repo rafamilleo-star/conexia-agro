@@ -1,0 +1,81 @@
+name: Danna - restaurar audio
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Restaurar caminho anterior de audio
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("src/lib/dannaGeminiLive.js")
+          s = p.read_text()
+
+          if "danna-echo-output-v1" not in s:
+              print("O ajuste WebRTC já foi removido.")
+              raise SystemExit(0)
+
+          replacements = [
+              ('import DannaEchoOutput, { needsEchoOutput } from "./dannaEchoOutput.js";\n', ''),
+              ('    // danna-echo-output-v1\n    this.echoOutput = null;\n', ''),
+              ('    this.outCtx = new AC({ latencyHint: "interactive" });', '    this.outCtx = new AC();'),
+              ('      if (needsEchoOutput()) {\n        this.echoOutput = new DannaEchoOutput(this.outCtx);\n        await this.echoOutput.open();\n      }\n', ''),
+              ('          autoGainControl: !needsEchoOutput(),', '          autoGainControl: true,'),
+              ('    this.echoOutput?.resume();\n    src.connect(this.echoOutput?.input || this.outCtx.destination);', '    src.connect(this.outCtx.destination);'),
+              ('    this.echoOutput?.interrupt();\n', ''),
+              ('    this.echoOutput?.close();\n    this.echoOutput = null;\n', ''),
+          ]
+
+          for old, new in replacements:
+              if s.count(old) != 1:
+                  raise SystemExit(
+                      "Arquivo diferente do esperado. Nada foi salvo: " + old[:80]
+                  )
+              s = s.replace(old, new, 1)
+
+          if "echoOutput" in s or "needsEchoOutput" in s:
+              raise SystemExit("Reversão incompleta. Nada foi salvo.")
+
+          p.write_text(s)
+          print("Caminho anterior de áudio restaurado.")
+          PY
+
+          node --check src/lib/dannaGeminiLive.js
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Validar compilacao
+        run: npm run build
+
+      - name: Salvar restauracao
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/dannaGeminiLive.js
+
+          if git diff --cached --quiet; then
+            echo "Audio ja restaurado."
+          else
+            git commit -m "Restore Danna audio before mobile WebRTC regression"
+            git push origin HEAD:main
+          fi
