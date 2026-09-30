@@ -1,0 +1,50 @@
+name: Danna - corrigir eco no celular
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Aplicar ajuste
+        run: |
+          node --check src/lib/dannaEchoOutput.js
+          python scripts/patch_danna_echo_output.py
+          node --check src/lib/dannaGeminiLive.js
+
+      - name: Sincronizar e instalar dependencias
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund
+
+      - name: Validar compilacao
+        run: npm run build
+
+      - name: Salvar alteracoes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/dannaEchoOutput.js src/lib/dannaGeminiLive.js package-lock.json
+          if git diff --cached --quiet; then
+            echo "Ajuste ja aplicado."
+          else
+            git commit -m "Route mobile Danna audio through WebRTC for echo cancellation"
+            git push origin HEAD:main
+          fi
