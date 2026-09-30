@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { forwardRef, useImperativeHandle, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { computePriorities } from "../../shared/priorityEngine.js";
 import {
@@ -601,7 +601,7 @@ const secondaryButton = {
   cursor: "pointer",
 };
 
-export default function ConexiaLabHome({
+const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   userId,
   firstName,
   contacts = [],
@@ -609,7 +609,7 @@ export default function ConexiaLabHome({
   onOpenContact,
   onDataChanged,
   voiceEngine = "openai",
-}) {
+}, ref) {
   const [prefs, setPrefs] = useState(null);
   const [selectedVoiceEngine, setSelectedVoiceEngine] = useState(voiceEngine);
   const [profileSnapshot, setProfileSnapshot] = useState(null);
@@ -629,6 +629,8 @@ export default function ConexiaLabHome({
 
   const liveRef = useRef(null);
   const conversationActiveRef = useRef(false);
+  // danna-single-click-v1
+  const preferencesReadyRef = useRef(Promise.resolve(null));
   const greetedThisSessionRef = useRef(false);
   const recentTurnsRef = useRef([]);
   const turnSeqRef = useRef(0);
@@ -667,8 +669,8 @@ export default function ConexiaLabHome({
   useEffect(() => {
     let alive = true;
 
-    (async () => {
-      if (!userId) return;
+    preferencesReadyRef.current = (async () => {
+      if (!userId) return null;
 
       setPrefsLoading(true);
 
@@ -691,7 +693,12 @@ export default function ConexiaLabHome({
       setPrefs(p || null);
       setProfileSnapshot(prof || null);
       setPrefsLoading(false);
-    })();
+      return { prefs: p, profile: prof };
+    })().catch(error => {
+      console.warn("[Danna] Perfil indisponível:", error);
+      if (alive) setPrefsLoading(false);
+      return null;
+    });
 
     return () => {
       alive = false;
@@ -957,6 +964,10 @@ export default function ConexiaLabHome({
       return;
     }
 
+    if (liveRef.current !== live) {
+      live.disconnect("opening_cancelled");
+      return;
+    }
     conversationActiveRef.current = true;
 
     setConversationActive(true);
@@ -968,45 +979,57 @@ export default function ConexiaLabHome({
       "Nunca use a expressão 'o usuário'."
     );
 
-    if (!greetedThisSessionRef.current) {
+    const greetingTurn = ++turnSeqRef.current;
+    const loaded = await preferencesReadyRef.current;
+    if (isStaleTurn(greetingTurn) || liveRef.current !== live ||
+        !conversationActiveRef.current) return;
+    if (greetedThisSessionRef.current) return;
+
+    const openingPrefs = loaded?.prefs || prefs;
+    const openingProfile = loaded?.profile || profileSnapshot;
+    const openingName = String(
+      openingPrefs?.preferred_name || openingProfile?.first_name ||
+      openingProfile?.name || firstName || ""
+    ).trim().split(/\s+/)[0] || "";
+    const openingTimeZone = openingProfile?.timezone || timeZone;
+    let storedFirstContact = false;
+    try {
+      storedFirstContact = Boolean(
+        firstContactStorageKey && window.localStorage.getItem(firstContactStorageKey)
+      );
+    } catch {}
+
+    if (!openingPrefs?.first_contact_completed && !storedFirstContact) {
+      speak(
+        `Oi${openingName ? `, ${openingName}` : ""}. Eu sou a Danna, ` +
+        "a inteligência relacional do CONÉXIA. Me conta uma pessoa importante para você hoje.",
+        true
+      );
       greetedThisSessionRef.current = true;
-
-      if (!firstContactCompleted) {
-        void markFirstContactCompleted();
-
-        const introName = displayName ? `${displayName}, ` : "";
-
-        speak(
-          `${introName}eu sou a Danna, a inteligência relacional do CONÉXIA. ` +
-          "Me conta uma pessoa importante para você hoje.",
-          true
-        );
-      } else {
-        const greetingTurn = ++turnSeqRef.current;
-
-        let brain = null;
-
-        try {
-          brain = await loadDannaKnowledge();
-        } catch (e) {
-          console.warn("[Danna] Abertura sem snapshot:", e.message);
-        }
-
-        if (
-          isStaleTurn(greetingTurn) ||
-          liveRef.current !== live ||
-          !conversationActiveRef.current
-        ) {
-          return;
-        }
-
-        speak(
-          buildDannaGreeting(brain, spokenName, timeZone),
-          true
-        );
-      }
+      void markFirstContactCompleted();
+      return;
     }
+
+    let brain = null;
+    try {
+      brain = await loadDannaKnowledge();
+    } catch (error) {
+      console.warn("[Danna] Abertura sem snapshot:", error);
+    }
+    if (isStaleTurn(greetingTurn) || liveRef.current !== live ||
+        !conversationActiveRef.current) return;
+
+    speak(buildDannaGreeting(brain, openingName, openingTimeZone), true);
+    greetedThisSessionRef.current = true;
   };
+
+  useImperativeHandle(ref, () => ({
+    start() {
+      if (!liveRef.current && !conversationActiveRef.current) {
+        void beginConversation();
+      }
+    },
+  }));
 
   const findContactByName = name => {
     const n = normalize(name);
@@ -2365,4 +2388,6 @@ Responda SOMENTE JSON:
       </div>
     </div>
   );
-}
+});
+
+export default ConexiaLabHome;

@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
 import ConexiaLabHome from './components/ConexiaLabHome';
@@ -2957,6 +2958,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   // Preferência salva por usuário no navegador ("on" | "off" | null).
   const CONEXIA_LAB_USER_ID = "848ebde1-dd60-4652-8f9a-3e86dd31482f";
   const dannaPrefKey = user?.id ? `conexia_danna_home_${user.id}` : "";
+  // danna-single-click-v1
+  const dannaStartRef = useRef(null);
   const [dannaPref, setDannaPref] = useState(null);
   useEffect(() => {
     if (!dannaPrefKey) { setDannaPref(null); return; }
@@ -2966,6 +2969,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     const value = on ? "on" : "off";
     setDannaPref(value);
     try { if (dannaPrefKey) window.localStorage.setItem(dannaPrefKey, value); } catch {}
+  };
+  const openDannaConversation = () => {
+    flushSync(() => setDannaHome(true));
+    dannaStartRef.current?.start();
   };
   // Voz BETA: somente pagantes (assinatura Stripe ativa) e admins.
   // Mesma regra validada no servidor (public.has_paid_voice_access).
@@ -4070,6 +4077,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             </button>
           </div>
         <ConexiaLabHome
+          ref={dannaStartRef}
           userId={user?.id}
           firstName={profile?.first_name || profile?.name || ""}
           contacts={cts}
@@ -4103,7 +4111,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         {/* Danna (beta): convite opt-in para a conversa por voz (somente pagantes). */}
         {hasVoiceAccess ? (
         <div
-          onClick={() => setDannaHome(true)}
+          onClick={openDannaConversation}
           style={{ cursor: "pointer", background: `linear-gradient(135deg, ${C.gold}18, ${C.gold}06)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "16px 20px", marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}
         >
           <div style={{ width: 42, height: 42, borderRadius: "50%", background: `radial-gradient(circle at 35% 35%, ${C.gold}, ${C.gold}40)`, flexShrink: 0 }} />
