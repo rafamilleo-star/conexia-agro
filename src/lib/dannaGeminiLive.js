@@ -1,3 +1,4 @@
+import DannaEchoOutput, { needsEchoOutput } from "./dannaEchoOutput.js";
 const WS_URL =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained";
 
@@ -164,6 +165,8 @@ export default class DannaGeminiLive {
     this.onVisibility = null;
     this.assistantBuffer = "";
     this.outputSuppressed = false;
+    // danna-echo-output-v1
+    this.echoOutput = null;
   }
 
   setStatus(status) {
@@ -204,20 +207,24 @@ export default class DannaGeminiLive {
 
     const AC = window.AudioContext || window.webkitAudioContext;
 
-    this.outCtx = new AC();
+    this.outCtx = new AC({ latencyHint: "interactive" });
     this.inCtx = new AC();
 
     try { this.outCtx.resume(); } catch {}
     try { this.inCtx.resume(); } catch {}
 
     try {
+      if (needsEchoOutput()) {
+        this.echoOutput = new DannaEchoOutput(this.outCtx);
+        await this.echoOutput.open();
+      }
       await this.beforeConnect();
 
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
+          autoGainControl: !needsEchoOutput(),
           channelCount: 1,
         },
       });
@@ -644,7 +651,8 @@ export default class DannaGeminiLive {
 
     const src = this.outCtx.createBufferSource();
     src.buffer = buffer;
-    src.connect(this.outCtx.destination);
+    this.echoOutput?.resume();
+    src.connect(this.echoOutput?.input || this.outCtx.destination);
 
     const now = this.outCtx.currentTime;
     const startAt = Math.max(now + 0.02, this.nextPlayTime);
@@ -666,6 +674,7 @@ export default class DannaGeminiLive {
   }
 
   stopPlayback() {
+    this.echoOutput?.interrupt();
     for (const src of this.playing) {
       try { src.stop(); } catch {}
     }
@@ -809,6 +818,8 @@ export default class DannaGeminiLive {
   }
 
   disconnect(reason = "manual") {
+    this.echoOutput?.close();
+    this.echoOutput = null;
     clearInterval(this.watchdog);
     this.watchdog = null;
 
