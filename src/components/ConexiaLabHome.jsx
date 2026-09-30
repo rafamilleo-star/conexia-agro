@@ -1,3 +1,4 @@
+import { saveDannaCapture, linkDannaCapture, updateDannaContact, capturePerson } from "../lib/dannaCapture.js";
 import React, { forwardRef, useImperativeHandle, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../utils/supabase";
 import { computePriorities } from "../../shared/priorityEngine.js";
@@ -621,7 +622,12 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   const [input, setInput] = useState("");
   const [lastQuestion, setLastQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  // danna-capture-v1
   const [draft, setDraft] = useState(null);
+  const [pendingContact, setPendingContact] = useState(null);
+  const [contactNameInput, setContactNameInput] = useState("");
+  const pendingContactRef = useRef(null);
+  const captureBusyRef = useRef(false);
   const [connectionData, setConnectionData] = useState(null);
   const [error, setError] = useState("");
   const [showText, setShowText] = useState(false);
@@ -1120,6 +1126,16 @@ Responda SOMENTE JSON válido:
 
     if (isStaleTurn(turnId)) return;
 
+    parsed.sourceText = text;
+    const exactMatches = contacts.filter(c =>
+      parsed.contactName && normalize(c.name) === normalize(parsed.contactName)
+    );
+    if (!contacts.some(c => c.id === parsed.existingContactId)) {
+      parsed.existingContactId = null;
+    }
+    if (parsed.contactName) {
+      parsed.existingContactId = exactMatches.length === 1 ? exactMatches[0].id : null;
+    }
     setDraft(parsed);
     setCurrentView("capture");
 
@@ -1266,7 +1282,7 @@ Responda SOMENTE JSON válido:
     const interactionsForAI = (interactionsRes.data || [])
       .slice(0, 200)
       .map(i => ({
-        person: contactName(i.contact_id) || "desconhecido",
+        person: contactName(i.contact_id) || capturePerson(i.description) || "a identificar",
         date: i.created_at,
         type: i.type || "",
         description: (i.description || "").slice(0, 400),
@@ -1815,6 +1831,22 @@ Responda SOMENTE JSON:
       return;
     }
 
+    if (pendingContactRef.current) {
+      if (/^(sim|pode|pode adicionar|pode cadastrar|quero|adiciona|adicionar|adicionar agora|cadastra|cadastrar|cadastrar agora)[.! ]*$/.test(n)) {
+        await addCapturedContact();
+        return;
+      }
+      if (/^(nao|agora nao|nao agora|depois|mais tarde|nao quero)[.! ]*$/.test(n)) {
+        declineCapturedContact();
+        return;
+      }
+      const named = /^(?:adicionar|cadastrar)\s+(.+?)[.!]*$/i.exec(line);
+      if (named) {
+        await addCapturedContact(named[1]);
+        return;
+      }
+    }
+
     if (currentView === "capture" && draft) {
       if (
         /^(sim|pode|salva|salvar|confirma|confirmar|correto|isso|certo|exato|perfeito)/.test(n)
@@ -1900,122 +1932,117 @@ Responda SOMENTE JSON:
     }
   };
 
-  const confirmCapture = async () => {
-    if (!draft) return;
+  const refreshCaptureData = async () => {
+    try { await onDataChanged?.(); }
+    catch (error) {
+      console.warn("[Danna] Registro salvo; atualização da tela falhou:", error);
+    }
+  };
 
+  const rememberCapture = saved => {
+    lastSavedContextRef.current = saved;
+    sessionContextRef.current.lastSavedInteraction = saved;
+    sessionContextRef.current.activePerson = saved.contactName;
+    sessionContextRef.current.activePeople =
+      saved.contactName ? [saved.contactName] : [];
+    sessionContextRef.current.activeTopics = saved.tags || [];
+    sessionContextRef.current.lastView = "saved";
+  };
+
+  const declineCapturedContact = () => {
+    pendingContactRef.current = null;
+    setPendingContact(null);
+    const message =
+      "Tudo bem. O relato continua salvo, sem adicionar a pessoa à sua rede.";
+    setAnswer(message);
+    speak(message, true);
+  };
+
+  const addCapturedContact = async explicitName => {
+    const saved = pendingContactRef.current;
+    if (!saved || captureBusyRef.current) return;
+
+    const name = String(
+      explicitName || contactNameInput || saved.contactName || ""
+    ).trim();
+
+    if (!name) {
+      const message =
+        "O relato já está salvo. Para cadastrar, diga 'adicionar' seguido do nome da pessoa, ou escreva o nome abaixo.";
+      setAnswer(message);
+      speak(message, true);
+      return;
+    }
+
+    captureBusyRef.current = true;
+    setError("");
+
+    try {
+      const linked = await linkDannaCapture(supabase, userId, saved, name);
+      rememberCapture(linked);
+      pendingContactRef.current = null;
+      setPendingContact(null);
+
+      try { await updateDannaContact(supabase, userId, linked); }
+      catch (error) {
+        console.warn("[Danna] Pessoa vinculada; próximo passo não atualizado:", error);
+      }
+
+      const message =
+        `Pronto. ${linked.contactName} está na sua rede e vinculado ao relato que já salvei.`;
+      setAnswer(message);
+      await refreshCaptureData();
+      speak(message, true);
+    } catch (error) {
+      setError(
+        `Seu relato está salvo. Não consegui concluir o cadastro: ${error.message}`
+      );
+      setVoiceState("listening");
+    } finally {
+      captureBusyRef.current = false;
+    }
+  };
+
+  const confirmCapture = async () => {
+    if (!draft || captureBusyRef.current) return;
+
+    captureBusyRef.current = true;
     setVoiceState("thinking");
     setError("");
 
     try {
-      let contactId = draft.existingContactId || null;
-
-      let contact =
-        contacts.find(c => c.id === contactId) || null;
-
-      if (!contactId) {
-        const { data, error } = await supabase
-          .from("contacts")
-          .insert({
-            user_id: userId,
-            name: draft.contactName,
-            company: draft.company || null,
-            role: draft.role || null,
-            status: "active",
-          })
-          .select("id,name,company,role")
-          .single();
-
-        if (error) throw error;
-
-        contactId = data.id;
-        contact = data;
-      }
-
-      const savedContext = {
-        contactId,
-        contactName: draft.contactName || contact?.name || null,
-        company: draft.company || contact?.company || null,
-        role: draft.role || contact?.role || null,
-        interactionType: draft.interactionType || "outro",
-        description: draft.description || lastQuestion,
-        sentiment: draft.sentiment || "neutro",
-        tags: Array.isArray(draft.tags) ? draft.tags.slice(0, 5) : [],
-        nextAction: draft.nextAction || null,
-        nextActionDate: draft.nextActionDate || null,
-        savedAt: new Date().toISOString(),
-      };
-
-      const { error: intErr } = await supabase
-        .from("interactions")
-        .insert({
-          user_id: userId,
-          contact_id: contactId,
-          type: draft.interactionType || "outro",
-          description: draft.description || lastQuestion,
-          sentiment: draft.sentiment || "neutro",
-          tags: Array.isArray(draft.tags)
-            ? draft.tags.slice(0, 5)
-            : [],
-        });
-
-      if (intErr) throw intErr;
-
-      const patch = {
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      if (draft.nextAction) {
-        patch.next_action = draft.nextAction;
-      }
-
-      if (draft.nextActionDate) {
-        patch.next_action_date = draft.nextActionDate;
-      }
-
-      if (!contact?.company && draft.company) {
-        patch.company = draft.company;
-      }
-
-      if (!contact?.role && draft.role) {
-        patch.role = draft.role;
-      }
-
-      const { error: upErr } = await supabase
-        .from("contacts")
-        .update(patch)
-        .eq("id", contactId)
-        .eq("user_id", userId);
-
-      if (upErr) throw upErr;
-
-      lastSavedContextRef.current = savedContext;
-
-      sessionContextRef.current.lastSavedInteraction = savedContext;
-      sessionContextRef.current.activePerson = savedContext.contactName;
-      sessionContextRef.current.activePeople =
-        savedContext.contactName ? [savedContext.contactName] : [];
-      sessionContextRef.current.activeTopics = savedContext.tags || [];
-      sessionContextRef.current.lastView = "saved";
-      sessionContextRef.current.lastQuestion = lastQuestion;
-
-      const who = savedContext.contactName || "essa pessoa";
-
+      const saved = await saveDannaCapture(supabase, userId, draft, contacts);
+      rememberCapture(saved);
       setDraft(null);
 
-      const confirmation = `Pronto. Registrei com ${who}.`;
+      pendingContactRef.current = saved.needsContact ? saved : null;
+      setPendingContact(pendingContactRef.current);
+      setContactNameInput(saved.contactName || "");
 
-      setAnswer(confirmation);
+      let message;
+
+      if (saved.needsContact) {
+        message = saved.contactName
+          ? `Registrei o relato. Vi que ${saved.contactName} não está na sua lista. Você quer adicionar essa pessoa agora?`
+          : "Registrei o relato. Não consegui identificar o nome da pessoa. Se quiser cadastrá-la, diga 'adicionar' seguido do nome. Você também pode deixar para depois.";
+      } else {
+        message = `Pronto. Registrei com ${saved.contactName || "essa pessoa"}.`;
+
+        try { await updateDannaContact(supabase, userId, saved); }
+        catch (error) {
+          console.warn("[Danna] Relato salvo; próximo passo não atualizado:", error);
+        }
+      }
+
+      setAnswer(message);
       setCurrentView("saved");
-
-      await onDataChanged?.();
-
-      speak(
-        `${confirmation} Podemos continuar falando sobre essa reunião.`,
-        true
-      );
-    } catch (e) {
-      setError(`Não salvei nada: ${e.message}`);
+      await refreshCaptureData();
+      speak(message, true);
+    } catch (error) {
+      setError(`Não consegui salvar o relato: ${error.message}`);
       setVoiceState("idle");
+    } finally {
+      captureBusyRef.current = false;
     }
   };
 
@@ -2232,6 +2259,40 @@ Responda SOMENTE JSON:
             }}>
               {answer}
             </div>
+            {pendingContact && (
+              <div style={{ marginTop: 16 }}>
+                <input
+                  aria-label="Nome da pessoa para adicionar"
+                  placeholder="Nome da pessoa"
+                  value={contactNameInput}
+                  onChange={event => setContactNameInput(event.target.value)}
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    marginBottom: 12,
+                    maxWidth: "100%",
+                  }}
+                />
+                <div style={{
+                  display: "flex",
+                  gap: 12,
+                  justifyContent: "center",
+                }}>
+                  <button
+                    onClick={() => addCapturedContact()}
+                    style={secondaryButton}
+                  >
+                    Adicionar agora
+                  </button>
+                  <button
+                    onClick={declineCapturedContact}
+                    style={secondaryButton}
+                  >
+                    Agora não
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
