@@ -4089,7 +4089,8 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           }}
           onDataChanged={load}
           voiceEngine={voiceEngine}
-          key={`danna-${voiceEngine}`}
+          autoStart={true}
+          key={`danna-${user?.id}-${voiceEngine}`}
         />
         </div>
       );
@@ -7104,3 +7105,4 @@ function App() {
 
 
 export default App;
+
