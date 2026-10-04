@@ -11,6 +11,10 @@ import DannaLive from "../lib/dannaLive";
 import DannaGeminiLive from "../lib/dannaGeminiLive";
 import DannaFishLive from "../lib/dannaFishLive";
 import { buildDannaGreeting } from "../lib/dannaGreeting.js";
+import {
+  resolveDannaSpokenName, isNetworkQuestion,
+  buildNetworkOverview, extractPendingPersonName,
+} from "../lib/dannaConversation.js";
 
 const K = {
   bg: "#0D0D0F",
@@ -610,6 +614,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   onOpenContact,
   onDataChanged,
   voiceEngine = "openai",
+  autoStart = false,
 }, ref) {
   const [prefs, setPrefs] = useState(null);
   const [selectedVoiceEngine, setSelectedVoiceEngine] = useState(voiceEngine);
@@ -628,6 +633,8 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   const [contactNameInput, setContactNameInput] = useState("");
   const pendingContactRef = useRef(null);
   const captureBusyRef = useRef(false);
+  const pendingNameRef = useRef({ awaiting: false, candidate: null });
+  const autoStartAttemptedRef = useRef(false);
   const [connectionData, setConnectionData] = useState(null);
   const [error, setError] = useState("");
   const [showText, setShowText] = useState(false);
@@ -721,8 +728,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
     firstName ||
     "";
 
-  const spokenName =
-    String(displayName || "").trim().split(/\s+/)[0] || "";
+  const spokenName = resolveDannaSpokenName(prefs, profileSnapshot, firstName);
 
   const firstContactStorageKey = userId
     ? `conexia_first_contact_completed_${userId}`
@@ -974,6 +980,15 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
       live.disconnect("opening_cancelled");
       return;
     }
+    if (live.outCtx && live.outCtx.state !== "running") {
+      live.disconnect("audio_requires_gesture");
+      liveRef.current = null;
+      conversationActiveRef.current = false;
+      setConversationActive(false);
+      setVoiceState("idle");
+      setError("Toque em Conversar para liberar o áudio neste navegador.");
+      return;
+    }
     conversationActiveRef.current = true;
 
     setConversationActive(true);
@@ -993,10 +1008,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
 
     const openingPrefs = loaded?.prefs || prefs;
     const openingProfile = loaded?.profile || profileSnapshot;
-    const openingName = String(
-      openingPrefs?.preferred_name || openingProfile?.first_name ||
-      openingProfile?.name || firstName || ""
-    ).trim().split(/\s+/)[0] || "";
+    const openingName = resolveDannaSpokenName(openingPrefs, openingProfile, firstName);
     const openingTimeZone = openingProfile?.timezone || timeZone;
     let storedFirstContact = false;
     try {
@@ -1005,28 +1017,11 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
       );
     } catch {}
 
-    if (!openingPrefs?.first_contact_completed && !storedFirstContact) {
-      speak(
-        `Oi${openingName ? `, ${openingName}` : ""}. Eu sou a Danna, ` +
-        "a inteligência relacional do CONÉXIA. Me conta uma pessoa importante para você hoje.",
-        true
-      );
-      greetedThisSessionRef.current = true;
-      void markFirstContactCompleted();
-      return;
-    }
-
-    let brain = null;
-    try {
-      brain = await loadDannaKnowledge();
-    } catch (error) {
-      console.warn("[Danna] Abertura sem snapshot:", error);
-    }
-    if (isStaleTurn(greetingTurn) || liveRef.current !== live ||
-        !conversationActiveRef.current) return;
-
-    speak(buildDannaGreeting(brain, openingName, openingTimeZone), true);
     greetedThisSessionRef.current = true;
+    speak(buildDannaGreeting(null, openingName, openingTimeZone), true);
+    if (!openingPrefs?.first_contact_completed && !storedFirstContact) {
+      void markFirstContactCompleted();
+    }
   };
 
   useImperativeHandle(ref, () => ({
@@ -1036,6 +1031,14 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
       }
     },
   }));
+
+  // Tenta iniciar ao montar a tela. Se o navegador exigir um gesto,
+  // o botão existente continua disponível, sem repetição automática.
+  useEffect(() => {
+    if (!autoStart || !userId || prefsLoading || autoStartAttemptedRef.current) return;
+    autoStartAttemptedRef.current = true;
+    if (!liveRef.current && !conversationActiveRef.current) void beginConversation();
+  }, [autoStart, userId, prefsLoading]);
 
   const findContactByName = name => {
     const n = normalize(name);
@@ -1493,6 +1496,7 @@ Responda SOMENTE JSON válido:
               calendarConnected: Boolean(profile.calendar_ics_url),
             }
           : null,
+        network_overview: buildNetworkOverview(people, interactionsRes.data || [], now),
         counts: {
           contacts: people.length,
           interactionsLoaded: (interactionsRes.data || []).length,
@@ -1568,10 +1572,13 @@ Responda SOMENTE JSON válido:
         sentiment: i.sentiment || "",
       }));
 
-    const ctx = {
-      ...sessionContextRef.current,
-      lastSavedInteraction: lastSavedContextRef.current,
-    };
+    const networkScope = isNetworkQuestion(text);
+    const ctx = networkScope
+      ? { scope: "network", activePerson: null, activePeople: [], lastSavedInteraction: null }
+      : { ...sessionContextRef.current, lastSavedInteraction: lastSavedContextRef.current };
+    const promptOverview = brain?.overview && networkScope
+      ? { ...brain.overview, profile: { ...brain.overview.profile, lastDiscussedPerson: null, lastDiscussedAt: null } }
+      : brain?.overview;
 
     const prompt = `
 Você é o CONÉXIA, um cérebro conversacional especializado EXCLUSIVAMENTE em inteligência relacional.
@@ -1633,13 +1640,16 @@ ${JSON.stringify(ctx)}
 ${JSON.stringify(recentTurnsRef.current)}
 
 ÚLTIMA INTERAÇÃO SALVA NESTA SESSÃO:
-${JSON.stringify(lastSavedContextRef.current)}
+${JSON.stringify(networkScope ? null : lastSavedContextRef.current)}
+
+ESCOPO DESTA PERGUNTA:
+${networkScope ? "REDE INTEIRA: use network_overview e todas as pessoas. O foco de turnos anteriores não limita esta análise. Comece pela visão do conjunto, depois cite exemplos de pessoas diferentes quando existirem evidências. Nunca transforme um contato na análise da rede inteira. Não invente uma nota de saúde. Se a amostra for limitada ou o snapshot falhar, declare a limitação." : "Responda ao pedido atual; contexto anterior serve apenas para referências relevantes."}
 
 PERGUNTA ATUAL:
 ${text}
 
 SNAPSHOT FRESCO DO CONÉXIA (lido agora do banco; fonte de verdade para agenda, memória relacional, alertas, sinais e pontos de atenção):
-${brain ? JSON.stringify(brain.overview) : "indisponível nesta consulta; use somente pessoas e interações abaixo e avise se a pergunta depender de agenda ou memória."}
+${brain ? JSON.stringify(promptOverview) : "indisponível nesta consulta; use somente pessoas e interações abaixo e avise se a pergunta depender de agenda ou memória."}
 
 PESSOAS DA REDE:
 ${JSON.stringify(people)}
@@ -1719,9 +1729,8 @@ REGRAS DE RESPOSTA:
     sessionContextRef.current.activeTopics = parsed.topics || [];
     sessionContextRef.current.lastView = parsed.view || "answer";
 
-    if (parsed.activePerson) {
-      sessionContextRef.current.activePerson = parsed.activePerson;
-    }
+    sessionContextRef.current.activePerson = networkScope ? null : (parsed.activePerson || null);
+    if (networkScope) sessionContextRef.current.activePeople = [];
 
     if (
       parsed.view === "connection" &&
@@ -1832,6 +1841,24 @@ Responda SOMENTE JSON:
     }
 
     if (pendingContactRef.current) {
+      const nameState = pendingNameRef.current;
+      if (nameState.candidate && /^(sim|isso|correto|certo|pode|pode cadastrar|pode adicionar)[.! ]*$/.test(n)) {
+        await addCapturedContact(nameState.candidate);
+        return;
+      }
+      if (nameState.candidate && /^(nao|nao e|nome errado|corrigir|corrige)[.! ]*$/.test(n)) {
+        pendingNameRef.current = { awaiting: true, candidate: null };
+        speak("Qual é o nome correto? O relato continua salvo.", true);
+        return;
+      }
+      if (nameState.awaiting) {
+        const name = extractPendingPersonName(line);
+        if (name) {
+          pendingNameRef.current = { awaiting: false, candidate: name };
+          speak(`Você quer cadastrar ${name} e vincular ao relato que já salvei?`, true);
+          return;
+        }
+      }
       if (/^(sim|pode|pode adicionar|pode cadastrar|quero|adiciona|adicionar|adicionar agora|cadastra|cadastrar|cadastrar agora)[.! ]*$/.test(n)) {
         await addCapturedContact();
         return;
@@ -1895,7 +1922,7 @@ Responda SOMENTE JSON:
         sessionContextRef.current.activePerson ||
         lastSavedContextRef.current
           ? "Estou aqui. Pode continuar de onde paramos."
-          : "Estou aqui. Pode falar sobre uma pessoa, relação, reunião ou situação da sua rede.";
+          : "Oi. Como você está? O que vamos ver hoje?";
 
       setAnswer(response);
       setCurrentView("answer");
@@ -1951,6 +1978,7 @@ Responda SOMENTE JSON:
 
   const declineCapturedContact = () => {
     pendingContactRef.current = null;
+    pendingNameRef.current = { awaiting: false, candidate: null };
     setPendingContact(null);
     const message =
       "Tudo bem. O relato continua salvo, sem adicionar a pessoa à sua rede.";
@@ -1968,7 +1996,8 @@ Responda SOMENTE JSON:
 
     if (!name) {
       const message =
-        "O relato já está salvo. Para cadastrar, diga 'adicionar' seguido do nome da pessoa, ou escreva o nome abaixo.";
+        "Claro. Qual é o nome da pessoa? O relato já está salvo.";
+      pendingNameRef.current = { awaiting: true, candidate: null };
       setAnswer(message);
       speak(message, true);
       return;
@@ -1981,6 +2010,7 @@ Responda SOMENTE JSON:
       const linked = await linkDannaCapture(supabase, userId, saved, name);
       rememberCapture(linked);
       pendingContactRef.current = null;
+      pendingNameRef.current = { awaiting: false, candidate: null };
       setPendingContact(null);
 
       try { await updateDannaContact(supabase, userId, linked); }
@@ -2017,6 +2047,7 @@ Responda SOMENTE JSON:
 
       pendingContactRef.current = saved.needsContact ? saved : null;
       setPendingContact(pendingContactRef.current);
+      pendingNameRef.current = { awaiting: saved.needsContact, candidate: null };
       setContactNameInput(saved.contactName || "");
 
       let message;
@@ -2024,7 +2055,7 @@ Responda SOMENTE JSON:
       if (saved.needsContact) {
         message = saved.contactName
           ? `Registrei o relato. Vi que ${saved.contactName} não está na sua lista. Você quer adicionar essa pessoa agora?`
-          : "Registrei o relato. Não consegui identificar o nome da pessoa. Se quiser cadastrá-la, diga 'adicionar' seguido do nome. Você também pode deixar para depois.";
+          : "Registrei o relato. Qual é o nome da pessoa que você quer vincular? Se preferir, podemos deixar para depois.";
       } else {
         message = `Pronto. Registrei com ${saved.contactName || "essa pessoa"}.`;
 
