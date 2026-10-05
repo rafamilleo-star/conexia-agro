@@ -1,3 +1,5 @@
+import ContactCircleField from "./ContactCircleField";
+import { circlePath, resolveCircle } from "../../shared/networkCircles.js";
 import { saveDannaCapture, linkDannaCapture, updateDannaContact, capturePerson } from "../lib/dannaCapture.js";
 import React, { forwardRef, useImperativeHandle, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../utils/supabase";
@@ -613,9 +615,12 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   interactions = [],
   onOpenContact,
   onDataChanged,
+  network,
   voiceEngine = "openai",
   autoStart = false,
 }, ref) {
+  const networkRef = useRef(network);
+  networkRef.current = network;
   const [prefs, setPrefs] = useState(null);
   const [selectedVoiceEngine, setSelectedVoiceEngine] = useState(voiceEngine);
   const [profileSnapshot, setProfileSnapshot] = useState(null);
@@ -630,6 +635,9 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   // danna-capture-v1
   const [draft, setDraft] = useState(null);
   const [pendingContact, setPendingContact] = useState(null);
+  const [pendingGrouping, setPendingGrouping] = useState(null);
+  const pendingGroupingRef = useRef(null);
+  const [groupChoice, setGroupChoice] = useState("");
   const [contactNameInput, setContactNameInput] = useState("");
   const pendingContactRef = useRef(null);
   const captureBusyRef = useRef(false);
@@ -1573,12 +1581,23 @@ Responda SOMENTE JSON válido:
       }));
 
     const networkScope = isNetworkQuestion(text);
-    const ctx = networkScope
+    const conversationContext = networkScope
       ? { scope: "network", activePerson: null, activePeople: [], lastSavedInteraction: null }
       : { ...sessionContextRef.current, lastSavedInteraction: lastSavedContextRef.current };
     const promptOverview = brain?.overview && networkScope
       ? { ...brain.overview, profile: { ...brain.overview.profile, lastDiscussedPerson: null, lastDiscussedAt: null } }
       : brain?.overview;
+    const ctx = {
+      ...conversationContext,
+      networkOrganization: networkRef.current
+        ? networkRef.current.circles.map(c => ({
+            id: c.id,
+            path: circlePath(networkRef.current.circles, c.id),
+            contactIds: Object.keys(networkRef.current.assignments)
+              .filter(id => networkRef.current.assignments[id] === c.id),
+          }))
+        : [],
+    };
 
     const prompt = `
 Você é o CONÉXIA, um cérebro conversacional especializado EXCLUSIVAMENTE em inteligência relacional.
@@ -1840,6 +1859,11 @@ Responda SOMENTE JSON:
       return;
     }
 
+    if (pendingGroupingRef.current) {
+      await handleCircleChoice(line);
+      return;
+    }
+
     if (pendingContactRef.current) {
       const nameState = pendingNameRef.current;
       if (nameState.candidate && /^(sim|isso|correto|certo|pode|pode cadastrar|pode adicionar)[.! ]*$/.test(n)) {
@@ -1976,6 +2000,94 @@ Responda SOMENTE JSON:
     sessionContextRef.current.lastView = "saved";
   };
 
+
+  const askContactCircle = (contactId, contactName) => {
+    const network = networkRef.current;
+    if (!network || network.assignments[contactId]) return "";
+    const pending = { contactId, contactName };
+    pendingGroupingRef.current = pending;
+    setPendingGrouping(pending);
+    setGroupChoice("");
+    const examples = network.circles
+      .filter(c => !c.parent_id).slice(0, 5).map(c => c.name);
+    return ` Em qual círculo você quer colocar ${contactName}? ${examples.length ? `Você tem ${examples.join(", ")}. ` : "Você pode criar seu primeiro círculo. "}Se preferir, pode organizar depois.`;
+  };
+
+  const finishCircleChoice = async circleId => {
+    const network = networkRef.current;
+    const pending = pendingGroupingRef.current;
+    if (!pending || captureBusyRef.current) return;
+    if (!circleId) {
+      pendingGroupingRef.current = null;
+      setPendingGrouping(null);
+      const message = `Tudo bem. ${pending.contactName} continua salvo. Você pode organizar depois na Minha rede.`;
+      setAnswer(message);
+      speak(message, true);
+      return;
+    }
+    if (!network || network.loading || network.error) {
+      speak("Ainda não consegui carregar seus círculos. Tente novamente ou escolha organizar depois na tela.", true);
+      return;
+    }
+    captureBusyRef.current = true;
+    try {
+      await network.assign(pending.contactId, circleId);
+      const message = `Pronto. ${pending.contactName} está em ${circlePath(network.circles, circleId)}.`;
+      pendingGroupingRef.current = null;
+      setPendingGrouping(null);
+      setAnswer(message);
+      speak(message, true);
+    } catch (e) {
+      setError(e.message);
+      setVoiceState("listening");
+    } finally {
+      captureBusyRef.current = false;
+    }
+  };
+
+  const handleCircleChoice = async line => {
+    const network = networkRef.current;
+    const n = normalize(line).replace(/[.!?]+$/, "");
+    if (/^(depois|organizo depois|organizar depois|mais tarde|agora nao|nao|cancelar|cancela)$/.test(n)) {
+      await finishCircleChoice(null);
+      return;
+    }
+    if (!network || network.loading || network.error) {
+      speak("Escolha organizar depois ou tente novamente quando seus círculos carregarem.", true);
+      return;
+    }
+    const resolved = resolveCircle(network.circles, line.replace(/[.!?]+$/, ""));
+    if (resolved) {
+      await finishCircleChoice(resolved.id);
+      return;
+    }
+    const createMatch = /^(?:criar|crie|cria)\s+(?:um\s+)?(?:circulo|círculo|grupo|subgrupo)\s+(.+?)(?:\s+(?:em|dentro de)\s+(.+))?$/i.exec(line.replace(/[.!?]+$/, ""));
+    if (createMatch && !captureBusyRef.current) {
+      const parent = createMatch[2]
+        ? resolveCircle(network.circles, createMatch[2])
+        : null;
+      if (createMatch[2] && !parent) {
+        speak("Não consegui identificar o círculo principal. Diga o caminho completo ou escolha na tela.", true);
+        return;
+      }
+      captureBusyRef.current = true;
+      try {
+        const created = await network.create(createMatch[1], parent?.id || null);
+        setGroupChoice(created.id);
+        const personName = pendingGroupingRef.current?.contactName || "a pessoa";
+        setAnswer(`Criei ${created.name}. Selecione Salvar grupo para colocar ${personName} nele.`);
+        speak(`Criei ${created.name}. Diga ${created.name} para colocar a pessoa nele, ou confirme na tela.`, true);
+      } catch (e) {
+        setError(e.message);
+        setVoiceState("listening");
+      } finally {
+        captureBusyRef.current = false;
+      }
+      return;
+    }
+    speak("Escolha o nome de um círculo, diga criar círculo seguido do nome, ou diga organizar depois. Para subgrupos com nomes iguais, diga o caminho completo ou escolha na tela.", true);
+  };
+
   const declineCapturedContact = () => {
     pendingContactRef.current = null;
     pendingNameRef.current = { awaiting: false, candidate: null };
@@ -2019,7 +2131,7 @@ Responda SOMENTE JSON:
       }
 
       const message =
-        `Pronto. ${linked.contactName} está na sua rede e vinculado ao relato que já salvei.`;
+        `Pronto. ${linked.contactName} está na sua rede e vinculado ao relato que já salvei.` + askContactCircle(linked.contactId, linked.contactName);
       setAnswer(message);
       await refreshCaptureData();
       speak(message, true);
@@ -2290,6 +2402,23 @@ Responda SOMENTE JSON:
             }}>
               {answer}
             </div>
+            {pendingGrouping && network && <div style={{ marginTop: 16 }}>
+              <ContactCircleField
+                network={network}
+                value={groupChoice}
+                onChange={setGroupChoice}
+                label={`Onde colocar ${pendingGrouping.contactName}?`}
+              />
+              <button
+                disabled={network.loading || Boolean(network.error)}
+                onClick={() => finishCircleChoice(groupChoice || null)}
+                style={secondaryButton}
+              >Salvar grupo</button>{" "}
+              <button
+                onClick={() => finishCircleChoice(null)}
+                style={secondaryButton}
+              >Organizar depois</button>
+            </div>}
             {pendingContact && (
               <div style={{ marginTop: 16 }}>
                 <input

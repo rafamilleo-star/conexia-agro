@@ -2,7 +2,10 @@ import { flushSync } from "react-dom";
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
 import ConexiaLabHome from './components/ConexiaLabHome';
-import ConexiaTeiaEvolutiva from "./components/ConexiaTeiaEvolutiva";
+import ConexiaCircleNetwork from "./components/ConexiaCircleNetwork";
+import ContactCircleField from "./components/ContactCircleField";
+import ContactCircleAssignment from "./components/ContactCircleAssignment";
+import useNetworkCircles from "./lib/useNetworkCircles";
 import GuidedNetworkStart from './components/GuidedNetworkStart';
 import { computePriorities, calculateRelevance as calculateRelevanceCanonical, relationshipMomentum } from '../shared/priorityEngine.js';
 import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
@@ -2900,6 +2903,11 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
 
 /* ═══ CRM APP ═════════════════════════════════════════════ */
 function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
+  const network = useNetworkCircles(user?.id);
+  const [contactCircleDraft, setContactCircleDraft] = useState("");
+  const [circleFocus, setCircleFocus] = useState(null);
+  const [openedFromCircle, setOpenedFromCircle] = useState(false);
+  const [circleSaveNotice, setCircleSaveNotice] = useState("");
   const [view, setView] = useState("dash");
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
@@ -2936,6 +2944,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [selId, setSelId] = useState(null);
   const [editId, setEditId] = useState(null);
   const [modal, setModal] = useState(null);
+  useEffect(() => { setContactCircleDraft(""); }, [modal]);
   const [intCid, setIntCid] = useState(null);
   const [teiaFilter, setTeiaFilter] = useState("todos");
   const [teiaSel, setTeiaSel] = useState(null);
@@ -3178,6 +3187,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     if (error) { setDbgMsg("❌ " + error.message + " [" + error.code + "]"); return; }
     setDbgMsg("✅ Salvo: " + newContact?.name);
     if (newContact) {
+      if (contactCircleDraft) {
+        try { await network.assign(newContact.id, contactCircleDraft); }
+        catch (e) {
+          setCircleSaveNotice("Contato salvo. " + e.message + " Organize pela Minha rede.");
+        }
+      }
       trackEvent("contact_added", "contacts", { contactId: newContact.id });
       try {
         const p = profile || {};
@@ -4088,6 +4103,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             setView("contacts");
           }}
           onDataChanged={load}
+          network={network}
           voiceEngine={voiceEngine}
           autoStart={true}
           key={`danna-${user?.id}-${voiceEngine}`}
@@ -4239,7 +4255,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       const ci = CATS.find(c => c.value === sel.category);
       return (
         <div>
-          <button onClick={() => setSelId(null)} style={{ background: "none", border: "none", color: C.txM, cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 13, padding: "0 0 14px" }}>← Voltar</button>
+          <button onClick={() => {
+            setSelId(null);
+            if (openedFromCircle) setRedeSubTab("teia");
+            setOpenedFromCircle(false);
+          }} style={{ background: "none", border: "none", color: C.txM, cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 13, padding: "0 0 14px" }}>← Voltar</button>
+          <ContactCircleAssignment network={network} contactId={sel.id} />
           <div
             style={{
               background: C.card,
@@ -4500,11 +4521,15 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
 
   const renderTeia = () => (
-    <ConexiaTeiaEvolutiva
+    <ConexiaCircleNetwork
+      network={network}
+      initialFocus={circleFocus}
+      onFocusChange={setCircleFocus}
       contacts={cts}
       interactions={its}
       isPro={isPro}
       onOpenContact={(id) => {
+        setOpenedFromCircle(true);
         setSelId(id);
         setRedeSubTab("pessoas");
         setView("contacts");
@@ -4566,6 +4591,10 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
   const [redeSubTab, setRedeSubTab] = useState("teia"); // Teia como padrão — é o elemento mais diferenciado do produto, não devia ficar atrás de um clique extra
   const renderContacts = () => (
     <div>
+      {circleSaveNotice && <p role="alert" style={{ color: C.cor, fontSize: 12 }}>
+        {circleSaveNotice}
+        <button onClick={() => setCircleSaveNotice("")}>Fechar</button>
+      </p>}
       <div
         style={{
           display: "flex",
@@ -4573,7 +4602,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           marginBottom: isMobile ? 10 : 16,
         }}
       >
-        <button onClick={() => setRedeSubTab("pessoas")} style={{ background: redeSubTab === "pessoas" ? C.gD : "transparent", border: `1px solid ${redeSubTab === "pessoas" ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: redeSubTab === "pessoas" ? C.gold : C.txM, cursor: "pointer" }}>Pessoas</button>
+        <button onClick={() => { setRedeSubTab("pessoas"); setOpenedFromCircle(false); }} style={{ background: redeSubTab === "pessoas" ? C.gD : "transparent", border: `1px solid ${redeSubTab === "pessoas" ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: redeSubTab === "pessoas" ? C.gold : C.txM, cursor: "pointer" }}>Pessoas</button>
         <button onClick={() => setRedeSubTab("teia")} style={{ background: redeSubTab === "teia" ? C.gD : "transparent", border: `1px solid ${redeSubTab === "teia" ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: redeSubTab === "teia" ? C.gold : C.txM, cursor: "pointer" }}>Teia</button>
       </div>
       {redeSubTab === "pessoas" ? renderContactsList() : renderTeia()}
@@ -5590,6 +5619,7 @@ ${MENTORIA_LINK || true ? `
 
       {modal === "addC" && <Modal title="Novo contato" onClose={() => setModal(null)}>
         <Inp label="Nome *" value={cf.name} onChange={v => setCf({ ...cf, name: v })} placeholder="Nome completo" />
+        <ContactCircleField network={network} value={contactCircleDraft} onChange={setContactCircleDraft} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <Inp label="Empresa" value={cf.company} onChange={v => setCf({ ...cf, company: v })} placeholder="Empresa" />
           <Inp label="Cargo" value={cf.role} onChange={v => setCf({ ...cf, role: v })} placeholder="Cargo" />
