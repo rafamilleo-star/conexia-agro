@@ -1,0 +1,200 @@
+name: Apply Danna Contact Name Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply Danna contact-name fix
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/components/ConexiaLabHome.jsx")
+
+          if not path.exists():
+              raise SystemExit(
+                  "ERRO: src/components/ConexiaLabHome.jsx não encontrado."
+              )
+
+          content = path.read_text(encoding="utf-8")
+
+          # ============================================================
+          # FIX 1
+          # A Danna deve preservar o nome falado mesmo quando a pessoa
+          # ainda não existe na tabela contacts.
+          # ============================================================
+
+          old_prompt = '''Extraia apenas o que está explícito.
+          Não invente.
+          A descrição será exibida como memória pessoal do dono da rede:
+          escreva em primeira pessoa.
+
+          É proibido narrar como observador externo usando "o usuário".'''
+
+          new_prompt = '''Extraia apenas o que está explícito.
+          Não invente.
+
+          REGRA CRÍTICA SOBRE PESSOAS:
+          - "contactName" é SEMPRE o nome da pessoa mencionada explicitamente na FALA ATUAL ou, apenas quando a fala atual for continuação inequívoca, na CONVERSA RECENTE.
+          - Extraia primeiro o nome falado. Só depois verifique se essa pessoa existe em CONTATOS.
+          - Preserve "contactName" mesmo quando essa pessoa NÃO existir em CONTATOS.
+          - A ausência da pessoa em CONTATOS NUNCA é motivo para retornar "contactName": null.
+          - "existingContactId" é independente de "contactName".
+          - Só preencha "existingContactId" quando houver correspondência clara com um contato cadastrado.
+          - Se a pessoa foi mencionada mas não está cadastrada, retorne obrigatoriamente o nome ouvido em "contactName" e "existingContactId": null.
+          - Não substitua uma pessoa não cadastrada por um contato de nome parecido.
+          - Não descarte sobrenomes.
+          - Preserve o nome da forma mais completa possível.
+
+          EXEMPLOS:
+
+          FALA ATUAL:
+          "Conversei com Douglas Oliveira hoje sobre o projeto."
+
+          Se Douglas Oliveira NÃO estiver em CONTATOS:
+          {
+            "contactName": "Douglas Oliveira",
+            "existingContactId": null
+          }
+
+          FALA ATUAL:
+          "Falei com João da Silva."
+
+          Se João da Silva estiver em CONTATOS:
+          {
+            "contactName": "João da Silva",
+            "existingContactId": "id-do-contato"
+          }
+
+          A descrição será exibida como memória pessoal do dono da rede:
+          escreva em primeira pessoa.
+
+          É proibido narrar como observador externo usando "o usuário".'''
+
+          if old_prompt not in content:
+              raise SystemExit(
+                  "ERRO: bloco do prompt não encontrado. "
+                  "Nenhuma alteração foi feita."
+              )
+
+          content = content.replace(
+              old_prompt,
+              new_prompt,
+              1
+          )
+
+          # ============================================================
+          # FIX 2
+          # Depois de salvar uma interação com pessoa ainda não
+          # cadastrada, manter o nome como candidato pendente.
+          #
+          # Assim:
+          #
+          # Danna:
+          # "Douglas Oliveira não está na sua lista.
+          #  Quer adicioná-lo?"
+          #
+          # Rafael:
+          # "Sim."
+          #
+          # -> cadastra Douglas Oliveira diretamente.
+          # ============================================================
+
+          old_pending = '''      pendingNameRef.current = { awaiting: saved.needsContact, candidate: null };
+                setContactNameInput(saved.contactName || "");'''
+
+          new_pending = '''      pendingNameRef.current = {
+                  awaiting: saved.needsContact && !saved.contactName,
+                  candidate:
+                    saved.needsContact && saved.contactName
+                      ? saved.contactName
+                      : null,
+                };
+                setContactNameInput(saved.contactName || "");'''
+
+          if old_pending not in content:
+              raise SystemExit(
+                  "ERRO: bloco pendingNameRef não encontrado. "
+                  "Nenhuma alteração foi gravada."
+              )
+
+          content = content.replace(
+              old_pending,
+              new_pending,
+              1
+          )
+
+          path.write_text(content, encoding="utf-8")
+
+          print("")
+          print("==============================================")
+          print("FIX APLICADO COM SUCESSO")
+          print("==============================================")
+          print("")
+          print("Arquivo:")
+          print("src/components/ConexiaLabHome.jsx")
+          print("")
+          print("Comportamento esperado:")
+          print("")
+          print('Rafael: "Conversei com Douglas Oliveira hoje."')
+          print("")
+          print("Danna deve manter:")
+          print('contactName = "Douglas Oliveira"')
+          print("existingContactId = null")
+          print("")
+          print("Depois de salvar:")
+          print(
+              'Danna: "Vi que Douglas Oliveira não está na sua lista. '
+              'Você quer adicionar essa pessoa agora?"'
+          )
+          print("")
+          print('Rafael: "Sim."')
+          print("")
+          print("Resultado:")
+          print("Douglas Oliveira é cadastrado e vinculado ao relato.")
+          print("==============================================")
+
+      - name: Verify changes
+        run: |
+          echo "===== DIFF ====="
+          git diff -- src/components/ConexiaLabHome.jsx
+
+          echo ""
+          echo "===== CHECK ====="
+
+          grep -n \
+            'Preserve "contactName" mesmo quando' \
+            src/components/ConexiaLabHome.jsx
+
+          grep -n \
+            'candidate:' \
+            src/components/ConexiaLabHome.jsx
+
+      - name: Commit and push
+        run: |
+          if git diff --quiet; then
+            echo "Nenhuma alteração para commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add src/components/ConexiaLabHome.jsx
+
+          git commit -m "fix: preserve unknown contact name in Danna capture"
+
+          git push origin main
