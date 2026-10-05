@@ -1,0 +1,42 @@
+name: "CONÉXIA — Aplicar círculos expansíveis"
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: conexia-network-circles
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar organização por círculos
+        run: python scripts/patch_network_circles.py
+      - name: Instalar dependências conforme o lockfile
+        run: npm ci
+      - name: Verificar caminhos dos círculos
+        run: node --test tests/networkCircles.test.js
+      - name: Compilar o aplicativo
+        run: npm run build
+      - name: Salvar alteração validada na main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.jsx src/components/ConexiaLabHome.jsx src/components/ConexiaCircleNetwork.jsx src/components/ContactCircleAssignment.jsx src/components/ContactCircleField.jsx src/lib/useNetworkCircles.js shared/networkCircles.js tests/networkCircles.test.js supabase/migrations/20261001003036_network_circles.sql
+          if git diff --cached --quiet; then
+            echo "Círculos já aplicados."
+          else
+            git commit -m "Organize contacts into expandable user-defined circles"
+            git push origin HEAD:main
+          fi
