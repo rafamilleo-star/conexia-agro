@@ -98,6 +98,13 @@ export default class DannaGeminiLive {
         : noop;
 
     this.localBargeIn = false;
+    this.geminiMicHeld = false;
+    this.geminiOutputOpen = false;
+    this.geminiFreshSpeech = false;
+    this.geminiSpeechMs = 0;
+    this.geminiManualMuted = false;
+    this.geminiReleaseTimer = null;
+    this.geminiTrackStates = new Map();
     this.micSpeechMs = 0;
     this.micSilenceMs = 0;
     this.micSpeechActive = false;
@@ -174,6 +181,11 @@ export default class DannaGeminiLive {
 
   setSpeaking(value) {
     const next = Boolean(value);
+
+    if (this.engine === "gemini") {
+      if (next) this.holdGeminiMic();
+      else this.releaseGeminiMicWhenDone();
+    }
 
     if (this.isSpeaking === next) return;
 
@@ -402,6 +414,82 @@ export default class DannaGeminiLive {
 
   async beforeConnect() {}
 
+
+  // gemini-echo-gate-v2
+  acceptGeminiMic(buffer) {
+    if (this.engine !== "gemini") return true;
+    if (this.geminiMicHeld || this.geminiManualMuted) return false;
+
+    const pcm = new Int16Array(buffer);
+    if (!pcm.length) return false;
+
+    let energy = 0;
+    for (const sample of pcm) {
+      energy += (sample / 32768) ** 2;
+    }
+
+    const rms = Math.sqrt(energy / pcm.length);
+
+    this.geminiSpeechMs = rms >= 0.005
+      ? this.geminiSpeechMs + pcm.length / INPUT_RATE * 1000
+      : 0;
+
+    if (this.geminiSpeechMs >= 128) {
+      this.geminiFreshSpeech = true;
+    }
+
+    return true;
+  }
+
+  holdGeminiMic() {
+    if (this.engine !== "gemini") return;
+
+    clearTimeout(this.geminiReleaseTimer);
+    this.geminiReleaseTimer = null;
+    this.geminiMicHeld = true;
+    this.geminiFreshSpeech = false;
+    this.geminiSpeechMs = 0;
+
+    for (const track of this.micStream?.getAudioTracks() || []) {
+      if (!this.geminiTrackStates.has(track)) {
+        this.geminiTrackStates.set(track, track.enabled);
+      }
+
+      track.enabled = false;
+    }
+  }
+
+  releaseGeminiMicWhenDone() {
+    if (this.engine !== "gemini" || !this.geminiMicHeld) return;
+    if (this.geminiOutputOpen || this.playing.size) return;
+
+    clearTimeout(this.geminiReleaseTimer);
+
+    this.geminiReleaseTimer = setTimeout(() => {
+      this.geminiReleaseTimer = null;
+
+      if (
+        !this.connected ||
+        this.geminiOutputOpen ||
+        this.playing.size
+      ) {
+        return;
+      }
+
+      for (const [track, enabled] of this.geminiTrackStates) {
+        if (track.readyState !== "ended") {
+          track.enabled = enabled && !this.geminiManualMuted;
+        }
+      }
+
+      this.geminiTrackStates.clear();
+      this.geminiMicHeld = false;
+      this.geminiFreshSpeech = false;
+      this.geminiSpeechMs = 0;
+      this.setStatus("listening");
+    }, 700);
+  }
+
   async startMic() {
     const blob = new Blob(
       [WORKLET_SOURCE],
@@ -431,6 +519,8 @@ export default class DannaGeminiLive {
       ) {
         return;
       }
+
+      if (!this.acceptGeminiMic(event.data)) return;
 
       if (this.localBargeIn) {
         this.checkMicActivity(event.data);
@@ -520,7 +610,8 @@ export default class DannaGeminiLive {
 
     if (!sc) return;
 
-    if (sc.interrupted) {
+    if (sc.interrupted && (this.engine !== "gemini" ||
+        (!this.geminiMicHeld && this.geminiFreshSpeech))) {
       this.interrupt();
       this.onUserSpeechStart();
       this.markActivity();
@@ -542,6 +633,10 @@ export default class DannaGeminiLive {
     }
 
     if (sc.turnComplete) {
+      if (this.engine === "gemini") {
+        this.geminiOutputOpen = false;
+        this.releaseGeminiMicWhenDone();
+      }
       const text = this.assistantBuffer.trim();
       this.assistantBuffer = "";
 
@@ -552,6 +647,20 @@ export default class DannaGeminiLive {
   }
 
   handleToolCall(calls) {
+    if (this.engine === "gemini") {
+      if (this.geminiMicHeld || !this.geminiFreshSpeech) {
+        if (!this.geminiMicHeld) this.outputSuppressed = true;
+
+        for (const call of calls) {
+          this.sendToolResponse(call, "");
+        }
+
+        return;
+      }
+
+      this.geminiFreshSpeech = false;
+      this.geminiSpeechMs = 0;
+    }
     const call =
       calls.find(c => c?.name === "conexia_responder") ||
       calls[0];
@@ -630,6 +739,11 @@ export default class DannaGeminiLive {
 
     if (!pcm.length) return;
 
+    if (this.engine === "gemini") {
+      this.geminiOutputOpen = true;
+      this.holdGeminiMic();
+    }
+
     const buffer = this.outCtx.createBuffer(
       1,
       pcm.length,
@@ -666,6 +780,9 @@ export default class DannaGeminiLive {
   }
 
   stopPlayback() {
+    if (this.engine === "gemini") {
+      this.geminiOutputOpen = false;
+    }
     for (const src of this.playing) {
       try { src.stop(); } catch {}
     }
@@ -717,12 +834,26 @@ export default class DannaGeminiLive {
   }
 
   mute() {
+    if (this.engine === "gemini") {
+      this.geminiManualMuted = true;
+    }
     this.micStream?.getAudioTracks().forEach(t => {
       t.enabled = false;
     });
   }
 
   unmute() {
+    if (this.engine === "gemini") {
+      this.geminiManualMuted = false;
+
+      if (this.geminiMicHeld) {
+        for (const track of this.geminiTrackStates.keys()) {
+          this.geminiTrackStates.set(track, true);
+        }
+
+        return;
+      }
+    }
     this.micStream?.getAudioTracks().forEach(t => {
       t.enabled = true;
     });
@@ -867,6 +998,15 @@ export default class DannaGeminiLive {
     this.connected = false;
     this.connecting = false;
     this.setupDone = false;
+
+    clearTimeout(this.geminiReleaseTimer);
+    this.geminiReleaseTimer = null;
+    this.geminiTrackStates.clear();
+    this.geminiMicHeld = false;
+    this.geminiOutputOpen = false;
+    this.geminiFreshSpeech = false;
+    this.geminiSpeechMs = 0;
+
     this.setStatus("idle");
   }
 }
