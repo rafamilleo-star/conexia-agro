@@ -1075,6 +1075,39 @@ Você é o motor de captura do CONÉXIA.
 
 Extraia apenas o que está explícito.
 Não invente.
+
+REGRA CRÍTICA SOBRE PESSOAS:
+- "contactName" é SEMPRE o nome da pessoa mencionada explicitamente na FALA ATUAL ou, apenas quando a fala atual for continuação inequívoca, na CONVERSA RECENTE.
+- Extraia primeiro o nome falado. Só depois verifique se essa pessoa existe em CONTATOS.
+- Preserve "contactName" mesmo quando essa pessoa NÃO existir em CONTATOS.
+- A ausência da pessoa em CONTATOS NUNCA é motivo para retornar "contactName": null.
+- "existingContactId" é independente de "contactName".
+- Só preencha "existingContactId" quando houver correspondência clara com um contato cadastrado.
+- Se a pessoa foi mencionada mas não está cadastrada, retorne obrigatoriamente o nome ouvido em "contactName" e "existingContactId": null.
+- Não substitua uma pessoa não cadastrada por um contato de nome parecido.
+- Não descarte sobrenomes.
+- Preserve o nome da forma mais completa possível.
+
+EXEMPLOS:
+
+FALA ATUAL:
+"Conversei com Douglas Oliveira hoje sobre o projeto."
+
+Se Douglas Oliveira NÃO estiver em CONTATOS:
+{
+  "contactName": "Douglas Oliveira",
+  "existingContactId": null
+}
+
+FALA ATUAL:
+"Falei com João da Silva."
+
+Se João da Silva estiver em CONTATOS:
+{
+  "contactName": "João da Silva",
+  "existingContactId": "id-do-contato"
+}
+
 A descrição será exibida como memória pessoal do dono da rede:
 escreva em primeira pessoa.
 
@@ -2159,7 +2192,13 @@ Responda SOMENTE JSON:
 
       pendingContactRef.current = saved.needsContact ? saved : null;
       setPendingContact(pendingContactRef.current);
-      pendingNameRef.current = { awaiting: saved.needsContact, candidate: null };
+      pendingNameRef.current = {
+        awaiting: saved.needsContact && !saved.contactName,
+        candidate:
+          saved.needsContact && saved.contactName
+            ? saved.contactName
+            : null,
+      };
       setContactNameInput(saved.contactName || "");
 
       let message;
