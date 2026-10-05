@@ -1,0 +1,59 @@
+name: Danna - corrigir eco Gemini
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: danna-gemini-echo-main
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Abrir main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Aplicar correção Gemini
+        run: python scripts/fix-gemini-echo.py
+
+      - name: Verificar sintaxe
+        run: node --check src/lib/dannaGeminiLive.js
+
+      - name: Instalar dependências
+        run: npm install --no-package-lock --no-audit --no-fund
+
+      - name: Compilar aplicativo
+        run: npm run build
+
+      - name: Salvar correção na main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add src/lib/dannaGeminiLive.js
+
+          if git diff --cached --quiet; then
+            echo "Correção já aplicada."
+            exit 0
+          fi
+
+          git commit -m "Guard Gemini microphone and reject stale self-echo turns"
+          git push origin HEAD:main
