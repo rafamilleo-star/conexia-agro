@@ -10,6 +10,7 @@
  */
 
 import { isRecommendationSuppressed } from "./alertsFeedback.js";
+import { buildRelationshipTriggers, localDay } from "./relationshipTriggers.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STALE_ACTION_DAYS = 180;
@@ -370,7 +371,7 @@ function buildContactCandidates(contact, referenceDate, interactions) {
         actionText
           ? `${reason} Próximo passo registrado: ${actionText}.`
           : reason,
-        100 + Math.min(daysOverdue, 30),
+        daysOverdue > STALE_ACTION_DAYS ? 50 : 100 + Math.min(daysOverdue, 30),
         momentum
       )
     );
@@ -536,65 +537,153 @@ export function computePriorities(
   contacts = [],
   feedbackMap = {},
   referenceDate = new Date(),
-  interactions = []
+  interactions = [],
+  context = {}
 ) {
-  const today =
-    parseDate(referenceDate) ||
-    new Date();
+  const actualNow = parseDate(referenceDate) || new Date();
+
+  const today = context.timezone
+    ? parseDate(localDay(actualNow, context.timezone))
+    : actualNow;
+
+  const safeContacts = (Array.isArray(contacts) ? contacts : []).filter(
+    (c) =>
+      ![
+        "cancelado",
+        "concluido",
+        "cancelled",
+        "completed",
+        "archived",
+        "inactive",
+      ].includes(c.status)
+  );
+
+  const triggers = buildRelationshipTriggers(
+    safeContacts,
+    context,
+    actualNow
+  );
 
   const allCandidates = [];
 
-  for (
-    const contact of Array.isArray(contacts)
-      ? contacts
-      : []
-  ) {
-    const feedback =
-      feedbackMap?.[contact.id] || null;
+  for (const contact of safeContacts) {
+    const history = contactInteractionDates(
+      interactions,
+      contact.id
+    );
 
-    const candidates =
-      buildContactCandidates(
-        contact,
+    const lastRecorded = history
+      .filter((date) => date <= actualNow)
+      .at(-1);
+
+    const explicitLast = parseDate(
+      contact.lastInteraction ||
+        contact.last_interaction_at ||
+        contact.last_interaction
+    );
+
+    const latest =
+      lastRecorded &&
+      (!explicitLast || lastRecorded > explicitLast)
+        ? lastRecorded.toISOString()
+        : explicitLast?.toISOString();
+
+    const normalizedContact = {
+      ...contact,
+      lastInteraction: latest || null,
+      idealFreq:
+        contact.idealFreq ??
+        contact.ideal_frequency_days ??
+        contact.ideal_frequency,
+    };
+
+    const personalTriggers = triggers.filter(
+      (candidate) => candidate.contactId === contact.id
+    );
+
+    const tracked = personalTriggers.filter(
+      (candidate) =>
+        candidate.actionType === "tracked_commitment"
+    );
+
+    const candidates = [
+      ...buildContactCandidates(
+        normalizedContact,
         today,
         interactions
-      );
+      ),
+      ...personalTriggers,
+    ].filter(
+      (candidate) =>
+        ![
+          "overdue_next_action",
+          "upcoming_next_action",
+        ].includes(candidate.actionType) ||
+        !tracked.some(
+          (item) =>
+            item.nextMove ===
+            (contact.next_action || contact.nextAction)
+        )
+    );
 
     for (const candidate of candidates) {
-      const suppressed =
-        isRecommendationSuppressed(
-          feedback,
+      if (
+        !isRecommendationSuppressed(
+          feedbackMap?.[contact.id],
           candidate.recommendationId,
           candidate.actionType,
-          today
-        );
-
-      if (!suppressed) {
-        allCandidates.push(candidate);
+          actualNow
+        )
+      ) {
+        allCandidates.push({
+          ...candidate,
+          nextMove:
+            candidate.nextMove || candidate.title,
+          confidence:
+            candidate.confidence ??
+            ([
+              "overdue_next_action",
+              "birthday",
+            ].includes(candidate.actionType)
+              ? 1
+              : 0.7),
+          evidence:
+            candidate.evidence || {
+              source: "contacts",
+              sourceId: contact.id,
+              lastInteractionAt: latest || null,
+              nextAction:
+                contact.next_action ||
+                contact.nextAction ||
+                null,
+              nextActionDate:
+                contact.next_action_date ||
+                contact.nextActionDate ||
+                null,
+            },
+        });
       }
     }
   }
 
-  const ordered =
-    keepBestCandidatePerContact(
-      allCandidates
-    )
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
+  const ordered = keepBestCandidatePerContact(
+    allCandidates
+  )
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
 
-        return String(
-          a.contactName || ""
-        ).localeCompare(
-          String(b.contactName || ""),
-          "pt-BR"
-        );
-      })
-      .slice(0,3);
+      return String(a.contactName || "").localeCompare(
+        String(b.contactName || ""),
+        "pt-BR"
+      );
+    })
+    .slice(0, 3);
 
   return {
     main: ordered[0] || null,
-    secondary: ordered.slice(1,3),
+    secondary: ordered.slice(1, 3),
   };
 }
 
