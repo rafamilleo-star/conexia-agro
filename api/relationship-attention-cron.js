@@ -1,3 +1,6 @@
+import { createClient } from '@supabase/supabase-js';
+import { loadRelationshipData } from '../shared/relationshipData.js';
+import { computeRelationshipIntelligence } from '../shared/relationshipIntelligence.js';
 // api/relationship-attention-cron.js
 // Job: scan-relationships-needing-attention
 //
@@ -8,12 +11,9 @@
 // impede que isso conflite com onboarding/inatividade/resumo semanal no
 // mesmo dia — quem já recebeu algo hoje simplesmente não recebe este também.
 
-import { supabaseRest as sb } from './_lib/relationshipAssistant/notificationLog.js';
 import { sendProactiveNotification } from './_lib/relationshipAssistant/sendProactiveNotification.js';
 import { relationshipAttentionMessage } from './_lib/relationshipAssistant/messages.js';
-import { computeNextBestActions } from './_lib/relationshipAssistant/actionEngine.js';
 import { localDateISO } from './_lib/relationshipAssistant/timeWindow.js';
-import { buildFeedbackMap } from '../shared/alertsFeedback.js';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 // Só dispara mensagem proativa quando a prioridade calculada é alta o
@@ -22,38 +22,34 @@ const MIN_PRIORITY_TO_NOTIFY = Number(process.env.RELATIONSHIP_ATTENTION_MIN_PRI
 
 export default async function handler(req, res) {
   try {
-    if (CRON_SECRET) {
-      const auth = req.headers['authorization'] || '';
-      if (auth !== `Bearer ${CRON_SECRET}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
-    }
+    if (!CRON_SECRET) return res.status(503).json({ ok: false, error: 'CRON_SECRET ausente' });
+    const auth = req.headers['authorization'] || '';
+    if (auth !== `Bearer ${CRON_SECRET}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
     if (!process.env.SUPABASE_SERVICE_KEY) {
       return res.status(200).json({ ok: false, error: 'SUPABASE_SERVICE_KEY ausente' });
     }
 
-    const perfis = await sb(
-      `profiles?select=id,first_name,whatsapp,timezone,notifications_enabled,whatsapp_opt_in,is_pro,plan&onboarding_completed=eq.true&whatsapp=not.is.null&is_pro=eq.true`
-    );
-
-    let enviados = 0, pulados = 0, semAcao = 0;
-    for (const profile of perfis || []) {
-      const [contacts, interactions, alerts] = await Promise.all([
-        sb(
-          `contacts?user_id=eq.${profile.id}&select=id,name,created_at,proximity,ideal_frequency_days,last_interaction_at,next_action,next_action_date,birthday,influencia_pessoas,gera_oportunidade,abre_portas,momento_atual`
-        ),
-        sb(
-          `interactions?user_id=eq.${profile.id}&select=contact_id,created_at`
-        ),
-        // FASE 0: mesma tabela e mesmo buildFeedbackMap que HomeToday.jsx usa
-        // — uma recomendação já dispensada/aceita/adiada na Home ou no
-        // painel do app não deve virar mensagem proativa de WhatsApp.
-        sb(
-          `alerts?user_id=eq.${profile.id}&select=contact_id,status,created_at,metadata`
-        ),
-      ]);
-      const feedbackMap = buildFeedbackMap(alerts || []);
-      const [top] = computeNextBestActions(contacts, interactions, feedbackMap);
+    const db = createClient(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co',
+      process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    const perfis = [];
+    for (let offset = 0; ; offset += 500) {
+      const result = await db.from('profiles').select('*').eq('onboarding_completed', true)
+        .eq('is_pro', true).not('whatsapp', 'is', null).order('id').range(offset, offset + 499);
+      if (result.error) throw result.error;
+      perfis.push(...(result.data || []));
+      if (!result.data || result.data.length < 500) break;
+    }
+    const dryRun = req.query?.dry_run === '1';
+    let enviados = 0, pulados = 0, semAcao = 0, falhas = 0, relevantes = 0;
+    for (const profile of perfis) {
+      try {
+      const raw = await loadRelationshipData(db, profile.id);
+      const intelligence = computeRelationshipIntelligence(raw);
+      const top = intelligence.main ? { ...intelligence.main, priority: intelligence.main.score } : null;
       if (!top || top.priority < MIN_PRIORITY_TO_NOTIFY) { semAcao++; continue; }
 
+      relevantes++;
+      if (dryRun) continue;
       const todayISO = localDateISO(profile.timezone);
       const text = relationshipAttentionMessage({
         firstName: profile.first_name,
@@ -65,13 +61,14 @@ export default async function handler(req, res) {
         profile,
         notificationType: 'RELATIONSHIP_ATTENTION',
         relationshipId: top.relationshipId,
-        scopeKey: `${top.relationshipId}:${todayISO}`,
+        scopeKey: `${top.recommendationId}:${todayISO}`,
         text,
       });
       if (result.sent) enviados++; else pulados++;
+      } catch (error) { falhas++; console.error('[relationship-attention-cron] usuário:', profile.id, error.message); }
     }
 
-    return res.status(200).json({ ok: true, avaliados: perfis?.length || 0, enviados, pulados, semAcao });
+    return res.status(200).json({ ok: falhas === 0, dryRun, avaliados: perfis.length, enviados, pulados, semAcao, relevantes, falhas });
   } catch (err) {
     console.error('[relationship-attention-cron] erro:', err);
     return res.status(200).json({ ok: false, error: err.message });
