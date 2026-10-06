@@ -1,7 +1,7 @@
+import useRelationshipIntelligence from '../lib/useRelationshipIntelligence.js';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { C } from "../utils/theme";
 import {
-  computePriorities,
   relationshipMomentum,
 } from "../../shared/priorityEngine.js";
 import {
@@ -176,6 +176,7 @@ function InfoRow({ label, value }) {
 }
 
 export default function ConexiaTeiaEvolutiva({
+  userId,
   contacts = [],
   interactions = [],
   isPro = true,
@@ -262,16 +263,7 @@ export default function ConexiaTeiaEvolutiva({
       );
   }, [motion]);
 
-  const priorities = useMemo(
-    () =>
-      computePriorities(
-        contacts,
-        {},
-        new Date(),
-        interactions
-      ),
-    [contacts, interactions]
-  );
+  const priorities = useRelationshipIntelligence(userId, contacts, interactions);
 
   const priorityIds = useMemo(
     () =>
@@ -533,8 +525,7 @@ export default function ConexiaTeiaEvolutiva({
     interactions,
     phase,
   ]);
-
-  const selected =
+    const selected =
     nodes.find(
       node =>
         node.c.id ===
@@ -906,6 +897,7 @@ export default function ConexiaTeiaEvolutiva({
         >
           <svg
             viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+                        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
             style={{
               width: "100%",
               height: "100%",
@@ -1275,8 +1267,7 @@ export default function ConexiaTeiaEvolutiva({
             )}
           </svg>
         </div>
-
-        {/* PAINEL LATERAL */}
+                {/* PAINEL LATERAL */}
 
         <div
           style={{
@@ -1591,7 +1582,7 @@ export default function ConexiaTeiaEvolutiva({
                       .linkedin
                   }
                 />
-              </div>
+                              </div>
 
               {/* RELACIONAMENTO */}
 
@@ -2073,4 +2064,4 @@ export default function ConexiaTeiaEvolutiva({
       `}</style>
     </div>
   );
-}
+}        
