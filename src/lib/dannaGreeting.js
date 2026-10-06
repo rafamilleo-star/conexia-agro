@@ -9,8 +9,10 @@ export function buildDannaGreeting(
 ) {
   const spokenName = String(name || "").trim();
 
+  const decision = brain?.overview?.relationship_intelligence?.main;
+  const context = decision ? ` ${decision.reason} Quer ver esse próximo passo ou outro assunto?` : ' Como você está? O que vamos ver hoje?';
   return (
     `Oi${spokenName ? `, ${spokenName}` : ""}. ` +
-    "Como você está? O que vamos ver hoje?"
+    context.trim()
   );
 }
