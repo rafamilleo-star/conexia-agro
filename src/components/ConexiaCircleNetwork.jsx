@@ -39,6 +39,7 @@ function shortName(value, max = 28) {
 }
 
 export default function ConexiaCircleNetwork({
+  userId,
   contacts = [],
   interactions = [],
   network,
@@ -53,25 +54,11 @@ export default function ConexiaCircleNetwork({
   const circles = network?.circles || [];
   const assignments = network?.assignments || {};
 
-  /*
-   * Círculo atualmente aberto.
-   */
   const currentCircle = useMemo(
     () => circles.find(circle => circle.id === focus) || null,
     [circles, focus]
   );
 
-  /*
-   * Círculos de primeiro nível.
-   *
-   * Ex.:
-   * Profissional
-   * Pessoal
-   * Amigos
-   * Família
-   *
-   * Cada usuário decide quantos existirão.
-   */
   const rootCircles = useMemo(
     () =>
       circles
@@ -85,16 +72,6 @@ export default function ConexiaCircleNetwork({
     [circles]
   );
 
-  /*
-   * Subcírculos do universo atualmente aberto.
-   *
-   * Ex.:
-   * Profissional
-   *   ├─ BASF
-   *   ├─ Clientes
-   *   ├─ Consultores
-   *   └─ Mercado
-   */
   const childCircles = useMemo(() => {
     if (!focus) return rootCircles;
 
@@ -108,10 +85,6 @@ export default function ConexiaCircleNetwork({
       );
   }, [circles, focus, rootCircles]);
 
-  /*
-   * Todos os IDs pertencentes ao círculo aberto,
-   * incluindo os subcírculos.
-   */
   const focusedCircleIds = useMemo(() => {
     if (!focus) return null;
 
@@ -122,20 +95,6 @@ export default function ConexiaCircleNetwork({
     return descendantIds(circles, focus);
   }, [circles, focus]);
 
-  /*
-   * REGRA MAIS IMPORTANTE:
-   *
-   * SEM FOCO:
-   * TODOS os contatos aparecem.
-   *
-   * COM FOCO:
-   * aparecem apenas as pessoas daquele círculo
-   * e dos seus descendentes.
-   *
-   * NÃO existe slice().
-   * NÃO existe PAGE_SIZE.
-   * NÃO existe paginação.
-   */
   const visibleContacts = useMemo(() => {
     if (!focus) {
       return contacts;
@@ -159,13 +118,6 @@ export default function ConexiaCircleNetwork({
     focusedCircleIds,
   ]);
 
-  /*
-   * Interações somente das pessoas que estão
-   * sendo visualizadas naquele momento.
-   *
-   * Isso mantém health, prioridade, momentum etc.
-   * coerentes dentro da Teia.
-   */
   const visibleContactIds = useMemo(
     () => new Set(visibleContacts.map(contact => contact.id)),
     [visibleContacts]
@@ -185,12 +137,6 @@ export default function ConexiaCircleNetwork({
     focus,
   ]);
 
-  /*
-   * Busca.
-   *
-   * A busca não destrói a Teia.
-   * Apenas permite encontrar uma pessoa rapidamente.
-   */
   const searchResults = useMemo(() => {
     const query = normalize(search);
 
@@ -224,10 +170,6 @@ export default function ConexiaCircleNetwork({
     assignments,
   ]);
 
-  /*
-   * Quantas pessoas existem dentro de um círculo,
-   * considerando também seus subcírculos.
-   */
   const countForCircle = circleId => {
     const ids = descendantIds(circles, circleId);
 
@@ -236,9 +178,6 @@ export default function ConexiaCircleNetwork({
     ).length;
   };
 
-  /*
-   * Navegação entre universos.
-   */
   const goToCircle = circleId => {
     const next = circleId || null;
 
@@ -248,9 +187,6 @@ export default function ConexiaCircleNetwork({
     onFocusChange?.(next);
   };
 
-  /*
-   * Voltar um nível.
-   */
   const goBack = () => {
     if (!focus) return;
 
@@ -262,9 +198,6 @@ export default function ConexiaCircleNetwork({
     goToCircle(currentCircle?.parent_id || null);
   };
 
-  /*
-   * Breadcrumb completo.
-   */
   const breadcrumb = useMemo(() => {
     if (!focus || focus === UNASSIGNED) return [];
 
@@ -289,16 +222,6 @@ export default function ConexiaCircleNetwork({
     circles,
   ]);
 
-  /*
-   * Quantidade ainda sem organização.
-   *
-   * Importante:
-   * elas continuam aparecendo normalmente
-   * na Teia principal.
-   *
-   * "Sem círculo" é somente informação,
-   * não uma segunda rede.
-   */
   const unassignedCount = useMemo(
     () =>
       contacts.filter(contact => !assignments[contact.id])
@@ -444,7 +367,6 @@ export default function ConexiaCircleNetwork({
 
   return (
     <div style={styles.container}>
-      {/* CABEÇALHO */}
       <div style={styles.header}>
         <h2 style={styles.title}>
           {focus
@@ -461,7 +383,6 @@ export default function ConexiaCircleNetwork({
         </p>
       </div>
 
-      {/* BUSCA */}
       <input
         aria-label="Buscar contato na rede"
         placeholder="Buscar pessoa, empresa ou círculo"
@@ -472,7 +393,6 @@ export default function ConexiaCircleNetwork({
         style={styles.search}
       />
 
-      {/* RESULTADO DA BUSCA */}
       {!!search.trim() && (
         <div style={styles.searchResults}>
           {searchResults.length ? (
@@ -515,11 +435,9 @@ export default function ConexiaCircleNetwork({
         </div>
       )}
 
-      {/* CÍRCULOS */}
       {!search.trim() && (
         <>
           <div style={styles.circleBar}>
-            {/* TODA A REDE */}
             <button
               type="button"
               style={{
@@ -537,7 +455,6 @@ export default function ConexiaCircleNetwork({
               </span>
             </button>
 
-            {/* NA HOME: PROFISSIONAL / PESSOAL / ETC */}
             {!focus &&
               rootCircles.map(circle => (
                 <button
@@ -556,7 +473,6 @@ export default function ConexiaCircleNetwork({
                 </button>
               ))}
 
-            {/* DENTRO DE UM CÍRCULO: SUBGRUPOS */}
             {!!focus &&
               focus !== UNASSIGNED &&
               childCircles.map(circle => (
@@ -577,7 +493,6 @@ export default function ConexiaCircleNetwork({
               ))}
           </div>
 
-          {/* BREADCRUMB */}
           {!!focus && (
             <div style={styles.breadcrumb}>
               <button
@@ -588,7 +503,7 @@ export default function ConexiaCircleNetwork({
                 Minha rede
               </button>
 
-              {breadcrumb.map((circle, index) => (
+              {breadcrumb.map(circle => (
                 <React.Fragment key={circle.id}>
                   <span>›</span>
 
@@ -616,7 +531,6 @@ export default function ConexiaCircleNetwork({
             </div>
           )}
 
-          {/* CONTADORES */}
           <div style={styles.info}>
             <span>
               {focus
@@ -639,22 +553,9 @@ export default function ConexiaCircleNetwork({
             )}
           </div>
 
-          {/* ==========================================
-              A TEIA ORIGINAL CONTINUA SENDO O MOTOR
-              VISUAL.
-
-              HOME:
-              recebe TODOS os contatos.
-
-              CÍRCULO ABERTO:
-              recebe o subconjunto daquele universo.
-
-              Nenhuma paginação.
-              Nenhum limite de seis.
-              ========================================== */}
-
           {visibleContacts.length ? (
             <ConexiaTeiaEvolutiva
+              userId={userId}
               contacts={visibleContacts}
               interactions={visibleInteractions}
               isPro={isPro}
