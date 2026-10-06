@@ -6032,24 +6032,33 @@ const TEIA_EXAMPLE = [
 ];
 function TeiaPreview({ size = 340 }) {
   const cx = 200, cy = 200, R = 168;
+  const TEIA_EXAMPLE = [
+  { name: "Marina Costa", health: 88, prio: "alta", interacoes: 5 },
+  { name: "Joao Kaminski", health: 74, prio: "alta", interacoes: 4 },
+  { name: "Patricia Nunes", health: 60, prio: "media", interacoes: 3 },
+  { name: "Eduardo Reis", health: 45, prio: "media", interacoes: 2 },
+  { name: "Camila Torres", health: 30, prio: "baixa", interacoes: 1 },
+  { name: "Rafael Sanches", health: 68, prio: "media", interacoes: 3 },
+  { name: "Beatriz Lima", health: 82, prio: "alta", interacoes: 5 },
+  { name: "Diego Farah", health: 22, prio: "baixa", interacoes: 1 },
+];
+
+function TeiaPreview({ size = 340 }) {
+  const cx = 200, cy = 200, R = 168;
   const step = (2 * Math.PI) / TEIA_EXAMPLE.length;
+
   const nodes = TEIA_EXAMPLE.map((c, i) => {
     const a = -Math.PI / 2 + i * step;
     const d = R * Math.max(0.15, c.health / 100);
-    return { ...c, x: cx + d * Math.cos(a), y: cy + d * Math.sin(a), col: TEIA_PRIO_COLORS[c.prio], r: 6 + c["interaÃ§Ãµes"] * 2 };
+
+    return {
+      ...c,
+      x: cx + d * Math.cos(a),
+      y: cy + d * Math.sin(a),
+      col: TEIA_PRIO_COLORS[c.prio],
+      r: 6 + c.interacoes * 2,
+    };
   });
-  return (
-    <svg viewBox="0 0 400 400" style={{ width: "100%", maxWidth: size, display: "block", margin: "0 auto" }}>
-      {[0.2, 0.4, 0.6, 0.8, 1].map(f => (
-        <circle key={f} cx={cx} cy={cy} r={R * f} fill="none" stroke={C.brd} strokeWidth={0.7}
-          strokeDasharray={f < 1 ? "3,6" : "none"} opacity={0.5} />
-      ))}
-      {nodes.map((n, i) => (
-        <line key={i} x1={cx} y1={cy} x2={n.x} y2={n.y} stroke={n.col} strokeWidth={1} opacity={0.25} />
-      ))}
-      <circle cx={cx} cy={cy} r={9} fill={C.gold} opacity={0.9} />
-      <text x={cx} y={cy + 22} textAnchor="middle" fontSize={9} fontFamily="DM Sans" fill={C.txL}>VocÃª</text>
-      {nodes.map((n, i) => (
         <g key={i}>
           <circle cx={n.x} cy={n.y} r={n.r} fill={n.col} opacity={0.88}
             style={{ animation: `nodePulse ${3 + (i % 4)}s ease-in-out ${i * 0.15}s infinite` }} />
