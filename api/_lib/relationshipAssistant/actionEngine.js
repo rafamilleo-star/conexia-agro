@@ -27,13 +27,40 @@ import { computePriorities } from '../../../shared/priorityEngine.js';
 // Mantém o array de até 3 ações ordenadas que os crons já esperavam, e
 // preserva o campo `.priority` (relationship-attention-cron.js compara
 // `top.priority < MIN_PRIORITY_TO_NOTIFY`) — o motor novo usa `.score`.
-export function computeNextBestActions(contacts, interactions = [], feedbackMap = {}) {
-  const { main, secondary } = computePriorities(contacts, feedbackMap, new Date(), interactions);
+export function computeNextBestActions(
+  contacts,
+  interactions = [],
+  feedbackMap = {},
+  context = {}
+) {
+  const { main, secondary } = computePriorities(
+    contacts,
+    feedbackMap,
+    new Date(),
+    interactions,
+    context
+  );
+
   return [main, ...secondary]
     .filter(Boolean)
-    .map(({ score, ...rest }) => ({ ...rest, priority: score }));
+    .map(({ score, ...rest }) => ({
+      ...rest,
+      priority: score,
+    }));
 }
 
-export function computeWeeklyAttentionItems(contacts, interactions = [], feedbackMap = {}) {
-  return computeNextBestActions(contacts, interactions, feedbackMap).map(a => a.reason).slice(0, 3);
+export function computeWeeklyAttentionItems(
+  contacts,
+  interactions = [],
+  feedbackMap = {},
+  context = {}
+) {
+  return computeNextBestActions(
+    contacts,
+    interactions,
+    feedbackMap,
+    context
+  )
+    .map((a) => a.reason)
+    .slice(0, 3);
 }
