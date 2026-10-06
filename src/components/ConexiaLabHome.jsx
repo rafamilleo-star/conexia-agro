@@ -1,9 +1,11 @@
+import useRelationshipIntelligence, { invalidateRelationshipIntelligence } from '../lib/useRelationshipIntelligence.js';
+import { loadRelationshipData } from '../../shared/relationshipData.js';
+import { computeRelationshipIntelligence } from '../../shared/relationshipIntelligence.js';
 import ContactCircleField from "./ContactCircleField";
 import { circlePath, resolveCircle } from "../../shared/networkCircles.js";
 import { saveDannaCapture, linkDannaCapture, updateDannaContact, capturePerson } from "../lib/dannaCapture.js";
 import React, { forwardRef, useImperativeHandle, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../utils/supabase";
-import { computePriorities } from "../../shared/priorityEngine.js";
 import {
   detectPatterns,
   PATTERN_NOTES,
@@ -632,6 +634,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   const [input, setInput] = useState("");
   const [lastQuestion, setLastQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+
   // danna-capture-v1
   const [draft, setDraft] = useState(null);
   const [pendingContact, setPendingContact] = useState(null);
@@ -646,7 +649,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   const [connectionData, setConnectionData] = useState(null);
   const [error, setError] = useState("");
   const [showText, setShowText] = useState(false);
-  const [textInput, setTextInput] = useState("");
+    const [textInput, setTextInput] = useState("");
 
   const liveRef = useRef(null);
   const conversationActiveRef = useRef(false);
@@ -750,15 +753,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
       window.localStorage?.getItem(firstContactStorageKey)
     );
 
-  const priorities = useMemo(
-    () => computePriorities(
-      contacts,
-      {},
-      new Date().toISOString().slice(0, 10),
-      interactions
-    ),
-    [contacts, interactions]
-  );
+  const priorities = useRelationshipIntelligence(userId, contacts, interactions);
 
   const patterns = useMemo(
     () => detectPatterns(contacts, interactions, new Date()),
@@ -1026,7 +1021,11 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
     } catch {}
 
     greetedThisSessionRef.current = true;
-    speak(buildDannaGreeting(null, openingName, openingTimeZone), true);
+    let openingBrain = null;
+    try { openingBrain = await loadDannaKnowledge(); }
+    catch (error) { console.warn('[Danna] Abertura sem contexto:', error.message); }
+    if (isStaleTurn(greetingTurn) || liveRef.current !== live || !conversationActiveRef.current) return;
+    speak(buildDannaGreeting(openingBrain, openingName, openingTimeZone), true);
     if (!openingPrefs?.first_contact_completed && !storedFirstContact) {
       void markFirstContactCompleted();
     }
@@ -1083,7 +1082,7 @@ REGRA CRÍTICA SOBRE PESSOAS:
 - A ausência da pessoa em CONTATOS NUNCA é motivo para retornar "contactName": null.
 - "existingContactId" é independente de "contactName".
 - Só preencha "existingContactId" quando houver correspondência clara com um contato cadastrado.
-- Se a pessoa foi mencionada mas não está cadastrada, retorne obrigatoriamente o nome ouvido em "contactName" e "existingContactId": null.
+- Se a pessoa foi mencionada mas não está cadastrada, retorne obrigatoriatoriamente o nome ouvido em "contactName" e "existingContactId": null.
 - Não substitua uma pessoa não cadastrada por um contato de nome parecido.
 - Não descarte sobrenomes.
 - Preserve o nome da forma mais completa possível.
@@ -1197,109 +1196,26 @@ Responda SOMENTE JSON válido:
       true
     );
   };
-
-  const loadDannaKnowledge = async () => {
+    const loadDannaKnowledge = async () => {
     if (!userId) {
       throw new Error("Sessão não autenticada.");
     }
 
     const now = new Date();
     const nowIso = now.toISOString();
-    const today = nowIso.slice(0, 10);
-    const horizon =
-      new Date(now.getTime() + 45 * 86400000).toISOString();
 
-    const [
-      contactsRes,
-      interactionsRes,
-      memoryRes,
-      alertsRes,
-      eventsRes,
-      signalsRes,
-      profileRes,
-    ] = await Promise.all([
-      supabase
-        .from("contacts")
-        .select("id,name,company,role,category,city,state_code,birthday,hobbies,main_culture,personal_notes,notes,next_action,next_action_date,last_interaction_at,status,ideal_frequency_days")
-        .eq("user_id", userId)
-        .order("last_interaction_at", {
-          ascending: false,
-          nullsFirst: false,
-        }),
-
-      supabase
-        .from("interactions")
-        .select("id,contact_id,type,description,sentiment,tags,value_generated,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(500),
-
-      supabase
-        .from("relational_memory")
-        .select("id,contact_id,memory_type,content,summary,source_type,source_excerpt,confidence,occurred_at,valid_from,valid_until,created_at")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(200),
-
-      supabase
-        .from("alerts")
-        .select("id,contact_id,title,description,status,created_at,metadata")
-        .eq("user_id", userId)
-        .neq("status", "dismissed")
-        .order("created_at", { ascending: false })
-        .limit(100),
-
-      supabase
-        .from("scheduled_events")
-        .select("id,contact_id,type,scheduled_at,duration_minutes,location,notes,status,source,created_at")
-        .eq("user_id", userId)
-        .gte(
-          "scheduled_at",
-          new Date(now.getTime() - 7 * 86400000).toISOString()
-        )
-        .lte("scheduled_at", horizon)
-        .order("scheduled_at", { ascending: true })
-        .limit(150),
-
-      supabase
-        .from("signals")
-        .select("id,contact_id,source,type,title,summary,identity_confidence,detected_at,expires_at,status")
-        .eq("user_id", userId)
-        .in("status", ["new", "evaluated", "relevant"])
-        .order("detected_at", { ascending: false })
-        .limit(100),
-
-      supabase
-        .from("profiles")
-        .select("id,name,first_name,company,role,city,segment,timezone,last_discussed_contact_id,last_discussed_contact_at,calendar_ics_url")
-        .eq("id", userId)
-        .maybeSingle(),
-    ]);
-
-    const critical = [
-      contactsRes,
-      interactionsRes,
-      memoryRes,
-      eventsRes,
-    ];
-
-    const criticalError =
-      critical.find(x => x?.error)?.error;
-
-    if (criticalError) throw criticalError;
-
-    if (alertsRes.error) {
-      console.warn("[Danna Brain] alerts indisponível", alertsRes.error);
-    }
-
-    if (signalsRes.error) {
-      console.warn("[Danna Brain] signals indisponível", signalsRes.error);
-    }
-
-    if (profileRes.error) {
-      console.warn("[Danna Brain] profile indisponível", profileRes.error);
-    }
+    const raw = await loadRelationshipData(supabase, userId, now);
+    const contactsRes = { data: raw.contacts };
+    const interactionsRes = { data: raw.interactions };
+    const memoryRes = { data: raw.memories };
+    const alertsRes = { data: raw.alerts };
+    const eventsRes = { data: raw.events };
+    const profileRes = { data: raw.profile };
+    const signalsRes = await supabase.from('signals')
+      .select('id,contact_id,source,type,title,summary,identity_confidence,detected_at,expires_at,status')
+      .eq('user_id', userId).in('status', ['new', 'evaluated', 'relevant'])
+      .order('detected_at', { ascending: false }).limit(100);
+    const intelligence = computeRelationshipIntelligence(raw, now);
 
     const people = contactsRes.data || [];
     const contactById = new Map(people.map(c => [c.id, c]));
@@ -1336,6 +1252,8 @@ Responda SOMENTE JSON válido:
       }));
 
     const memoryForAI = (memoryRes.data || []).map(m => ({
+      id: m.id,
+      metadata: m.metadata,
       person: contactName(m.contact_id),
       type: m.memory_type,
       content: (m.summary || m.content || "").slice(0, 400),
@@ -1408,7 +1326,7 @@ Responda SOMENTE JSON válido:
     };
 
     const events = (eventsRes.data || [])
-      .filter(e => e.status !== "cancelado")
+      .filter(e => !["cancelado", "concluido"].includes(e.status))
       .map(e => ({
         person: contactName(e.contact_id),
         type: e.type,
@@ -1521,8 +1439,9 @@ Responda SOMENTE JSON válido:
       interactions: interactionsForAI,
       overview: {
         generated_at: nowIso,
-        today,
+        today: intelligence.today,
         timezone: tz,
+        relationship_intelligence: intelligence,
         profile: profile
           ? {
               name: profile.first_name || profile.name || null,
@@ -1530,6 +1449,7 @@ Responda SOMENTE JSON válido:
               role: profile.role || null,
               city: profile.city || null,
               segment: profile.segment || null,
+              objectives: profile.objectives || [],
               lastDiscussedPerson:
                 contactName(profile.last_discussed_contact_id),
               lastDiscussedAt:
@@ -1537,7 +1457,7 @@ Responda SOMENTE JSON válido:
               calendarConnected: Boolean(profile.calendar_ics_url),
             }
           : null,
-        network_overview: buildNetworkOverview(people, interactionsRes.data || [], now),
+        network_overview: buildNetworkOverview(people, interactionsRes.data || [], now, true),
         counts: {
           contacts: people.length,
           interactionsLoaded: (interactionsRes.data || []).length,
@@ -1724,6 +1644,7 @@ Responda SOMENTE JSON válido:
 
 REGRAS DE RESPOSTA:
 - AGENDA: para "minha semana", "amanhã", "próximas reuniões" ou similares, use week_overview e upcoming_events do SNAPSHOT; nunca invente compromissos fora dele;
+- DECISÃO CENTRAL: para quem merece atenção agora, use relationship_intelligence.decisions: pessoa, motivo, nextMove, confidence e evidence. Não reordene por suposição. Padrões e dimensões explicam a rede; não comprovam urgência de uma pessoa. Se status for no_supported_action, não invente urgência.
 - MEMÓRIA: relational_memory são fatos/compromissos já consolidados; use-os como evidência forte, citando a pessoa;
 - ATENÇÃO: attention traz ações vencidas, aniversários próximos e contatos esfriando; traga só o que for relevante para a pergunta;
 - DATAS: não cite datas exatas automaticamente; resuma temporalidade em linguagem natural. Cite data exata apenas quando ela for relevante para decisão/urgência/cadência ou quando o usuário pedir;
@@ -1861,8 +1782,7 @@ Responda SOMENTE JSON:
 
     return "relational";
   };
-
-  const handleUserTurn = async text => {
+    const handleUserTurn = async text => {
     const line = String(text || "").trim();
 
     if (!line) return;
@@ -2158,13 +2078,16 @@ Responda SOMENTE JSON:
       pendingNameRef.current = { awaiting: false, candidate: null };
       setPendingContact(null);
 
+      let commitmentWarning = '';
       try { await updateDannaContact(supabase, userId, linked); }
       catch (error) {
-        console.warn("[Danna] Pessoa vinculada; próximo passo não atualizado:", error);
+        commitmentWarning = ' Não consegui confirmar o acompanhamento do compromisso.';
+        setError(error.message);
       }
+      invalidateRelationshipIntelligence();
 
       const message =
-        `Pronto. ${linked.contactName} está na sua rede e vinculado ao relato que já salvei.` + askContactCircle(linked.contactId, linked.contactName);
+        `Pronto. ${linked.contactName} está na sua rede e vinculado ao relato que já salvei.` + commitmentWarning + askContactCircle(linked.contactId, linked.contactName);
       setAnswer(message);
       await refreshCaptureData();
       speak(message, true);
@@ -2212,10 +2135,16 @@ Responda SOMENTE JSON:
 
         try { await updateDannaContact(supabase, userId, saved); }
         catch (error) {
-          console.warn("[Danna] Relato salvo; próximo passo não atualizado:", error);
+          message += ' O relato está salvo, mas não consegui confirmar o acompanhamento do próximo passo.';
+          setError(error.message);
         }
       }
 
+      if (saved.needsContact && saved.commitmentError) {
+        message += ' Não consegui confirmar o acompanhamento do compromisso.';
+        setError(saved.commitmentError);
+      }
+      invalidateRelationshipIntelligence();
       setAnswer(message);
       setCurrentView("saved");
       await refreshCaptureData();
