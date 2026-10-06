@@ -1,3 +1,5 @@
+import { validDateOnly } from '../../shared/relationshipTriggers.js';
+
 export function capturePerson(description) {
   return /^Pessoa mencionada: ([^\n]+)\n/.exec(
     String(description || "")
@@ -38,11 +40,12 @@ export async function saveDannaCapture(db, userId, draft, contacts = []) {
     .single();
 
   if (error) throw error;
+
   if (!data?.id) {
     throw new Error("Não consegui confirmar o registro.");
   }
 
-  return {
+  const saved = {
     ...draft,
     contactName:
       name || contacts.find(c => c.id === contactId)?.name || null,
@@ -52,10 +55,72 @@ export async function saveDannaCapture(db, userId, draft, contacts = []) {
     savedAt: data.created_at,
     needsContact: !contactId,
   };
+
+  try {
+    await persistDannaCommitment(db, userId, saved);
+  } catch (e) {
+    saved.commitmentError = e.message;
+  }
+
+  return saved;
 }
 
-export async function linkDannaCapture(db, userId, saved, personName) {
-  const name = String(personName || saved.contactName || "").trim();
+// Um id por interação: retries não criam múltiplos compromissos.
+export async function persistDannaCommitment(db, userId, saved) {
+  const nextAction = String(saved.nextAction || '').trim();
+
+  if (!nextAction) return;
+
+  const dueDate = validDateOnly(saved.nextActionDate);
+
+  if (saved.nextActionDate && !dueDate) {
+    throw new Error(
+      'Data do próximo passo inválida; confirme a data.'
+    );
+  }
+
+  const { error } = await db
+    .from('relational_memory')
+    .upsert(
+      {
+        id: saved.interactionId,
+        user_id: userId,
+        contact_id: saved.contactId || null,
+        memory_type: 'commitment',
+        content: nextAction,
+        summary: nextAction,
+        source_type: 'interaction',
+        source_id: saved.interactionId,
+        source_excerpt: saved.sourceText || saved.description,
+        confidence: 1,
+        status: 'active',
+        occurred_at: saved.savedAt,
+        metadata: {
+          confirmed: true,
+          due_date: dueDate,
+          next_action: nextAction,
+          person_name: saved.contactName,
+          completed: false,
+        },
+      },
+      {
+        onConflict: 'id',
+        ignoreDuplicates: true,
+      }
+    );
+
+  if (error) throw error;
+}
+
+export async function linkDannaCapture(
+  db,
+  userId,
+  saved,
+  personName
+) {
+  const name = String(
+    personName || saved.contactName || ""
+  ).trim();
 
   if (!name) {
     throw new Error(
@@ -67,7 +132,10 @@ export async function linkDannaCapture(db, userId, saved, personName) {
     throw new Error("Não encontrei o registro salvo.");
   }
 
-  const pattern = name.replace(/[\\%_]/g, char => `\\${char}`);
+  const pattern = name.replace(
+    /[\\%_]/g,
+    char => `\\${char}`
+  );
 
   const found = await db
     .from("contacts")
@@ -124,15 +192,40 @@ export async function linkDannaCapture(db, userId, saved, personName) {
   };
 }
 
-export async function updateDannaContact(db, userId, saved) {
+export async function updateDannaContact(
+  db,
+  userId,
+  saved
+) {
   if (!saved.contactId) return;
+
+  await persistDannaCommitment(db, userId, saved);
+
+  if (saved.nextAction) {
+    const linked = await db
+      .from('relational_memory')
+      .update({
+        contact_id: saved.contactId,
+      })
+      .eq('id', saved.interactionId)
+      .eq('user_id', userId);
+
+    if (linked.error) throw linked.error;
+  }
 
   const patch = {
     last_interaction_at: saved.savedAt,
   };
 
-  if (saved.nextAction) patch.next_action = saved.nextAction;
-  if (saved.nextActionDate) patch.next_action_date = saved.nextActionDate;
+  if (saved.nextAction) {
+    patch.next_action = saved.nextAction;
+
+    // Um novo passo sem data não pode herdar a data
+    // de um compromisso antigo.
+    patch.next_action_date = validDateOnly(
+      saved.nextActionDate
+    );
+  }
 
   const { error } = await db
     .from("contacts")
