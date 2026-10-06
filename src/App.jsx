@@ -22,8 +22,8 @@ import iconeTransp from "./assets/brand/conexia_icone_transparente.svg";
 import logoTexto from "./assets/brand/conexia_logo_texto-dourado_fundo-transparente.webp";
 
 
-/* ─── Logo Components ─────────────────────────────────── */
-// Ícone isolado (para splash, headers, favicons)
+/* âââ Logo Components âââââââââââââââââââââââââââââââââââ */
+// Ãcone isolado (para splash, headers, favicons)
 const ConexiaIcon = ({ size = 64, dark = true, style = {} }) => (
   <img
     src={dark ? iconeDark : iconeTransp}
@@ -35,57 +35,57 @@ const ConexiaIcon = ({ size = 64, dark = true, style = {} }) => (
 const ConexiaLogo = ({ height = 48, style = {} }) => (
   <img
     src={logoTexto}
-    alt={`${BRAND.name} — Diagnóstico Relacional`}
+    alt={`${BRAND.name} â DiagnÃ³stico Relacional`}
     style={{ height, objectFit: 'contain', ...style }}
   />
 );
 
 
-/* ─── Profiles ────────────────────────────────────────── */
+/* âââ Profiles ââââââââââââââââââââââââââââââââââââââââââ */
 const PROFILES = {
-  estrategista: { name: "O Estrategista", emoji: "🎯", tagline: "Você joga xadrez relacional.", desc: "Você não faz networking por acaso. Sabe exatamente quem precisa na sua rede, por quê, e cultiva com disciplina. Sua força está na clareza de intenção combinada com consistência.", strengths: ["Visão estratégica de longo prazo", "Disciplina no follow-up", "Capacidade de priorizar relações"], risks: ["Pode parecer transacional", "Subestima conexões sem utilidade imediata"], actions: ["Liste 3 pessoas que mantém contato por obrigação — existe algo genuíno ali?", "Tenha 1 conversa sem agenda nas próximas 2 semanas.", "Envie reconhecimento para alguém que te ajudou, sem pedir nada."] },
-  influenciador: { name: "O Influenciador", emoji: "🌟", tagline: "Onde você está, as coisas acontecem.", desc: "Presença de mercado e generosidade natural. As pessoas te procuram porque sabem que você conecta, indica e gera valor. Rede viva e diversa.", strengths: ["Alta visibilidade", "Generosidade natural", "Confiança rápida"], risks: ["Pode se sobrecarregar", "Rede ampla mas nem sempre profunda"], actions: ["Transforme 2 contatos superficiais em relações profundas.", "Crie critério claro para dizer não sem culpa.", "Documente os 10 contatos que mais geram valor mútuo."] },
-  conector: { name: "O Conector", emoji: "🔗", tagline: "Você tece redes vivas.", desc: "Escuta de verdade e conecta A com B criando valor para ambos. Confiança natural porque se importa genuinamente.", strengths: ["Escuta ativa genuína", "Conecta pessoas certas", "Alta reciprocidade"], risks: ["Falta de direcionamento estratégico", "Pode dar mais do que recebe"], actions: ["Liste 10 conexões valiosas que fez para outros — peça algo para 3.", "Defina 3 objetivos para sua rede nos próximos 90 dias.", "Para cada conexão: isso me aproxima de qual objetivo?"] },
-  tecnico_invisivel: { name: "O Técnico Invisível", emoji: "🔬", tagline: "Competente demais para ser ignorado — mas é o que acontece.", desc: "Competência inquestionável. Mas sua rede não sabe porque você não aparece. Confiança alta, presença baixa.", strengths: ["Competência reconhecida por quem convive", "Autenticidade", "Relações profundas"], risks: ["Invisibilidade profissional", "Perde oportunidades"], actions: ["Participe de 1 evento do setor nos próximos 30 dias.", "Publique 1 conteúdo técnico no LinkedIn esta semana.", "Peça a 3 pessoas: me indica para uma conversa importante."] },
-  relacional_intuitivo: { name: "O Relacional Intuitivo", emoji: "💫", tagline: "Você sente as pessoas. Falta transformar em sistema.", desc: "Dom natural para relações, opera por intuição. Quando a vida aperta, networking cai primeiro — porque não tem estrutura.", strengths: ["Inteligência emocional alta", "Relações autênticas", "Confiança rápida"], risks: ["Networking inconsistente", "Reativo — só cultiva quando precisa"], actions: [`Configure o ${BRAND.name} com 10 contatos mais importantes.`, "Ritual semanal: toda segunda, escolha 2 pessoas para contatar.", "Escreva o que cada contato precisa. Envie algo relevante sem pedir nada."] },
-  ativador_intermitente: { name: "O Ativador Intermitente", emoji: "⚡", tagline: "Quando ativa, é poderoso. O problema é que nem sempre ativa.", desc: "Visão e presença. Mas a inconsistência faz sua rede nunca saber se pode contar com você.", strengths: ["Alta capacidade quando engajado", "Boa visão estratégica", "Presença forte"], risks: ["Inconsistência crônica", "Perde credibilidade pela oscilação"], actions: ["Ative alertas para contatos com mais de 15 dias sem interação.", "Comprometa-se com 3 interações por semana.", "Agende networking como reunião fixa no calendário."] },
-  construtor_confianca: { name: "O Construtor de Confiança", emoji: "🏛️", tagline: "Você constrói devagar, mas o que constrói não cai.", desc: "Rede sólida. Cultiva com consistência e autenticidade. O que falta é expandir.", strengths: ["Alta confiabilidade", "Consistência no cultivo", "Autenticidade reconhecida"], risks: ["Rede pode ser pequena demais", "Dificuldade em expandir zona de conforto"], actions: ["Identifique 3 pessoas FORA do seu círculo que seriam estratégicas.", "Peça a um aliado para te apresentar a alguém novo.", "Participe de 1 evento onde não conhece ninguém."] },
-  explorador_rede: { name: "O Explorador de Rede", emoji: "🧭", tagline: "Você está no começo. E isso é vantagem.", desc: `Sem padrão dominante — pode construir do zero, com método, sem vícios. O ${BRAND.name} será sua fundação.`, strengths: ["Mente aberta", "Sem vícios de networking", "Alto potencial"], risks: ["Pode se sentir perdido", "Risco de desistir cedo"], actions: [`Liste 15 pessoas que importam — classifique cada uma no ${BRAND.name}.`, "Escolha 3 e envie mensagem genuína esta semana.", "Leia o capítulo 1 do livro e aplique 1 conceito."] },
+  estrategista: { name: "O Estrategista", emoji: "ð¯", tagline: "VocÃª joga xadrez relacional.", desc: "VocÃª nÃ£o faz networking por acaso. Sabe exatamente quem precisa na sua rede, por quÃª, e cultiva com disciplina. Sua forÃ§a estÃ¡ na clareza de intenÃ§Ã£o combinada com consistÃªncia.", strengths: ["VisÃ£o estratÃ©gica de longo prazo", "Disciplina no follow-up", "Capacidade de priorizar relaÃ§Ãµes"], risks: ["Pode parecer transacional", "Subestima conexÃµes sem utilidade imediata"], actions: ["Liste 3 pessoas que mantÃ©m contato por obrigaÃ§Ã£o â existe algo genuÃ­no ali?", "Tenha 1 conversa sem agenda nas prÃ³ximas 2 semanas.", "Envie reconhecimento para alguÃ©m que te ajudou, sem pedir nada."] },
+  influenciador: { name: "O Influenciador", emoji: "ð", tagline: "Onde vocÃª estÃ¡, as coisas acontecem.", desc: "PresenÃ§a de mercado e generosidade natural. As pessoas te procuram porque sabem que vocÃª conecta, indica e gera valor. Rede viva e diversa.", strengths: ["Alta visibilidade", "Generosidade natural", "ConfianÃ§a rÃ¡pida"], risks: ["Pode se sobrecarregar", "Rede ampla mas nem sempre profunda"], actions: ["Transforme 2 contatos superficiais em relaÃ§Ãµes profundas.", "Crie critÃ©rio claro para dizer nÃ£o sem culpa.", "Documente os 10 contatos que mais geram valor mÃºtuo."] },
+  conector: { name: "O Conector", emoji: "ð", tagline: "VocÃª tece redes vivas.", desc: "Escuta de verdade e conecta A com B criando valor para ambos. ConfianÃ§a natural porque se importa genuinamente.", strengths: ["Escuta ativa genuÃ­na", "Conecta pessoas certas", "Alta reciprocidade"], risks: ["Falta de direcionamento estratÃ©gico", "Pode dar mais do que recebe"], actions: ["Liste 10 conexÃµes valiosas que fez para outros â peÃ§a algo para 3.", "Defina 3 objetivos para sua rede nos prÃ³ximos 90 dias.", "Para cada conexÃ£o: isso me aproxima de qual objetivo?"] },
+  tecnico_invisivel: { name: "O TÃ©cnico InvisÃ­vel", emoji: "ð¬", tagline: "Competente demais para ser ignorado â mas Ã© o que acontece.", desc: "CompetÃªncia inquestionÃ¡vel. Mas sua rede nÃ£o sabe porque vocÃª nÃ£o aparece. ConfianÃ§a alta, presenÃ§a baixa.", strengths: ["CompetÃªncia reconhecida por quem convive", "Autenticidade", "RelaÃ§Ãµes profundas"], risks: ["Invisibilidade profissional", "Perde oportunidades"], actions: ["Participe de 1 evento do setor nos prÃ³ximos 30 dias.", "Publique 1 conteÃºdo tÃ©cnico no LinkedIn esta semana.", "PeÃ§a a 3 pessoas: me indica para uma conversa importante."] },
+  relacional_intuitivo: { name: "O Relacional Intuitivo", emoji: "ð«", tagline: "VocÃª sente as pessoas. Falta transformar em sistema.", desc: "Dom natural para relaÃ§Ãµes, opera por intuiÃ§Ã£o. Quando a vida aperta, networking cai primeiro â porque nÃ£o tem estrutura.", strengths: ["InteligÃªncia emocional alta", "RelaÃ§Ãµes autÃªnticas", "ConfianÃ§a rÃ¡pida"], risks: ["Networking inconsistente", "Reativo â sÃ³ cultiva quando precisa"], actions: [`Configure o ${BRAND.name} com 10 contatos mais importantes.`, "Ritual semanal: toda segunda, escolha 2 pessoas para contatar.", "Escreva o que cada contato precisa. Envie algo relevante sem pedir nada."] },
+  ativador_intermitente: { name: "O Ativador Intermitente", emoji: "â¡", tagline: "Quando ativa, Ã© poderoso. O problema Ã© que nem sempre ativa.", desc: "VisÃ£o e presenÃ§a. Mas a inconsistÃªncia faz sua rede nunca saber se pode contar com vocÃª.", strengths: ["Alta capacidade quando engajado", "Boa visÃ£o estratÃ©gica", "PresenÃ§a forte"], risks: ["InconsistÃªncia crÃ´nica", "Perde credibilidade pela oscilaÃ§Ã£o"], actions: ["Ative alertas para contatos com mais de 15 dias sem interaÃ§Ã£o.", "Comprometa-se com 3 interaÃ§Ãµes por semana.", "Agende networking como reuniÃ£o fixa no calendÃ¡rio."] },
+  construtor_confianca: { name: "O Construtor de ConfianÃ§a", emoji: "ðï¸", tagline: "VocÃª constrÃ³i devagar, mas o que constrÃ³i nÃ£o cai.", desc: "Rede sÃ³lida. Cultiva com consistÃªncia e autenticidade. O que falta Ã© expandir.", strengths: ["Alta confiabilidade", "ConsistÃªncia no cultivo", "Autenticidade reconhecida"], risks: ["Rede pode ser pequena demais", "Dificuldade em expandir zona de conforto"], actions: ["Identifique 3 pessoas FORA do seu cÃ­rculo que seriam estratÃ©gicas.", "PeÃ§a a um aliado para te apresentar a alguÃ©m novo.", "Participe de 1 evento onde nÃ£o conhece ninguÃ©m."] },
+  explorador_rede: { name: "O Explorador de Rede", emoji: "ð§­", tagline: "VocÃª estÃ¡ no comeÃ§o. E isso Ã© vantagem.", desc: `Sem padrÃ£o dominante â pode construir do zero, com mÃ©todo, sem vÃ­cios. O ${BRAND.name} serÃ¡ sua fundaÃ§Ã£o.`, strengths: ["Mente aberta", "Sem vÃ­cios de networking", "Alto potencial"], risks: ["Pode se sentir perdido", "Risco de desistir cedo"], actions: [`Liste 15 pessoas que importam â classifique cada uma no ${BRAND.name}.`, "Escolha 3 e envie mensagem genuÃ­na esta semana.", "Leia o capÃ­tulo 1 do livro e aplique 1 conceito."] },
 };
 
 
 const PLAN = [
-  { week: 1, title: "Mapear contatos", icon: "🗺️", goal: "Construir a fundação da sua rede.", tasks: ["Cadastre 10 contatos estratégicos", "Classifique cada um", "Defina frequência ideal", "Escreva notas sobre cada pessoa"], metric: "10 contatos cadastrados" },
-  { week: 2, title: "Reativar relações", icon: "🔄", goal: "Reconectar com quem esfriou.", tasks: ["Identifique 3 contatos com menor health", "Envie mensagem genuína para cada um", `Registre cada interação no ${BRAND.name}`], metric: "3 relações reativadas" },
-  { week: 3, title: "Gerar valor", icon: "💎", goal: "Dar antes de pedir.", tasks: ["Para cada contato-chave: o que posso oferecer?", "Faça 2 indicações", "Compartilhe conteúdo com 3 contatos"], metric: "2 indicações + 3 conteúdos" },
-  { week: 4, title: "Criar sistema", icon: "⚙️", goal: "Transformar ação em hábito.", tasks: ["Defina ritual semanal", "Configure alertas", "Defina 3 metas para 90 dias"], metric: "Ritual + metas documentadas" },
+  { week: 1, title: "Mapear contatos", icon: "ðºï¸", goal: "Construir a fundaÃ§Ã£o da sua rede.", tasks: ["Cadastre 10 contatos estratÃ©gicos", "Classifique cada um", "Defina frequÃªncia ideal", "Escreva notas sobre cada pessoa"], metric: "10 contatos cadastrados" },
+  { week: 2, title: "Reativar relaÃ§Ãµes", icon: "ð", goal: "Reconectar com quem esfriou.", tasks: ["Identifique 3 contatos com menor health", "Envie mensagem genuÃ­na para cada um", `Registre cada interaÃ§Ã£o no ${BRAND.name}`], metric: "3 relaÃ§Ãµes reativadas" },
+  { week: 3, title: "Gerar valor", icon: "ð", goal: "Dar antes de pedir.", tasks: ["Para cada contato-chave: o que posso oferecer?", "FaÃ§a 2 indicaÃ§Ãµes", "Compartilhe conteÃºdo com 3 contatos"], metric: "2 indicaÃ§Ãµes + 3 conteÃºdos" },
+  { week: 4, title: "Criar sistema", icon: "âï¸", goal: "Transformar aÃ§Ã£o em hÃ¡bito.", tasks: ["Defina ritual semanal", "Configure alertas", "Defina 3 metas para 90 dias"], metric: "Ritual + metas documentadas" },
 ];
 
 
-/* ─── Culturas Agro ───────────────────────────────────── */
+/* âââ Culturas Agro âââââââââââââââââââââââââââââââââââââ */
 const MAIN_CULTURES = [
-  { value: "soja",        label: "🌱 Soja" },
-  { value: "milho",       label: "🌽 Milho" },
-  { value: "cafe",        label: "☕ Café" },
-  { value: "algodao",     label: "🌿 Algodão" },
-  { value: "cana",        label: "🎋 Cana-de-açúcar" },
-  { value: "trigo",       label: "🌾 Trigo" },
-  { value: "hortifruti",  label: "🥦 Hortifruti" },
-  { value: "pecuaria",    label: "🐄 Pecuária" },
-  { value: "citrus",      label: "🍊 Citrus" },
-  { value: "cacau",       label: "🍫 Cacau" },
-  { value: "feijao",      label: "🫘 Feijão" },
-  { value: "arroz",       label: "🍚 Arroz" },
-  { value: "outro",       label: "🌍 Outro" },
+  { value: "soja",        label: "ð± Soja" },
+  { value: "milho",       label: "ð½ Milho" },
+  { value: "cafe",        label: "â CafÃ©" },
+  { value: "algodao",     label: "ð¿ AlgodÃ£o" },
+  { value: "cana",        label: "ð Cana-de-aÃ§Ãºcar" },
+  { value: "trigo",       label: "ð¾ Trigo" },
+  { value: "hortifruti",  label: "ð¥¦ Hortifruti" },
+  { value: "pecuaria",    label: "ð PecuÃ¡ria" },
+  { value: "citrus",      label: "ð Citrus" },
+  { value: "cacau",       label: "ð« Cacau" },
+  { value: "feijao",      label: "ð« FeijÃ£o" },
+  { value: "arroz",       label: "ð Arroz" },
+  { value: "outro",       label: "ð Outro" },
 ];
 
 
-/* ─── Helpers ─────────────────────────────────────────── */
+/* âââ Helpers âââââââââââââââââââââââââââââââââââââââââââ */
 const dSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999;
 const hScore = (last, freq) => { const d = dSince(last); if (!last || d > freq * 3) return 0; return Math.max(0, Math.round((1 - d / (freq * 1.5)) * 100)); };
-const fD = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—";
-// Gera um arquivo .ics padrão (RFC 5545) — funciona igual em Outlook, Google Calendar
-// e Apple Calendar, sem precisar de OAuth nem integração com nenhuma API externa.
+const fD = (d) => d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "â";
+// Gera um arquivo .ics padrÃ£o (RFC 5545) â funciona igual em Outlook, Google Calendar
+// e Apple Calendar, sem precisar de OAuth nem integraÃ§Ã£o com nenhuma API externa.
 const buildICS = ({ title, description, location, start, durationMinutes }) => {
   const pad = (n) => String(n).padStart(2, "0");
   const fmt = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
@@ -113,7 +113,7 @@ const downloadICS = (ics, filename) => {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
-// Normaliza WhatsApp para sempre incluir o código do país 55 — formato que o bot do WhatsApp espera
+// Normaliza WhatsApp para sempre incluir o cÃ³digo do paÃ­s 55 â formato que o bot do WhatsApp espera
 const normalizeWhatsapp = (raw) => {
   if (!raw) return null;
   const digits = raw.replace(/\D/g, "");
@@ -124,12 +124,12 @@ const normalizeWhatsapp = (raw) => {
 };
 
 
-// ── RELEVANCE SCORE utils ──────────────────────────────────
+// ââ RELEVANCE SCORE utils ââââââââââââââââââââââââââââââââââ
 const calculateRelevanceScore = (c) => {
-  // Cálculo delegado a shared/priorityEngine.js (fonte única de verdade para
-  // relevância). Mantemos aqui apenas a regra de exibição: só mostrar um
-  // valor quando os 4 campos estratégicos estiverem completos — do
-  // contrário, a UI cai em "Dados incompletos", como sempre se comportou.
+  // CÃ¡lculo delegado a shared/priorityEngine.js (fonte Ãºnica de verdade para
+  // relevÃ¢ncia). Mantemos aqui apenas a regra de exibiÃ§Ã£o: sÃ³ mostrar um
+  // valor quando os 4 campos estratÃ©gicos estiverem completos â do
+  // contrÃ¡rio, a UI cai em "Dados incompletos", como sempre se comportou.
   const fields = [c.influenciaPessoas, c.geraOportunidade, c.abrePortas, c.momentoAtual];
   const valid = fields.filter(v => v !== null && v !== undefined && v !== "");
   if (valid.length < 4) return null;
@@ -141,7 +141,7 @@ const calculateRelevanceScore = (c) => {
 
 const getRelevanceLabel = (rs) => {
   if (rs === null || rs === undefined) return null;
-  if (rs >= 80) return "Estratégico";
+  if (rs >= 80) return "EstratÃ©gico";
   if (rs >= 60) return "Relevante";
   if (rs >= 40) return "Manter no radar";
   return "Sem prioridade agora";
@@ -160,27 +160,27 @@ const getRelevanceLabelColor = (rs) => {
 const getContactPriorityStatus = (health, rs) => {
   if (rs === null || rs === undefined) return {
     status: "Dados incompletos",
-    msg: "Preencha os 4 critérios para entender melhor essa relação.",
+    msg: "Preencha os 4 critÃ©rios para entender melhor essa relaÃ§Ã£o.",
     color: "#5a5650"
   };
   if (health >= 70 && rs >= 70) return {
     status: "Presente e importante",
-    msg: "Uma relação presente e importante para o seu momento atual.",
+    msg: "Uma relaÃ§Ã£o presente e importante para o seu momento atual.",
     color: "#4caf50"
   };
   if (health < 70 && rs >= 70) return {
-    status: "Talvez mereça atenção",
-    msg: "Uma relação importante para você, com pouco registro recente.",
+    status: "Talvez mereÃ§a atenÃ§Ã£o",
+    msg: "Uma relaÃ§Ã£o importante para vocÃª, com pouco registro recente.",
     color: "#E8A020"
   };
   if (health >= 70 && rs < 70) return {
-    status: "Relação tranquila",
-    msg: "Uma relação presente, em um ritmo tranquilo.",
+    status: "RelaÃ§Ã£o tranquila",
+    msg: "Uma relaÃ§Ã£o presente, em um ritmo tranquilo.",
     color: "#ff9800"
   };
   return {
     status: "Sem prioridade agora",
-    msg: "Nada que precise da sua atenção nesta relação agora.",
+    msg: "Nada que precise da sua atenÃ§Ã£o nesta relaÃ§Ã£o agora.",
     color: "#6a6460"
   };
 };
@@ -192,40 +192,40 @@ const generateImmediateActionPlan = (sc) => {
   const low = Object.entries(sc).filter(([k,v]) => DIMS.find(d=>d.key===k) && v <= 60).sort((a,b)=>a[1]-b[1]);
   const dimActions = {
     presenca_mercado: {
-      h48: "Escolha 3 pessoas estratégicas e retome o contato com mensagem personalizada ainda esta semana.",
-      d7: ["Faça uma publicação, comentário ou interação pública ligada ao seu tema de atuação.", "Marque uma conversa sem agenda comercial com alguém relevante para você agora."],
-      d30: ["Crie uma cadência semanal de presença: 1 conteúdo, 1 evento, 1 conversa por semana.", "Identifique 3 ambientes onde seu público está e apareça com regularidade.", "Revise sua bio e perfil: eles comunicam claramente o que você entrega?"]
+      h48: "Escolha 3 pessoas estratÃ©gicas e retome o contato com mensagem personalizada ainda esta semana.",
+      d7: ["FaÃ§a uma publicaÃ§Ã£o, comentÃ¡rio ou interaÃ§Ã£o pÃºblica ligada ao seu tema de atuaÃ§Ã£o.", "Marque uma conversa sem agenda comercial com alguÃ©m relevante para vocÃª agora."],
+      d30: ["Crie uma cadÃªncia semanal de presenÃ§a: 1 conteÃºdo, 1 evento, 1 conversa por semana.", "Identifique 3 ambientes onde seu pÃºblico estÃ¡ e apareÃ§a com regularidade.", "Revise sua bio e perfil: eles comunicam claramente o que vocÃª entrega?"]
     },
     reciprocidade_ativa: {
-      h48: "Envie algo útil para 3 contatos sem pedir nada em troca — um artigo, uma indicação, um reconhecimento.",
-      d7: ["Faça uma indicação entre duas pessoas da sua rede que deveriam se conhecer.", "Reconheça publicamente ou em privado alguém que te ajudou recentemente."],
-      d30: ["Crie o hábito de gerar valor antes de pedir: analise cada contato e defina o que pode oferecer.", "Faça 2 indicações por mês — elas constroem a reputação de quem conecta.", "Mantenha um registro simples de favores feitos e recebidos."]
+      h48: "Envie algo Ãºtil para 3 contatos sem pedir nada em troca â um artigo, uma indicaÃ§Ã£o, um reconhecimento.",
+      d7: ["FaÃ§a uma indicaÃ§Ã£o entre duas pessoas da sua rede que deveriam se conhecer.", "ReconheÃ§a publicamente ou em privado alguÃ©m que te ajudou recentemente."],
+      d30: ["Crie o hÃ¡bito de gerar valor antes de pedir: analise cada contato e defina o que pode oferecer.", "FaÃ§a 2 indicaÃ§Ãµes por mÃªs â elas constroem a reputaÃ§Ã£o de quem conecta.", "Mantenha um registro simples de favores feitos e recebidos."]
     },
     escuta_relacional: {
-      h48: "Faça uma conversa com o objetivo exclusivo de entender o momento do outro. Zero agenda própria.",
-      d7: ["Use uma pergunta aberta antes de falar sobre você em conversas importantes.", "Registre no cadastro do contato algo pessoal ou profissional que você aprendeu."],
-      d30: ["Revise suas últimas 5 conversas: você ouviu mais do que falou?", "Adote a regra 70/30: 70% escutando, 30% falando em conversas estratégicas.", "Crie o hábito de anotar o contexto do outro após cada conversa relevante."]
+      h48: "FaÃ§a uma conversa com o objetivo exclusivo de entender o momento do outro. Zero agenda prÃ³pria.",
+      d7: ["Use uma pergunta aberta antes de falar sobre vocÃª em conversas importantes.", "Registre no cadastro do contato algo pessoal ou profissional que vocÃª aprendeu."],
+      d30: ["Revise suas Ãºltimas 5 conversas: vocÃª ouviu mais do que falou?", "Adote a regra 70/30: 70% escutando, 30% falando em conversas estratÃ©gicas.", "Crie o hÃ¡bito de anotar o contexto do outro apÃ³s cada conversa relevante."]
     },
     intencao_estrategica: {
-      h48: "Liste os 10 contatos mais importantes para seus próximos 90 dias e defina por que cada um importa.",
-      d7: ["Defina o objetivo relacional de cada contato-chave: o que quer construir com essa pessoa?", "Remova da lista de prioridade relações que consomem energia sem conexão com seu momento."],
-      d30: ["Crie um mapa mental da sua rede: quem você quer adicionar, manter e reduzir nos próximos 90 dias.", "Revise sua estratégia relacional mensalmente — ela precisa acompanhar seus objetivos.", "Classifique seus contatos por relevância para o que você está construindo agora."]
+      h48: "Liste os 10 contatos mais importantes para seus prÃ³ximos 90 dias e defina por que cada um importa.",
+      d7: ["Defina o objetivo relacional de cada contato-chave: o que quer construir com essa pessoa?", "Remova da lista de prioridade relaÃ§Ãµes que consomem energia sem conexÃ£o com seu momento."],
+      d30: ["Crie um mapa mental da sua rede: quem vocÃª quer adicionar, manter e reduzir nos prÃ³ximos 90 dias.", "Revise sua estratÃ©gia relacional mensalmente â ela precisa acompanhar seus objetivos.", "Classifique seus contatos por relevÃ¢ncia para o que vocÃª estÃ¡ construindo agora."]
     },
     ritual_consistencia: {
-      h48: "Defina uma próxima ação clara para seus 5 contatos mais importantes e cadastre no sistema.",
-      d7: ["Crie um ritual semanal de 30 minutos para revisar sua rede — coloque no calendário agora.", "Faça follow-up em até 48h após conversas relevantes: uma mensagem curta já basta."],
-      d30: ["Configure alertas para contatos estratégicos que você não pode deixar esfriar.", "Revise e atualize o CRM toda segunda-feira — 20 minutos mudam a qualidade da sua rede.", "Transforme intenção em sistema: sem ritual fixo, bons contatos somem da agenda."]
+      h48: "Defina uma prÃ³xima aÃ§Ã£o clara para seus 5 contatos mais importantes e cadastre no sistema.",
+      d7: ["Crie um ritual semanal de 30 minutos para revisar sua rede â coloque no calendÃ¡rio agora.", "FaÃ§a follow-up em atÃ© 48h apÃ³s conversas relevantes: uma mensagem curta jÃ¡ basta."],
+      d30: ["Configure alertas para contatos estratÃ©gicos que vocÃª nÃ£o pode deixar esfriar.", "Revise e atualize o CRM toda segunda-feira â 20 minutos mudam a qualidade da sua rede.", "Transforme intenÃ§Ã£o em sistema: sem ritual fixo, bons contatos somem da agenda."]
     },
     confianca_autentica: {
-      h48: "Faça uma conversa sem pedir, vender ou apresentar nada. Apareça pelo outro, não por você.",
-      d7: ["Revise se suas interações recentes estão muito transacionais — equilíbrio é chave.", "Compartilhe uma percepção honesta e útil com alguém da sua rede."],
-      d30: ["Analise a coerência entre o que você diz que faz e como você de fato se comporta nas relações.", "Busque aprofundar 3 relações: da superfície para conversa real.", "Seja o mesmo em reuniões formais e conversas informais — isso é o que gera confiança duradoura."]
+      h48: "FaÃ§a uma conversa sem pedir, vender ou apresentar nada. ApareÃ§a pelo outro, nÃ£o por vocÃª.",
+      d7: ["Revise se suas interaÃ§Ãµes recentes estÃ£o muito transacionais â equilÃ­brio Ã© chave.", "Compartilhe uma percepÃ§Ã£o honesta e Ãºtil com alguÃ©m da sua rede."],
+      d30: ["Analise a coerÃªncia entre o que vocÃª diz que faz e como vocÃª de fato se comporta nas relaÃ§Ãµes.", "Busque aprofundar 3 relaÃ§Ãµes: da superfÃ­cie para conversa real.", "Seja o mesmo em reuniÃµes formais e conversas informais â isso Ã© o que gera confianÃ§a duradoura."]
     }
   };
   const allHighPlan = {
-    h48: "Escolha um contato estratégico e faça uma interação de valor sem pedir nada em troca.",
-    d7: ["Reative 3 contatos com alta relevância e pouca presença recente.", "Defina próxima ação para os 5 contatos mais importantes."],
-    d30: ["Crie ritual semanal fixo de revisão da rede — 30 minutos toda segunda.", "Organize seus contatos por relevância e defina próximos passos claros.", "Transforme pelo menos 3 contatos em relações com continuidade clara."]
+    h48: "Escolha um contato estratÃ©gico e faÃ§a uma interaÃ§Ã£o de valor sem pedir nada em troca.",
+    d7: ["Reative 3 contatos com alta relevÃ¢ncia e pouca presenÃ§a recente.", "Defina prÃ³xima aÃ§Ã£o para os 5 contatos mais importantes."],
+    d30: ["Crie ritual semanal fixo de revisÃ£o da rede â 30 minutos toda segunda.", "Organize seus contatos por relevÃ¢ncia e defina prÃ³ximos passos claros.", "Transforme pelo menos 3 contatos em relaÃ§Ãµes com continuidade clara."]
   };
   if (low.length === 0) return allHighPlan;
   const worstKey = low[0][0];
@@ -275,7 +275,7 @@ function getProfile(scores) {
 }
 
 
-/* ─── UI Components ───────────────────────────────────── */
+/* âââ UI Components âââââââââââââââââââââââââââââââââââââ */
 function Btn({ children, onClick, variant = "primary", disabled, small, full }) {
   const base = { fontFamily: "'DM Sans',sans-serif", fontSize: small ? 12 : 15, fontWeight: 600, border: "none", borderRadius: 8, cursor: disabled ? "default" : "pointer", padding: small ? "8px 16px" : "14px 28px", transition: `all ${MOTION.fast}`, opacity: disabled ? 0.5 : 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, width: full ? "100%" : "auto" };
   const v = { primary: { color: C.bg, background: `linear-gradient(135deg,${C.gold},${C.gB})` }, secondary: { color: C.txt, background: C.w06 }, ghost: { color: C.txM, background: "transparent" }, danger: { color: C.cor, background: C.corD }, success: { color: C.grn, background: C.grnD } };
@@ -301,7 +301,7 @@ function Inp({ label, value, onChange, placeholder, type = "text", textarea }) {
             aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
             style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", color: C.txL, fontSize: 16, lineHeight: 1 }}
           >
-            {showPass ? "🙈" : "👁️"}
+            {showPass ? "ð" : "ðï¸"}
           </button>
         </div>
       ) : (
@@ -350,7 +350,7 @@ function Modal({ children, onClose, title }) {
       <div style={{ background: C.card, border: `1px solid ${C.brdH}`, borderRadius: 16, width: "100%", maxWidth: 460, maxHeight: "85vh", overflow: "auto", padding: 28 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: 0 }}>{title}</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.txL, fontSize: 22, cursor: "pointer" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.txL, fontSize: 22, cursor: "pointer" }}>Ã</button>
         </div>
         {children}
       </div>
@@ -376,11 +376,11 @@ function RadarChart({ scores, size = 260 }) {
 }
 
 
-/* ═══ TENDÊNCIA DE EQUIPE (LINHA) ═════════════════════════════
-   % da equipe evoluindo, semana a semana. Já vem filtrado (>=3 pessoas
-   por semana) pela function get_org_team_trend — aqui é só desenhar.
-   Tooltip no hover mostra o valor exato + quantas pessoas contribuíram
-   pro número daquela semana. */
+/* âââ TENDÃNCIA DE EQUIPE (LINHA) âââââââââââââââââââââââââââââ
+   % da equipe evoluindo, semana a semana. JÃ¡ vem filtrado (>=3 pessoas
+   por semana) pela function get_org_team_trend â aqui Ã© sÃ³ desenhar.
+   Tooltip no hover mostra o valor exato + quantas pessoas contribuÃ­ram
+   pro nÃºmero daquela semana. */
 function TeamTrendChart({ data, width = 640, height = 170 }) {
   const [hover, setHover] = useState(null);
   if (!data || data.length < 2) return null;
@@ -430,7 +430,7 @@ function TeamTrendChart({ data, width = 640, height = 170 }) {
           background: C.bg, border: `1px solid ${C.brdH}`, borderRadius: 8, padding: "6px 10px", pointerEvents: "none",
           fontFamily: "'DM Sans'", fontSize: 11, color: C.txt, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,.4)",
         }}>
-          <div style={{ fontWeight: 700 }}>Semana {data[hover].week} · {data[hover].pct_evoluindo}% evoluindo</div>
+          <div style={{ fontWeight: 700 }}>Semana {data[hover].week} Â· {data[hover].pct_evoluindo}% evoluindo</div>
           <div style={{ color: C.txL, marginTop: 2 }}>{data[hover].member_count} pessoas com dado nessa semana</div>
         </div>
       )}
@@ -439,12 +439,12 @@ function TeamTrendChart({ data, width = 640, height = 170 }) {
 }
 
 
-/* ═══ RADAR CATEGÓRICO DE EQUIPE ══════════════════════════════
-   Mesma geometria hexagonal do RadarChart acima, mas sem número de
+/* âââ RADAR CATEGÃRICO DE EQUIPE ââââââââââââââââââââââââââââââ
+   Mesma geometria hexagonal do RadarChart acima, mas sem nÃºmero de
    desempenho: cada eixo vai pra 1 de 3 raios fixos conforme o estado
-   categórico (Evoluindo/Estável/Perdendo/Sem dados). Cor por ESTADO
-   (verde/âmbar/vermelho/cinza), não por dimensão — o que importa aqui é
-   "onde a equipe está indo bem ou mal", não a identidade da dimensão. */
+   categÃ³rico (Evoluindo/EstÃ¡vel/Perdendo/Sem dados). Cor por ESTADO
+   (verde/Ã¢mbar/vermelho/cinza), nÃ£o por dimensÃ£o â o que importa aqui Ã©
+   "onde a equipe estÃ¡ indo bem ou mal", nÃ£o a identidade da dimensÃ£o. */
 const TEAM_STATE_RADIUS = { evoluindo: 100, estavel: 60, perdendo_intensidade: 30 };
 const TEAM_STATE_COLOR = { evoluindo: C.grn, estavel: C.amb, perdendo_intensidade: C.cor, sem_dados: C.txL };
 function TeamDimensionRadar({ observation, size = 128 }) {
@@ -465,8 +465,8 @@ function TeamDimensionRadar({ observation, size = 128 }) {
 }
 
 
-/* ═══ WELCOME ═════════════════════════════════════════════ */
-/* ═══ ONBOARDING ══════════════════════════════════════════ */
+/* âââ WELCOME âââââââââââââââââââââââââââââââââââââââââââââ */
+/* âââ ONBOARDING ââââââââââââââââââââââââââââââââââââââââââ */
 function Onboard({ onDone, initialKey = "", authEmail = "", authName = "" }) {
   const initialName = String(authName || "").trim();
   const [phase, setPhase] = useState("intro"); // intro | interview | review
@@ -542,12 +542,12 @@ function Onboard({ onDone, initialKey = "", authEmail = "", authName = "" }) {
     return "oportunidades";
   };
 
-  // O nome já vem da criação da conta. Só perguntamos novamente em contas
-  // antigas onde ele não esteja disponível.
+  // O nome jÃ¡ vem da criaÃ§Ã£o da conta. SÃ³ perguntamos novamente em contas
+  // antigas onde ele nÃ£o esteja disponÃ­vel.
   const questions = [
     ...(!initialName ? [{
       key: "name",
-      prompt: "Antes de tudo, como você prefere que eu te chame?",
+      prompt: "Antes de tudo, como vocÃª prefere que eu te chame?",
     }] : []),
     {
       key: "company",
@@ -555,15 +555,15 @@ function Onboard({ onDone, initialKey = "", authEmail = "", authName = "" }) {
     },
     {
       key: "role",
-      prompt: "E qual é o seu cargo ou função principal?",
+      prompt: "E qual Ã© o seu cargo ou funÃ§Ã£o principal?",
     },
     {
       key: "segment",
-      prompt: "Em que setor você atua hoje?",
+      prompt: "Em que setor vocÃª atua hoje?",
     },
     {
       key: "objective",
-      prompt: "O que você mais quer que o CONÉXIA te ajude a construir agora?",
+      prompt: "O que vocÃª mais quer que o CONÃXIA te ajude a construir agora?",
     },
   ];
 
@@ -653,7 +653,7 @@ function Onboard({ onDone, initialKey = "", authEmail = "", authName = "" }) {
         intent: "clarify",
         confidence: "low",
         accepted: false,
-        reply: "Não consegui entender sua resposta. Me conta de outro jeito.",
+        reply: "NÃ£o consegui entender sua resposta. Me conta de outro jeito.",
         value: null,
         normalizedValue: null,
       };
@@ -691,21 +691,21 @@ function Onboard({ onDone, initialKey = "", authEmail = "", authName = "" }) {
     };
   };
 
-  // A Danna não trata qualquer fala como se fosse automaticamente uma resposta.
-  // Ela distingue resposta, pedido de explicação, recusa/pular e fala fora de
-  // contexto. Só avança sem confirmação quando há confiança suficiente.
+  // A Danna nÃ£o trata qualquer fala como se fosse automaticamente uma resposta.
+  // Ela distingue resposta, pedido de explicaÃ§Ã£o, recusa/pular e fala fora de
+  // contexto. SÃ³ avanÃ§a sem confirmaÃ§Ã£o quando hÃ¡ confianÃ§a suficiente.
   const interpretAnswer = async (question, value) => {
     const allowedSegments = SEGMENTS.map(s => s.value);
     const allowedObjectives = OBJECTIVES.map(o => o.value);
 
     const prompt = `
-Você é DANNA, a voz de onboarding do CONÉXIA, uma plataforma de inteligência relacional.
+VocÃª Ã© DANNA, a voz de onboarding do CONÃXIA, uma plataforma de inteligÃªncia relacional.
 
-Seu trabalho é interpretar UMA fala do usuário dentro de UMA pergunta de cadastro.
-Você deve funcionar bem independentemente do que o usuário disser: resposta direta,
-frase longa, dúvida, pedido de explicação, correção, recusa, brincadeira ou algo sem relação.
+Seu trabalho Ã© interpretar UMA fala do usuÃ¡rio dentro de UMA pergunta de cadastro.
+VocÃª deve funcionar bem independentemente do que o usuÃ¡rio disser: resposta direta,
+frase longa, dÃºvida, pedido de explicaÃ§Ã£o, correÃ§Ã£o, recusa, brincadeira ou algo sem relaÃ§Ã£o.
 
-CONTEXTO JÁ CAPTURADO:
+CONTEXTO JÃ CAPTURADO:
 ${JSON.stringify({
   name: form.name || null,
   company: form.company || null,
@@ -720,43 +720,43 @@ ${question.prompt}
 CAMPO ESPERADO:
 ${question.key}
 
-FALA DO USUÁRIO:
+FALA DO USUÃRIO:
 ${value}
 
-VALORES VÁLIDOS PARA segment:
+VALORES VÃLIDOS PARA segment:
 ${JSON.stringify(allowedSegments)}
 
-VALORES VÁLIDOS PARA objective:
+VALORES VÃLIDOS PARA objective:
 ${JSON.stringify(allowedObjectives)}
 
 REGRAS:
-- nunca invente informação;
+- nunca invente informaÃ§Ã£o;
 - se a fala responder claramente, intent="answer";
-- se o usuário pedir explicação ("por quê?", "o que quer dizer?", "não entendi"),
-  intent="clarify" e responda a dúvida de modo curto, terminando de forma que ele possa responder;
-- se disser que prefere não responder, intent="skip";
-- se for irrelevante ou impossível extrair com segurança, intent="other";
+- se o usuÃ¡rio pedir explicaÃ§Ã£o ("por quÃª?", "o que quer dizer?", "nÃ£o entendi"),
+  intent="clarify" e responda a dÃºvida de modo curto, terminando de forma que ele possa responder;
+- se disser que prefere nÃ£o responder, intent="skip";
+- se for irrelevante ou impossÃ­vel extrair com seguranÃ§a, intent="other";
 - confidence deve ser "high", "medium" ou "low";
-- accepted=true somente quando você pode armazenar o dado com segurança;
-- para company, role e name, "value" deve conter apenas o dado limpo extraído,
-  não a frase inteira;
+- accepted=true somente quando vocÃª pode armazenar o dado com seguranÃ§a;
+- para company, role e name, "value" deve conter apenas o dado limpo extraÃ­do,
+  nÃ£o a frase inteira;
 - para segment, normalizedValue deve ser exatamente um valor da lista de segmentos;
 - para objective, normalizedValue deve ser exatamente um valor da lista de objetivos;
-- se não houver base suficiente para normalizar, confidence="low" e accepted=false;
-- reply é o que DANNA vai FALAR. Deve soar humana, curta e específica.
-- Não bajule. Não diga "perfeito", "sensacional", "incrível" a cada resposta.
-- Para uma resposta aceita, reconheça em no máximo 12 palavras.
-- Não repita o que o usuário disse inteiro.
-- Para clarify/other/baixa confiança, explique ou faça UMA pergunta curta de esclarecimento.
-- Não fale sobre tecnologia, modelo, JSON ou classificação.
+- se nÃ£o houver base suficiente para normalizar, confidence="low" e accepted=false;
+- reply Ã© o que DANNA vai FALAR. Deve soar humana, curta e especÃ­fica.
+- NÃ£o bajule. NÃ£o diga "perfeito", "sensacional", "incrÃ­vel" a cada resposta.
+- Para uma resposta aceita, reconheÃ§a em no mÃ¡ximo 12 palavras.
+- NÃ£o repita o que o usuÃ¡rio disse inteiro.
+- Para clarify/other/baixa confianÃ§a, explique ou faÃ§a UMA pergunta curta de esclarecimento.
+- NÃ£o fale sobre tecnologia, modelo, JSON ou classificaÃ§Ã£o.
 
-Responda SOMENTE JSON válido:
+Responda SOMENTE JSON vÃ¡lido:
 {
   "intent":"answer|clarify|skip|other",
   "confidence":"high|medium|low",
   "accepted":true,
   "reply":"frase curta da Danna",
-  "value":"valor extraído ou null",
+  "value":"valor extraÃ­do ou null",
   "normalizedValue":"valor normalizado ou null"
 }
 `.trim();
@@ -783,7 +783,7 @@ Responda SOMENTE JSON válido:
       }
 
       const parsed = parseModelJson(data.content?.[0]?.text || "");
-      if (!parsed) throw new Error("Resposta não estruturada.");
+      if (!parsed) throw new Error("Resposta nÃ£o estruturada.");
 
       return {
         intent: parsed.intent || "other",
@@ -797,7 +797,7 @@ Responda SOMENTE JSON válido:
             : String(parsed.normalizedValue).trim(),
       };
     } catch (e) {
-      console.warn("[Danna onboarding] fallback de interpretação:", e);
+      console.warn("[Danna onboarding] fallback de interpretaÃ§Ã£o:", e);
       return fallbackInterpretation(question, value);
     }
   };
@@ -849,7 +849,7 @@ Responda SOMENTE JSON válido:
     if (questionIndex >= questions.length - 1) {
       setPhase("review");
       speak(
-        `${reply ? `${reply} ` : ""}Pronto. Eu organizei o essencial. Confere se está tudo certo.`
+        `${reply ? `${reply} ` : ""}Pronto. Eu organizei o essencial. Confere se estÃ¡ tudo certo.`
       );
       return;
     }
@@ -879,7 +879,7 @@ Responda SOMENTE JSON válido:
         const skippable = ["company", "segment", "objective"].includes(currentQuestion.key);
 
         if (!skippable) {
-          const msg = result.reply || "Essa informação é importante para eu começar. Como você descreveria isso?";
+          const msg = result.reply || "Essa informaÃ§Ã£o Ã© importante para eu comeÃ§ar. Como vocÃª descreveria isso?";
           setError(msg);
           speak(msg, () => setTimeout(beginListening, 100));
           return;
@@ -903,7 +903,7 @@ Responda SOMENTE JSON válido:
       if (!confidentEnough || result.intent !== "answer") {
         const msg =
           result.reply ||
-          "Não quero presumir. Me conta isso de outro jeito.";
+          "NÃ£o quero presumir. Me conta isso de outro jeito.";
         setError(msg);
         setHeard(clean);
         speak(msg, () => setTimeout(beginListening, 100));
@@ -924,7 +924,7 @@ Responda SOMENTE JSON válido:
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
       setUseText(true);
-      setError("Seu navegador não liberou reconhecimento de voz. Você pode responder por texto.");
+      setError("Seu navegador nÃ£o liberou reconhecimento de voz. VocÃª pode responder por texto.");
       return;
     }
 
@@ -964,7 +964,7 @@ Responda SOMENTE JSON válido:
       recognitionRef.current = null;
       setListening(false);
       if (e?.error !== "aborted" && e?.error !== "no-speech") {
-        setError("Não entendi bem. Você pode tentar de novo ou responder por texto.");
+        setError("NÃ£o entendi bem. VocÃª pode tentar de novo ou responder por texto.");
       }
     };
 
@@ -977,7 +977,7 @@ Responda SOMENTE JSON válido:
       rec.start();
     } catch {
       setUseText(true);
-      setError("Não consegui abrir o microfone. Responda por texto.");
+      setError("NÃ£o consegui abrir o microfone. Responda por texto.");
     }
   };
 
@@ -994,8 +994,8 @@ Responda SOMENTE JSON válido:
 
     const intro =
       firstNameForVoice
-        ? `${firstNameForVoice}, eu sou a Danna, a voz do CONÉXIA. Vou te fazer algumas perguntas rápidas e organizar tudo para você.`
-        : "Eu sou a Danna, a voz do CONÉXIA. Vou te fazer algumas perguntas rápidas e organizar tudo para você.";
+        ? `${firstNameForVoice}, eu sou a Danna, a voz do CONÃXIA. Vou te fazer algumas perguntas rÃ¡pidas e organizar tudo para vocÃª.`
+        : "Eu sou a Danna, a voz do CONÃXIA. Vou te fazer algumas perguntas rÃ¡pidas e organizar tudo para vocÃª.";
 
     setTimeout(() => {
       speak(
@@ -1030,7 +1030,7 @@ Responda SOMENTE JSON válido:
     };
 
     if (!ready.name || !ready.role) {
-      setError("Nome e função são necessários para começar.");
+      setError("Nome e funÃ§Ã£o sÃ£o necessÃ¡rios para comeÃ§ar.");
       return;
     }
 
@@ -1061,7 +1061,7 @@ Responda SOMENTE JSON válido:
             margin: "14px 0 8px",
             lineHeight: 1.08,
           }}>
-            {firstNameForVoice ? `${firstNameForVoice}, vamos começar conversando.` : "Vamos começar conversando."}
+            {firstNameForVoice ? `${firstNameForVoice}, vamos comeÃ§ar conversando.` : "Vamos comeÃ§ar conversando."}
           </h2>
           <p style={{
             fontFamily: "'DM Sans'",
@@ -1071,9 +1071,9 @@ Responda SOMENTE JSON válido:
             margin: "0 auto 22px",
             maxWidth: 360,
           }}>
-            A Danna conversa com você, interpreta as respostas e organiza o essencial. Se algo não estiver claro, ela pergunta antes de salvar.
+            A Danna conversa com vocÃª, interpreta as respostas e organiza o essencial. Se algo nÃ£o estiver claro, ela pergunta antes de salvar.
           </p>
-          <Btn full onClick={startInterview}>Começar conversa</Btn>
+          <Btn full onClick={startInterview}>ComeÃ§ar conversa</Btn>
         </div>
       </div>
     );
@@ -1113,7 +1113,7 @@ Responda SOMENTE JSON válido:
                 letterSpacing: ".12em",
                 textTransform: "uppercase",
               }}>
-                DANNA · PRIMEIRO CONTATO
+                DANNA Â· PRIMEIRO CONTATO
               </div>
               <div style={{
                 fontFamily: "'DM Sans'",
@@ -1171,7 +1171,7 @@ Responda SOMENTE JSON válido:
             }}
           >
             <span style={{ fontSize: 28 }}>
-              {processingAnswer ? "◌" : listening ? "◉" : speaking ? "◌" : "●"}
+              {processingAnswer ? "â" : listening ? "â" : speaking ? "â" : "â"}
             </span>
           </button>
 
@@ -1188,7 +1188,7 @@ Responda SOMENTE JSON válido:
                 ? "Danna falando..."
                 : listening
                   ? "Ouvindo..."
-                  : "Toque no círculo para responder"}
+                  : "Toque no cÃ­rculo para responder"}
           </div>
 
           {(heard || useText) && (
@@ -1265,7 +1265,7 @@ Responda SOMENTE JSON válido:
             color: C.txL,
             lineHeight: 1.5,
           }}>
-            Respostas claras avançam automaticamente. Se a Danna tiver dúvida, ela pergunta antes de continuar.
+            Respostas claras avanÃ§am automaticamente. Se a Danna tiver dÃºvida, ela pergunta antes de continuar.
           </div>
         </div>
       </div>
@@ -1297,7 +1297,7 @@ Responda SOMENTE JSON válido:
         borderRadius: 22,
         padding: 22,
       }}>
-        <Tag>Confirmação</Tag>
+        <Tag>ConfirmaÃ§Ã£o</Tag>
 
         <h2 style={{
           fontFamily: "'Cormorant Garamond',serif",
@@ -1315,12 +1315,12 @@ Responda SOMENTE JSON válido:
           lineHeight: 1.55,
           margin: "0 0 18px",
         }}>
-          A Danna já organizou as respostas. Ajuste qualquer coisa antes de continuarmos.
+          A Danna jÃ¡ organizou as respostas. Ajuste qualquer coisa antes de continuarmos.
         </p>
 
         <Inp label="Como devo te chamar" value={form.name} onChange={v => updateField("name", v)} />
         <Inp label="Empresa" value={form.company} onChange={v => updateField("company", v)} />
-        <Inp label="Cargo / função" value={form.role} onChange={v => updateField("role", v)} />
+        <Inp label="Cargo / funÃ§Ã£o" value={form.role} onChange={v => updateField("role", v)} />
 
         <div style={{ marginBottom: 14 }}>
           <div style={{
@@ -1391,7 +1391,7 @@ Responda SOMENTE JSON válido:
             Leitura atual
           </div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12.5, color: C.txt }}>
-            {segmentLabel} · {objectiveLabel}
+            {segmentLabel} Â· {objectiveLabel}
           </div>
         </div>
 
@@ -1399,7 +1399,7 @@ Responda SOMENTE JSON válido:
           label="Chave PRO (opcional)"
           value={voucher}
           onChange={setVoucher}
-          placeholder="Se você recebeu uma chave"
+          placeholder="Se vocÃª recebeu uma chave"
         />
 
         {error && (
@@ -1423,7 +1423,7 @@ Responda SOMENTE JSON válido:
           }}>
             Rever conversa
           </Btn>
-          <Btn onClick={finish}>Está certo →</Btn>
+          <Btn onClick={finish}>EstÃ¡ certo â</Btn>
         </div>
       </div>
     </div>
@@ -1431,13 +1431,13 @@ Responda SOMENTE JSON válido:
 }
 
 
-/* ═══ ASSESSMENT ══════════════════════════════════════════ */
-// Tela final do assessment — reescrita para terminar em 1 CTA único
-// ("Começar minha rede"), em vez de radar + 6 dimensões + plano de 4
-// semanas + PDF antes de qualquer botão. Essa pilha de conteúdo era
-// exatamente o ponto identificado de maior abandono (assessment concluído,
-// usuário nunca chega a cadastrar ninguém). O diagnóstico completo continua
-// existindo — como um link secundário que não bloqueia o próximo passo.
+/* âââ ASSESSMENT ââââââââââââââââââââââââââââââââââââââââââ */
+// Tela final do assessment â reescrita para terminar em 1 CTA Ãºnico
+// ("ComeÃ§ar minha rede"), em vez de radar + 6 dimensÃµes + plano de 4
+// semanas + PDF antes de qualquer botÃ£o. Essa pilha de conteÃºdo era
+// exatamente o ponto identificado de maior abandono (assessment concluÃ­do,
+// usuÃ¡rio nunca chega a cadastrar ninguÃ©m). O diagnÃ³stico completo continua
+// existindo â como um link secundÃ¡rio que nÃ£o bloqueia o prÃ³ximo passo.
 function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, onSave, userId }) {
   const [showFull, setShowFull] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -1467,7 +1467,7 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
       <div style={{ maxWidth: 480, width: "100%" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>{prof.emoji}</div>
-          <Tag color={C.grn}>Diagnóstico concluído</Tag>
+          <Tag color={C.grn}>DiagnÃ³stico concluÃ­do</Tag>
           <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: TYPE.display, fontWeight: 700, color: C.gold, margin: "12px 0 4px", fontStyle: "italic" }}>{prof.name}</h1>
           <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txM, fontStyle: "italic" }}>{prof.tagline}</p>
         </div>
@@ -1476,15 +1476,15 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 22, marginBottom: 20 }}>
           <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txt, lineHeight: 1.7, margin: 0 }}>
             {maxD && minD ? (
-              <>Seu perfil mostra facilidade em <strong style={{ color: C.gold }}>{forcaLabel}</strong>, mas indica que <strong style={{ color: C.gold }}>{desafioLabel}</strong> pode ser um desafio. Agora vamos transformar esse diagnóstico em uma rede que você consegue cuidar no dia a dia.</>
+              <>Seu perfil mostra facilidade em <strong style={{ color: C.gold }}>{forcaLabel}</strong>, mas indica que <strong style={{ color: C.gold }}>{desafioLabel}</strong> pode ser um desafio. Agora vamos transformar esse diagnÃ³stico em uma rede que vocÃª consegue cuidar no dia a dia.</>
             ) : (
-              <>Seu diagnóstico está pronto. Agora vamos transformar isso em uma rede que você consegue cuidar no dia a dia.</>
+              <>Seu diagnÃ³stico estÃ¡ pronto. Agora vamos transformar isso em uma rede que vocÃª consegue cuidar no dia a dia.</>
             )}
           </p>
         </div>
 
 
-        <Btn onClick={handleStartNetwork} disabled={saving} full>{saving ? "Salvando..." : "Começar minha rede →"}</Btn>
+        <Btn onClick={handleStartNetwork} disabled={saving} full>{saving ? "Salvando..." : "ComeÃ§ar minha rede â"}</Btn>
         {saveError && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.cor, textAlign: "center", marginTop: 10 }}>{saveError}</div>
         )}
@@ -1492,7 +1492,7 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
 
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <button onClick={() => setShowFull(s => !s)} style={{ background: "none", border: "none", color: C.txL, fontFamily: "'DM Sans'", fontSize: TYPE.caption, cursor: "pointer", textDecoration: "underline" }}>
-            {showFull ? "Ocultar diagnóstico completo" : "Ver diagnóstico completo"}
+            {showFull ? "Ocultar diagnÃ³stico completo" : "Ver diagnÃ³stico completo"}
           </button>
         </div>
 
@@ -1502,7 +1502,7 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
             <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.gold, textAlign: "center", marginBottom: 12 }}>Score geral: {overall}%</div>
             <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}><RadarChart scores={scores} /></div>
             <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Suas 6 dimensões</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Suas 6 dimensÃµes</div>
               {DIMS.map((d, i) => { const v = scores[d.key] || 0; return (
                 <div key={i} style={{ marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 500, color: C.txt }}>{d.label}</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: TYPE.caption, fontWeight: 600, color: d.color }}>{v}%</span></div>
@@ -1511,11 +1511,11 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
               ); })}
             </div>
             <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Análise profunda</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>AnÃ¡lise profunda</div>
               <p style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txM, lineHeight: 1.65 }}>{prof.desc}</p>
             </div>
             <div style={{ textAlign: "center", fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.txL }}>
-              O plano de 4 semanas completo e o PDF continuam disponíveis depois, dentro de "Eu".
+              O plano de 4 semanas completo e o PDF continuam disponÃ­veis depois, dentro de "Eu".
             </div>
           </div>
         )}
@@ -1526,10 +1526,10 @@ function AssessResult({ prof, overall, maxD, minD, scores, saving, saveError, on
 
 
 function Assess({ profile, onDone }) {
-  // ── Rascunho persistente (retomada entre sessões/dispositivos) ──
+  // ââ Rascunho persistente (retomada entre sessÃµes/dispositivos) ââ
   // Restaura de profile.assessment_draft/assessment_draft_step no primeiro
-  // render — não localStorage, porque precisa sobreviver a troca de
-  // dispositivo/navegador, e profile já vem carregado do Supabase.
+  // render â nÃ£o localStorage, porque precisa sobreviver a troca de
+  // dispositivo/navegador, e profile jÃ¡ vem carregado do Supabase.
   const hadDraft = !!(profile?.assessment_draft && Object.keys(profile.assessment_draft).length > 0);
   const [qi, setQi] = useState(() => (hadDraft ? (profile.assessment_draft_step || 0) : 0));
   const [ans, setAns] = useState(() => (hadDraft ? profile.assessment_draft : {}));
@@ -1537,9 +1537,9 @@ function Assess({ profile, onDone }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
-  // Guard síncrono: useRef não depende de re-render, então cobre o caso de
+  // Guard sÃ­ncrono: useRef nÃ£o depende de re-render, entÃ£o cobre o caso de
   // duplo-clique disparando dois eventos antes do React aplicar `disabled`.
-  // O useState continua existindo só para controlar o texto/estado visual do botão.
+  // O useState continua existindo sÃ³ para controlar o texto/estado visual do botÃ£o.
   const savingRef = useRef(false);
   const { scores, overall } = useMemo(() => calcScores(ans), [ans]);
   const pKey = useMemo(() => getProfile(scores), [scores]);
@@ -1555,16 +1555,16 @@ function Assess({ profile, onDone }) {
 
 
   // Dispara 1x no mount: assessment_started (rascunho novo) ou
-  // assessment_resumed (já havia respostas salvas).
+  // assessment_resumed (jÃ¡ havia respostas salvas).
   useEffect(() => {
     trackAssess(hadDraft ? "assessment_resumed" : "assessment_started", hadDraft ? { resumedAtStep: qi } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
-  // Salva o rascunho automaticamente a cada resposta/mudança de pergunta.
-  // Erro de salvamento nunca bloqueia o preenchimento — só fica registrado
-  // no console; a próxima resposta tenta salvar de novo.
+  // Salva o rascunho automaticamente a cada resposta/mudanÃ§a de pergunta.
+  // Erro de salvamento nunca bloqueia o preenchimento â sÃ³ fica registrado
+  // no console; a prÃ³xima resposta tenta salvar de novo.
   const draftSaveRef = useRef(null);
   useEffect(() => {
     if (done || !profile?.id) return;
@@ -1575,7 +1575,7 @@ function Assess({ profile, onDone }) {
         .update({ assessment_draft: ans, assessment_draft_step: qi })
         .eq("id", profile.id)
         .then(({ error }) => { if (error) console.warn("[Assess] falha ao salvar rascunho:", error); });
-    }, 400); // pequeno debounce — não salva a cada tecla, salva por resposta
+    }, 400); // pequeno debounce â nÃ£o salva a cada tecla, salva por resposta
     return () => clearTimeout(draftSaveRef.current);
   }, [ans, qi, done, profile?.id]);
 
@@ -1594,15 +1594,15 @@ function Assess({ profile, onDone }) {
     try {
       const result = { scores, overall, profileKey: pKey, profileName: prof.name, createdAt: new Date().toISOString(), answers: ans };
       await onDone(result);
-      // Sucesso: mantém o guard travado de propósito — a navegação para o
-      // app acontece dentro de onDone, então não deve haver novo envio.
+      // Sucesso: mantÃ©m o guard travado de propÃ³sito â a navegaÃ§Ã£o para o
+      // app acontece dentro de onDone, entÃ£o nÃ£o deve haver novo envio.
     } catch (e) {
-      // Erro real: libera o guard para o usuário poder tentar de novo, sem
+      // Erro real: libera o guard para o usuÃ¡rio poder tentar de novo, sem
       // perder as respostas (ans/qi continuam intactos no estado).
       console.error("[Assess] falha ao concluir o assessment:", e);
       savingRef.current = false;
       setSaving(false);
-      setSaveError("Não consegui salvar seu diagnóstico agora. Suas respostas continuam aqui — tenta de novo?");
+      setSaveError("NÃ£o consegui salvar seu diagnÃ³stico agora. Suas respostas continuam aqui â tenta de novo?");
     }
   };
 
@@ -1637,9 +1637,9 @@ function Assess({ profile, onDone }) {
           </button>
         ))}
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          {qi > 0 && <Btn variant="ghost" onClick={() => setQi(qi - 1)} small>← Anterior</Btn>}
+          {qi > 0 && <Btn variant="ghost" onClick={() => setQi(qi - 1)} small>â Anterior</Btn>}
           <div style={{ flex: 1 }} />
-          {qi < QS.length - 1 ? <Btn onClick={() => setQi(qi + 1)} disabled={!cur}>Próxima →</Btn> : <Btn onClick={() => setDone(true)} disabled={!cur}>Ver meu perfil</Btn>}
+          {qi < QS.length - 1 ? <Btn onClick={() => setQi(qi + 1)} disabled={!cur}>PrÃ³xima â</Btn> : <Btn onClick={() => setDone(true)} disabled={!cur}>Ver meu perfil</Btn>}
         </div>
       </div>
     </div>
@@ -1647,36 +1647,36 @@ function Assess({ profile, onDone }) {
 }
 
 
-/* ═══ MAKE WEBHOOK ════════════════════════════════════════
+/* âââ MAKE WEBHOOK ââââââââââââââââââââââââââââââââââââââââ
    A URL real do webhook Make NUNCA fica no frontend (era um segredo exposto
-   no bundle público, acionável por qualquer pessoa via DevTools). O push
-   agora passa por /api/track-crm-event, que lê MAKE_WEBHOOK_URL do ambiente
+   no bundle pÃºblico, acionÃ¡vel por qualquer pessoa via DevTools). O push
+   agora passa por /api/track-crm-event, que lÃª MAKE_WEBHOOK_URL do ambiente
    Vercel e repassa no servidor. */
 const MAKE_WEBHOOK = "/api/track-crm-event";
 const MENTORIA_LINK = ""; // Preencher com link WhatsApp/Calendly
 
 
-/* ═══ STRIPE — CONFIGURAÇÃO CENTRALIZADA ═══════════════════
-   Um único Payment Link (modo Live) com os dois preços cadastrados
-   dentro dele — o cliente escolhe mensal (R$39,90) ou anual (R$399)
-   na própria tela de checkout da Stripe. Não são dois links separados. */
+/* âââ STRIPE â CONFIGURAÃÃO CENTRALIZADA âââââââââââââââââââ
+   Um Ãºnico Payment Link (modo Live) com os dois preÃ§os cadastrados
+   dentro dele â o cliente escolhe mensal (R$39,90) ou anual (R$399)
+   na prÃ³pria tela de checkout da Stripe. NÃ£o sÃ£o dois links separados. */
 const STRIPE = {
   checkoutUrl: "https://buy.stripe.com/dRm5kF9Rs4oKguA388gfu02",
 };
-// Mantidos por compatibilidade com o restante do arquivo — todos apontam
-// pro mesmo link único, já que mensal e anual vivem dentro dele.
+// Mantidos por compatibilidade com o restante do arquivo â todos apontam
+// pro mesmo link Ãºnico, jÃ¡ que mensal e anual vivem dentro dele.
 const STRIPE_MENSAL = STRIPE.checkoutUrl;
 const STRIPE_ANUAL  = STRIPE.checkoutUrl;
 
 
-/* Monta a URL do Payment Link já associada ao usuário logado.
-   client_reference_id e prefilled_email são parâmetros oficiais da Stripe
-   para Payment Links — voltam intactos no evento checkout.session.completed,
-   é assim que o webhook (api/stripe-webhook.js) sabe pra qual usuário do
-   Supabase ativar o PRO. Sem isso, o pagamento acontece mas não tem como
+/* Monta a URL do Payment Link jÃ¡ associada ao usuÃ¡rio logado.
+   client_reference_id e prefilled_email sÃ£o parÃ¢metros oficiais da Stripe
+   para Payment Links â voltam intactos no evento checkout.session.completed,
+   Ã© assim que o webhook (api/stripe-webhook.js) sabe pra qual usuÃ¡rio do
+   Supabase ativar o PRO. Sem isso, o pagamento acontece mas nÃ£o tem como
    saber automaticamente de quem foi. */
 const buildStripeCheckoutUrl = (baseUrl, user) => {
-  if (!user?.id) return baseUrl; // usuário não logado — não deveria acontecer, mas não quebra o link
+  if (!user?.id) return baseUrl; // usuÃ¡rio nÃ£o logado â nÃ£o deveria acontecer, mas nÃ£o quebra o link
   const params = new URLSearchParams();
   params.set("client_reference_id", user.id);
   if (user.email) params.set("prefilled_email", user.email);
@@ -1686,7 +1686,7 @@ const buildStripeCheckoutUrl = (baseUrl, user) => {
 
 const ADMIN_EMAILS           = ["rafaelmilleo@yahoo.com.br", "rafamilleo@gmail.com"];
 const FREE_CT_LIMIT          = 5;
-const FREE_IT_PER_CT_LIMIT   = 3; // interações por contato no plano Free
+const FREE_IT_PER_CT_LIMIT   = 3; // interaÃ§Ãµes por contato no plano Free
 
 
 const isProUser = (prof, email) => {
@@ -1712,7 +1712,7 @@ const getPlanLabel = (prof, email) => {
 };
 
 
-/* ═══ IA PROATIVA ════════════════════════════════════════ */
+/* âââ IA PROATIVA ââââââââââââââââââââââââââââââââââââââââ */
 function PainelIAProativa({ userId, contacts, interactions, assessment, profile }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1728,7 +1728,7 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
     setLoading(true);
     setErrMsg(null);
     try {
-      // ── Dados ricos de cada contato correlacionados com interações ──
+      // ââ Dados ricos de cada contato correlacionados com interaÃ§Ãµes ââ
       const contactsDetail = contacts.map(c => {
         const cIts = interactions.filter(i => i.contactId === c.id)
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -1738,18 +1738,18 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         const diasSemContato = lastIt
           ? Math.floor((Date.now() - new Date(lastIt.createdAt).getTime()) / 86400000)
           : null;
-        // Frequência real vs ideal
+        // FrequÃªncia real vs ideal
         const freqIdeal = c.idealFreq || 30;
         const atrasado = diasSemContato !== null && diasSemContato > freqIdeal;
         const diasAtraso = atrasado ? diasSemContato - freqIdeal : 0;
-        // Valor gerado nas interações
+        // Valor gerado nas interaÃ§Ãµes
         const valorGerado = cIts.filter(i => i.valueGen).length;
         return {
           nome: c.name,
           empresa: c.company || '',
           cargo: c.role || '',
           categoria: c.category || '',         // aliado, ponte, mentor, potencial, dormindo
-          proximidade: c.proximity || 3,       // 1=muito próximo, 5=distante
+          proximidade: c.proximity || 3,       // 1=muito prÃ³ximo, 5=distante
           frequenciaIdealDias: freqIdeal,
           saudeRelacional: c.health || 0,      // 0-100
           status: c.status,
@@ -1759,12 +1759,12 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
           notas: c.notes || null,
           cidade: c.city || null,
           aniversario: c.birthday || null,
-          // Campos de potencial estratégico
+          // Campos de potencial estratÃ©gico
           influenciaPessoas: c.influenciaPessoas,   // boolean
           geraOportunidade: c.geraOportunidade,     // boolean
           abrePortas: c.abrePortas,                 // boolean
           momentoAtual: c.momentoAtual || null,     // contexto atual do contato
-          // Histórico de interações
+          // HistÃ³rico de interaÃ§Ãµes
           totalInteracoes: cIts.length,
           interacoesPositivas: posIts.length,
           interacoesNegativas: negIts.length,
@@ -1779,7 +1779,7 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
       });
 
 
-      // ── Assessment completo do usuário ──
+      // ââ Assessment completo do usuÃ¡rio ââ
       const sc = assessment?.scores || {};
       const assessmentScores = {
         perfil: assessment?.profileName || assessment?.profileKey || '',
@@ -1793,14 +1793,14 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
       };
 
 
-      // ── Análises agregadas ──
+      // ââ AnÃ¡lises agregadas ââ
       const empCount = {};
       contacts.forEach(c => { if (c.company) empCount[c.company] = (empCount[c.company] || 0) + 1; });
       const catCount = {};
       contacts.forEach(c => { catCount[c.category || 'outro'] = (catCount[c.category || 'outro'] || 0) + 1; });
 
 
-      // Contatos estratégicos de alto potencial sem interação recente
+      // Contatos estratÃ©gicos de alto potencial sem interaÃ§Ã£o recente
       const altoPotencialSemContato = contactsDetail.filter(c =>
         (c.influenciaPessoas || c.geraOportunidade || c.abrePortas) &&
         (c.diasSemContato === null || c.diasSemContato > 14)
@@ -1813,25 +1813,25 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
       );
 
 
-      // Contatos atrasados na frequência ideal
+      // Contatos atrasados na frequÃªncia ideal
       const atrasadosNaFrequencia = contactsDetail
         .filter(c => c.atrasadoNaFrequencia)
         .sort((a, b) => b.diasDeAtraso - a.diasDeAtraso)
         .slice(0, 5);
 
 
-      // Contatos sem nenhuma interação
+      // Contatos sem nenhuma interaÃ§Ã£o
       const semInteracao = contactsDetail.filter(c => c.totalInteracoes === 0);
 
 
-      // Contatos ponte/mentor sem interação recente (crítico)
+      // Contatos ponte/mentor sem interaÃ§Ã£o recente (crÃ­tico)
       const ponteMentorSemContato = contactsDetail.filter(c =>
         (c.categoria === 'ponte' || c.categoria === 'mentor') &&
         (c.diasSemContato === null || c.diasSemContato > 21)
       );
 
 
-      // Reciprocidade: contatos com muitas interações mas sem valor gerado
+      // Reciprocidade: contatos com muitas interaÃ§Ãµes mas sem valor gerado
       const semReciprocidade = contactsDetail.filter(c =>
         c.totalInteracoes >= 3 && c.vezesMandouValor === 0
       );
@@ -1843,7 +1843,7 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
         totalContatos: contacts.length,
         distribuicaoEmpresas: empCount,
         distribuicaoCategorias: catCount,
-        // Situações críticas
+        // SituaÃ§Ãµes crÃ­ticas
         altoPotencialSemContato: altoPotencialSemContato.map(c => ({
           nome: c.nome, empresa: c.empresa, cargo: c.cargo, categoria: c.categoria,
           influencia: c.influenciaPessoas, geraOportunidade: c.geraOportunidade,
@@ -1875,21 +1875,21 @@ function PainelIAProativa({ userId, contacts, interactions, assessment, profile 
       };
 
 
-      const prompt = `Você é um coach de networking estratégico de alto nível. Analise os dados REAIS da rede do usuário e gere exatamente 3 insights PODEROSOS, ESPECÍFICOS e CORRELACIONADOS.
+      const prompt = `VocÃª Ã© um coach de networking estratÃ©gico de alto nÃ­vel. Analise os dados REAIS da rede do usuÃ¡rio e gere exatamente 3 insights PODEROSOS, ESPECÃFICOS e CORRELACIONADOS.
 
 
-Regras obrigatórias:
-- Use NOMES REAIS dos contatos — nunca seja genérico
+Regras obrigatÃ³rias:
+- Use NOMES REAIS dos contatos â nunca seja genÃ©rico
 - Cruze os dados do assessment com os dados da rede:
-  * Se reciprocidadeAtiva está baixa mas tem contatos com muitas interações sem valor gerado, aponte isso
-  * Se ritualConsistencia está alto mas tem contatos atrasados na frequência, aponte a contradição
-  * Se presencaMercado está baixo e não há contatos "ponte" ativos, conecte os pontos
-- Priorize situações críticas: relacionamentos deteriorando, alto potencial sem contato, pontes/mentores esquecidos
-- Para cada insight, a "acao" deve ser IMEDIATA e ESPECÍFICA: diga O QUE fazer, COM QUEM e COMO (ex: "Ligue para Katty Corrente hoje — pergunte sobre o projeto X que ela mencionou")
-- Se houver relacionamento deteriorando, gere um plano de reversão em 3 passos
-- Se houver contato de alto potencial (abrePortas/geraOportunidade/influenciaPessoas) sem contato recente, trate como urgência máxima
-- Considere a categoria do contato: pontes e mentores têm peso estratégico maior que dormindo
-- Considere a proximidade (1=muito próximo, 5=distante) para calibrar a urgência
+  * Se reciprocidadeAtiva estÃ¡ baixa mas tem contatos com muitas interaÃ§Ãµes sem valor gerado, aponte isso
+  * Se ritualConsistencia estÃ¡ alto mas tem contatos atrasados na frequÃªncia, aponte a contradiÃ§Ã£o
+  * Se presencaMercado estÃ¡ baixo e nÃ£o hÃ¡ contatos "ponte" ativos, conecte os pontos
+- Priorize situaÃ§Ãµes crÃ­ticas: relacionamentos deteriorando, alto potencial sem contato, pontes/mentores esquecidos
+- Para cada insight, a "acao" deve ser IMEDIATA e ESPECÃFICA: diga O QUE fazer, COM QUEM e COMO (ex: "Ligue para Katty Corrente hoje â pergunte sobre o projeto X que ela mencionou")
+- Se houver relacionamento deteriorando, gere um plano de reversÃ£o em 3 passos
+- Se houver contato de alto potencial (abrePortas/geraOportunidade/influenciaPessoas) sem contato recente, trate como urgÃªncia mÃ¡xima
+- Considere a categoria do contato: pontes e mentores tÃªm peso estratÃ©gico maior que dormindo
+- Considere a proximidade (1=muito prÃ³ximo, 5=distante) para calibrar a urgÃªncia
 
 
 Dados reais: ${JSON.stringify(ctx)}
@@ -1945,33 +1945,33 @@ Sem texto extra.`;
     <div style={{ background: `${C.gold}04`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>🧠 Inteligência da sua rede</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>ð§  InteligÃªncia da sua rede</div>
           {lastRefresh && <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginTop: 2 }}>Atualizado {lastRefresh.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>}
         </div>
         <button onClick={generateInsights} disabled={loading || contacts.length < 3}
           title={contacts.length < 3 ? 'Cadastre pelo menos 3 contatos pra habilitar' : undefined}
           style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '5px 12px', fontFamily: "'DM Sans'", fontSize: 11, color: C.gold, cursor: (loading || contacts.length < 3) ? 'default' : 'pointer', opacity: (loading || contacts.length < 3) ? 0.6 : 1 }}>
-          {loading ? 'Analisando...' : '🔄 Atualizar'}
+          {loading ? 'Analisando...' : 'ð Atualizar'}
         </button>
       </div>
 
 
       {loading && (
         <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, textAlign: 'center', padding: '16px 0' }}>
-          A IA está analisando sua rede...
+          A IA estÃ¡ analisando sua rede...
         </div>
       )}
 
 
       {errMsg && (
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.cor, marginBottom: 8, padding: '8px 10px', background: `${C.cor}10`, borderRadius: 6 }}>
-          ⚠️ {errMsg}
+          â ï¸ {errMsg}
         </div>
       )}
       {!loading && !insights && (
         <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, lineHeight: 1.5 }}>
           {contacts.length < 3
-            ? `✨ Cadastre pelo menos 3 contatos (você tem ${contacts.length}) pra eu começar a analisar sua rede e trazer recomendações personalizadas aqui.`
+            ? `â¨ Cadastre pelo menos 3 contatos (vocÃª tem ${contacts.length}) pra eu comeÃ§ar a analisar sua rede e trazer recomendaÃ§Ãµes personalizadas aqui.`
             : 'Clique em Atualizar para gerar insights personalizados da sua rede.'}
         </div>
       )}
@@ -1988,7 +1988,7 @@ Sem texto extra.`;
             </div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 8 }}>{ins.observacao}</div>
             <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 6, padding: '7px 10px' }}>
-              <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.06em' }}>→ Ação: </span>
+              <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.06em' }}>â AÃ§Ã£o: </span>
               <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{ins.acao}</span>
             </div>
           </div>
@@ -1999,12 +1999,12 @@ Sem texto extra.`;
 }
 
 
-/* ═══ AÇÕES DO ARQUÉTIPO (compartilhado entre Plano e Trajetória) ═══
-   Antes existiam 2 blocos estáticos idênticos e desconectados — um em
-   "Plano de Ativação" (PlanInterativo) e outro em "Trajetória"
-   (renderReport). Nenhum dos dois era clicável. Agora é 1 componente só,
-   com estado próprio salvo em plan_step_completion (phase=0), usado nos
-   dois lugares — marcar numa aba reflete na outra. */
+/* âââ AÃÃES DO ARQUÃTIPO (compartilhado entre Plano e TrajetÃ³ria) âââ
+   Antes existiam 2 blocos estÃ¡ticos idÃªnticos e desconectados â um em
+   "Plano de AtivaÃ§Ã£o" (PlanInterativo) e outro em "TrajetÃ³ria"
+   (renderReport). Nenhum dos dois era clicÃ¡vel. Agora Ã© 1 componente sÃ³,
+   com estado prÃ³prio salvo em plan_step_completion (phase=0), usado nos
+   dois lugares â marcar numa aba reflete na outra. */
 function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
   const [archetypeDone, setArchetypeDone] = useState({});
   const [loaded, setLoaded] = useState(false);
@@ -2031,7 +2031,7 @@ function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
       const { error } = await supabase.from('plan_step_completion')
         .upsert({ user_id: userId, phase: 0, week: 0, step_number: idx, completed_at: new Date().toISOString() },
           { onConflict: 'user_id,phase,week,step_number' });
-      if (error) { console.error('[AçõesArquétipo] falha ao salvar:', error); setArchetypeDone(a => ({ ...a, [idx]: wasDone })); }
+      if (error) { console.error('[AÃ§ÃµesArquÃ©tipo] falha ao salvar:', error); setArchetypeDone(a => ({ ...a, [idx]: wasDone })); }
     }
   };
 
@@ -2039,14 +2039,14 @@ function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
   if (!pf || !pf.actions?.length) return null;
   return (
     <div style={hideHeader ? {} : { background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
-      {!hideHeader && <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 ações como {pf.name}</div>}
+      {!hideHeader && <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 8 }}>Suas 3 aÃ§Ãµes como {pf.name}</div>}
       {pf.actions.map((a, i) => {
         const checked = loaded && !!archetypeDone[i];
         return (
           <div key={i} onClick={() => toggle(i)}
             style={{ display: "flex", gap: 10, marginBottom: 6, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: `all ${MOTION.base}` }}>
             <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? C.grn : C.gL}`, background: checked ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-              {checked && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+              {checked && <span style={{ color: '#fff', fontSize: 11 }}>â</span>}
             </div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: checked ? C.txL : C.txM, lineHeight: 1.5, textDecoration: checked ? 'line-through' : 'none' }}>{a}</div>
           </div>
@@ -2057,17 +2057,17 @@ function ArchetypeActionsChecklist({ userId, pf, hideHeader = false }) {
 }
 
 
-/* ═══ PLANO INTERATIVO ══════════════════════════════════ */
+/* âââ PLANO INTERATIVO ââââââââââââââââââââââââââââââââââ */
 function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   const [done, setDone] = useState({});
   const [metaDone, setMetaDone] = useState({});
   const [aiGoals, setAiGoals] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [regeneratingGoalId, setRegeneratingGoalId] = useState(null);
-  const [expandedWeeks, setExpandedWeeks] = useState({}); // semanas concluídas que o usuário abriu manualmente
+  const [expandedWeeks, setExpandedWeeks] = useState({}); // semanas concluÃ­das que o usuÃ¡rio abriu manualmente
   const [realProgress, setRealProgress] = useState(null); // atividade real (interactions/contacts) vinda do banco
   const [loaded, setLoaded] = useState(false);
-  // Microrresposta contextual ao concluir tarefa/meta — some sozinha, não
+  // Microrresposta contextual ao concluir tarefa/meta â some sozinha, nÃ£o
   // fica acumulando (nada de log de "conquistas"). Ver src/lib/evolutionCopy.js.
   const [microMsg, setMicroMsg] = useState(null);
   useEffect(() => {
@@ -2096,12 +2096,12 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
     setRealProgress(progress?.[0] || null);
 
 
-    // Meta de 90 dias batida (100%) não fecha sozinha — sem isso ela fica
-    // "somando pra sempre" na tela mesmo já concluída. Aqui, ao carregar,
-    // qualquer meta com progress_percentage >= 100 é arquivada como
-    // "achieved" e substituída por uma nova, com o mesmo salto (target -
-    // baseline) a partir do valor atual — sem IA, sem mexer nas outras
-    // metas que ainda estão em andamento (diferente do botão "Regenerar").
+    // Meta de 90 dias batida (100%) nÃ£o fecha sozinha â sem isso ela fica
+    // "somando pra sempre" na tela mesmo jÃ¡ concluÃ­da. Aqui, ao carregar,
+    // qualquer meta com progress_percentage >= 100 Ã© arquivada como
+    // "achieved" e substituÃ­da por uma nova, com o mesmo salto (target -
+    // baseline) a partir do valor atual â sem IA, sem mexer nas outras
+    // metas que ainda estÃ£o em andamento (diferente do botÃ£o "Regenerar").
     const achieved = (goals || []).filter(g => (g.progress_percentage ?? 0) >= 100 && g.status !== 'achieved');
     if (achieved.length) {
       for (const g of achieved) {
@@ -2127,14 +2127,14 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   useEffect(() => { loadAll(); }, [userId]);
 
 
-  // Troca só esta meta (arquiva 1, gera 1 nova), diferente de "Regenerar"
-  // que substitui as 3 de uma vez — evita perder progresso de metas ainda
-  // em andamento quando o usuário só quer trocar uma específica.
+  // Troca sÃ³ esta meta (arquiva 1, gera 1 nova), diferente de "Regenerar"
+  // que substitui as 3 de uma vez â evita perder progresso de metas ainda
+  // em andamento quando o usuÃ¡rio sÃ³ quer trocar uma especÃ­fica.
   const regenerateSingleGoal = async (goal) => {
     if (!pf) return;
     setRegeneratingGoalId(goal.id);
     try {
-      const prompt = `Você é um coach de networking estratégico. O usuário tem o perfil relacional "${pf.name}" (${pf.tagline}). A meta atual dele é "${goal.goal_text}" (métrica: ${goal.metric_type}), e ele quer trocá-la por outra. Hoje ele tem ${goal.current_value ?? 0} nessa métrica. Gere exatamente 1 meta mensurável nova e diferente da atual para os próximos 90 dias, medida por "interactions_count" ou "contacts_engaged", com alvo numérico realista acima do valor atual. Responda APENAS com JSON: {"goal_text": "...", "metric_type": "interactions_count", "target_value": 40}. Sem texto extra.`;
+      const prompt = `VocÃª Ã© um coach de networking estratÃ©gico. O usuÃ¡rio tem o perfil relacional "${pf.name}" (${pf.tagline}). A meta atual dele Ã© "${goal.goal_text}" (mÃ©trica: ${goal.metric_type}), e ele quer trocÃ¡-la por outra. Hoje ele tem ${goal.current_value ?? 0} nessa mÃ©trica. Gere exatamente 1 meta mensurÃ¡vel nova e diferente da atual para os prÃ³ximos 90 dias, medida por "interactions_count" ou "contacts_engaged", com alvo numÃ©rico realista acima do valor atual. Responda APENAS com JSON: {"goal_text": "...", "metric_type": "interactions_count", "target_value": 40}. Sem texto extra.`;
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2194,8 +2194,8 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
   };
 
 
-  // Gera metas de 90 dias com métrica real e mensurável (interações ou contatos engajados),
-  // não texto solto: a IA define o alvo numérico, e o progresso evolui sozinho a partir do uso real da plataforma.
+  // Gera metas de 90 dias com mÃ©trica real e mensurÃ¡vel (interaÃ§Ãµes ou contatos engajados),
+  // nÃ£o texto solto: a IA define o alvo numÃ©rico, e o progresso evolui sozinho a partir do uso real da plataforma.
   const generateAiGoals = async () => {
     if (!pf) return;
     setAiLoading(true);
@@ -2207,7 +2207,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
       const contactsEngaged = new Set((contactRows || []).map(r => r.contact_id)).size;
 
 
-      const prompt = `Você é um coach de networking estratégico. O usuário tem o perfil relacional "${pf.name}" (${pf.tagline}). Pontos fortes: ${pf.strengths?.join(', ')}. Riscos: ${pf.risks?.join(', ')}. Hoje ele tem ${interactionsCount || 0} interações registradas e ${contactsEngaged} contatos engajados na plataforma. Gere exatamente 3 metas mensuráveis para os próximos 90 dias, cada uma medida por UM destes dois indicadores: "interactions_count" (total de interações registradas) ou "contacts_engaged" (contatos distintos com quem interagiu). Defina um alvo numérico realista acima do valor atual. Responda APENAS com JSON no formato: {"goals": [{"text": "descrição curta e específica da meta", "metric_type": "interactions_count", "target_value": 40}]}. Sem texto extra.`;
+      const prompt = `VocÃª Ã© um coach de networking estratÃ©gico. O usuÃ¡rio tem o perfil relacional "${pf.name}" (${pf.tagline}). Pontos fortes: ${pf.strengths?.join(', ')}. Riscos: ${pf.risks?.join(', ')}. Hoje ele tem ${interactionsCount || 0} interaÃ§Ãµes registradas e ${contactsEngaged} contatos engajados na plataforma. Gere exatamente 3 metas mensurÃ¡veis para os prÃ³ximos 90 dias, cada uma medida por UM destes dois indicadores: "interactions_count" (total de interaÃ§Ãµes registradas) ou "contacts_engaged" (contatos distintos com quem interagiu). Defina um alvo numÃ©rico realista acima do valor atual. Responda APENAS com JSON no formato: {"goals": [{"text": "descriÃ§Ã£o curta e especÃ­fica da meta", "metric_type": "interactions_count", "target_value": 40}]}. Sem texto extra.`;
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2224,7 +2224,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
           baseline_value: g.metric_type === 'contacts_engaged' ? contactsEngaged : (interactionsCount || 0),
           target_value: Number(g.target_value) || (g.metric_type === 'contacts_engaged' ? contactsEngaged + 5 : (interactionsCount || 0) + 10),
         }));
-        // Arquiva metas antigas (mantém histórico) e cria as novas
+        // Arquiva metas antigas (mantÃ©m histÃ³rico) e cria as novas
         await supabase.from('ai_goals').update({ archived: true }).eq('user_id', userId).eq('archived', false);
         const { error } = await supabase.from('ai_goals').insert(rows);
         if (error) console.error('[Plano] falha ao salvar metas de IA:', error);
@@ -2242,11 +2242,11 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
 
   return (
     <div>
-      {/* Atividade real registrada (vem do trigger do banco, não é auto-declarada) */}
+      {/* Atividade real registrada (vem do trigger do banco, nÃ£o Ã© auto-declarada) */}
       {realProgress && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: '14px 16px' }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Interações — semana atual</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: 'uppercase', letterSpacing: '.06em' }}>InteraÃ§Ãµes â semana atual</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 22, fontWeight: 700, color: C.txt, marginTop: 4 }}>{realProgress.interactions_count ?? 0}</div>
           </div>
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: '14px 16px' }}>
@@ -2257,14 +2257,14 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
       )}
 
 
-      {/* Suas 3 ações do perfil — componente compartilhado com a aba Trajetória (mesmo estado real) */}
+      {/* Suas 3 aÃ§Ãµes do perfil â componente compartilhado com a aba TrajetÃ³ria (mesmo estado real) */}
       <ArchetypeActionsChecklist userId={userId} pf={pf} />
 
 
-      {/* Metas de IA — mensuráveis, com progresso calculado a partir do uso real */}
+      {/* Metas de IA â mensurÃ¡veis, com progresso calculado a partir do uso real */}
       <div style={{ background: `${C.gold}06`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>🎯 Suas metas para 90 dias</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.08em' }}>ð¯ Suas metas para 90 dias</div>
           {!hasActiveGoals && (
             <button onClick={generateAiGoals} disabled={aiLoading || !pf}
               style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 8, padding: '6px 14px', fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, cursor: aiLoading || !pf ? 'default' : 'pointer', opacity: aiLoading || !pf ? 0.6 : 1 }}>
@@ -2280,10 +2280,10 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         </div>
         {!hasActiveGoals && !aiLoading && loaded && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>
-            {pf ? 'Clique em "Gerar com IA" para receber metas personalizadas e mensuráveis para o seu perfil.' : 'Complete o diagnóstico para gerar metas personalizadas.'}
+            {pf ? 'Clique em "Gerar com IA" para receber metas personalizadas e mensurÃ¡veis para o seu perfil.' : 'Complete o diagnÃ³stico para gerar metas personalizadas.'}
           </div>
         )}
-        {aiLoading && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>A IA está analisando seu perfil...</div>}
+        {aiLoading && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>A IA estÃ¡ analisando seu perfil...</div>}
         {hasActiveGoals && aiGoals.map((g) => {
           const pct = Math.max(0, Math.min(100, g.progress_percentage ?? 0));
           const achieved = g.status === 'achieved' || pct >= 100;
@@ -2291,11 +2291,11 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
           return (
             <div key={g.id} style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 8, background: achieved ? C.grnD : C.w06, border: `1px solid ${achieved ? C.grn + '40' : C.brd}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.4 }}>{achieved ? '✅ ' : ''}{g.goal_text}</span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.4 }}>{achieved ? 'â ' : ''}{g.goal_text}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                   <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{daysLeft}d restantes</span>
                   <button onClick={() => regenerateSingleGoal(g)} disabled={regeneratingGoalId === g.id}
-                    title="Trocar só esta meta, sem mexer nas outras"
+                    title="Trocar sÃ³ esta meta, sem mexer nas outras"
                     style={{ background: 'transparent', border: 'none', fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, cursor: regeneratingGoalId === g.id ? 'default' : 'pointer', textDecoration: 'underline' }}>
                     {regeneratingGoalId === g.id ? '...' : 'Trocar'}
                   </button>
@@ -2305,7 +2305,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
                 <div style={{ height: '100%', width: `${pct}%`, background: achieved ? C.grn : C.gold, transition: `width ${MOTION.slow}` }} />
               </div>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
-                {g.current_value ?? 0} / {g.target_value} {g.metric_type === 'contacts_engaged' ? 'contatos' : 'interações'} · {pct}%
+                {g.current_value ?? 0} / {g.target_value} {g.metric_type === 'contacts_engaged' ? 'contatos' : 'interaÃ§Ãµes'} Â· {pct}%
               </div>
             </div>
           );
@@ -2313,7 +2313,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
       </div>
 
 
-      {/* Microrresposta contextual — aparece ao concluir tarefa/meta, some sozinha */}
+      {/* Microrresposta contextual â aparece ao concluir tarefa/meta, some sozinha */}
       {microMsg && (
         <div style={{ background: `${C.gold}0d`, border: `1px solid ${C.gL}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontFamily: "'DM Sans'", fontSize: 12.5, color: C.txt, lineHeight: 1.5 }}>
           {microMsg}
@@ -2333,7 +2333,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         if (isLocked) return (
           <div key={i} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10, opacity: 0.6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.w06, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🔒</div>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.w06, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>ð</div>
               <div><Tag color={C.txL} small>Semana {w.week}</Tag><div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txL, marginTop: 3 }}>{w.title}</div></div>
             </div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>Continue seu plano no PRO.</div>
@@ -2342,7 +2342,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         );
 
 
-        // Semana já concluída (e não é a atual) fica colapsada por padrão —
+        // Semana jÃ¡ concluÃ­da (e nÃ£o Ã© a atual) fica colapsada por padrÃ£o â
         // antes ficava sempre expandida com o mesmo tamanho de uma semana
         // ativa, empurrando tudo pra baixo mesmo depois de feita.
         const isCollapsible = !isCurrent && allTasksDone;
@@ -2352,8 +2352,8 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
         if (isCollapsible && !isExpanded) return (
           <div key={i} onClick={() => setExpandedWeeks(e => ({ ...e, [w.week]: true }))}
             style={{ background: C.grnD, border: `1px solid ${C.grn}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-            <span style={{ fontSize: 16 }}>✅</span>
-            <span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, flex: 1 }}>Semana {w.week} · {w.title}</span>
+            <span style={{ fontSize: 16 }}>â</span>
+            <span style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: C.txt, flex: 1 }}>Semana {w.week} Â· {w.title}</span>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>ver detalhes</span>
           </div>
         );
@@ -2363,12 +2363,12 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
           <div key={i} style={{ background: isCurrent ? `${C.gold}06` : C.card, border: `1px solid ${isCurrent ? C.gL : C.brd}`, borderRadius: 12, padding: 20, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: allTasksDone ? C.grnD : isCurrent ? C.gD : C.w06, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                {allTasksDone ? '✅' : w.icon}
+                {allTasksDone ? 'â' : w.icon}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Tag color={isCurrent ? C.gold : allTasksDone ? C.grn : C.txL} small>Semana {w.week}</Tag>
-                  {isCurrent && <Tag color={C.gold} small>↑ Agora</Tag>}
+                  {isCurrent && <Tag color={C.gold} small>â Agora</Tag>}
                   {weekTasksDone > 0 && <Tag color={C.grn} small>{weekTasksDone}/{w.tasks.length}</Tag>}
                 </div>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 600, color: C.txt, marginTop: 3 }}>{w.title}</div>
@@ -2389,7 +2389,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
                 <div key={j} onClick={() => toggleTask(w.week, j)}
                   style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, background: checked ? C.grnD : 'transparent', border: `1px solid ${checked ? C.grn + '30' : 'transparent'}`, transition: `all ${MOTION.base}` }}>
                   <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? C.grn : isCurrent ? C.gL : C.brd}`, background: checked ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                    {checked && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                    {checked && <span style={{ color: '#fff', fontSize: 11 }}>â</span>}
                   </div>
                   <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: checked ? C.txL : isCurrent ? C.txt : C.txM, lineHeight: 1.5, textDecoration: checked ? 'line-through' : 'none' }}>{t}</span>
                 </div>
@@ -2401,7 +2401,7 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
             <div onClick={() => toggleMeta(w.week)}
               style={{ marginTop: 12, background: metaDone[w.week] ? C.grnD : C.w06, border: `1px solid ${metaDone[w.week] ? C.grn + '40' : 'transparent'}`, borderRadius: 6, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: `all ${MOTION.base}` }}>
               <div style={{ width: 16, height: 16, borderRadius: 3, border: `1.5px solid ${metaDone[w.week] ? C.grn : C.txL}`, background: metaDone[w.week] ? C.grn : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {metaDone[w.week] && <span style={{ color: '#fff', fontSize: 10 }}>✓</span>}
+                {metaDone[w.week] && <span style={{ color: '#fff', fontSize: 10 }}>â</span>}
               </div>
               <div>
                 <span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, textTransform: 'uppercase' }}>Meta: </span>
@@ -2417,10 +2417,10 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginTop: 8 }}>
         <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>Dicas de uso do {BRAND.name}</div>
         {[
-          { icon: '📅', title: 'Ritual semanal', desc: 'Toda segunda-feira, 15 minutos: veja os alertas do Dashboard e escolha 2 contatos para contatar.' },
-          { icon: '📋', title: 'Registre interações', desc: 'Sempre que falar com alguém relevante, registre na aba Contatos. Quanto mais você registra, mais precisas as recomendações ficam.' },
-          { icon: '🎯', title: 'Próxima ação', desc: 'Todo contato deve ter sempre uma próxima ação definida. Relacionamento sem direção esfria.' },
-          { icon: '🌱', title: 'Diversifique categorias', desc: 'Equilibre sua rede entre Mentores, Aliados, Pontes e Potenciais. Redes diversas geram mais oportunidades.' },
+          { icon: 'ð', title: 'Ritual semanal', desc: 'Toda segunda-feira, 15 minutos: veja os alertas do Dashboard e escolha 2 contatos para contatar.' },
+          { icon: 'ð', title: 'Registre interaÃ§Ãµes', desc: 'Sempre que falar com alguÃ©m relevante, registre na aba Contatos. Quanto mais vocÃª registra, mais precisas as recomendaÃ§Ãµes ficam.' },
+          { icon: 'ð¯', title: 'PrÃ³xima aÃ§Ã£o', desc: 'Todo contato deve ter sempre uma prÃ³xima aÃ§Ã£o definida. Relacionamento sem direÃ§Ã£o esfria.' },
+          { icon: 'ð±', title: 'Diversifique categorias', desc: 'Equilibre sua rede entre Mentores, Aliados, Pontes e Potenciais. Redes diversas geram mais oportunidades.' },
         ].map((tip, i) => (
           <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: i < 3 ? `1px solid ${C.brd}` : 'none' }}>
             <span style={{ fontSize: 20 }}>{tip.icon}</span>
@@ -2433,26 +2433,26 @@ function PlanInterativo({ userId, week, isPro, openAccessKey, pf }) {
 }
 
 
-/* ═══ AJUDA CONTEXTUAL (primeira vez + lâmpada de dicas) ═════════
-   Antes disso era um tour fixo com 9 passos descrevendo abas que não
-   existem mais ("Analytics", "Dashboard" separado, "IA" como aba própria).
-   Agora o conteúdo muda de acordo com onde a pessoa está — incluindo
-   dentro do assessment e do cadastro guiado, que antes não tinham nenhum
+/* âââ AJUDA CONTEXTUAL (primeira vez + lÃ¢mpada de dicas) âââââââââ
+   Antes disso era um tour fixo com 9 passos descrevendo abas que nÃ£o
+   existem mais ("Analytics", "Dashboard" separado, "IA" como aba prÃ³pria).
+   Agora o conteÃºdo muda de acordo com onde a pessoa estÃ¡ â incluindo
+   dentro do assessment e do cadastro guiado, que antes nÃ£o tinham nenhum
    tipo de ajuda. */
-const WELCOME_STEP = { icon: "✨", title: `Bem-vindo(a) ao ${BRAND.name}`, desc: "Isso aqui não é um CRM tradicional. É um assistente que te ajuda a cuidar das pessoas importantes, sem transformar relações em tarefas." };
+const WELCOME_STEP = { icon: "â¨", title: `Bem-vindo(a) ao ${BRAND.name}`, desc: "Isso aqui nÃ£o Ã© um CRM tradicional. Ã um assistente que te ajuda a cuidar das pessoas importantes, sem transformar relaÃ§Ãµes em tarefas." };
 
 
 const HELP_STEPS = {
-  // Onboarding e assessment — telas que hoje não tinham ajuda nenhuma.
-  onboard: [WELCOME_STEP, { icon: "📝", title: "Cadastro inicial", desc: "Só o essencial pra começar. O resto você completa depois, com calma, dentro de \"Eu\"." }],
-  assess: [{ icon: "🧭", title: "Diagnóstico relacional", desc: "12 perguntas rápidas. Suas respostas são salvas automaticamente a cada uma — pode fechar e voltar quando quiser, sem perder nada." }],
-  assessResult: [{ icon: "🎯", title: "Seu resultado", desc: "Esse é só o resumo. Se quiser o diagnóstico completo (gráfico, todas as dimensões), tem um link \"Ver diagnóstico completo\" logo abaixo do botão principal." }],
-  startNetwork: [{ icon: "🫂", title: "Cadastro guiado", desc: "Uma pessoa de cada vez, só o essencial. Você pode pular a qualquer momento — nada aqui é obrigatório, e dá pra completar o resto depois no perfil de cada pessoa." }],
-  // App principal, já com as 3 âncoras atuais.
-  dash: [WELCOME_STEP, { icon: "◎", title: "Hoje", desc: "A recomendação mais importante do momento — no máximo 1 principal + 2 secundárias. Sem lista acumulada, sem pressão." }],
-  contacts: [{ icon: "⊛", title: "Rede", desc: "Suas pessoas e a Teia (mapa visual da sua rede) ficam juntas aqui — use o alternador \"Pessoas / Teia\" no topo pra trocar de visão." }],
-  perfil: [{ icon: "👤", title: "Perfil", desc: "Seus dados pessoais e de contato. Mantenha atualizado pra IA personalizar melhor as sugestões." }],
-  insights: [{ icon: "🧠", title: "Insights", desc: "Sugestões, análises e próximos passos da IA. Seu plano de ativação e o relatório em PDF também ficam aqui, nas abas do topo." }],
+  // Onboarding e assessment â telas que hoje nÃ£o tinham ajuda nenhuma.
+  onboard: [WELCOME_STEP, { icon: "ð", title: "Cadastro inicial", desc: "SÃ³ o essencial pra comeÃ§ar. O resto vocÃª completa depois, com calma, dentro de \"Eu\"." }],
+  assess: [{ icon: "ð§­", title: "DiagnÃ³stico relacional", desc: "12 perguntas rÃ¡pidas. Suas respostas sÃ£o salvas automaticamente a cada uma â pode fechar e voltar quando quiser, sem perder nada." }],
+  assessResult: [{ icon: "ð¯", title: "Seu resultado", desc: "Esse Ã© sÃ³ o resumo. Se quiser o diagnÃ³stico completo (grÃ¡fico, todas as dimensÃµes), tem um link \"Ver diagnÃ³stico completo\" logo abaixo do botÃ£o principal." }],
+  startNetwork: [{ icon: "ð«", title: "Cadastro guiado", desc: "Uma pessoa de cada vez, sÃ³ o essencial. VocÃª pode pular a qualquer momento â nada aqui Ã© obrigatÃ³rio, e dÃ¡ pra completar o resto depois no perfil de cada pessoa." }],
+  // App principal, jÃ¡ com as 3 Ã¢ncoras atuais.
+  dash: [WELCOME_STEP, { icon: "â", title: "Hoje", desc: "A recomendaÃ§Ã£o mais importante do momento â no mÃ¡ximo 1 principal + 2 secundÃ¡rias. Sem lista acumulada, sem pressÃ£o." }],
+  contacts: [{ icon: "â", title: "Rede", desc: "Suas pessoas e a Teia (mapa visual da sua rede) ficam juntas aqui â use o alternador \"Pessoas / Teia\" no topo pra trocar de visÃ£o." }],
+  perfil: [{ icon: "ð¤", title: "Perfil", desc: "Seus dados pessoais e de contato. Mantenha atualizado pra IA personalizar melhor as sugestÃµes." }],
+  insights: [{ icon: "ð§ ", title: "Insights", desc: "SugestÃµes, anÃ¡lises e prÃ³ximos passos da IA. Seu plano de ativaÃ§Ã£o e o relatÃ³rio em PDF tambÃ©m ficam aqui, nas abas do topo." }],
 };
 
 
@@ -2461,8 +2461,8 @@ function getHelpSteps(context) {
 }
 
 
-// Botão flutuante reutilizável — usado dentro do app (CRM), do assessment
-// e do cadastro guiado, sempre com o conteúdo certo pra onde a pessoa está.
+// BotÃ£o flutuante reutilizÃ¡vel â usado dentro do app (CRM), do assessment
+// e do cadastro guiado, sempre com o conteÃºdo certo pra onde a pessoa estÃ¡.
 function HelpButton({ onClick, bottom = 20 }) {
   return (
     <button
@@ -2470,7 +2470,7 @@ function HelpButton({ onClick, bottom = 20 }) {
       title="Dicas desta tela"
       aria-label="Dicas desta tela"
       style={{ position: "fixed", bottom, right: 20, width: 44, height: 44, borderRadius: "50%", background: C.gold, border: "none", boxShadow: "0 4px 14px #00000040", fontSize: 20, cursor: "pointer", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }}
-    >💡</button>
+    >ð¡</button>
   );
 }
 
@@ -2486,7 +2486,7 @@ function TourModal({ onClose, onFinish, steps }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(5,12,9,0.72)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 16, padding: 28, maxWidth: 360, width: "100%", position: "relative" }}>
-        <button onClick={onClose} aria-label="Fechar" style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: C.txL, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>×</button>
+        <button onClick={onClose} aria-label="Fechar" style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: C.txL, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>Ã</button>
         <div style={{ fontSize: 34, marginBottom: 12 }}>{s.icon}</div>
         <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 8 }}>{s.title}</div>
         <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, marginBottom: 20 }}>{s.desc}</div>
@@ -2498,7 +2498,7 @@ function TourModal({ onClose, onFinish, steps }) {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             {step > 0 && <Btn variant="ghost" small onClick={() => setStep(step - 1)}>Voltar</Btn>}
-            {!isLast && <Btn small onClick={() => setStep(step + 1)}>Próximo</Btn>}
+            {!isLast && <Btn small onClick={() => setStep(step + 1)}>PrÃ³ximo</Btn>}
             {isLast && <Btn small onClick={onFinish}>Concluir</Btn>}
           </div>
         </div>
@@ -2508,9 +2508,9 @@ function TourModal({ onClose, onFinish, steps }) {
 }
 
 
-/* ═══ PERFIL FORM ════════════════════════════════════════ */
-// Captura Passiva via Calendário — conexão OAuth com Google Calendar (sem
-// copiar/colar link .ics). Outlook e Apple ainda não têm botão próprio;
+/* âââ PERFIL FORM ââââââââââââââââââââââââââââââââââââââââ */
+// Captura Passiva via CalendÃ¡rio â conexÃ£o OAuth com Google Calendar (sem
+// copiar/colar link .ics). Outlook e Apple ainda nÃ£o tÃªm botÃ£o prÃ³prio;
 // entram aqui quando os endpoints api/calendar-oauth/outlook-* e o fluxo
 // CalDAV do Apple estiverem prontos.
 function CalendarConnectionCard({ pf, sp }) {
@@ -2543,7 +2543,7 @@ function CalendarConnectionCard({ pf, sp }) {
     const status = params.get('calendar');
     if (!status) return;
     refreshConn();
-    // Limpa a query string pra não reprocessar em refresh manual da página.
+    // Limpa a query string pra nÃ£o reprocessar em refresh manual da pÃ¡gina.
     params.delete('calendar');
     const rest = params.toString();
     window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''));
@@ -2556,7 +2556,7 @@ function CalendarConnectionCard({ pf, sp }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setConnectError('Sessão não encontrada — saia e entre de novo no app.');
+        setConnectError('SessÃ£o nÃ£o encontrada â saia e entre de novo no app.');
         setConnecting(false);
         return;
       }
@@ -2567,7 +2567,7 @@ function CalendarConnectionCard({ pf, sp }) {
       try {
         data = await res.json();
       } catch {
-        setConnectError(`Resposta inesperada do servidor (status ${res.status}). O endpoint pode não existir ainda.`);
+        setConnectError(`Resposta inesperada do servidor (status ${res.status}). O endpoint pode nÃ£o existir ainda.`);
         setConnecting(false);
         return;
       }
@@ -2605,15 +2605,15 @@ function CalendarConnectionCard({ pf, sp }) {
 
   return (
     <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
-      <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 6 }}>Captura Passiva via Calendário</div>
+      <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.txL, marginBottom: 6 }}>Captura Passiva via CalendÃ¡rio</div>
       <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: 14 }}>
-        Conecte seu calendário e, quando você tiver uma reunião com alguém da sua rede, o assistente {BRAND.name} te pergunta pelo WhatsApp se quer registrar como interação — sem precisar abrir o app.
+        Conecte seu calendÃ¡rio e, quando vocÃª tiver uma reuniÃ£o com alguÃ©m da sua rede, o assistente {BRAND.name} te pergunta pelo WhatsApp se quer registrar como interaÃ§Ã£o â sem precisar abrir o app.
       </div>
 
 
       {!loadingConn && conectado && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: C.w06, border: `1px solid ${C.gold}30`, borderRadius: 8, padding: "12px 14px" }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>🟢 Google Calendar conectado</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>ð¢ Google Calendar conectado</div>
           <button onClick={handleDisconnect} disabled={disconnecting} style={{ background: "transparent", border: `1px solid ${C.brd}`, borderRadius: 6, padding: "6px 12px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, cursor: "pointer" }}>
             {disconnecting ? "Desconectando..." : "Desconectar"}
           </button>
@@ -2625,7 +2625,7 @@ function CalendarConnectionCard({ pf, sp }) {
         <>
           {comErro && (
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: "#D97757", marginBottom: 10 }}>
-              A conexão expirou ou foi revogada. Conecte novamente.
+              A conexÃ£o expirou ou foi revogada. Conecte novamente.
             </div>
           )}
           <button onClick={handleConnect} disabled={connecting} style={{ display: "flex", alignItems: "center", gap: 8, background: C.gold, border: "none", borderRadius: 8, padding: "12px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, color: "#0D0D0D", cursor: "pointer" }}>
@@ -2641,13 +2641,13 @@ function CalendarConnectionCard({ pf, sp }) {
 
 
       <button onClick={() => setShowLegacyIcs(v => !v)} style={{ display: "block", marginTop: 14, background: "none", border: "none", padding: 0, fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, textDecoration: "underline", cursor: "pointer" }}>
-        {showLegacyIcs ? "Ocultar opção avançada" : "Uso Outlook, Apple, ou quero colar um link .ics manualmente"}
+        {showLegacyIcs ? "Ocultar opÃ§Ã£o avanÃ§ada" : "Uso Outlook, Apple, ou quero colar um link .ics manualmente"}
       </button>
 
 
       {showLegacyIcs && (
         <div style={{ marginTop: 12 }}>
-          <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>Link .ics do calendário</label>
+          <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.gold, display: "block", marginBottom: 6 }}>Link .ics do calendÃ¡rio</label>
           <input
             type="url"
             value={pf.calendarIcsUrl || ""}
@@ -2656,7 +2656,7 @@ function CalendarConnectionCard({ pf, sp }) {
             style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.gold}50`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, outline: "none" }}
           />
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, lineHeight: 1.5, marginTop: 8 }}>
-            Funciona com qualquer calendário que gere um link público .ics (Google, Outlook, Apple). Salve o formulário depois de colar o link.
+            Funciona com qualquer calendÃ¡rio que gere um link pÃºblico .ics (Google, Outlook, Apple). Salve o formulÃ¡rio depois de colar o link.
           </div>
         </div>
       )}
@@ -2673,12 +2673,12 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
     { value: "100+",   label: "Mais de 100 contatos" },
   ];
   const CHALLENGES = [
-    { value: "consistencia", label: "Manter consistência" },
+    { value: "consistencia", label: "Manter consistÃªncia" },
     { value: "expansao",    label: "Expandir a rede" },
-    { value: "reativacao",  label: "Reativar relações" },
-    { value: "valor",       label: "Gerar valor genuíno" },
+    { value: "reativacao",  label: "Reativar relaÃ§Ãµes" },
+    { value: "valor",       label: "Gerar valor genuÃ­no" },
     { value: "visibilidade",label: "Aumentar visibilidade" },
-    { value: "estrategia",  label: "Ter estratégia clara" },
+    { value: "estrategia",  label: "Ter estratÃ©gia clara" },
   ];
   const [pf, setPf] = useState({
     name:         profile?.name || profile?.first_name || "",
@@ -2696,7 +2696,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
     challenges:   profile?.challenge ? profile.challenge.split(",").map(s => s.trim()).filter(Boolean) : [],
     calendarIcsUrl: profile?.calendar_ics_url || "",
   });
-  // Ressincronizar quando o profile chega do Supabase (carregamento assíncrono)
+  // Ressincronizar quando o profile chega do Supabase (carregamento assÃ­ncrono)
   useEffect(() => {
     if (!profile) return;
     setPf({
@@ -2731,14 +2731,14 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
   const sp = (k) => (v) => setPf(p => ({ ...p, [k]: v }));
 
 
-  // Carta de Evolução e observação por dimensão: vivem em Insights →
-  // Trajetória (renderReport, componente CRM), não aqui. PerfilForm é só
-  // conta/dados pessoais — ver comentário acima de renderInsightsHub no
+  // Carta de EvoluÃ§Ã£o e observaÃ§Ã£o por dimensÃ£o: vivem em Insights â
+  // TrajetÃ³ria (renderReport, componente CRM), nÃ£o aqui. PerfilForm Ã© sÃ³
+  // conta/dados pessoais â ver comentÃ¡rio acima de renderInsightsHub no
   // componente CRM.
 
 
   // Estado do trial gratuito do Assistente de WhatsApp (10 dias, contados a
-  // partir do primeiro cadastro do número — não da criação da conta).
+  // partir do primeiro cadastro do nÃºmero â nÃ£o da criaÃ§Ã£o da conta).
   const trialStartedAt = profile?.whatsapp_trial_started_at || null;
   const diasDeTrial     = trialStartedAt ? (Date.now() - new Date(trialStartedAt).getTime()) / 86400000 : null;
   const trialExpirado   = !isPro && diasDeTrial !== null && diasDeTrial > 10;
@@ -2750,13 +2750,13 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
     setSaving(true); setErr(""); setSaved(false); setJustActivatedTrial(false);
     const calendarIcsUrlTrimmed = (pf.calendarIcsUrl || "").trim();
     if (calendarIcsUrlTrimmed && !/^https?:\/\//i.test(calendarIcsUrlTrimmed)) {
-      setErr("O link do calendário precisa começar com http:// ou https://");
+      setErr("O link do calendÃ¡rio precisa comeÃ§ar com http:// ou https://");
       setSaving(false);
       return;
     }
     const whatsappNormalizado = normalizeWhatsapp(pf.whatsapp);
-    // Primeira vez que este usuário Free cadastra um WhatsApp: inicia o
-    // relógio do trial de 10 dias. Nunca reinicia se já existir uma data.
+    // Primeira vez que este usuÃ¡rio Free cadastra um WhatsApp: inicia o
+    // relÃ³gio do trial de 10 dias. Nunca reinicia se jÃ¡ existir uma data.
     const primeiroCadastro = !isPro && !!whatsappNormalizado && !profile?.whatsapp_trial_started_at;
     const payload = {
       name:         pf.name || null,
@@ -2783,7 +2783,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
       if (primeiroCadastro) setJustActivatedTrial(true);
       setTimeout(() => setSaved(false), 3000);
       // Atualiza o estado do profile no componente pai para que a aba
-      // Perfil não volte a mostrar dados antigos/vazios ao ser reaberta.
+      // Perfil nÃ£o volte a mostrar dados antigos/vazios ao ser reaberta.
       onSaved && onSaved(payload);
     } catch (e) {
       console.error("[PerfilForm] save error:", e);
@@ -2797,41 +2797,41 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 0 40px" }}>
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>Meu Perfil</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: 0 }}>Mantenha suas informações atualizadas para personalizar os insights da IA.</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: 0 }}>Mantenha suas informaÃ§Ãµes atualizadas para personalizar os insights da IA.</p>
       </div>
       {isPro ? (
         <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>ð±</span>
           <div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Cadastre seu WhatsApp para usar o Assistente de IA</div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu número cadastrado, você pode conversar com o assistente {BRAND.name} diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Com seu nÃºmero cadastrado, vocÃª pode conversar com o assistente {BRAND.name} diretamente pelo WhatsApp e receber insights personalizados sobre sua rede.</div>
           </div>
         </div>
       ) : trialExpirado ? (
         <div style={{ background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <span style={{ fontSize: 20, flexShrink: 0 }}>🔒</span>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>ð</span>
           <div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 3 }}>Seu teste grátis do WhatsApp acabou</div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Você testou o assistente {BRAND.name} por 10 dias grátis pelo WhatsApp. Assine o PRO para continuar usando sem limite.</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 3 }}>Seu teste grÃ¡tis do WhatsApp acabou</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>VocÃª testou o assistente {BRAND.name} por 10 dias grÃ¡tis pelo WhatsApp. Assine o PRO para continuar usando sem limite.</div>
             <button onClick={openAccessKey} style={{ background: "none", border: "none", fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, cursor: "pointer", textDecoration: "underline", padding: 0, marginTop: 6 }}>Tenho uma chave de acesso</button>
           </div>
         </div>
       ) : (
         <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>ð±</span>
           <div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>
-              {trialStartedAt ? `Teste grátis ativo — ${diasRestantes} dia(s) restante(s)` : "Cadastre seu WhatsApp e teste grátis por 10 dias"}
+              {trialStartedAt ? `Teste grÃ¡tis ativo â ${diasRestantes} dia(s) restante(s)` : "Cadastre seu WhatsApp e teste grÃ¡tis por 10 dias"}
             </div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
               {trialStartedAt
-               ? `Seu assistente ${BRAND.name} já está disponível no WhatsApp.`
-                : `Ao salvar seu número, você libera 10 dias grátis do assistente ${BRAND.name} direto pelo WhatsApp.`}
+               ? `Seu assistente ${BRAND.name} jÃ¡ estÃ¡ disponÃ­vel no WhatsApp.`
+                : `Ao salvar seu nÃºmero, vocÃª libera 10 dias grÃ¡tis do assistente ${BRAND.name} direto pelo WhatsApp.`}
             </div>
             {trialStartedAt && (
              <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer"
                 style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textDecoration: "none", marginTop: 6 }}>
-                Abrir conversa e ativar →
+                Abrir conversa e ativar â
               </a>
             )}
           </div>
@@ -2842,7 +2842,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <div style={{ gridColumn: "1 / -1" }}><Inp label="Nome completo" value={pf.name} onChange={sp('name')} placeholder="Seu nome" /></div>
           <Inp label="Empresa" value={pf.company} onChange={sp('company')} placeholder="Empresa onde atua" />
-          <Inp label="Cargo / Função" value={pf.role} onChange={sp('role')} placeholder="Ex: Gerente Comercial" />
+          <Inp label="Cargo / FunÃ§Ã£o" value={pf.role} onChange={sp('role')} placeholder="Ex: Gerente Comercial" />
           <div><Sel label="Segmento" value={pf.segment} onChange={sp('segment')} options={SEGMENTS} placeholder="Selecione..." /></div>
           <Inp label="Cidade" value={pf.city} onChange={sp('city')} placeholder="Sua cidade" />
           <Sel label="Estado" value={pf.state} onChange={sp('state')} options={UFS} placeholder="UF" />
@@ -2853,8 +2853,8 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <div style={{ gridColumn: "1 / -1" }}>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: canEditWhatsapp ? C.gold : C.txL, display: "block", marginBottom: 6 }}>📱 WhatsApp <span style={{ color: C.txL, fontWeight: 400 }}>{isPro ? "(para o Assistente de IA)" : trialExpirado ? "(teste grátis encerrado)" : "(Assistente de IA — teste grátis 10 dias)"}</span></label>
-              <input type="tel" value={pf.whatsapp || ""} onChange={e => sp('whatsapp')(e.target.value)} disabled={!canEditWhatsapp} placeholder={canEditWhatsapp ? "Ex: 11999999999 (DDD + número, sem 55)" : "Assine o PRO para ativar"} style={{ width: "100%", boxSizing: "border-box", background: canEditWhatsapp ? C.sf : C.w06, border: `1px solid ${canEditWhatsapp ? C.gold+"50" : C.brd}`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: canEditWhatsapp ? C.txt : C.txL, outline: "none", cursor: canEditWhatsapp ? "text" : "not-allowed" }} />
+              <label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: canEditWhatsapp ? C.gold : C.txL, display: "block", marginBottom: 6 }}>ð± WhatsApp <span style={{ color: C.txL, fontWeight: 400 }}>{isPro ? "(para o Assistente de IA)" : trialExpirado ? "(teste grÃ¡tis encerrado)" : "(Assistente de IA â teste grÃ¡tis 10 dias)"}</span></label>
+              <input type="tel" value={pf.whatsapp || ""} onChange={e => sp('whatsapp')(e.target.value)} disabled={!canEditWhatsapp} placeholder={canEditWhatsapp ? "Ex: 11999999999 (DDD + nÃºmero, sem 55)" : "Assine o PRO para ativar"} style={{ width: "100%", boxSizing: "border-box", background: canEditWhatsapp ? C.sf : C.w06, border: `1px solid ${canEditWhatsapp ? C.gold+"50" : C.brd}`, borderRadius: 8, padding: "12px 14px", fontFamily: "'DM Sans'", fontSize: 14, color: canEditWhatsapp ? C.txt : C.txL, outline: "none", cursor: canEditWhatsapp ? "text" : "not-allowed" }} />
             </div>
           </div>
           <Inp label="Instagram" value={pf.instagram} onChange={sp('instagram')} placeholder="@seuinstagram" />
@@ -2874,24 +2874,24 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
               ))}
             </div>
           </div>
-          <div style={{ gridColumn: "1 / -1" }}><Inp label="Aniversário" value={pf.birthday} onChange={sp('birthday')} type="date" /></div>
+          <div style={{ gridColumn: "1 / -1" }}><Inp label="AniversÃ¡rio" value={pf.birthday} onChange={sp('birthday')} type="date" /></div>
           <div style={{ gridColumn: "1 / -1" }}><Inp label="Hobbies & Interesses" value={pf.hobbies} onChange={sp('hobbies')} placeholder="Ex: Pesca, Agro, Tecnologia..." textarea /></div>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-        <Btn onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar alterações"}</Btn>
-        {saved && <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.grn }}>✓ Perfil atualizado com sucesso!</span>}
+        <Btn onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar alteraÃ§Ãµes"}</Btn>
+        {saved && <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.grn }}>â Perfil atualizado com sucesso!</span>}
         {err   && <span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.cor }}>{err}</span>}
       </div>
       {justActivatedTrial && (
         <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}40`, borderRadius: 12, padding: "14px 18px", marginTop: 16, display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <span style={{ fontSize: 20, flexShrink: 0 }}>🎉</span>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>ð</span>
           <div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>WhatsApp ativado! Seu teste grátis de 10 dias começou agora.</div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Abra a conversa com o assistente no WhatsApp para começar.</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>WhatsApp ativado! Seu teste grÃ¡tis de 10 dias comeÃ§ou agora.</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>Abra a conversa com o assistente no WhatsApp para comeÃ§ar.</div>
            <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer"
               style={{ display: "inline-block", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textDecoration: "none", marginTop: 6 }}>
-              Abrir conversa e ativar →
+              Abrir conversa e ativar â
             </a>
           </div>
         </div>
@@ -2901,7 +2901,7 @@ function PerfilForm({ profile, userId, onSaved, isPro, openAccessKey, archetype 
 }
 
 
-/* ═══ CRM APP ═════════════════════════════════════════════ */
+/* âââ CRM APP âââââââââââââââââââââââââââââââââââââââââââââ */
 function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const network = useNetworkCircles(user?.id);
   const [contactCircleDraft, setContactCircleDraft] = useState("");
@@ -2957,14 +2957,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [inf, setInf] = useState({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
 
 
-  // ── Computed plan ─────────────────────────────────────────
+  // ââ Computed plan âââââââââââââââââââââââââââââââââââââââââ
   const isPro         = isProUser(profile, user?.email);
   const planLabel     = getPlanLabel(profile, user?.email);
   const canAddContact = isPro || cts.length < FREE_CT_LIMIT;
-  // Caminho B (28/09): a Home padrão volta a ser o painel <HomeToday>.
-  // A Danna (conversa por voz) vira opt-in: ligada por padrão só para a
-  // conta do laboratório; qualquer usuário pode ativar/desativar pela Home.
-  // Preferência salva por usuário no navegador ("on" | "off" | null).
+  // Caminho B (28/09): a Home padrÃ£o volta a ser o painel <HomeToday>.
+  // A Danna (conversa por voz) vira opt-in: ligada por padrÃ£o sÃ³ para a
+  // conta do laboratÃ³rio; qualquer usuÃ¡rio pode ativar/desativar pela Home.
+  // PreferÃªncia salva por usuÃ¡rio no navegador ("on" | "off" | null).
   const CONEXIA_LAB_USER_ID = "848ebde1-dd60-4652-8f9a-3e86dd31482f";
   const dannaPrefKey = user?.id ? `conexia_danna_home_${user.id}` : "";
   // danna-single-click-v1
@@ -2997,7 +2997,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     return () => { alive = false; };
   }, [user?.id]);
   // Motor de voz (BETA): admins escolhem entre Gemini e OpenAI para comparar.
-  // Demais pagantes usam o padrão abaixo.
+  // Demais pagantes usam o padrÃ£o abaixo.
   const DEFAULT_VOICE_ENGINE = "gemini";
   const voiceEngineKey = user?.id ? `conexia_danna_engine_${user.id}` : "";
   const [voiceEngine, setVoiceEngineState] = useState(DEFAULT_VOICE_ENGINE);
@@ -3020,11 +3020,11 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   );
 
 
-  // Observação comportamental por dimensão (declarado vs. observado) —
-  // consumida em renderReport (Insights → Trajetória). Ver
-  // shared/dimensionObservation.js pra fundamentação de cada dimensão.
+  // ObservaÃ§Ã£o comportamental por dimensÃ£o (declarado vs. observado) â
+  // consumida em renderReport (Insights â TrajetÃ³ria). Ver
+  // shared/dimensionObservation.js pra fundamentaÃ§Ã£o de cada dimensÃ£o.
   const [dimObservation, setDimObservation] = useState(null);
-  const [expandedDim, setExpandedDim] = useState(null); // dimensão aberta em "Suas 6 dimensões" (Trajetória)
+  const [expandedDim, setExpandedDim] = useState(null); // dimensÃ£o aberta em "Suas 6 dimensÃµes" (TrajetÃ³ria)
   useEffect(() => {
     if (!user?.id || !isPro) return;
     supabase.from('plan_insights')
@@ -3034,17 +3034,17 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       .order('created_at', { ascending: false })
       .limit(1)
       .then(({ data, error }) => {
-        if (error) { console.error('[CRM] falha ao carregar observação por dimensão:', error); return; }
+        if (error) { console.error('[CRM] falha ao carregar observaÃ§Ã£o por dimensÃ£o:', error); return; }
         if (data?.[0]?.description) {
           try { setDimObservation(JSON.parse(data[0].description)); }
-          catch (e) { console.error('[CRM] observação por dimensão em formato inesperado:', e); }
+          catch (e) { console.error('[CRM] observaÃ§Ã£o por dimensÃ£o em formato inesperado:', e); }
         }
       });
   }, [user?.id, isPro]);
 
 
-  // Trial grátis do Assistente de WhatsApp: 10 dias a partir do cadastro do
-  // número (whatsapp_trial_started_at), independente de virar PRO depois.
+  // Trial grÃ¡tis do Assistente de WhatsApp: 10 dias a partir do cadastro do
+  // nÃºmero (whatsapp_trial_started_at), independente de virar PRO depois.
   const diasDeTrialCrm    = profile?.whatsapp_trial_started_at ? (Date.now() - new Date(profile.whatsapp_trial_started_at).getTime()) / 86400000 : null;
   const hasWhatsappAccess = isPro || (diasDeTrialCrm !== null && diasDeTrialCrm <= 10);
 
@@ -3059,7 +3059,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         p_user_email: user?.email || "",
       });
       if (error) throw error;
-      const msgs = { invalid:"Chave de acesso inválida.", inactive:"Essa chave não está mais ativa.", expired:"Essa chave expirou.", limit_reached:"Essa chave já atingiu o limite de ativações.", already_used:"Essa chave já foi utilizada por este usuário." };
+      const msgs = { invalid:"Chave de acesso invÃ¡lida.", inactive:"Essa chave nÃ£o estÃ¡ mais ativa.", expired:"Essa chave expirou.", limit_reached:"Essa chave jÃ¡ atingiu o limite de ativaÃ§Ãµes.", already_used:"Essa chave jÃ¡ foi utilizada por este usuÃ¡rio." };
       if (!data?.ok) { setAkMsg(msgs[data?.error] || "Erro ao ativar chave."); setAkBusy(false); return; }
       await loadUserData(user.id);
       setShowAccessKey(false); setAkCode(""); setAkMsg("");
@@ -3070,7 +3070,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const openAccessKey = () => { setAkCode(""); setAkMsg(""); setShowAccessKey(true); };
 
 
-  // ── Analytics: rastrear navegação de abas ───────────────
+  // ââ Analytics: rastrear navegaÃ§Ã£o de abas âââââââââââââââ
   const trackEvent = useCallback(async (eventType, tabName, metadata = {}) => {
     if (!user?.id) return;
     try {
@@ -3080,7 +3080,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         tab_name: tabName,
         metadata: Object.keys(metadata).length ? metadata : null,
       });
-    } catch (_) { /* silencioso — não interrompe o fluxo */ }
+    } catch (_) { /* silencioso â nÃ£o interrompe o fluxo */ }
   }, [user?.id]);
 
 
@@ -3091,12 +3091,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
 
   const load = useCallback(async () => {
-    if (!user?.id) { setDbgMsg("⚠️ user.id ausente — não autenticado"); return; }
+    if (!user?.id) { setDbgMsg("â ï¸ user.id ausente â nÃ£o autenticado"); return; }
     const { data: c, error: ce } = await supabase.from("contacts").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
     const { data: i, error: ie } = await supabase.from("interactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-    if (ce) { setDbgMsg("❌ Erro ao buscar contatos: " + ce.message); return; }
-    if (ie) { setDbgMsg("❌ Erro ao buscar interações: " + ie.message); return; }
-    setDbgMsg("✅ user:" + user.id.slice(0,8) + " | contatos:" + (c?.length || 0));
+    if (ce) { setDbgMsg("â Erro ao buscar contatos: " + ce.message); return; }
+    if (ie) { setDbgMsg("â Erro ao buscar interaÃ§Ãµes: " + ie.message); return; }
+    setDbgMsg("â user:" + user.id.slice(0,8) + " | contatos:" + (c?.length || 0));
     setCts((c || []).map(ct => ({ ...ct, health: hScore(ct.last_interaction_at, ct.ideal_frequency_days || 30), notes: ct.personal_notes, howMet: ct.how_met, idealFreq: ct.ideal_frequency_days, lastInteraction: ct.last_interaction_at, nextAction: ct.next_action, nextActionDate: ct.next_action_date, whatsapp: ct.whatsapp, contactEmail: ct.contact_email, linkedin: ct.linkedin, birthday: ct.birthday, hobbies: ct.hobbies, mainCulture: ct.main_culture, city: ct.city, stateCode: ct.state_code, influenciaPessoas: ct.influencia_pessoas ?? null, geraOportunidade: ct.gera_oportunidade ?? null, abrePortas: ct.abre_portas ?? null, momentoAtual: ct.momento_atual ?? null })));
     setIts((i || []).map(it => ({ ...it, desc: it.description, contactId: it.contact_id, createdAt: it.created_at, valueGen: it.value_generated })));
   }, [user?.id]);
@@ -3105,9 +3105,9 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   useEffect(() => { load(); }, [load]);
 
 
-  // ── Métricas administrativas: acompanhamento do produto CONÉXIA ──
-  // Contas de teste do próprio admin ficam de fora de todas as agregações,
-  // para refletir apenas o comportamento de usuários reais.
+  // ââ MÃ©tricas administrativas: acompanhamento do produto CONÃXIA ââ
+  // Contas de teste do prÃ³prio admin ficam de fora de todas as agregaÃ§Ãµes,
+  // para refletir apenas o comportamento de usuÃ¡rios reais.
   const loadMetrics = useCallback(async () => {
     setMetricsLoading(true); setMetricsErr("");
     try {
@@ -3149,7 +3149,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         weeklySignups,
       });
     } catch (e) {
-      setMetricsErr(e?.message || "Erro ao carregar métricas.");
+      setMetricsErr(e?.message || "Erro ao carregar mÃ©tricas.");
     }
     setMetricsLoading(false);
   }, []);
@@ -3158,12 +3158,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
 
   const addC = async () => {
-    if (!cf.name.trim() || !user?.id) { setDbgMsg("⚠️ Bloqueado: " + (!user?.id ? "sem user.id" : "nome vazio")); return; }
+    if (!cf.name.trim() || !user?.id) { setDbgMsg("â ï¸ Bloqueado: " + (!user?.id ? "sem user.id" : "nome vazio")); return; }
     if (!isPro && cts.length >= FREE_CT_LIMIT) { setModal("limiteCt"); return; }
     if (savingContact) return; // trava contra duplo clique / duplo submit
     setSavingContact(true);
     try {
-    setDbgMsg("⏳ Salvando...");
+    setDbgMsg("â³ Salvando...");
     const { data: newContact, error } = await supabase.from("contacts").insert({
       user_id: user.id, name: cf.name.trim(), company: cf.company.trim(),
       role: cf.role.trim(), category: cf.category, proximity: parseInt(cf.proximity),
@@ -3184,8 +3184,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       abre_portas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null,
       momento_atual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null,
     }).select().single();
-    if (error) { setDbgMsg("❌ " + error.message + " [" + error.code + "]"); return; }
-    setDbgMsg("✅ Salvo: " + newContact?.name);
+    if (error) { setDbgMsg("â " + error.message + " [" + error.code + "]"); return; }
+    setDbgMsg("â Salvo: " + newContact?.name);
     if (newContact) {
       if (contactCircleDraft) {
         try { await network.assign(newContact.id, contactCircleDraft); }
@@ -3240,17 +3240,17 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       value_generated: inf.valueGen,
     });
     // Atualiza last_interaction_at no contato (essencial para Health Score) e
-    // limpa a próxima ação/data pendente — registrar uma interação resolve a
-    // pendência anterior, igual já acontece no assistente de WhatsApp. Sem isso,
-    // um contato com "próxima ação vencida" nunca some da lista de Movimentos
-    // da Semana, mesmo depois de já ter sido acionado.
+    // limpa a prÃ³xima aÃ§Ã£o/data pendente â registrar uma interaÃ§Ã£o resolve a
+    // pendÃªncia anterior, igual jÃ¡ acontece no assistente de WhatsApp. Sem isso,
+    // um contato com "prÃ³xima aÃ§Ã£o vencida" nunca some da lista de Movimentos
+    // da Semana, mesmo depois de jÃ¡ ter sido acionado.
     await supabase.from("contacts").update({
       last_interaction_at: new Date().toISOString(),
       next_action: null,
       next_action_date: null,
     }).eq("id", intCid).eq("user_id", user.id);
     trackEvent("interaction_logged", "contacts", { contactId: intCid, type: inf.type });
-    // Push interação para Make
+    // Push interaÃ§Ã£o para Make
     const contact = cts.find(c => c.id === intCid);
     if (contact) {
       try {
@@ -3276,7 +3276,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
             healthAnterior: contact.health,
           }),
         });
-      } catch (e) { console.warn("[Make push interação]", e); }
+      } catch (e) { console.warn("[Make push interaÃ§Ã£o]", e); }
     }
     setInf({ type: "mensagem", desc: "", sentiment: "positivo", tags: "", valueGen: false });
     setModal(null);
@@ -3298,24 +3298,24 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
         scheduled_at: scheduledAt, duration_minutes: parseInt(schedForm.duration) || 30,
         location: schedForm.location.trim() || null, notes: schedForm.topic.trim() || null, source: "app",
       });
-      if (error) { setDbgMsg("❌ Erro ao agendar: " + error.message); return; }
-      // Espelha em contacts.next_action/next_action_date para não quebrar nada que já
-      // depende desses campos hoje (lembrete automático do WhatsApp, HomeToday, intent
-      // schedule_action do bot). A tabela scheduled_events é a fonte de verdade nova;
-      // isso aqui é só compatibilidade com o que já roda em produção.
+      if (error) { setDbgMsg("â Erro ao agendar: " + error.message); return; }
+      // Espelha em contacts.next_action/next_action_date para nÃ£o quebrar nada que jÃ¡
+      // depende desses campos hoje (lembrete automÃ¡tico do WhatsApp, HomeToday, intent
+      // schedule_action do bot). A tabela scheduled_events Ã© a fonte de verdade nova;
+      // isso aqui Ã© sÃ³ compatibilidade com o que jÃ¡ roda em produÃ§Ã£o.
       const tp = ITYPES.find(t => t.value === schedForm.type);
       const topic = schedForm.topic.trim();
       await supabase.from("contacts").update({
-        next_action: `${tp?.icon || "📋"} ${topic || tp?.label || "Agendamento"}${schedForm.location.trim() ? ` · ${schedForm.location.trim()}` : ""}`,
+        next_action: `${tp?.icon || "ð"} ${topic || tp?.label || "Agendamento"}${schedForm.location.trim() ? ` Â· ${schedForm.location.trim()}` : ""}`,
         next_action_date: schedForm.date,
       }).eq("id", contactId).eq("user_id", user.id);
       trackEvent("scheduled_event_created", "contacts", { contactId, type: schedForm.type });
-      // Gera e baixa o convite .ics na hora — é o motivo de existir o agendamento:
-      // cair na agenda de verdade do usuário (Outlook, Google ou Apple), sem OAuth.
+      // Gera e baixa o convite .ics na hora â Ã© o motivo de existir o agendamento:
+      // cair na agenda de verdade do usuÃ¡rio (Outlook, Google ou Apple), sem OAuth.
       const contactName = cts.find(c => c.id === contactId)?.name || "contato";
       const ics = buildICS({
-        title: `${tp?.icon || "📋"} ${topic || tp?.label || "Agendamento"} · ${contactName}`,
-        description: topic ? `${topic}\n\nAgendado via CONÉXIA` : "Agendado via CONÉXIA",
+        title: `${tp?.icon || "ð"} ${topic || tp?.label || "Agendamento"} Â· ${contactName}`,
+        description: topic ? `${topic}\n\nAgendado via CONÃXIA` : "Agendado via CONÃXIA",
         location: schedForm.location.trim(),
         start: scheduledAt,
         durationMinutes: parseInt(schedForm.duration) || 30,
@@ -3393,26 +3393,26 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const sc = assessment?.scores || {};
   const admin = isAdmin(profile?.email);
   const isMetricsAdmin = isAdminEmail(user?.email);
-  // Navegação principal reorganizada em 3 âncoras (Hoje / Rede / Eu). Os ids
+  // NavegaÃ§Ã£o principal reorganizada em 3 Ã¢ncoras (Hoje / Rede / Eu). Os ids
   // internos de view ("contacts", "perfil", "teia", "plano", "report", "ia")
-  // continuam existindo exatamente como antes — só o que aparece na barra
-  // principal mudou, para não quebrar nenhuma das chamadas diretas de
+  // continuam existindo exatamente como antes â sÃ³ o que aparece na barra
+  // principal mudou, para nÃ£o quebrar nenhuma das chamadas diretas de
   // setView(...) espalhadas pelo restante do arquivo. "Analytics" saiu da
-  // navegação porque consulta uma tabela/coluna que não existe no schema
-  // atual (contacts.health_score, assessment_results) — está confirmado
-  // quebrado, e a regra é não manter uma funcionalidade sabidamente quebrada
-  // só para preservar a estrutura anterior.
-  // "Insights" é o chamariz da IA na coluna lateral (com Plano e Relatório
-  // juntos). Cadastro/perfil ficou só no botão de baixo, na área da conta
-  // (view="perfil") — não tem mais 2 caminhos pro mesmo lugar.
+  // navegaÃ§Ã£o porque consulta uma tabela/coluna que nÃ£o existe no schema
+  // atual (contacts.health_score, assessment_results) â estÃ¡ confirmado
+  // quebrado, e a regra Ã© nÃ£o manter uma funcionalidade sabidamente quebrada
+  // sÃ³ para preservar a estrutura anterior.
+  // "Insights" Ã© o chamariz da IA na coluna lateral (com Plano e RelatÃ³rio
+  // juntos). Cadastro/perfil ficou sÃ³ no botÃ£o de baixo, na Ã¡rea da conta
+  // (view="perfil") â nÃ£o tem mais 2 caminhos pro mesmo lugar.
   const NAVS = [
-    { id: "dash", icon: "◎", label: "Hoje" },
-    { id: "contacts", icon: "⊛", label: "Rede" },
-    { id: "insights", icon: "🧠", label: "Insights" },
-    ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }] : []),
-    ...(admin ? [{ id: "export", icon: "⬇", label: "Exportar" }] : []),
-    ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
-    ...(profile?.organization_id && profile?.org_role === "admin" ? [{ id: "empresa", icon: "🏢", label: "Empresa" }] : []),
+    { id: "dash", icon: "â", label: "Hoje" },
+    { id: "contacts", icon: "â", label: "Rede" },
+    { id: "insights", icon: "ð§ ", label: "Insights" },
+    ...(admin ? [{ id: "mentor", icon: "ð", label: "Mentor" }] : []),
+    ...(admin ? [{ id: "export", icon: "â¬", label: "Exportar" }] : []),
+    ...(isMetricsAdmin ? [{ id: "metrics", icon: "ð", label: "MÃ©tricas" }] : []),
+    ...(profile?.organization_id && profile?.org_role === "admin" ? [{ id: "empresa", icon: "ð¢", label: "Empresa" }] : []),
   ];
 
 
@@ -3421,10 +3421,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   }, [view, isMetricsAdmin, metrics, metricsLoading, loadMetrics]);
 
 
-  // CONÉXIA B2B — visão agregada da equipe, só para org_role
-  // 'admin'. Lê exclusivamente get_org_team_overview() (SECURITY DEFINER),
-  // que nunca expõe contacts/interactions/email — só arquétipo e o estado
-  // categórico semanal já computado por relationship-weekly-summary-cron.js.
+  // CONÃXIA B2B â visÃ£o agregada da equipe, sÃ³ para org_role
+  // 'admin'. LÃª exclusivamente get_org_team_overview() (SECURITY DEFINER),
+  // que nunca expÃµe contacts/interactions/email â sÃ³ arquÃ©tipo e o estado
+  // categÃ³rico semanal jÃ¡ computado por relationship-weekly-summary-cron.js.
   useEffect(() => {
     if (view !== "empresa" || !profile?.organization_id || profile?.org_role !== "admin") return;
     if (orgOverview || orgOverviewLoading) return;
@@ -3438,14 +3438,14 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       supabase.rpc("get_org_decline_alerts", { p_organization_id: profile.organization_id }),
     ])
       .then(([overviewRes, orgRes, trendRes, insightRes, alertsRes]) => {
-        if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "Não foi possível carregar a visão da equipe."); return; }
+        if (overviewRes.error) { setOrgOverviewError(overviewRes.error.message || "NÃ£o foi possÃ­vel carregar a visÃ£o da equipe."); return; }
         setOrgOverview(overviewRes.data || []);
         if (orgRes.data) { setOrgInfo(orgRes.data); setOrgNameDraft(orgRes.data.name || ""); }
         if (!trendRes.error) setOrgTrend(trendRes.data || []);
         if (!insightRes.error && insightRes.data) { setOrgAnalysisText(insightRes.data.insight_text); setOrgAnalysisGeneratedAt(insightRes.data.generated_at); }
         if (!alertsRes.error) setOrgDeclineAlerts(alertsRes.data || []);
       })
-      .catch((e) => setOrgOverviewError(e?.message || "Não foi possível carregar a visão da equipe."))
+      .catch((e) => setOrgOverviewError(e?.message || "NÃ£o foi possÃ­vel carregar a visÃ£o da equipe."))
       .finally(() => setOrgOverviewLoading(false));
   }, [view, profile?.organization_id, profile?.org_role, orgOverview, orgOverviewLoading]);
 
@@ -3471,7 +3471,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
       await navigator.clipboard.writeText(orgInfo.invite_code);
       setOrgCodeCopied(true);
       setTimeout(() => setOrgCodeCopied(false), 1800);
-    } catch (e) { /* clipboard indisponível — botão só não confirma visualmente */ }
+    } catch (e) { /* clipboard indisponÃ­vel â botÃ£o sÃ³ nÃ£o confirma visualmente */ }
   };
 
 
@@ -3492,10 +3492,10 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   };
 
 
-  // Análise de IA da equipe — a IA só recebe percentuais agregados
-  // (nunca nome, nunca dado individual). Sob demanda (botão), não
-  // automática, pra não gerar custo/latência toda vez que o admin abre a
-  // aba. Não faz cache no banco na v1 — cada clique gera de novo.
+  // AnÃ¡lise de IA da equipe â a IA sÃ³ recebe percentuais agregados
+  // (nunca nome, nunca dado individual). Sob demanda (botÃ£o), nÃ£o
+  // automÃ¡tica, pra nÃ£o gerar custo/latÃªncia toda vez que o admin abre a
+  // aba. NÃ£o faz cache no banco na v1 â cada clique gera de novo.
   const generateOrgAnalysis = async () => {
     if (!orgTeamStats) return;
     setOrgAnalysisLoading(true);
@@ -3503,12 +3503,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     setOrgAnalysisText("");
     try {
       const dimLines = Object.entries(orgTeamStats.perDimPct)
-        .map(([dim, p]) => `- ${DIMENSION_LABELS[dim] || dim}: ${p.evoluindo}% evoluindo, ${p.estavel}% estável, ${p.perdendo_intensidade}% perdendo intensidade`)
+        .map(([dim, p]) => `- ${DIMENSION_LABELS[dim] || dim}: ${p.evoluindo}% evoluindo, ${p.estavel}% estÃ¡vel, ${p.perdendo_intensidade}% perdendo intensidade`)
         .join("\n");
       const activityLine = orgActivityStats
-        ? `\nAtividade da equipe: ${orgActivityStats.totalContacts} contatos na carteira somada, ${orgActivityStats.totalLast30d} interações nos últimos 30 dias (${orgActivityStats.totalInteractions} no histórico total), ${orgActivityStats.totalCooling} contas esfriando (60+ dias sem interação).`
+        ? `\nAtividade da equipe: ${orgActivityStats.totalContacts} contatos na carteira somada, ${orgActivityStats.totalLast30d} interaÃ§Ãµes nos Ãºltimos 30 dias (${orgActivityStats.totalInteractions} no histÃ³rico total), ${orgActivityStats.totalCooling} contas esfriando (60+ dias sem interaÃ§Ã£o).`
         : "";
-      const prompt = `Você é um consultor de inteligência relacional (metodologia CONÉXIA) analisando o estado agregado e ANÔNIMO de uma equipe comercial de agronegócio, medido em 6 dimensões relacionais e em volume de atividade. Você não recebe nome nem dado de nenhuma pessoa — só percentuais e totais da equipe inteira.
+      const prompt = `VocÃª Ã© um consultor de inteligÃªncia relacional (metodologia CONÃXIA) analisando o estado agregado e ANÃNIMO de uma equipe comercial de agronegÃ³cio, medido em 6 dimensÃµes relacionais e em volume de atividade. VocÃª nÃ£o recebe nome nem dado de nenhuma pessoa â sÃ³ percentuais e totais da equipe inteira.
 
 
 Dados desta semana (${orgTeamStats.memberCount} pessoas com dado comportamental computado):
@@ -3516,12 +3516,12 @@ ${dimLines}
 ${activityLine}
 
 
-Escreva uma análise executiva curta para o gestor da equipe, em português, tom consultivo e direto, 4 a 6 frases corridas (sem bullet points, sem markdown):
-1. Qual é o padrão mais forte da equipe e o que isso indica sobre como ela constrói relações.
-2. Qual dimensão merece atenção e por que isso importa comercialmente.
-3. Cruze com a atividade: se há contas esfriando ou baixa atividade recente, comente o risco disso combinado com o padrão comportamental.
-4. Uma recomendação prática e específica de ação para a próxima semana.
-Não invente números além dos fornecidos. Não mencione nomes — você não tem acesso a nenhum.`;
+Escreva uma anÃ¡lise executiva curta para o gestor da equipe, em portuguÃªs, tom consultivo e direto, 4 a 6 frases corridas (sem bullet points, sem markdown):
+1. Qual Ã© o padrÃ£o mais forte da equipe e o que isso indica sobre como ela constrÃ³i relaÃ§Ãµes.
+2. Qual dimensÃ£o merece atenÃ§Ã£o e por que isso importa comercialmente.
+3. Cruze com a atividade: se hÃ¡ contas esfriando ou baixa atividade recente, comente o risco disso combinado com o padrÃ£o comportamental.
+4. Uma recomendaÃ§Ã£o prÃ¡tica e especÃ­fica de aÃ§Ã£o para a prÃ³xima semana.
+NÃ£o invente nÃºmeros alÃ©m dos fornecidos. NÃ£o mencione nomes â vocÃª nÃ£o tem acesso a nenhum.`;
       const res = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -3529,20 +3529,20 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       });
       const data = await res.json();
       const text = data.content?.[0]?.text?.trim() || "";
-      if (!text) { setOrgAnalysisError("A IA não retornou análise. Tenta de novo."); return; }
+      if (!text) { setOrgAnalysisError("A IA nÃ£o retornou anÃ¡lise. Tenta de novo."); return; }
       setOrgAnalysisText(text);
       setOrgAnalysisGeneratedAt(null);
     } catch (e) {
-      setOrgAnalysisError("Não foi possível gerar a análise agora. Tenta de novo.");
+      setOrgAnalysisError("NÃ£o foi possÃ­vel gerar a anÃ¡lise agora. Tenta de novo.");
     } finally {
       setOrgAnalysisLoading(false);
     }
   };
 
 
-  // Guardrail de consentimento: vínculo a organização nunca é silencioso.
-  // respond_to_org_invite() é a única via de escrita nesses campos vinda
-  // do client — aceitar seta org_consent_status='accepted'; recusar limpa
+  // Guardrail de consentimento: vÃ­nculo a organizaÃ§Ã£o nunca Ã© silencioso.
+  // respond_to_org_invite() Ã© a Ãºnica via de escrita nesses campos vinda
+  // do client â aceitar seta org_consent_status='accepted'; recusar limpa
   // organization_id por completo (a pessoa sai, dados individuais intactos).
   const respondOrgInvite = async (accept) => {
     setOrgConsentBusy(true);
@@ -3576,10 +3576,10 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
   };
 
 
-  // Auto-declaração: pessoa digita o código da própria empresa e entra
-  // sozinha. join_organization_by_code() já bloqueia quem já está em uma
-  // organização, e o trigger do banco já força org_consent_status de
-  // volta pra 'pending' — o modal de consentimento assume dali em diante.
+  // Auto-declaraÃ§Ã£o: pessoa digita o cÃ³digo da prÃ³pria empresa e entra
+  // sozinha. join_organization_by_code() jÃ¡ bloqueia quem jÃ¡ estÃ¡ em uma
+  // organizaÃ§Ã£o, e o trigger do banco jÃ¡ forÃ§a org_consent_status de
+  // volta pra 'pending' â o modal de consentimento assume dali em diante.
   const joinOrganization = async () => {
     const code = joinOrgCode.trim();
     if (!code) return;
@@ -3589,9 +3589,9 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       const { data, error } = await supabase.rpc("join_organization_by_code", { p_code: code });
       if (error) {
         setJoinOrgMsg(
-          error.message?.includes("invalid_code") ? "Código inválido." :
-          error.message?.includes("already_in_organization") ? "Você já está em uma organização — saia dela antes de entrar em outra." :
-          "Não foi possível entrar. Confira o código e tente de novo."
+          error.message?.includes("invalid_code") ? "CÃ³digo invÃ¡lido." :
+          error.message?.includes("already_in_organization") ? "VocÃª jÃ¡ estÃ¡ em uma organizaÃ§Ã£o â saia dela antes de entrar em outra." :
+          "NÃ£o foi possÃ­vel entrar. Confira o cÃ³digo e tente de novo."
         );
         return;
       }
@@ -3600,7 +3600,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       setJoinOrgCode("");
       setJoinOrgMsg("");
     } catch (e) {
-      setJoinOrgMsg("Não foi possível entrar. Tente de novo.");
+      setJoinOrgMsg("NÃ£o foi possÃ­vel entrar. Tente de novo.");
     } finally {
       setJoinOrgBusy(false);
     }
@@ -3612,39 +3612,39 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Painel do Mentor</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Visão administrativa — apenas para {ADMIN_EMAIL}</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>VisÃ£o administrativa â apenas para {ADMIN_EMAIL}</p>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, marginBottom: 14 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.vio, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Seus dados locais</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6 }}>
-            {profile?.name} · {profile?.email}<br />
-            {profile?.role} · {profile?.segment} · {profile?.state}<br />
-            Perfil: {pf?.emoji} {pf?.name} · Score: {assessment?.overall}%<br />
-            {cts.length} contatos · {its.length} interações
+            {profile?.name} Â· {profile?.email}<br />
+            {profile?.role} Â· {profile?.segment} Â· {profile?.state}<br />
+            Perfil: {pf?.emoji} {pf?.name} Â· Score: {assessment?.overall}%<br />
+            {cts.length} contatos Â· {its.length} interaÃ§Ãµes
           </div>
         </div>
         <div style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 10, padding: 16 }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, marginBottom: 8 }}>Quando migrar para Supabase</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>Este painel mostrará todos os mentorados, seus assessments, contatos e interações. A RLS do Supabase garante que só o mentor (is_mentor=true) consegue leitura cross-user.</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>Este painel mostrarÃ¡ todos os mentorados, seus assessments, contatos e interaÃ§Ãµes. A RLS do Supabase garante que sÃ³ o mentor (is_mentor=true) consegue leitura cross-user.</div>
         </div>
       </div>
     );
   };
 
 
-  // Rótulos legíveis das 6 dimensões, usados nos cards de resumo agregado.
+  // RÃ³tulos legÃ­veis das 6 dimensÃµes, usados nos cards de resumo agregado.
   const DIMENSION_LABELS = {
-    intencao_estrategica: "Estratégia",
+    intencao_estrategica: "EstratÃ©gia",
     escuta_relacional: "Empatia",
-    presenca_mercado: "Presença",
+    presenca_mercado: "PresenÃ§a",
     reciprocidade_ativa: "Reciprocidade",
-    ritual_consistencia: "Consistência",
+    ritual_consistencia: "ConsistÃªncia",
     confianca_autentica: "Autenticidade",
   };
 
 
-  // Resumo agregado de equipe — estatística do time, nunca de uma pessoa.
-  // Só calcula/mostra com >=3 membros consentidos com dado, senão o
-  // "agregado" vira o dado individual disfarçado (n=1 ou n=2 identifica).
+  // Resumo agregado de equipe â estatÃ­stica do time, nunca de uma pessoa.
+  // SÃ³ calcula/mostra com >=3 membros consentidos com dado, senÃ£o o
+  // "agregado" vira o dado individual disfarÃ§ado (n=1 ou n=2 identifica).
   const orgTeamStats = useMemo(() => {
     const withData = (orgOverview || []).filter((m) => m.dimension_observation);
     if (withData.length < 3) return null;
@@ -3680,10 +3680,10 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
   }, [orgOverview]);
 
 
-  // Atividade agregada — soma bruta de contatos/interações da equipe.
+  // Atividade agregada â soma bruta de contatos/interaÃ§Ãµes da equipe.
   // Usa o mesmo piso de 3 pessoas que o resto do agregado, mesmo essa
-  // métrica não depender do cron semanal (existe assim que há contato
-  // cadastrado), pra manter uma única régua de anonimato em toda a tela.
+  // mÃ©trica nÃ£o depender do cron semanal (existe assim que hÃ¡ contato
+  // cadastrado), pra manter uma Ãºnica rÃ©gua de anonimato em toda a tela.
   const orgActivityStats = useMemo(() => {
     const members = orgOverview || [];
     if (members.length < 3) return null;
@@ -3705,12 +3705,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
   );
 
 
-  // Visão Empresa. Só categórico, só arquétipo.
-  // Nunca lista contatos, interações ou conteúdo de mensagens de ninguém.
+  // VisÃ£o Empresa. SÃ³ categÃ³rico, sÃ³ arquÃ©tipo.
+  // Nunca lista contatos, interaÃ§Ãµes ou conteÃºdo de mensagens de ninguÃ©m.
   const renderEmpresa = () => {
     return (
       <div>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Visão Empresa</h2>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>VisÃ£o Empresa</h2>
         {orgInfo && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             {orgNameEditing ? (
@@ -3732,27 +3732,27 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           </div>
         )}
         <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px", maxWidth: 560 }}>
-          Estado comportamental semanal e volume de atividade da sua equipe — categórico e quantitativo, nunca identidade ou conteúdo. Quem são os contatos de cada pessoa e o que foi dito em qualquer conversa nunca aparecem aqui.
+          Estado comportamental semanal e volume de atividade da sua equipe â categÃ³rico e quantitativo, nunca identidade ou conteÃºdo. Quem sÃ£o os contatos de cada pessoa e o que foi dito em qualquer conversa nunca aparecem aqui.
         </p>
 
 
         {orgInfo?.invite_code && (
           <div style={{ background: C.gD, border: `1px solid ${C.gL}`, borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
             <div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Código de convite — {orgInfo.name}</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>CÃ³digo de convite â {orgInfo.name}</div>
               <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 18, fontWeight: 700, color: C.txt, letterSpacing: ".08em" }}>{orgInfo.invite_code}</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginTop: 4 }}>Compartilhe com a equipe. Cada pessoa digita esse código em Perfil → "Tem um código de empresa?" e passa pelo consentimento antes de qualquer dado aparecer aqui.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginTop: 4 }}>Compartilhe com a equipe. Cada pessoa digita esse cÃ³digo em Perfil â "Tem um cÃ³digo de empresa?" e passa pelo consentimento antes de qualquer dado aparecer aqui.</div>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
               <Btn small variant="ghost" onClick={copyOrgCode}>{orgCodeCopied ? "Copiado!" : "Copiar"}</Btn>
-              <Btn small variant="ghost" onClick={regenerateOrgCode} disabled={orgCodeBusy}>Gerar novo código</Btn>
+              <Btn small variant="ghost" onClick={regenerateOrgCode} disabled={orgCodeBusy}>Gerar novo cÃ³digo</Btn>
             </div>
           </div>
         )}
 
 
         {orgOverviewLoading && (
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando…</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregandoâ¦</div>
         )}
 
 
@@ -3765,11 +3765,11 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
         {orgDeclineAlerts && orgDeclineAlerts.length > 0 && (
           <div style={{ background: `${C.cor}12`, border: `1px solid ${C.cor}50`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.cor, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>⚠ Queda consecutiva detectada</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.cor, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>â  Queda consecutiva detectada</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {orgDeclineAlerts.map((a) => (
                 <div key={a.dimension} style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>
-                  <strong>{a.member_count}</strong> {a.member_count === 1 ? "pessoa" : "pessoas"} com <strong>{DIMENSION_LABELS[a.dimension] || a.dimension}</strong> perdendo intensidade há 2+ semanas seguidas
+                  <strong>{a.member_count}</strong> {a.member_count === 1 ? "pessoa" : "pessoas"} com <strong>{DIMENSION_LABELS[a.dimension] || a.dimension}</strong> perdendo intensidade hÃ¡ 2+ semanas seguidas
                 </div>
               ))}
             </div>
@@ -3779,7 +3779,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length === 0 && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 16, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>
-            Nenhum membro vinculado a esta organização ainda.
+            Nenhum membro vinculado a esta organizaÃ§Ã£o ainda.
           </div>
         )}
 
@@ -3792,32 +3792,32 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               (() => {
                 if (!orgTrend || orgTrend.length < 2) return `${orgTeamStats.memberCount} pessoas com dado`;
                 const delta = orgTrend[orgTrend.length - 1].pct_evoluindo - orgTrend[orgTrend.length - 2].pct_evoluindo;
-                const arrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "＝";
+                const arrow = delta > 0 ? "â²" : delta < 0 ? "â¼" : "ï¼";
                 return `${arrow} ${Math.abs(delta)} pts vs semana passada`;
               })(),
               C.grn
             )}
-            {orgTeamStats.bestDim && renderTeamStatCard("Ponto forte da equipe", DIMENSION_LABELS[orgTeamStats.bestDim] || orgTeamStats.bestDim, `${orgTeamStats.bestPct}% evoluindo nessa dimensão`, C.gold)}
-            {orgTeamStats.attentionDim && renderTeamStatCard("Merece atenção", DIMENSION_LABELS[orgTeamStats.attentionDim] || orgTeamStats.attentionDim, `${orgTeamStats.attentionPct}% perdendo intensidade`, C.cor)}
+            {orgTeamStats.bestDim && renderTeamStatCard("Ponto forte da equipe", DIMENSION_LABELS[orgTeamStats.bestDim] || orgTeamStats.bestDim, `${orgTeamStats.bestPct}% evoluindo nessa dimensÃ£o`, C.gold)}
+            {orgTeamStats.attentionDim && renderTeamStatCard("Merece atenÃ§Ã£o", DIMENSION_LABELS[orgTeamStats.attentionDim] || orgTeamStats.attentionDim, `${orgTeamStats.attentionPct}% perdendo intensidade`, C.cor)}
           </div>
         )}
         {!orgOverviewLoading && !orgOverviewError && orgActivityStats && (
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
             {renderTeamStatCard("Carteira total da equipe", orgActivityStats.totalContacts, "contatos cadastrados")}
-            {renderTeamStatCard("Interações (30 dias)", orgActivityStats.totalLast30d, `${orgActivityStats.totalInteractions} no histórico total`)}
-            {renderTeamStatCard("Contas esfriando", orgActivityStats.totalCooling, "60+ dias sem interação", orgActivityStats.totalCooling > 0 ? C.cor : undefined)}
+            {renderTeamStatCard("InteraÃ§Ãµes (30 dias)", orgActivityStats.totalLast30d, `${orgActivityStats.totalInteractions} no histÃ³rico total`)}
+            {renderTeamStatCard("Contas esfriando", orgActivityStats.totalCooling, "60+ dias sem interaÃ§Ã£o", orgActivityStats.totalCooling > 0 ? C.cor : undefined)}
           </div>
         )}
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && !orgTeamStats && (
           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, marginBottom: 20 }}>
-            O resumo agregado da equipe aparece a partir de 3 pessoas com dado semanal computado — preserva o anonimato de quem já entrou.
+            O resumo agregado da equipe aparece a partir de 3 pessoas com dado semanal computado â preserva o anonimato de quem jÃ¡ entrou.
           </div>
         )}
 
 
         {orgTrend && orgTrend.length >= 2 && (
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Tendência — % da equipe evoluindo por semana</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>TendÃªncia â % da equipe evoluindo por semana</div>
             <TeamTrendChart data={orgTrend} />
           </div>
         )}
@@ -3827,12 +3827,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: orgAnalysisText || orgAnalysisLoading || orgAnalysisError ? 12 : 0 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".06em" }}>
-                Análise da equipe (IA)
+                AnÃ¡lise da equipe (IA)
                 {orgAnalysisGeneratedAt && !orgAnalysisLoading && (
-                  <span style={{ textTransform: "none", fontWeight: 400, color: C.txL, marginLeft: 8 }}>· gerada automaticamente {new Date(orgAnalysisGeneratedAt).toLocaleDateString("pt-BR")}</span>
+                  <span style={{ textTransform: "none", fontWeight: 400, color: C.txL, marginLeft: 8 }}>Â· gerada automaticamente {new Date(orgAnalysisGeneratedAt).toLocaleDateString("pt-BR")}</span>
                 )}
               </div>
-              <Btn small onClick={generateOrgAnalysis} disabled={orgAnalysisLoading}>{orgAnalysisLoading ? "Gerando…" : orgAnalysisText ? "Gerar de novo" : "Gerar análise"}</Btn>
+              <Btn small onClick={generateOrgAnalysis} disabled={orgAnalysisLoading}>{orgAnalysisLoading ? "Gerandoâ¦" : orgAnalysisText ? "Gerar de novo" : "Gerar anÃ¡lise"}</Btn>
             </div>
             {orgAnalysisError && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor }}>{orgAnalysisError}</div>}
             {orgAnalysisText && <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt, lineHeight: 1.65 }}>{orgAnalysisText}</div>}
@@ -3843,7 +3843,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         {!orgOverviewLoading && !orgOverviewError && orgOverview && orgOverview.length > 0 && (
           <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, textTransform: "uppercase", letterSpacing: ".05em" }}>Legenda</span>
-            {[["evoluindo", "Evoluindo"], ["estavel", "Estável"], ["perdendo_intensidade", "Perdendo intensidade"], ["sem_dados", "Sem dados suficientes"]].map(([k, label]) => (
+            {[["evoluindo", "Evoluindo"], ["estavel", "EstÃ¡vel"], ["perdendo_intensidade", "Perdendo intensidade"], ["sem_dados", "Sem dados suficientes"]].map(([k, label]) => (
               <span key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: TEAM_STATE_COLOR[k] || C.txL, display: "inline-block" }} />
                 {label}
@@ -3862,36 +3862,36 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 )}
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "—"}</div>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{m.profile_name || "Arquétipo pendente"}</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt }}>{m.first_name || "â"}</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{m.profile_name || "ArquÃ©tipo pendente"}</div>
                   </div>
                   {!m.onboarding_completed ? (
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding não concluído</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding nÃ£o concluÃ­do</div>
                   ) : !m.dimension_observation ? (
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observaÃ§Ã£o semanal computada ainda</div>
                   ) : null}
                   {m.declining_dimensions && m.declining_dimensions.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                       {m.declining_dimensions.map((dim) => (
                         <span key={dim} style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.cor, background: `${C.cor}15`, padding: "2px 8px", borderRadius: 20 }}>
-                          ⚠ {DIMENSION_LABELS[dim] || dim} em queda há 2+ semanas
+                          â  {DIMENSION_LABELS[dim] || dim} em queda hÃ¡ 2+ semanas
                         </span>
                       ))}
                     </div>
                   )}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 8 }}>
                     <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.contacts_count ?? 0}</strong> contatos</span>
-                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.interactions_count ?? 0}</strong> interações <span style={{ color: C.txL }}>({m.interactions_last_30d ?? 0} nos últimos 30d)</span></span>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.interactions_count ?? 0}</strong> interaÃ§Ãµes <span style={{ color: C.txL }}>({m.interactions_last_30d ?? 0} nos Ãºltimos 30d)</span></span>
                     {(m.contacts_cooling_count ?? 0) > 0 && (
                       <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor }}>{m.contacts_cooling_count} esfriando (60d+)</span>
                     )}
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 4 }}>
                     {(m.interactions_count ?? 0) > 0 && (
-                      <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.value_rate ?? 0}%</strong> das interações geraram valor</span>
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}><strong style={{ color: C.txt }}>{m.value_rate ?? 0}%</strong> das interaÃ§Ãµes geraram valor</span>
                     )}
                     <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: (m.weeks_with_data ?? 0) <= 2 ? C.amb : C.txM }}>
-                      dado há <strong style={{ color: (m.weeks_with_data ?? 0) <= 2 ? C.amb : C.txt }}>{m.weeks_with_data ?? 0}</strong> {(m.weeks_with_data ?? 0) === 1 ? "semana" : "semanas"}
+                      dado hÃ¡ <strong style={{ color: (m.weeks_with_data ?? 0) <= 2 ? C.amb : C.txt }}>{m.weeks_with_data ?? 0}</strong> {(m.weeks_with_data ?? 0) === 1 ? "semana" : "semanas"}
                     </span>
                   </div>
                 </div>
@@ -3907,7 +3907,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
   const renderExport = () => {
     const exportCSV = () => {
       try {
-        const header = "Nome,Empresa,Cargo,Categoria,Proximidade,Frequência,Health,Último Contato,Como Conheceu,Notas\n";
+        const header = "Nome,Empresa,Cargo,Categoria,Proximidade,FrequÃªncia,Health,Ãltimo Contato,Como Conheceu,Notas\n";
         const rows = cts.map(c => `"${c.name}","${c.company || ""}","${c.role || ""}","${c.category}",${c.proximity},${c.idealFreq},${c.health},"${fD(c.lastInteraction)}","${c.howMet || ""}","${(c.notes || "").replace(/"/g, "''")}"`).join("\n");
         const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
@@ -3933,18 +3933,18 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     return (
       <div>
         <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Exportar dados</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Apenas o admin pode exportar. Testadores não veem esta tela.</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Apenas o admin pode exportar. Testadores nÃ£o veem esta tela.</p>
 
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>📋</div>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>ð</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, marginBottom: 6 }}>Contatos CSV</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 12 }}>{cts.length} contatos</div>
-            {isPro ? <Btn small onClick={exportCSV}>Baixar CSV</Btn> : <button onClick={openAccessKey} style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"6px 12px", fontFamily:"'DM Sans'", fontSize:11, color:C.gold, cursor:"pointer" }}>🔒 CSV — PRO</button>}
+            {isPro ? <Btn small onClick={exportCSV}>Baixar CSV</Btn> : <button onClick={openAccessKey} style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"6px 12px", fontFamily:"'DM Sans'", fontSize:11, color:C.gold, cursor:"pointer" }}>ð CSV â PRO</button>}
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>💾</div>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>ð¾</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 600, color: C.txt, marginBottom: 6 }}>Backup completo</div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 12 }}>Perfil + assessment + CRM</div>
             {isPro ? <Btn small onClick={exportJSON}>Baixar JSON</Btn> : null}
@@ -3954,8 +3954,8 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
         {admin && (
         <div style={{ background: C.ambD, border: `1px solid ${C.amb}28`, borderRadius: 10, padding: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, marginBottom: 6 }}>Google Drive · Em breve</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>No deploy com Supabase, este botão conectará ao Google Drive via OAuth exclusivo do admin. Relatórios, contatos e backups serão salvos automaticamente na pasta MILLÉO STRATEGIC HUB.</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, marginBottom: 6 }}>Google Drive Â· Em breve</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>No deploy com Supabase, este botÃ£o conectarÃ¡ ao Google Drive via OAuth exclusivo do admin. RelatÃ³rios, contatos e backups serÃ£o salvos automaticamente na pasta MILLÃO STRATEGIC HUB.</div>
         </div>
         )}
       </div>
@@ -3970,26 +3970,26 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         <div style={{ fontFamily: "'DM Sans'", fontSize: 26, fontWeight: 700, color: danger ? C.cor : C.txt }}>{value}</div>
       </div>
     );
-    const sourceLabels = { access_key: "Convite (grátis)", admin: "Concedido (admin)", stripe: "Stripe", stripe_test: "Teste Stripe", demo: "Demo", desconhecido: "Desconhecido" };
+    const sourceLabels = { access_key: "Convite (grÃ¡tis)", admin: "Concedido (admin)", stripe: "Stripe", stripe_test: "Teste Stripe", demo: "Demo", desconhecido: "Desconhecido" };
 
 
     return (
       <div>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Métricas do CONÉXIA</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Visão administrativa do produto — contas de teste do admin excluídas.</p>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>MÃ©tricas do CONÃXIA</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>VisÃ£o administrativa do produto â contas de teste do admin excluÃ­das.</p>
 
 
-        {metricsLoading && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando métricas…</p>}
+        {metricsLoading && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>Carregando mÃ©tricasâ¦</p>}
         {metricsErr && <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.cor }}>{metricsErr}</p>}
 
 
         {metrics && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
-              <Card label="Usuários reais" value={metrics.totalReal} />
+              <Card label="UsuÃ¡rios reais" value={metrics.totalReal} />
               <Card label="Onboarding completo" value={`${metrics.onboardingPct}%`} />
-              <Card label="Avaliação completa" value={`${metrics.assessmentPct}%`} />
-              <Card label="Com 1ª interação" value={metrics.usersWithInteraction} />
+              <Card label="AvaliaÃ§Ã£o completa" value={`${metrics.assessmentPct}%`} />
+              <Card label="Com 1Âª interaÃ§Ã£o" value={metrics.usersWithInteraction} />
               <Card label="Pro concedido" value={metrics.proConcedido} />
               <Card label="Pagantes externos reais" value={metrics.payingReal} danger={metrics.payingReal === 0} />
             </div>
@@ -4026,8 +4026,8 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
             {metrics.payingReal === 0 && (
               <div style={{ background: C.corD, border: `1px solid ${C.cor}40`, borderRadius: 10, padding: 16 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, marginBottom: 6 }}>Estado real do negócio</div>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>Nenhum cliente externo paga hoje. O acesso pro em uso vem de convites gratuitos. Monetização ainda não foi validada no mercado.</div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.cor, marginBottom: 6 }}>Estado real do negÃ³cio</div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.6 }}>Nenhum cliente externo paga hoje. O acesso pro em uso vem de convites gratuitos. MonetizaÃ§Ã£o ainda nÃ£o foi validada no mercado.</div>
               </div>
             )}
           </>
@@ -4041,8 +4041,8 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     const week = Math.min(4, Math.max(1, Math.ceil(dSince(assessment?.createdAt) / 7) || 1));
     return (
       <div>
-        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Plano de Ativação</h2>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Seu guia de 4 semanas para transformar networking em hábito.</p>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>Plano de AtivaÃ§Ã£o</h2>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Seu guia de 4 semanas para transformar networking em hÃ¡bito.</p>
         <PlanInterativo userId={user?.id} week={week} isPro={isPro} openAccessKey={openAccessKey} pf={pf} />
       </div>
     );
@@ -4051,18 +4051,18 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
   const renderDash = () => {
     // A Home ("Hoje") deixou de acumular 4 mecanismos de prioridade
-    // paralelos e contraditórios entre si (arco de saúde/score, "Movimento
-    // da Semana", "Ritual Semanal", "Ações Prioritárias" e "Top 5
-    // Movimentos" — todos usando fórmulas diferentes). Agora existe só uma
-    // fonte de verdade: <HomeToday>, que usa shared/priorityEngine.js — o
-    // mesmo motor do WhatsApp. Isso também resolve a instrução explícita de
-    // não começar a Home com quantidade de contatos, saúde da rede, scores,
-    // gráficos ou banner de venda no topo.
-    // Correção de um bug real: usava `??` (nullish coalescing), que só cai
-    // para `assessment` quando profile.assessment_completed é null/undefined.
-    // Contas com assessment_completed=false por inconsistência de dado
-    // antiga (mas com um assessment de verdade já carregado em `assessment`)
-    // ficavam presas na tela de "diagnóstico não concluído" para sempre.
+    // paralelos e contraditÃ³rios entre si (arco de saÃºde/score, "Movimento
+    // da Semana", "Ritual Semanal", "AÃ§Ãµes PrioritÃ¡rias" e "Top 5
+    // Movimentos" â todos usando fÃ³rmulas diferentes). Agora existe sÃ³ uma
+    // fonte de verdade: <HomeToday>, que usa shared/priorityEngine.js â o
+    // mesmo motor do WhatsApp. Isso tambÃ©m resolve a instruÃ§Ã£o explÃ­cita de
+    // nÃ£o comeÃ§ar a Home com quantidade de contatos, saÃºde da rede, scores,
+    // grÃ¡ficos ou banner de venda no topo.
+    // CorreÃ§Ã£o de um bug real: usava `??` (nullish coalescing), que sÃ³ cai
+    // para `assessment` quando profile.assessment_completed Ã© null/undefined.
+    // Contas com assessment_completed=false por inconsistÃªncia de dado
+    // antiga (mas com um assessment de verdade jÃ¡ carregado em `assessment`)
+    // ficavam presas na tela de "diagnÃ³stico nÃ£o concluÃ­do" para sempre.
     const assessmentCompleted = !!(profile?.assessment_completed || assessment);
 
 
@@ -4088,7 +4088,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               onClick={() => setDannaHome(false)}
               style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "6px 12px", fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, cursor: "pointer" }}
             >
-              ← Voltar ao painel
+              â Voltar ao painel
             </button>
           </div>
         <ConexiaLabHome
@@ -4115,12 +4115,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
     return (
       <div>
-        {/* Transparência LGPD: o membro precisa saber que o
-            estado categórico semanal (nunca contatos/interações/conteúdo)
-            fica visível ao admin da organização. */}
+        {/* TransparÃªncia LGPD: o membro precisa saber que o
+            estado categÃ³rico semanal (nunca contatos/interaÃ§Ãµes/conteÃºdo)
+            fica visÃ­vel ao admin da organizaÃ§Ã£o. */}
         {profile?.organization_id && profile?.org_role === "membro" && (
           <div style={{ background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontFamily: "'DM Sans'", fontSize: 11, color: C.txM }}>
-            Sua organização tem acesso a um resumo categórico da sua tendência comportamental semanal (ex.: "Presença: Evoluindo") e à quantidade de contatos e interações que você registra. A identidade dos seus contatos e o conteúdo de conversas continuam privados.
+            Sua organizaÃ§Ã£o tem acesso a um resumo categÃ³rico da sua tendÃªncia comportamental semanal (ex.: "PresenÃ§a: Evoluindo") e Ã  quantidade de contatos e interaÃ§Ãµes que vocÃª registra. A identidade dos seus contatos e o conteÃºdo de conversas continuam privados.
           </div>
         )}
 
@@ -4137,10 +4137,10 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               Converse com a Danna <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: C.txM, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "1px 6px", marginLeft: 6, verticalAlign: "middle" }}>BETA</span>
             </div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>
-              Fale sobre uma pessoa, prepare uma reunião ou registre uma conversa usando a voz. Você pode voltar ao painel quando quiser.
+              Fale sobre uma pessoa, prepare uma reuniÃ£o ou registre uma conversa usando a voz. VocÃª pode voltar ao painel quando quiser.
             </div>
           </div>
-          <span style={{ fontSize: 18, color: C.gold, flexShrink: 0 }}>→</span>
+          <span style={{ fontSize: 18, color: C.gold, flexShrink: 0 }}>â</span>
         </div>
         ) : (
         <a
@@ -4149,70 +4149,70 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           rel="noreferrer"
           style={{ textDecoration: "none", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "14px 20px", marginBottom: 14, display: "flex", alignItems: "center", gap: 14 }}
         >
-          <div style={{ width: 38, height: 38, borderRadius: "50%", background: `radial-gradient(circle at 35% 35%, ${C.gold}80, ${C.gold}20)`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🔒</div>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: `radial-gradient(circle at 35% 35%, ${C.gold}80, ${C.gold}20)`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>ð</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 3 }}>
               Converse com a Danna <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: C.txM, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "1px 6px", marginLeft: 6, verticalAlign: "middle" }}>BETA</span>
             </div>
             <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5 }}>
-              A conversa por voz é exclusiva para assinantes. Toque para assinar.
+              A conversa por voz Ã© exclusiva para assinantes. Toque para assinar.
             </div>
           </div>
-          <span style={{ fontSize: 16, color: C.txM, flexShrink: 0 }}>→</span>
+          <span style={{ fontSize: 16, color: C.txM, flexShrink: 0 }}>â</span>
         </a>
         )}
 
 
-        {/* Removido: "{pf.emoji} {pf.name}" ocupava a posição mais nobre da
-            página (antes até do card do WhatsApp) pra mostrar algo puramente
-            decorativo, não acionável. O arquétipo continua visível em "Eu". */}
+        {/* Removido: "{pf.emoji} {pf.name}" ocupava a posiÃ§Ã£o mais nobre da
+            pÃ¡gina (antes atÃ© do card do WhatsApp) pra mostrar algo puramente
+            decorativo, nÃ£o acionÃ¡vel. O arquÃ©tipo continua visÃ­vel em "Eu". */}
 
 
-        {/* ── Assistente por WhatsApp: em destaque, no topo — não é um
-            detalhe de rodapé, é o jeito mais usado de falar com o CONÉXIA
-            (na palma da mão, sem precisar abrir o app). Antes ficava depois
-            de "Sua rede", exigindo rolar a tela inteira pra ver. ── */}
+        {/* ââ Assistente por WhatsApp: em destaque, no topo â nÃ£o Ã© um
+            detalhe de rodapÃ©, Ã© o jeito mais usado de falar com o CONÃXIA
+            (na palma da mÃ£o, sem precisar abrir o app). Antes ficava depois
+            de "Sua rede", exigindo rolar a tela inteira pra ver. ââ */}
         {hasWhatsappAccess && profile?.whatsapp ? (
           <div style={{ background: `linear-gradient(135deg, ${C.grn}14, ${C.grn}05)`, border: `1px solid ${C.grn}35`, borderRadius: 14, padding: "20px 22px", marginBottom: 18 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.grn}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>💬</div>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.grn}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>ð¬</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.grn, marginBottom: 4 }}>
-                  Seu assistente já está no WhatsApp{!isPro && diasDeTrialCrm !== null ? ` — teste grátis, ${Math.max(0, Math.ceil(10 - diasDeTrialCrm))} dia(s) restante(s)` : ""}
+                  Seu assistente jÃ¡ estÃ¡ no WhatsApp{!isPro && diasDeTrialCrm !== null ? ` â teste grÃ¡tis, ${Math.max(0, Math.ceil(10 - diasDeTrialCrm))} dia(s) restante(s)` : ""}
                 </div>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55, marginBottom: 12 }}>
-                  Não precisa abrir o {BRAND.name} pra usar. Manda uma mensagem de onde estiver: <em>"Liguei pro André hoje, foi positivo"</em> ou <em>"Minhas próximas ações"</em> — e o assistente cuida do resto.
+                  NÃ£o precisa abrir o {BRAND.name} pra usar. Manda uma mensagem de onde estiver: <em>"Liguei pro AndrÃ© hoje, foi positivo"</em> ou <em>"Minhas prÃ³ximas aÃ§Ãµes"</em> â e o assistente cuida do resto.
                 </div>
-                <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.grn, color: "#0D0D0D", borderRadius: 8, padding: "9px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Abrir conversa no WhatsApp →</a>
+                <a href="https://wa.me/5511988630785" target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.grn, color: "#0D0D0D", borderRadius: 8, padding: "9px 16px", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>Abrir conversa no WhatsApp â</a>
               </div>
             </div>
           </div>
         ) : hasWhatsappAccess ? (
           <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `linear-gradient(135deg, ${C.gold}14, ${C.gold}05)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "20px 22px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📱</div>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>ð±</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.gold, marginBottom: 4 }}>Ative o assistente no WhatsApp</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Registre interações e consulte sua rede direto do WhatsApp, sem precisar abrir o app. Toque aqui pra cadastrar seu número.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Registre interaÃ§Ãµes e consulte sua rede direto do WhatsApp, sem precisar abrir o app. Toque aqui pra cadastrar seu nÃºmero.</div>
             </div>
-            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>→</span>
+            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>â</span>
           </div>
         ) : profile?.whatsapp_trial_started_at ? (
           <div onClick={openAccessKey} style={{ cursor: "pointer", background: C.w06, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "20px 22px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: C.w06, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>🔒</div>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: C.w06, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>ð</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.txt, marginBottom: 4 }}>Seu teste grátis do WhatsApp acabou</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Você testou 10 dias grátis. Toque aqui pra assinar o PRO e continuar usando pelo WhatsApp.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.txt, marginBottom: 4 }}>Seu teste grÃ¡tis do WhatsApp acabou</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>VocÃª testou 10 dias grÃ¡tis. Toque aqui pra assinar o PRO e continuar usando pelo WhatsApp.</div>
             </div>
-            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>→</span>
+            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>â</span>
           </div>
         ) : (
           <div onClick={() => { setView("perfil"); setSelId(null); }} style={{ cursor: "pointer", background: `linear-gradient(135deg, ${C.gold}14, ${C.gold}05)`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: "20px 22px", marginBottom: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📱</div>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>ð±</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.gold, marginBottom: 4 }}>Teste grátis o assistente no WhatsApp — 10 dias</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Registre interações e consulte sua rede direto do WhatsApp, na palma da mão. Toque aqui pra cadastrar seu número e começar.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 15, fontWeight: 700, color: C.gold, marginBottom: 4 }}>Teste grÃ¡tis o assistente no WhatsApp â 10 dias</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.55 }}>Registre interaÃ§Ãµes e consulte sua rede direto do WhatsApp, na palma da mÃ£o. Toque aqui pra cadastrar seu nÃºmero e comeÃ§ar.</div>
             </div>
-            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>→</span>
+            <span style={{ fontSize: 18, color: C.gold, flexShrink: 0, marginTop: 8 }}>â</span>
           </div>
         )}
 
@@ -4233,16 +4233,16 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
         />
 
 
-        {/* ── Áreas secundárias: nunca competem com a orientação principal acima ── */}
+        {/* ââ Ãreas secundÃ¡rias: nunca competem com a orientaÃ§Ã£o principal acima ââ */}
         {!isPro && (
           <div style={{ background: `${C.gold}0d`, border: `1px solid ${C.gL}`, borderRadius: 12, padding: "14px 18px", marginTop: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>🔓</span>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>ð</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 3 }}>Sem limite de contatos. Plano completo de 90 dias. A IA te avisando toda semana quem chamar.</div>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 10 }}>Isso é o PRO — R$ 39,90/mês ou R$ 399/ano.</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, marginBottom: 10 }}>Isso Ã© o PRO â R$ 39,90/mÃªs ou R$ 399/ano.</div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" style={{ background: C.gold, color: C.bg, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Assinar PRO</a>
-                <button onClick={openAccessKey} style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, cursor: "pointer" }}>Já tenho uma chave</button>
+                <button onClick={openAccessKey} style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, cursor: "pointer" }}>JÃ¡ tenho uma chave</button>
               </div>
             </div>
           </div>
@@ -4259,7 +4259,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             setSelId(null);
             if (openedFromCircle) setRedeSubTab("teia");
             setOpenedFromCircle(false);
-          }} style={{ background: "none", border: "none", color: C.txM, cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 13, padding: "0 0 14px" }}>← Voltar</button>
+          }} style={{ background: "none", border: "none", color: C.txM, cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 13, padding: "0 0 14px" }}>â Voltar</button>
           <ContactCircleAssignment network={network} contactId={sel.id} />
           <div
             style={{
@@ -4293,12 +4293,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
             </div>
             <div style={{ flex: 1 }}>
               <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, margin: "0 0 4px" }}>{sel.name}</h3>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{[sel.role, sel.company].filter(Boolean).join(" · ")}</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{[sel.role, sel.company].filter(Boolean).join(" Â· ")}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 6 }}><Tag color={ci?.color}>{ci?.label}</Tag></div>
               {(() => {
                 const rs = calculateRelevanceScore(sel);
                 const priority = getContactPriorityStatus(sel.health, rs);
-                const badgeColors = {"Talvez mereça atenção":"#E8A020","Presente e importante":"#4caf50","Relação tranquila":"#ff9800","Sem prioridade agora":"#5a5650","Dados incompletos":"#9B59B6"};
+                const badgeColors = {"Talvez mereÃ§a atenÃ§Ã£o":"#E8A020","Presente e importante":"#4caf50","RelaÃ§Ã£o tranquila":"#ff9800","Sem prioridade agora":"#5a5650","Dados incompletos":"#9B59B6"};
                 const bc = badgeColors[priority.status] || C.txL;
                 return (
                   <div style={{ marginTop:10 }}>
@@ -4312,17 +4312,17 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                       }}
                     >
                       <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px" }}>
-                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Presença</div>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>PresenÃ§a</div>
                         <div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:sel.health>=70?C.grn:sel.health>=40?C.amb:C.cor, marginBottom:5 }}>{sel.health}%</div>
                         <HBar score={sel.health} />
                       </div>
                       <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 12px" }}>
-                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>Relevância</div>
+                        <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>RelevÃ¢ncia</div>
                         {rs !== null
                           ? (<><div style={{ fontFamily:"'JetBrains Mono'", fontSize:20, fontWeight:700, color:getRelevanceLabelColor(rs), marginBottom:5 }}>{rs}%</div>
                              <div style={{ height:6, borderRadius:3, background:C.w06 }}><div style={{ height:6, borderRadius:3, background:getRelevanceLabelColor(rs), width:`${rs}%` }}/></div></>)
-                          : (<><div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic", marginTop:4 }}>Não avaliado</div>
-                             <button onClick={()=>openEditC(sel)} style={{ marginTop:6, background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.gold, cursor:"pointer", padding:0, textAlign:"left" }}>→ Preencher esses dados</button></>)}
+                          : (<><div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic", marginTop:4 }}>NÃ£o avaliado</div>
+                             <button onClick={()=>openEditC(sel)} style={{ marginTop:6, background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.gold, cursor:"pointer", padding:0, textAlign:"left" }}>â Preencher esses dados</button></>)}
                       </div>
                     </div>
                     <div style={{ background:`${bc}10`, border:`1px solid ${bc}25`, borderRadius:8, padding:"8px 12px", display:"flex", alignItems:"flex-start", gap:8 }}>
@@ -4345,33 +4345,33 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 gridColumn: isMobile ? "1 / -1" : "auto",
               }}
             >
-              <Btn small full={isMobile} onClick={() => openEditC(sel)}>✏️ Editar</Btn>
+              <Btn small full={isMobile} onClick={() => openEditC(sel)}>âï¸ Editar</Btn>
               <Btn variant="danger" small full={isMobile} onClick={() => { if (confirm("Remover contato?")) delC(sel.id); }}>Remover</Btn>
             </div>
           </div>
           {sel.notes && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 14, marginBottom: 10, fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{sel.notes}</div>}
           {/* Info grid */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-            {sel.whatsapp && <a href={`https://wa.me/55${sel.whatsapp.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 2 }}>📱 WhatsApp</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{sel.whatsapp}</div></a>}
-            {sel.contactEmail && <a href={`mailto:${sel.contactEmail}`} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.blu, marginBottom: 2 }}>✉️ Email</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sel.contactEmail}</div></a>}
-            {sel.linkedin && <a href={sel.linkedin.startsWith("http") ? sel.linkedin : `https://${sel.linkedin}`} target="_blank" rel="noreferrer" style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: "#0A66C2", marginBottom: 2 }}>🔗 LinkedIn</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Ver perfil</div></a>}
-            {sel.birthday && (() => { const days = birthdayDaysAway(sel.birthday); const bDate = new Date(sel.birthday); return <div style={{ background: days !== null && days <= 7 ? `${C.vio}12` : C.card, border: `1px solid ${days !== null && days <= 7 ? C.vio : C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.vio, marginBottom: 2 }}>🎂 Aniversário</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{bDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}{days !== null && days <= 7 && <span style={{ color: C.vio, fontWeight: 600 }}> · em {days === 0 ? "hoje!" : `${days}d`}</span>}</div></div>; })()}
-            {sel.mainCulture && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 2 }}>🌱 Cultura</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{MAIN_CULTURES.find(m => m.value === sel.mainCulture)?.label || sel.mainCulture}</div></div>}
-            {(sel.city || sel.stateCode) && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, marginBottom: 2 }}>📍 Localização</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{[sel.city, sel.stateCode].filter(Boolean).join(", ")}</div></div>}
+            {sel.whatsapp && <a href={`https://wa.me/55${sel.whatsapp.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 2 }}>ð± WhatsApp</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{sel.whatsapp}</div></a>}
+            {sel.contactEmail && <a href={`mailto:${sel.contactEmail}`} style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.blu, marginBottom: 2 }}>âï¸ Email</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sel.contactEmail}</div></a>}
+            {sel.linkedin && <a href={sel.linkedin.startsWith("http") ? sel.linkedin : `https://${sel.linkedin}`} target="_blank" rel="noreferrer" style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px", textDecoration: "none" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: "#0A66C2", marginBottom: 2 }}>ð LinkedIn</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Ver perfil</div></a>}
+            {sel.birthday && (() => { const days = birthdayDaysAway(sel.birthday); const bDate = new Date(sel.birthday); return <div style={{ background: days !== null && days <= 7 ? `${C.vio}12` : C.card, border: `1px solid ${days !== null && days <= 7 ? C.vio : C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.vio, marginBottom: 2 }}>ð AniversÃ¡rio</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{bDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}{days !== null && days <= 7 && <span style={{ color: C.vio, fontWeight: 600 }}> Â· em {days === 0 ? "hoje!" : `${days}d`}</span>}</div></div>; })()}
+            {sel.mainCulture && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 2 }}>ð± Cultura</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{MAIN_CULTURES.find(m => m.value === sel.mainCulture)?.label || sel.mainCulture}</div></div>}
+            {(sel.city || sel.stateCode) && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: "10px 12px" }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.txL, marginBottom: 2 }}>ð LocalizaÃ§Ã£o</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{[sel.city, sel.stateCode].filter(Boolean).join(", ")}</div></div>}
           </div>
-          {sel.hobbies && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 12, marginBottom: 10 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.amb }}>🎯 Hobbies: </span><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>{sel.hobbies}</span></div>}
+          {sel.hobbies && <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 12, marginBottom: 10 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.amb }}>ð¯ Hobbies: </span><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM }}>{sel.hobbies}</span></div>}
           {sel.nextAction && (
             <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: 12, marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                 <div>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 4 }}>📋 Próxima ação{sel.nextActionDate ? ` · ${fD(sel.nextActionDate)}` : ""}</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.gold, marginBottom: 4 }}>ð PrÃ³xima aÃ§Ã£o{sel.nextActionDate ? ` Â· ${fD(sel.nextActionDate)}` : ""}</div>
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txt }}>{sel.nextAction}</div>
                 </div>
                 {sel.nextActionDate && (
                   <button onClick={() => {
-                    const ics = buildICS({ title: `📋 ${sel.nextAction} · ${sel.name}`, description: "Agendado via CONÉXIA", start: `${sel.nextActionDate}T09:00:00`, durationMinutes: 30 });
+                    const ics = buildICS({ title: `ð ${sel.nextAction} Â· ${sel.name}`, description: "Agendado via CONÃXIA", start: `${sel.nextActionDate}T09:00:00`, durationMinutes: 30 });
                     downloadICS(ics, `conexia-${sel.name.replace(/\s+/g, "_").toLowerCase()}.ics`);
-                  }} style={{ background: "none", border: `1px solid ${C.gL}`, borderRadius: 6, padding: "4px 8px", fontFamily: "'DM Sans'", fontSize: 10, color: C.gold, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>📅 Calendário</button>
+                  }} style={{ background: "none", border: `1px solid ${C.gL}`, borderRadius: 6, padding: "4px 8px", fontFamily: "'DM Sans'", fontSize: 10, color: C.gold, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>ð CalendÃ¡rio</button>
                 )}
               </div>
             </div>
@@ -4379,8 +4379,8 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <span style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase" }}>Timeline ({cI.length})</span>
             <div style={{ display: "flex", gap: 8 }}>
-              <Btn small onClick={() => setSchedOpenId(schedOpenId === sel.id ? null : sel.id)}>📅 Agendar</Btn>
-              <Btn variant="success" small onClick={() => { setIntCid(sel.id); setModal("addI"); }}>+ Interação</Btn>
+              <Btn small onClick={() => setSchedOpenId(schedOpenId === sel.id ? null : sel.id)}>ð Agendar</Btn>
+              <Btn variant="success" small onClick={() => { setIntCid(sel.id); setModal("addI"); }}>+ InteraÃ§Ã£o</Btn>
             </div>
           </div>
           {schedOpenId === sel.id && (
@@ -4397,7 +4397,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                   <option value="60">1 hora</option><option value="90">1h30</option>
                 </select>
               </div>
-              <textarea rows={3} placeholder="Tema (opcional): o que vai ser tratado nessa reunião..." value={schedForm.topic}
+              <textarea rows={3} placeholder="Tema (opcional): o que vai ser tratado nessa reuniÃ£o..." value={schedForm.topic}
                 onChange={e => setSchedForm({ ...schedForm, topic: e.target.value })}
                 style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, marginBottom: 8, resize: "vertical" }} />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
@@ -4406,7 +4406,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 <input type="time" value={schedForm.time} onChange={e => setSchedForm({ ...schedForm, time: e.target.value })}
                   style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }} />
               </div>
-              <input type="text" placeholder="Local (opcional): escritório, Google Meet, WhatsApp..." value={schedForm.location}
+              <input type="text" placeholder="Local (opcional): escritÃ³rio, Google Meet, WhatsApp..." value={schedForm.location}
                 onChange={e => setSchedForm({ ...schedForm, location: e.target.value })}
                 style={{ width: "100%", boxSizing: "border-box", background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 6, padding: "8px", fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, marginBottom: 10 }} />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -4415,12 +4415,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               </div>
             </div>
           )}
-          {cI.length === 0 ? <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 28, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 13, color: C.txL }}>Registre a primeira interação.</div>
+          {cI.length === 0 ? <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 28, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 13, color: C.txL }}>Registre a primeira interaÃ§Ã£o.</div>
           : cI.map((r, i) => { const tp = ITYPES.find(t => t.value === r.type); const se = SENTS.find(s => s.value === r.sentiment); return (
             <div key={i} style={{ display: "flex", gap: 12, marginBottom: 2 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 18 }}><div style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, background: se?.color || C.txL }} />{i < cI.length - 1 && <div style={{ width: 1, flex: 1, background: C.brd }} />}</div>
               <div style={{ flex: 1, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 8, padding: 12, marginBottom: 6 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: C.txt }}>{tp?.icon} {tp?.label}{r.valueGen ? " · 💎" : ""}</span><span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{fD(r.createdAt)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: C.txt }}>{tp?.icon} {tp?.label}{r.valueGen ? " Â· ð" : ""}</span><span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{fD(r.createdAt)}</span></div>
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.5 }}>{r.desc}</div>
               </div>
             </div>
@@ -4434,7 +4434,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: C.txt, margin: 0 }}>Contatos</h2>
           <Btn small onClick={() => setModal("addC")}>+ Novo</Btn>
         </div>
-        {/* ── Matriz Health × Relevance ── */}
+        {/* ââ Matriz Health Ã Relevance ââ */}
         {cts.length >= 2 && (() => {
           const q = { protect:[], reactivate:[], maintain:[], low:[], incomplete:[] };
           cts.forEach(c => {
@@ -4453,7 +4453,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                 <div style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono'", fontSize:12, fontWeight:700, color }}>{contacts.length}</div>
               </div>
               {contacts.slice(0,3).map((c,i) => (
-                <div key={c.id} onClick={()=>setSelId(c.id)} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, cursor:"pointer", marginBottom:3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>· {c.name}</div>
+                <div key={c.id} onClick={()=>setSelId(c.id)} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, cursor:"pointer", marginBottom:3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Â· {c.name}</div>
               ))}
               {contacts.length > 3 && <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:`${color}80`, marginTop:2 }}>+{contacts.length-3} mais</div>}
               {contacts.length === 0 && <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, fontStyle:"italic" }}>Nenhum contato</div>}
@@ -4462,20 +4462,20 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           return (
             <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:12, padding:14, marginBottom:14 }}>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em" }}>Como sua rede está agora</div>
-                <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>Presença × Importância</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em" }}>Como sua rede estÃ¡ agora</div>
+                <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>PresenÃ§a Ã ImportÃ¢ncia</div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom: q.incomplete.length ? 8 : 0 }}>
-                <QCell label="Talvez mereça atenção" color="#E8A020" icon="◐" contacts={q.reactivate} />
-                <QCell label="Presente e importante" color="#4caf50" icon="⭐" contacts={q.protect} />
-                <QCell label="Sem prioridade agora" color="#5a5650" icon="○" contacts={q.low} />
-                <QCell label="Relação tranquila" color="#ff9800" icon="→" contacts={q.maintain} />
+                <QCell label="Talvez mereÃ§a atenÃ§Ã£o" color="#E8A020" icon="â" contacts={q.reactivate} />
+                <QCell label="Presente e importante" color="#4caf50" icon="â­" contacts={q.protect} />
+                <QCell label="Sem prioridade agora" color="#5a5650" icon="â" contacts={q.low} />
+                <QCell label="RelaÃ§Ã£o tranquila" color="#ff9800" icon="â" contacts={q.maintain} />
               </div>
               {q.incomplete.length > 0 && (
                 <div style={{ background:`${"#9B59B6"}08`, border:`1px solid ${"#9B59B6"}20`, borderRadius:8, padding:"8px 12px", display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:12 }}>◎</span>
-                  <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:"#9B59B6", textTransform:"uppercase", letterSpacing:".08em", flex:1 }}>Sem relevância avaliada — {q.incomplete.length} contato{q.incomplete.length>1?"s":""}</div>
-                  <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:"#9B59B6", cursor:"pointer" }} onClick={()=>q.incomplete[0]&&setSelId(q.incomplete[0].id)}>Avaliar →</div>
+                  <span style={{ fontSize:12 }}>â</span>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:"#9B59B6", textTransform:"uppercase", letterSpacing:".08em", flex:1 }}>Sem relevÃ¢ncia avaliada â {q.incomplete.length} contato{q.incomplete.length>1?"s":""}</div>
+                  <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:"#9B59B6", cursor:"pointer" }} onClick={()=>q.incomplete[0]&&setSelId(q.incomplete[0].id)}>Avaliar â</div>
                 </div>
               )}
             </div>
@@ -4485,26 +4485,26 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
         {cts.length === 0 ? <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 40, textAlign: "center" }}><Btn small onClick={() => setModal("addC")}>+ Primeiro contato</Btn></div>
         : [...cts].sort((a, b) => {
-            // Ordena por prioridade, não por ordem de cadastro — usa o mesmo
-            // status já calculado pra Teia/detalhe de contato, sem criar
-            // uma segunda lógica. "Talvez mereça atenção" sempre primeiro;
-            // dentro de cada grupo, quem tem menos presença (health) vem
+            // Ordena por prioridade, nÃ£o por ordem de cadastro â usa o mesmo
+            // status jÃ¡ calculado pra Teia/detalhe de contato, sem criar
+            // uma segunda lÃ³gica. "Talvez mereÃ§a atenÃ§Ã£o" sempre primeiro;
+            // dentro de cada grupo, quem tem menos presenÃ§a (health) vem
             // antes (mais urgente primeiro).
-            const order = { "Talvez mereça atenção": 0, "Presente e importante": 1, "Relação tranquila": 2, "Sem prioridade agora": 3, "Dados incompletos": 4 };
+            const order = { "Talvez mereÃ§a atenÃ§Ã£o": 0, "Presente e importante": 1, "RelaÃ§Ã£o tranquila": 2, "Sem prioridade agora": 3, "Dados incompletos": 4 };
             const pa = getContactPriorityStatus(a.health, calculateRelevanceScore(a)).status;
             const pb = getContactPriorityStatus(b.health, calculateRelevanceScore(b)).status;
             const oa = order[pa] ?? 5, ob = order[pb] ?? 5;
             if (oa !== ob) return oa - ob;
             return (a.health ?? 100) - (b.health ?? 100);
           }).map(c => { const ci = CATS.find(x => x.value === c.category); return (
-          <div key={c.id} onClick={() => setSelId(c.id)} style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1px solid ${C.brd}`, borderLeft: `3px solid ${{ "Talvez mereça atenção":"#E8A020","Presente e importante":"#4caf50","Relação tranquila":"#ff9800" }[getContactPriorityStatus(c.health, calculateRelevanceScore(c)).status] || C.brd}`, borderRadius: 10, padding: "12px 14px", marginBottom: 6, cursor: "pointer" }}>
+          <div key={c.id} onClick={() => setSelId(c.id)} style={{ display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1px solid ${C.brd}`, borderLeft: `3px solid ${{ "Talvez mereÃ§a atenÃ§Ã£o":"#E8A020","Presente e importante":"#4caf50","RelaÃ§Ã£o tranquila":"#ff9800" }[getContactPriorityStatus(c.health, calculateRelevanceScore(c)).status] || C.brd}`, borderRadius: 10, padding: "12px 14px", marginBottom: 6, cursor: "pointer" }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: `${ci?.color || C.gold}14`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 700, color: ci?.color }}>{c.name[0]}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 14, fontWeight: 500, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
               <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{c.company || "—"}</span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{c.company || "â"}</span>
                 {(() => { const rs = calculateRelevanceScore(c); const p = getContactPriorityStatus(c.health, rs);
-                  const badgeColors = { "Talvez mereça atenção":"#E8A020","Presente e importante":"#4caf50","Relação tranquila":"#ff9800","Sem prioridade agora":"#5a5650","Dados incompletos":"#9B59B6" };
+                  const badgeColors = { "Talvez mereÃ§a atenÃ§Ã£o":"#E8A020","Presente e importante":"#4caf50","RelaÃ§Ã£o tranquila":"#ff9800","Sem prioridade agora":"#5a5650","Dados incompletos":"#9B59B6" };
                   const bc = badgeColors[p.status] || C.txL;
                   return p.status !== "Dados incompletos" ? (
                     <span style={{ fontFamily:"'DM Sans'",fontSize:8,fontWeight:700,color:bc,background:`${bc}14`,border:`1px solid ${bc}25`,padding:"1px 5px",borderRadius:3,textTransform:"uppercase",letterSpacing:".04em",flexShrink:0 }}>{p.status}</span>
@@ -4522,6 +4522,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
   const renderTeia = () => (
     <ConexiaCircleNetwork
+      userId={user.id}
       network={network}
       initialFocus={circleFocus}
       onFocusChange={setCircleFocus}
@@ -4542,53 +4543,53 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
     <Modal title="" onClose={() => setShowUpgrade(false)}>
       <div style={{ textAlign: "center", marginBottom: 16 }}>
         <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.gold, marginBottom: 4 }}>{BRAND.name} PRO</div>
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Transforme diagnóstico em execução</div>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Transforme diagnÃ³stico em execuÃ§Ã£o</div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
         <div style={{ background:C.sf, border:`1px solid ${C.brd}`, borderRadius:10, padding:14 }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>Free — R$ 0</div>
-          {["1 diagnóstico","Até 5 contatos","Health Score","Teia simples","Semana 1 do plano","1 insight por vez (IA)","WhatsApp — teste grátis 10 dias"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>✓ {f}</div>)}
+          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.txL, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>Free â R$ 0</div>
+          {["1 diagnÃ³stico","AtÃ© 5 contatos","Health Score","Teia simples","Semana 1 do plano","1 insight por vez (IA)","WhatsApp â teste grÃ¡tis 10 dias"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:4 }}>â {f}</div>)}
         </div>
         <div style={{ background:`${C.gold}08`, border:`1.5px solid ${C.gold}`, borderRadius:10, padding:14 }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>PRO — R$ 39,90/mês</div>
-          {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Insights ilimitados (IA)","Metas de 90 dias (IA)","Briefing pré-contato (IA)","Assistente por WhatsApp sem limite","Plano de 4 semanas completo","Teia avançada"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>⭐ {f}</div>)}
+          <div style={{ fontFamily:"'DM Sans'", fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>PRO â R$ 39,90/mÃªs</div>
+          {["Contatos ilimitados","Relevance Score","Top 5 movimentos","Insights ilimitados (IA)","Metas de 90 dias (IA)","Briefing prÃ©-contato (IA)","Assistente por WhatsApp sem limite","Plano de 4 semanas completo","Teia avanÃ§ada"].map((f,i)=><div key={i} style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txM, marginBottom:4 }}>â­ {f}</div>)}
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 12, padding: 20, textAlign: "center" }}>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.txL, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Mensal</div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, lineHeight: 1 }}>R$39,90</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 16 }}>/mês</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 16 }}>/mÃªs</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 16, lineHeight: 1.5 }}>Cancele quando quiser</div>
           <button onClick={() => window.open(buildStripeCheckoutUrl(STRIPE.checkoutUrl, user), "_blank")} style={{ width: "100%", background: C.w06, border: `1px solid ${C.brd}`, color: C.txt, borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Assinar mensal</button>
           <button onClick={() => { setShowUpgrade(false); openAccessKey(); }} style={{ width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline", marginTop:4 }}>Tenho uma chave de acesso</button>
         </div>
         <div style={{ background: `${C.gold}10`, border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: 20, textAlign: "center", position: "relative" }}>
-          <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.gold, color: "#0d0d0f", fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: ".08em", whiteSpace: "nowrap" }}>2 meses grátis</div>
+          <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.gold, color: "#0d0d0f", fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: ".08em", whiteSpace: "nowrap" }}>2 meses grÃ¡tis</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Anual</div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.gold, lineHeight: 1 }}>R$399</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 4 }}>/ano · R$33,25/mês</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, marginBottom: 4 }}>/ano Â· R$33,25/mÃªs</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginBottom: 16, lineHeight: 1.5 }}>Economia de R$79,80 vs mensal</div>
-          <button onClick={() => window.open(buildStripeCheckoutUrl(STRIPE.checkoutUrl, user), "_blank")} style={{ width: "100%", background: C.gold, border: "none", color: "#0d0d0f", borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Assinar anual ⚡</button>
+          <button onClick={() => window.open(buildStripeCheckoutUrl(STRIPE.checkoutUrl, user), "_blank")} style={{ width: "100%", background: C.gold, border: "none", color: "#0d0d0f", borderRadius: 8, padding: "10px 0", fontFamily: "'DM Sans'", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Assinar anual â¡</button>
         </div>
       </div>
       <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: 14 }}>
-        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txt, marginBottom: 8 }}>O que está incluído no PRO:</div>
-        {["📄 Relatório PDF completo personalizado", "🗺️ Mapa mental da sua arquitetura relacional", "📊 Termômetro de evolução 90 dias", "🎯 Gatilhos relacionais do seu perfil", "⚡ Acesso a todas as futuras funcionalidades"].map((f,i) => (
+        <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txt, marginBottom: 8 }}>O que estÃ¡ incluÃ­do no PRO:</div>
+        {["ð RelatÃ³rio PDF completo personalizado", "ðºï¸ Mapa mental da sua arquitetura relacional", "ð TermÃ´metro de evoluÃ§Ã£o 90 dias", "ð¯ Gatilhos relacionais do seu perfil", "â¡ Acesso a todas as futuras funcionalidades"].map((f,i) => (
           <div key={i} style={{ display: "flex", gap: 8, marginBottom: 5, fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>{f}</div>
         ))}
       </div>
       <div style={{ textAlign: "center", marginTop: 12, fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>
-        Após o pagamento, seu acesso PRO é liberado automaticamente. ✓
+        ApÃ³s o pagamento, seu acesso PRO Ã© liberado automaticamente. â
       </div>
     </Modal>
   );
 
 
-  // ── "Rede" (âncora principal) = Pessoas + Teia num só lugar ──
-  // Reaproveita renderContactsList() e renderTeia() sem tocar no que já
-  // funciona — só adiciona um alternador simples por cima.
-  const [redeSubTab, setRedeSubTab] = useState("teia"); // Teia como padrão — é o elemento mais diferenciado do produto, não devia ficar atrás de um clique extra
+  // ââ "Rede" (Ã¢ncora principal) = Pessoas + Teia num sÃ³ lugar ââ
+  // Reaproveita renderContactsList() e renderTeia() sem tocar no que jÃ¡
+  // funciona â sÃ³ adiciona um alternador simples por cima.
+  const [redeSubTab, setRedeSubTab] = useState("teia"); // Teia como padrÃ£o â Ã© o elemento mais diferenciado do produto, nÃ£o devia ficar atrÃ¡s de um clique extra
   const renderContacts = () => (
     <div>
       {circleSaveNotice && <p role="alert" style={{ color: C.cor, fontSize: 12 }}>
@@ -4611,20 +4612,20 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
 
   const renderReport = () => {
-    if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>Relatório não encontrado.</div>;
+    if (!assessment) return <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 40, textAlign: "center", fontFamily: "'DM Sans'", fontSize: 14, color: C.txL }}>RelatÃ³rio nÃ£o encontrado.</div>;
     const downloadReport = () => {
       const formatarNome = (raw) => {
         if (!raw) return '';
-        // Se tem espaço, assumir que foi digitado pelo usuário — respeitar exatamente
+        // Se tem espaÃ§o, assumir que foi digitado pelo usuÃ¡rio â respeitar exatamente
         if (raw.includes(' ')) return raw.trim();
-        // Sem espaço: tentar capitalizar corretamente (ex: "rafaelmilleo" → "Rafaelmilleo" como fallback legível)
+        // Sem espaÃ§o: tentar capitalizar corretamente (ex: "rafaelmilleo" â "Rafaelmilleo" como fallback legÃ­vel)
         return raw.charAt(0).toUpperCase() + raw.slice(1);
       };
       const nomeRaw = profile?.name || profile?.first_name || '';
       const nomePessoa = nomeRaw.includes(' ')
-        ? nomeRaw.trim()  // nome completo digitado pelo usuário — usar como está
+        ? nomeRaw.trim()  // nome completo digitado pelo usuÃ¡rio â usar como estÃ¡
         : nomeRaw
-          ? formatarNome(nomeRaw)  // nome sem espaço — capitalizar
+          ? formatarNome(nomeRaw)  // nome sem espaÃ§o â capitalizar
           : user?.email
             ? user.email.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase())
             : 'Profissional';
@@ -4635,7 +4636,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
       const bot2 = sortedD.slice(-2);
       const proj = (v) => v<30?Math.min(100,v+40):v<50?Math.min(100,v+30):v<70?Math.min(100,v+20):Math.min(100,v+10);
       const getLvl = (v) => v>=75?'high':v>=50?'mid':'low';
-      const getLvlLbl = (v) => v>=80?'Excelente':v>=65?'Forte':v>=50?'Médio':v>=35?'Relevante':'Gap Crítico';
+      const getLvlLbl = (v) => v>=80?'Excelente':v>=65?'Forte':v>=50?'MÃ©dio':v>=35?'Relevante':'Gap CrÃ­tico';
       const getLvlClr = (v) => v>=75?'#2e7d32':v>=50?'#e65100':'#c62828';
       const percLabel = assessment.overall>=85?'TOP 10%':assessment.overall>=75?'TOP 20%':assessment.overall>=65?'TOP 30%':'EM DESENVOLVIMENTO';
       const overallTen = Math.round(assessment.overall/10);
@@ -4643,67 +4644,67 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
       const dimInterp = {
         intencao_estrategica:{
-          high:"Use sua clareza estratégica para escolher melhor onde investir energia. Nem toda conexão merece o mesmo esforço — seu ganho está em priorizar quem amplia confiança, reputação e oportunidade.",
-          mid:"Você tem direção, mas nem sempre age com intenção deliberada. Defina os 10 contatos mais importantes para seus próximos 90 dias e estabeleça o que quer construir com cada um.",
-          low:"Antes de ampliar sua rede, defina quem realmente importa para os próximos 90 dias. Sem clareza de propósito, networking vira ruído."
+          high:"Use sua clareza estratÃ©gica para escolher melhor onde investir energia. Nem toda conexÃ£o merece o mesmo esforÃ§o â seu ganho estÃ¡ em priorizar quem amplia confianÃ§a, reputaÃ§Ã£o e oportunidade.",
+          mid:"VocÃª tem direÃ§Ã£o, mas nem sempre age com intenÃ§Ã£o deliberada. Defina os 10 contatos mais importantes para seus prÃ³ximos 90 dias e estabeleÃ§a o que quer construir com cada um.",
+          low:"Antes de ampliar sua rede, defina quem realmente importa para os prÃ³ximos 90 dias. Sem clareza de propÃ³sito, networking vira ruÃ­do."
         },
         escuta_relacional:{
-          high:"Sua escuta cria abertura. Use isso para aprofundar conversas e captar necessidades antes de propor qualquer movimento — quem escuta bem é lembrado como parceiro, não apenas como contato.",
-          mid:"Você escuta bem em momentos importantes, mas a agenda própria às vezes interfere. Antes de cada conversa relevante, defina 2 perguntas que você genuinamente não sabe a resposta.",
-          low:"Você pode estar ouvindo pouco antes de conduzir a conversa. Faça mais perguntas, registre o contexto do outro e resista ao impulso de posicionar antes de entender."
+          high:"Sua escuta cria abertura. Use isso para aprofundar conversas e captar necessidades antes de propor qualquer movimento â quem escuta bem Ã© lembrado como parceiro, nÃ£o apenas como contato.",
+          mid:"VocÃª escuta bem em momentos importantes, mas a agenda prÃ³pria Ã s vezes interfere. Antes de cada conversa relevante, defina 2 perguntas que vocÃª genuinamente nÃ£o sabe a resposta.",
+          low:"VocÃª pode estar ouvindo pouco antes de conduzir a conversa. FaÃ§a mais perguntas, registre o contexto do outro e resista ao impulso de posicionar antes de entender."
         },
         presenca_mercado:{
-          high:"Sua presença mantém você lembrado. Use essa força para ocupar espaços certos com constância e intenção — aparecendo antes de precisar pedir.",
-          mid:"Sua competência pode estar maior que sua visibilidade. Crie uma cadência mínima: 1 conteúdo, 1 evento, 1 conversa por semana — sem consistência, presença vira episódio.",
-          low:"O mercado não reconhece o que não vê com frequência. Sua competência está invisível para quem deveria conhecê-la. Aparecer com regularidade é o primeiro passo."
+          high:"Sua presenÃ§a mantÃ©m vocÃª lembrado. Use essa forÃ§a para ocupar espaÃ§os certos com constÃ¢ncia e intenÃ§Ã£o â aparecendo antes de precisar pedir.",
+          mid:"Sua competÃªncia pode estar maior que sua visibilidade. Crie uma cadÃªncia mÃ­nima: 1 conteÃºdo, 1 evento, 1 conversa por semana â sem consistÃªncia, presenÃ§a vira episÃ³dio.",
+          low:"O mercado nÃ£o reconhece o que nÃ£o vÃª com frequÃªncia. Sua competÃªncia estÃ¡ invisÃ­vel para quem deveria conhecÃª-la. Aparecer com regularidade Ã© o primeiro passo."
         },
         reciprocidade_ativa:{
-          high:"Você gera valor antes de pedir. Esse comportamento cria confiança e aumenta a chance de retorno espontâneo — continue antecipando, indicando e conectando.",
-          mid:"Você se importa em contribuir, mas nem sempre toma a iniciativa. Antecipe valor: antes de cada contato estratégico, defina o que pode oferecer sem pedir nada.",
-          low:"Você pode estar esperando ser acionado para ajudar. Inverta: indique, compartilhe, reconheça e facilite antes de receber qualquer demanda."
+          high:"VocÃª gera valor antes de pedir. Esse comportamento cria confianÃ§a e aumenta a chance de retorno espontÃ¢neo â continue antecipando, indicando e conectando.",
+          mid:"VocÃª se importa em contribuir, mas nem sempre toma a iniciativa. Antecipe valor: antes de cada contato estratÃ©gico, defina o que pode oferecer sem pedir nada.",
+          low:"VocÃª pode estar esperando ser acionado para ajudar. Inverta: indique, compartilhe, reconheÃ§a e facilite antes de receber qualquer demanda."
         },
         ritual_consistencia:{
-          high:"Sua disciplina evita que relações importantes esfriem. Use isso para transformar contato em continuidade — e continue aparecendo mesmo quando não há agenda comercial.",
-          mid:"Sem ritual, boas intenções somem da agenda. Crie uma cadência mínima semanal: 30 minutos, 3 contatos, toda segunda. O sistema faz o que a motivação não consegue.",
-          low:"Sem ritual fixo, networking vira reativo. Você só age quando precisa — e quando precisa já é tarde. Crie um sistema mínimo e coloque no calendário agora."
+          high:"Sua disciplina evita que relaÃ§Ãµes importantes esfriem. Use isso para transformar contato em continuidade â e continue aparecendo mesmo quando nÃ£o hÃ¡ agenda comercial.",
+          mid:"Sem ritual, boas intenÃ§Ãµes somem da agenda. Crie uma cadÃªncia mÃ­nima semanal: 30 minutos, 3 contatos, toda segunda. O sistema faz o que a motivaÃ§Ã£o nÃ£o consegue.",
+          low:"Sem ritual fixo, networking vira reativo. VocÃª sÃ³ age quando precisa â e quando precisa jÃ¡ Ã© tarde. Crie um sistema mÃ­nimo e coloque no calendÃ¡rio agora."
         },
         confianca_autentica:{
-          high:"Sua coerência gera confiança. As pessoas confiam mais quando percebem alinhamento entre fala, intenção e atitude — continue sendo o mesmo em reuniões formais e conversas informais.",
-          mid:"Cuidado para parecer estratégico demais e humano de menos. Relações fortes precisam de intenção, mas também de verdade — compartilhe mais do que está construindo e enfrentando.",
-          low:"Você pode estar mantendo um personagem profissional que impede conexões genuínas. Seja vulnerável em pelo menos 2 conversas esta semana — isso transforma contato em aliado."
+          high:"Sua coerÃªncia gera confianÃ§a. As pessoas confiam mais quando percebem alinhamento entre fala, intenÃ§Ã£o e atitude â continue sendo o mesmo em reuniÃµes formais e conversas informais.",
+          mid:"Cuidado para parecer estratÃ©gico demais e humano de menos. RelaÃ§Ãµes fortes precisam de intenÃ§Ã£o, mas tambÃ©m de verdade â compartilhe mais do que estÃ¡ construindo e enfrentando.",
+          low:"VocÃª pode estar mantendo um personagem profissional que impede conexÃµes genuÃ­nas. Seja vulnerÃ¡vel em pelo menos 2 conversas esta semana â isso transforma contato em aliado."
         },
       };
 
 
       const sintese = [
-        {q:"O que mais te impressiona?", a: pct('intencao_estrategica')>=70?`A clareza sobre quem quer ter na rede e por quê — vê o networking como investimento, não evento.`:`A intenção existe, mas a estratégia de rede ainda está em construção.`},
-        {q:"Como gostaria de ser descrito?", a: pct('presenca_mercado')>=70?`Uma referência — domínio técnico e visão que geram reconhecimento de mercado.`:`Um profissional sólido, construindo visibilidade consistente.`},
-        {q:"Sua relação com networking?", a: pct('intencao_estrategica')>=70?`Como investimento estratégico a ser gerenciado com propósito e disciplina.`:`Importante, mas ainda compete com a rotina na priorização.`},
-        {q:"Como se comporta em eventos?", a: pct('presenca_mercado')>=70?`Circulando ativamente — objetivo é conectar com pessoas relevantes com clareza de propósito.`:`Presente, mas sem sempre ter clareza do que quer gerar em cada conversa.`},
-        {q:"Alguém pede ajuda. Sua reação?", a: pct('reciprocidade_ativa')>=70?`Responde com generosidade — conecta, indica, compartilha. Reciprocidade é valor genuíno.`:`Ajuda quando solicitado, mas raramente oferece antes de ser chamado.`},
-        {q:"Qual situação te representa?", a: pct('ritual_consistencia')>=70?`Contatos que evoluem para aliados — porque cultiva com consistência, não só por necessidade.`:`Muitos contatos, mas poucos que chamaria de aliados reais.`},
-        {q:"Maior bloqueio?", a: pct('ritual_consistencia')>=70?`A escala — manter qualidade quando o volume de relações cresce.`:`O tempo — a intenção existe, mas a rotina engole a execução.`},
-        {q:"O que faz nas 48h após conversa?", a: pct('reciprocidade_ativa')>=70?`Envia mensagem personalizada com algo de valor — artigo, indicação, reconhecimento.`:`Depende da conversa — nas mais relevantes faz follow-up; nas demais, aguarda.`},
-        {q:"Onde sua energia vai em conversas?", a: pct('escuta_relacional')>=70?`Para entender o outro genuinamente — o que está construindo, enfrentando, precisando.`:`Para se posicionar bem — como está sendo percebido e que impressão gera.`},
-        {q:"Papel dos relacionamentos?", a: pct('confianca_autentica')>=70?`É o que define o legado — impacto gerado nas pessoas e no mercado.`:`Essencial para o crescimento, mas ainda não gerenciado com atenção suficiente.`},
-        {q:"Uma coisa que mudaria?", a: pct('ritual_consistencia')>=70?`Aprofundar as conexões que já tem — transformar mais contatos em aliados reais.`:`Ser mais consistente no follow-up — manter o contato vivo entre os encontros.`},
-        {q:"O que rede representa?", a: pct('confianca_autentica')>=70?`Segurança — pessoas que estarão lá quando precisar, porque cultivou com autenticidade.`:`Oportunidade — mas ainda não operacionalizada com a consistência que o potencial merece.`},
+        {q:"O que mais te impressiona?", a: pct('intencao_estrategica')>=70?`A clareza sobre quem quer ter na rede e por quÃª â vÃª o networking como investimento, nÃ£o evento.`:`A intenÃ§Ã£o existe, mas a estratÃ©gia de rede ainda estÃ¡ em construÃ§Ã£o.`},
+        {q:"Como gostaria de ser descrito?", a: pct('presenca_mercado')>=70?`Uma referÃªncia â domÃ­nio tÃ©cnico e visÃ£o que geram reconhecimento de mercado.`:`Um profissional sÃ³lido, construindo visibilidade consistente.`},
+        {q:"Sua relaÃ§Ã£o com networking?", a: pct('intencao_estrategica')>=70?`Como investimento estratÃ©gico a ser gerenciado com propÃ³sito e disciplina.`:`Importante, mas ainda compete com a rotina na priorizaÃ§Ã£o.`},
+        {q:"Como se comporta em eventos?", a: pct('presenca_mercado')>=70?`Circulando ativamente â objetivo Ã© conectar com pessoas relevantes com clareza de propÃ³sito.`:`Presente, mas sem sempre ter clareza do que quer gerar em cada conversa.`},
+        {q:"AlguÃ©m pede ajuda. Sua reaÃ§Ã£o?", a: pct('reciprocidade_ativa')>=70?`Responde com generosidade â conecta, indica, compartilha. Reciprocidade Ã© valor genuÃ­no.`:`Ajuda quando solicitado, mas raramente oferece antes de ser chamado.`},
+        {q:"Qual situaÃ§Ã£o te representa?", a: pct('ritual_consistencia')>=70?`Contatos que evoluem para aliados â porque cultiva com consistÃªncia, nÃ£o sÃ³ por necessidade.`:`Muitos contatos, mas poucos que chamaria de aliados reais.`},
+        {q:"Maior bloqueio?", a: pct('ritual_consistencia')>=70?`A escala â manter qualidade quando o volume de relaÃ§Ãµes cresce.`:`O tempo â a intenÃ§Ã£o existe, mas a rotina engole a execuÃ§Ã£o.`},
+        {q:"O que faz nas 48h apÃ³s conversa?", a: pct('reciprocidade_ativa')>=70?`Envia mensagem personalizada com algo de valor â artigo, indicaÃ§Ã£o, reconhecimento.`:`Depende da conversa â nas mais relevantes faz follow-up; nas demais, aguarda.`},
+        {q:"Onde sua energia vai em conversas?", a: pct('escuta_relacional')>=70?`Para entender o outro genuinamente â o que estÃ¡ construindo, enfrentando, precisando.`:`Para se posicionar bem â como estÃ¡ sendo percebido e que impressÃ£o gera.`},
+        {q:"Papel dos relacionamentos?", a: pct('confianca_autentica')>=70?`Ã o que define o legado â impacto gerado nas pessoas e no mercado.`:`Essencial para o crescimento, mas ainda nÃ£o gerenciado com atenÃ§Ã£o suficiente.`},
+        {q:"Uma coisa que mudaria?", a: pct('ritual_consistencia')>=70?`Aprofundar as conexÃµes que jÃ¡ tem â transformar mais contatos em aliados reais.`:`Ser mais consistente no follow-up â manter o contato vivo entre os encontros.`},
+        {q:"O que rede representa?", a: pct('confianca_autentica')>=70?`SeguranÃ§a â pessoas que estarÃ£o lÃ¡ quando precisar, porque cultivou com autenticidade.`:`Oportunidade â mas ainda nÃ£o operacionalizada com a consistÃªncia que o potencial merece.`},
       ];
 
 
       const tensao = top2.length>=2&&bot2.length>=2
-        ? `${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1].label} ${s10(top2[1].key)}/10 — mas ${bot2[1].label} ${s10(bot2[1].key)}/10 e ${bot2[0].label} ${s10(bot2[0].key)}/10. Os pontos mais fortes coexistem com gaps que limitam a conversão do potencial em resultado relacional real.`
+        ? `${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1].label} ${s10(top2[1].key)}/10 â mas ${bot2[1].label} ${s10(bot2[1].key)}/10 e ${bot2[0].label} ${s10(bot2[0].key)}/10. Os pontos mais fortes coexistem com gaps que limitam a conversÃ£o do potencial em resultado relacional real.`
         : `Score geral ${overallTen}/10. ${pf?.desc?.split('.')[0]||''}.`;
 
 
       const termometro = DIMS.map(d => ({
         label: d.label, hoje: `${s10(d.key)}/10`, d90: `${Math.round(proj(pct(d.key))/10)}/10`,
-        muda: dimInterp[d.key]?.high?.split('—')[1]?.trim() || dimInterp[d.key]?.high?.split('.')[0] || ''
+        muda: dimInterp[d.key]?.high?.split('â')[1]?.trim() || dimInterp[d.key]?.high?.split('.')[0] || ''
       }));
 
 
       const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Diagnóstico Relacional — ${nomePessoa}</title>
+<title>DiagnÃ³stico Relacional â ${nomePessoa}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-size:10pt;line-height:1.5}
@@ -4712,13 +4713,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .print-btn{position:fixed;top:16px;right:16px;background:#c9a227;color:#000;border:none;border-radius:6px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:12px;z-index:99}
 
 
-/* ── CABEÇALHO DE PÁGINA ── */
+/* ââ CABEÃALHO DE PÃGINA ââ */
 .pg-hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid #ddd;margin-bottom:14px}
 .pg-hdr-title{font-size:8pt;color:#888;letter-spacing:.05em}
 .pg-hdr-right{font-size:8pt;color:#888}
 
 
-/* ── CAPA ── */
+/* ââ CAPA ââ */
 .cover{min-height:90vh;display:flex;flex-direction:column;justify-content:space-between;padding:24px 0}
 .lbl{font-size:7.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#888;margin-bottom:6px}
 .name-big{font-size:36pt;font-weight:800;color:#1a1a1a;line-height:1;margin-bottom:6px}
@@ -4741,7 +4742,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .footer-bar-r{font-size:7.5pt;color:#888;text-align:right}
 
 
-/* ── DIM TABLE ── */
+/* ââ DIM TABLE ââ */
 .dim-table{width:100%;border-collapse:collapse;margin-bottom:8px}
 .dim-table td{padding:5px 4px;vertical-align:middle}
 .dim-key{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;text-align:center;width:28px}
@@ -4756,7 +4757,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .dim-sep{border-bottom:1px solid #f0ede8}
 
 
-/* ── SINTESE ── */
+/* ââ SINTESE ââ */
 .sq{display:flex;gap:8px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #f0ede8;break-inside:avoid}
 .sq:last-child{border-bottom:none;margin-bottom:0}
 .sq-num{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#c9a227;background:#c9a22712;border:1px solid #c9a22730;min-width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
@@ -4764,7 +4765,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .sq-a{font-size:8pt;color:#555;line-height:1.6;word-break:break-word;overflow-wrap:anywhere}
 
 
-/* ── SECTIONS ── */
+/* ââ SECTIONS ââ */
 .section{margin-bottom:20px}
 .h1{font-size:16pt;font-weight:800;color:#1a1a1a;margin-bottom:8px}
 .h2{font-size:11pt;font-weight:700;color:#1a1a1a;margin-bottom:5px;margin-top:14px}
@@ -4777,7 +4778,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .box-lbl{font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
 
 
-/* ── GATILHOS ── */
+/* ââ GATILHOS ââ */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .gt-block{border-radius:6px;padding:11px 13px;margin-bottom:10px;break-inside:avoid}
 .gt-at{background:#f0faf0;border-left:2.5px solid #2e7d32}
@@ -4787,7 +4788,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .gt-action{font-size:7.5pt;font-style:italic;color:#c9a227}
 
 
-/* ── PLANO ── */
+/* ââ PLANO ââ */
 .week-box{display:grid;grid-template-columns:56px 1fr;border:1px solid #e0ddd8;border-radius:6px;overflow:hidden;margin-bottom:12px;break-inside:avoid}
 .week-num{background:#f9f7f3;border-right:1px solid #e0ddd8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:3px;font-size:18pt}
 .week-num-txt{font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#c9a227}
@@ -4799,14 +4800,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 .week-meta{margin-top:6px;background:#fdf9ec;border:1px solid #c9a22720;border-radius:2px;padding:4px 8px;font-family:'Courier New',monospace;font-size:7.5pt;color:#c9a227}
 
 
-/* ── TERMÔMETRO ── */
+/* ââ TERMÃMETRO ââ */
 .thermo{width:100%;border-collapse:collapse}
 .thermo th{background:#f3f0ea;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px;border:1px solid #ddd;color:#666}
 .thermo td{padding:6px 8px;border:1px solid #ddd;font-size:8.5pt;vertical-align:middle}
 .thermo tr:nth-child(even) td{background:#faf8f4}
 
 
-/* ── VANTAGEM ── */
+/* ââ VANTAGEM ââ */
 .vant-box{background:#fdf9ec;border-left:3px solid #c9a227;border-radius:0 3px 3px 0;padding:12px;margin-bottom:10px}
 .frase-box{text-align:center;padding:20px;background:#f9f7f3;border:1px solid #e0ddd8;border-radius:3px}
 .frase-big{font-size:14pt;color:#c9a227;font-weight:700;margin-bottom:8px;line-height:1.4}
@@ -4814,20 +4815,20 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 </style></head><body>
 
 
-<button class="print-btn no-print" onclick="window.print()">⬇ Salvar como PDF</button>
+<button class="print-btn no-print" onclick="window.print()">â¬ Salvar como PDF</button>
 
 
-<!-- ════ CAPA ══════════════════════════════════════════════════════ -->
+<!-- ââââ CAPA ââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
 <div class="cover">
   <div>
-    <div class="lbl">Diagnóstico Relacional Profissional · ${BRAND.name}</div>
+    <div class="lbl">DiagnÃ³stico Relacional Profissional Â· ${BRAND.name}</div>
     <div class="name-big">${nomePessoa}</div>
     <div class="profile-tag">
       <span class="profile-tag-name">${pf?.name||""}</span>
     </div>
     <div class="profile-tagline">${pf?.tagline||""}</div>
     <div class="ctx-tags" style="margin-top:8px">
-      ${[profile?.role,profile?.segment,profile?.state].filter(Boolean).join("  ·  ")}
+      ${[profile?.role,profile?.segment,profile?.state].filter(Boolean).join("  Â·  ")}
     </div>
 
 
@@ -4845,7 +4846,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 
 
     <div class="tensao-box">
-      <div class="tensao-lbl">Tensão Central</div>
+      <div class="tensao-lbl">TensÃ£o Central</div>
       <div class="tensao-txt">${tensao}</div>
     </div>
 
@@ -4856,15 +4857,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 
   <div class="footer-bar">
     <div class="footer-bar-l">${BRAND.name}</div>
-    <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+    <div class="footer-bar-r">"Networking, alÃ©m do cafezinho" Â· Rafael MillÃ©o<br>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
   </div>
 </div>
 
 
-<!-- ════ P2: MAPA DIMENSIONAL + SÍNTESE ═════════════════════════════ -->
+<!-- ââââ P2: MAPA DIMENSIONAL + SÃNTESE âââââââââââââââââââââââââââââ -->
 <div class="pg-hdr pb">
-  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
+  <div class="pg-hdr-title">DIAGNÃSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} Â· ${BRAND.name}</div>
 </div>
 
 
@@ -4877,7 +4878,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
         <td class="dim-key" style="color:${d.color}">${d.key}</td>
         <td class="dim-info">
           <div class="dim-name" style="color:${d.color}">${d.label}</div>
-          ${isCrit?`<span class="dim-badge" style="color:#c62828;background:#fff0f0;border:1px solid #ffcccc">⚠ GAP CRÍTICO</span>`:isStr?`<span class="dim-badge" style="color:#2e7d32;background:#f0faf0;border:1px solid #c8e6c9">■ Excelente</span>`:''}
+          ${isCrit?`<span class="dim-badge" style="color:#c62828;background:#fff0f0;border:1px solid #ffcccc">â  GAP CRÃTICO</span>`:isStr?`<span class="dim-badge" style="color:#2e7d32;background:#f0faf0;border:1px solid #c8e6c9">â  Excelente</span>`:''}
           <div class="dim-note">${dimInterp[d.key]?.[getLvl(v)]?.split('.')[0]||''}</div>
         </td>
         <td class="dim-bar-cell"><div class="dim-bar-bg"><div class="dim-bar-fg" style="width:${v}%;background:${d.color}"></div></div></td>
@@ -4886,7 +4887,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
     </table>
   </div>
   <div>
-    <div class="lbl">Síntese das Respostas</div>
+    <div class="lbl">SÃ­ntese das Respostas</div>
     ${sintese.map((item,i)=>`<div class="sq">
       <div class="sq-num">${String(i+1).padStart(2,'0')}</div>
       <div><div class="sq-q">${item.q}</div><div class="sq-a">${item.a}</div></div>
@@ -4895,45 +4896,45 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 </div>
 
 
-<!-- ════ P3: ANÁLISE PROFUNDA ════════════════════════════════════════ -->
+<!-- ââââ P3: ANÃLISE PROFUNDA ââââââââââââââââââââââââââââââââââââââââ -->
 <div class="pg-hdr pb">
-  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
+  <div class="pg-hdr-title">DIAGNÃSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} Â· ${BRAND.name}</div>
 </div>
 
 
-<div class="lbl">Análise Profunda do Perfil</div>
-<div class="h1">O que suas respostas revelam sobre você</div>
+<div class="lbl">AnÃ¡lise Profunda do Perfil</div>
+<div class="h1">O que suas respostas revelam sobre vocÃª</div>
 
 
-<p class="body-p">${pf?.desc||""} ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 criam a percepção de profissional com propósito e coerência. ${bot2[0]?`O desafio central é ${bot2[0].label} ${s10(bot2[0].key)}/10 — ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}.`:''}`:''}.</p>
+<p class="body-p">${pf?.desc||""} ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 criam a percepÃ§Ã£o de profissional com propÃ³sito e coerÃªncia. ${bot2[0]?`O desafio central Ã© ${bot2[0].label} ${s10(bot2[0].key)}/10 â ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]?.split('.')[0]||''}.`:''}`:''}.</p>
 
 
-<div class="h3">Sua arquitetura relacional — como você está sendo percebido</div>
-<p class="body-p">${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 ${top2[1]?`combinado com ${top2[1].label} ${s10(top2[1].key)}/10`:''} cria a impressão de alguém que sabe o que está fazendo e para onde vai. Isso é um ativo real — as pessoas confiam em quem demonstra clareza de propósito. O problema é que essa percepção ainda não é suficientemente nutrida ${bot2[0]?`pela ausência de ${bot2[0].label.toLowerCase()} ativa`:''}.`:''}</p>
+<div class="h3">Sua arquitetura relacional â como vocÃª estÃ¡ sendo percebido</div>
+<p class="body-p">${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 ${top2[1]?`combinado com ${top2[1].label} ${s10(top2[1].key)}/10`:''} cria a impressÃ£o de alguÃ©m que sabe o que estÃ¡ fazendo e para onde vai. Isso Ã© um ativo real â as pessoas confiam em quem demonstra clareza de propÃ³sito. O problema Ã© que essa percepÃ§Ã£o ainda nÃ£o Ã© suficientemente nutrida ${bot2[0]?`pela ausÃªncia de ${bot2[0].label.toLowerCase()} ativa`:''}.`:''}</p>
 
 
 <div class="box box-warn" style="margin-top:12px">
-  <div class="box-lbl" style="color:#c62828">A sombra do seu perfil — o ponto cego que mais te custa</div>
-  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`A sombra mais profunda é o gap entre a intenção declarada e a execução. ${bot2[0].label} ${s10(bot2[0].key)}/10 é o padrão que mais custa — não pela ausência de vontade, mas pela ausência de sistema. ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]||''}`:pf?.risks?.[0]||''}</p>
+  <div class="box-lbl" style="color:#c62828">A sombra do seu perfil â o ponto cego que mais te custa</div>
+  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`A sombra mais profunda Ã© o gap entre a intenÃ§Ã£o declarada e a execuÃ§Ã£o. ${bot2[0].label} ${s10(bot2[0].key)}/10 Ã© o padrÃ£o que mais custa â nÃ£o pela ausÃªncia de vontade, mas pela ausÃªncia de sistema. ${dimInterp[bot2[0].key]?.[getLvl(pct(bot2[0].key))]||''}`:pf?.risks?.[0]||''}</p>
 </div>
 
 
 <div class="box box-gold">
-  <div class="box-lbl" style="color:#c9a227">⚑ Não ignore isso</div>
-  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`${(['presenca_mercado','escuta_relacional','reciprocidade_ativa','confianca_autentica'].includes(bot2[0].key)?bot2[0].label+' baixa':bot2[0].label+' baixo')} é o padrão clássico do profissional que confunde intenção com execução. A diferença entre quem constrói capital relacional real e quem acumula contatos está exatamente nessa dimensão.`:pf?.risks?.[1]||''}</p>
+  <div class="box-lbl" style="color:#c9a227">â NÃ£o ignore isso</div>
+  <p style="font-size:8.5pt;color:#444;line-height:1.65;margin:0">${bot2[0]?`${(['presenca_mercado','escuta_relacional','reciprocidade_ativa','confianca_autentica'].includes(bot2[0].key)?bot2[0].label+' baixa':bot2[0].label+' baixo')} Ã© o padrÃ£o clÃ¡ssico do profissional que confunde intenÃ§Ã£o com execuÃ§Ã£o. A diferenÃ§a entre quem constrÃ³i capital relacional real e quem acumula contatos estÃ¡ exatamente nessa dimensÃ£o.`:pf?.risks?.[1]||''}</p>
 </div>
 
 
 <div style="margin-top:14px">
-  <div class="lbl">Forças e Riscos</div>
+  <div class="lbl">ForÃ§as e Riscos</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="box box-grey">
-      <div class="box-lbl" style="color:#2e7d32">✓ Suas Forças</div>
-      ${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:6px;margin-bottom:5px;font-size:8.5pt"><span style="color:#2e7d32;flex-shrink:0">✓</span><span style="color:#333">${s}</span></div>`).join('')}
+      <div class="box-lbl" style="color:#2e7d32">â Suas ForÃ§as</div>
+      ${(pf?.strengths||[]).map(s=>`<div style="display:flex;gap:6px;margin-bottom:5px;font-size:8.5pt"><span style="color:#2e7d32;flex-shrink:0">â</span><span style="color:#333">${s}</span></div>`).join('')}
     </div>
     <div class="box box-grey">
-      <div class="box-lbl" style="color:#c62828">⚠ Pontos de Atenção</div>
+      <div class="box-lbl" style="color:#c62828">â  Pontos de AtenÃ§Ã£o</div>
       ${(pf?.risks||[]).map(r=>`<div style="display:flex;gap:6px;margin-bottom:5px;font-size:8.5pt"><span style="color:#c62828;flex-shrink:0">!</span><span style="color:#333">${r}</span></div>`).join('')}
     </div>
   </div>
@@ -4941,40 +4942,40 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;font-
 
 
 <div class="box box-gold" style="margin-top:10px">
-  <div class="box-lbl" style="color:#c9a227">Suas 3 Ações Prioritárias</div>
+  <div class="box-lbl" style="color:#c9a227">Suas 3 AÃ§Ãµes PrioritÃ¡rias</div>
   ${(pf?.actions||[]).map((a,i)=>`<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<(pf?.actions?.length-1)?'1px solid #e5d89a':'none'}"><span style="font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#c9a227;flex-shrink:0">${i+1}</span><span style="font-size:8.5pt;color:#333;line-height:1.5">${a}</span></div>`).join('')}
 </div>
 
 
-<!-- ════ PLANO DE AÇÃO IMEDIATO ═══════════════════════════════════════ -->
+<!-- ââââ PLANO DE AÃÃO IMEDIATO âââââââââââââââââââââââââââââââââââââââ -->
 ${(() => {
   const plan = generateImmediateActionPlan(sc);
   if (!plan) return '';
   return `<div class="pg-hdr pb">
-  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
+  <div class="pg-hdr-title">DIAGNÃSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} Â· ${BRAND.name}</div>
 </div>
-<div class="lbl">Plano de Ação Imediato</div>
-<h2 style="margin-bottom:6px">De diagnóstico para execução</h2>
-<p style="font-size:8.5pt;color:#666;margin-bottom:16px">Ações concretas baseadas nos seus menores scores. Sem teoria — só o próximo passo.</p>
+<div class="lbl">Plano de AÃ§Ã£o Imediato</div>
+<h2 style="margin-bottom:6px">De diagnÃ³stico para execuÃ§Ã£o</h2>
+<p style="font-size:8.5pt;color:#666;margin-bottom:16px">AÃ§Ãµes concretas baseadas nos seus menores scores. Sem teoria â sÃ³ o prÃ³ximo passo.</p>
 <div style="display:grid;grid-template-columns:1fr;gap:12px">
   <div style="display:grid;grid-template-columns:56px 1fr;border:1px solid #e8d89a;border-radius:8px;overflow:hidden">
     <div style="background:#fdf6d8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:4px;border-right:1px solid #e8d89a">
-      <div style="font-size:18px">⚡</div>
+      <div style="font-size:18px">â¡</div>
       <div style="font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#a07814;text-align:center;line-height:1.2">48h</div>
     </div>
     <div style="padding:12px 14px">
-      <div style="font-size:8pt;font-weight:700;color:#a07814;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Próximas 48 horas</div>
+      <div style="font-size:8pt;font-weight:700;color:#a07814;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">PrÃ³ximas 48 horas</div>
       <p style="font-size:9pt;color:#333;line-height:1.65;margin:0">${plan.h48}</p>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:56px 1fr;border:1px solid #ddd;border-radius:8px;overflow:hidden">
     <div style="background:#f9f7f3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:4px;border-right:1px solid #ddd">
-      <div style="font-size:18px">📅</div>
+      <div style="font-size:18px">ð</div>
       <div style="font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#888;text-align:center;line-height:1.2">7d</div>
     </div>
     <div style="padding:12px 14px">
-      <div style="font-size:8pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Próximos 7 dias</div>
+      <div style="font-size:8pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">PrÃ³ximos 7 dias</div>
       ${plan.d7.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<plan.d7.length-1?'1px solid #f0ede4':'none'}">
         <div style="width:20px;height:20px;border-radius:5px;background:#f0ede4;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#888;flex-shrink:0">${i+1}</div>
         <span style="font-size:8.5pt;color:#333;line-height:1.55">${a}</span>
@@ -4983,11 +4984,11 @@ ${(() => {
   </div>
   <div style="display:grid;grid-template-columns:56px 1fr;border:1px solid #ddd;border-radius:8px;overflow:hidden">
     <div style="background:#f9f7f3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:4px;border-right:1px solid #ddd">
-      <div style="font-size:18px">📆</div>
+      <div style="font-size:18px">ð</div>
       <div style="font-family:'Courier New',monospace;font-size:8pt;font-weight:700;color:#888;text-align:center;line-height:1.2">30d</div>
     </div>
     <div style="padding:12px 14px">
-      <div style="font-size:8pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Próximos 30 dias</div>
+      <div style="font-size:8pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">PrÃ³ximos 30 dias</div>
       ${plan.d30.map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:7px;padding-bottom:7px;border-bottom:${i<plan.d30.length-1?'1px solid #f0ede4':'none'}">
         <div style="width:20px;height:20px;border-radius:5px;background:#f0ede4;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;font-size:9pt;font-weight:700;color:#888;flex-shrink:0">${i+1}</div>
         <span style="font-size:8.5pt;color:#333;line-height:1.55">${a}</span>
@@ -4998,109 +4999,109 @@ ${(() => {
 })()}
 
 
-<!-- ════ P4: GATILHOS ══════════════════════════════════════════════ -->
+<!-- ââââ P4: GATILHOS ââââââââââââââââââââââââââââââââââââââââââââââ -->
 <div class="pg-hdr pb">
-  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
+  <div class="pg-hdr-title">DIAGNÃSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} Â· ${BRAND.name}</div>
 </div>
 
 
 <div class="lbl">Gatilhos Relacionais</div>
-<div class="h1" style="margin-bottom:6px">Os padrões automáticos que ativam e travam o comportamento relacional</div>
-<p style="font-size:8.5pt;color:#666;margin-bottom:14px">O que faz você aparecer com energia total — e o que te impede de avançar.</p>
+<div class="h1" style="margin-bottom:6px">Os padrÃµes automÃ¡ticos que ativam e travam o comportamento relacional</div>
+<p style="font-size:8.5pt;color:#666;margin-bottom:14px">O que faz vocÃª aparecer com energia total â e o que te impede de avanÃ§ar.</p>
 
 
 <div class="g2" style="margin-bottom:18px">
   <div>
-    <div style="font-size:8pt;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">⚡ Gatilhos de Ativação</div>
+    <div style="font-size:8pt;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">â¡ Gatilhos de AtivaÃ§Ã£o</div>
     ${(()=>{
       const acoes = {
-        intencao_estrategica: "Escolha melhor onde colocar energia. Seu ganho está em priorizar relações que ampliam reputação, oportunidade e confiança.",
-        escuta_relacional: "Use sua escuta para entender o momento do outro antes de propor qualquer próximo passo.",
-        presenca_mercado: "Use sua visibilidade para ocupar os ambientes certos com constância e intenção.",
-        reciprocidade_ativa: "Continue gerando valor antes de pedir. Indicações, reconhecimento e ajuda prática fortalecem retorno espontâneo.",
-        ritual_consistencia: "Mantenha cadência. Relações importantes não esfriam quando existe ritual.",
-        confianca_autentica: "Sua coerência gera confiança. Preserve o mesmo tom em conversas formais e informais."
+        intencao_estrategica: "Escolha melhor onde colocar energia. Seu ganho estÃ¡ em priorizar relaÃ§Ãµes que ampliam reputaÃ§Ã£o, oportunidade e confianÃ§a.",
+        escuta_relacional: "Use sua escuta para entender o momento do outro antes de propor qualquer prÃ³ximo passo.",
+        presenca_mercado: "Use sua visibilidade para ocupar os ambientes certos com constÃ¢ncia e intenÃ§Ã£o.",
+        reciprocidade_ativa: "Continue gerando valor antes de pedir. IndicaÃ§Ãµes, reconhecimento e ajuda prÃ¡tica fortalecem retorno espontÃ¢neo.",
+        ritual_consistencia: "Mantenha cadÃªncia. RelaÃ§Ãµes importantes nÃ£o esfriam quando existe ritual.",
+        confianca_autentica: "Sua coerÃªncia gera confianÃ§a. Preserve o mesmo tom em conversas formais e informais."
       };
       return DIMS.filter(d=>pct(d.key)>=65).slice(0,3).map(d=>`<div class="gt-block gt-at">
         <div class="gt-title" style="color:#2e7d32">${d.label} ${s10(d.key)}/10</div>
         <div class="gt-desc">${dimInterp[d.key]?.high?.split('.')[0]||''}</div>
-        <div class="gt-action">→ ${acoes[d.key]||'Use este ponto como vantagem relacional.'}</div>
+        <div class="gt-action">â ${acoes[d.key]||'Use este ponto como vantagem relacional.'}</div>
       </div>`).join('');
     })()}
   </div>
   <div>
-    <div style="font-size:8pt;font-weight:700;color:#c62828;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">🔴 Gatilhos de Bloqueio</div>
+    <div style="font-size:8pt;font-weight:700;color:#c62828;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">ð´ Gatilhos de Bloqueio</div>
     ${(()=>{
       const antidotos = {
-        intencao_estrategica: "Defina seus 10 contatos prioritários e o motivo de cada um importar nos próximos 90 dias.",
-        escuta_relacional: "Entre em conversas importantes com uma pergunta aberta e a intenção real de entender.",
-        presenca_mercado: "Crie uma cadência mínima: 1 conteúdo, 1 conversa e 1 aparição relevante por semana.",
-        reciprocidade_ativa: "Antecipe valor: faça uma indicação, compartilhe algo útil ou reconheça alguém antes de precisar pedir.",
-        ritual_consistencia: "Coloque um ritual fixo de 30 minutos por semana para revisar contatos e próximos passos.",
-        confianca_autentica: "Reduza interações transacionais. Faça uma conversa sem vender, pedir ou apresentar nada."
+        intencao_estrategica: "Defina seus 10 contatos prioritÃ¡rios e o motivo de cada um importar nos prÃ³ximos 90 dias.",
+        escuta_relacional: "Entre em conversas importantes com uma pergunta aberta e a intenÃ§Ã£o real de entender.",
+        presenca_mercado: "Crie uma cadÃªncia mÃ­nima: 1 conteÃºdo, 1 conversa e 1 apariÃ§Ã£o relevante por semana.",
+        reciprocidade_ativa: "Antecipe valor: faÃ§a uma indicaÃ§Ã£o, compartilhe algo Ãºtil ou reconheÃ§a alguÃ©m antes de precisar pedir.",
+        ritual_consistencia: "Coloque um ritual fixo de 30 minutos por semana para revisar contatos e prÃ³ximos passos.",
+        confianca_autentica: "Reduza interaÃ§Ãµes transacionais. FaÃ§a uma conversa sem vender, pedir ou apresentar nada."
       };
       return DIMS.filter(d=>pct(d.key)<70).slice(-3).map(d=>`<div class="gt-block gt-bl">
         <div class="gt-title" style="color:#c62828">${d.label} ${s10(d.key)}/10</div>
         <div class="gt-desc">${dimInterp[d.key]?.[getLvl(pct(d.key))]?.split('.')[0]||''}</div>
-        <div class="gt-action">Antídoto: ${antidotos[d.key]||'Crie um sistema mínimo para esta dimensão.'}</div>
+        <div class="gt-action">AntÃ­doto: ${antidotos[d.key]||'Crie um sistema mÃ­nimo para esta dimensÃ£o.'}</div>
       </div>`).join('');
     })()}
   </div>
 </div>
 
 
-<!-- ════ P5: PLANO ═════════════════════════════════════════════════ -->
+<!-- ââââ P5: PLANO âââââââââââââââââââââââââââââââââââââââââââââââââ -->
 <div class="pg-hdr pb">
-  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
+  <div class="pg-hdr-title">DIAGNÃSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} Â· ${BRAND.name}</div>
 </div>
 
 
-<div class="lbl">Plano de Ativação — 4 Semanas</div>
-<div class="h1" style="margin-bottom:6px">Quatro semanas para transformar o gap mais custoso em hábito</div>
-<p style="font-size:8.5pt;color:#666;margin-bottom:14px">Cada semana tem um foco, um comportamento concreto e uma meta mensurável.</p>
+<div class="lbl">Plano de AtivaÃ§Ã£o â 4 Semanas</div>
+<div class="h1" style="margin-bottom:6px">Quatro semanas para transformar o gap mais custoso em hÃ¡bito</div>
+<p style="font-size:8.5pt;color:#666;margin-bottom:14px">Cada semana tem um foco, um comportamento concreto e uma meta mensurÃ¡vel.</p>
 ${PLAN.map((w,i)=>`<div class="week-box">
   <div class="week-num"><span>${w.icon}</span><span class="week-num-txt">${w.week}</span></div>
   <div class="week-body">
     <div class="week-sem">Semana ${w.week}</div>
     <div class="week-title">${w.title}</div>
     <div class="week-goal">${w.goal}</div>
-    ${w.tasks.map(t=>`<div class="week-task"><span style="color:#c9a22760">→</span>${t}</div>`).join('')}
+    ${w.tasks.map(t=>`<div class="week-task"><span style="color:#c9a22760">â</span>${t}</div>`).join('')}
     <div class="week-meta">Meta: ${w.metric}</div>
   </div>
 </div>`).join('')}
 
 
-<!-- ════ P5: TERMÔMETRO + VANTAGEM ══════════════════════════════════ -->
+<!-- ââââ P5: TERMÃMETRO + VANTAGEM ââââââââââââââââââââââââââââââââââ -->
 <div class="pg-hdr pb">
-  <div class="pg-hdr-title">DIAGNÓSTICO RELACIONAL PROFISSIONAL</div>
-  <div class="pg-hdr-right">${nomePessoa} · ${BRAND.name}</div>
+  <div class="pg-hdr-title">DIAGNÃSTICO RELACIONAL PROFISSIONAL</div>
+  <div class="pg-hdr-right">${nomePessoa} Â· ${BRAND.name}</div>
 </div>
 
 
-<div class="lbl">Termômetro Relacional — 90 Dias</div>
-<div class="h1" style="margin-bottom:10px">O que é possível construir com consistência de aplicação</div>
+<div class="lbl">TermÃ´metro Relacional â 90 Dias</div>
+<div class="h1" style="margin-bottom:10px">O que Ã© possÃ­vel construir com consistÃªncia de aplicaÃ§Ã£o</div>
 
 
 <table class="thermo" style="margin-bottom:16px">
-  <tr><th>Dimensão</th><th>Hoje</th><th>90 dias</th><th>O que muda</th></tr>
+  <tr><th>DimensÃ£o</th><th>Hoje</th><th>90 dias</th><th>O que muda</th></tr>
   ${termometro.map(t=>`<tr><td style="font-weight:600">${t.label}</td><td style="font-family:'Courier New',monospace;font-weight:700;text-align:center">${t.hoje}</td><td style="font-family:'Courier New',monospace;font-weight:700;color:#2e7d32;text-align:center">${t.d90}</td><td style="font-size:8pt;color:#555">${t.muda}</td></tr>`).join('')}
 </table>
 
 
-<div class="lbl">A Vantagem Única do Seu Perfil</div>
+<div class="lbl">A Vantagem Ãnica do Seu Perfil</div>
 <div class="vant-box">
-  <p style="font-size:9pt;color:#333;line-height:1.75;margin:0">${pf?.desc?.split('.').slice(0,2).join('.')||''}. ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 é uma combinação que já posiciona como referência. O próximo nível não exige mudar o que você faz — exige ampliar como o mercado enxerga o que você entrega.`:''}</p>
+  <p style="font-size:9pt;color:#333;line-height:1.75;margin:0">${pf?.desc?.split('.').slice(0,2).join('.')||''}. ${top2[0]?`${top2[0].label} ${s10(top2[0].key)}/10 e ${top2[1]?.label} ${s10(top2[1]?.key)}/10 Ã© uma combinaÃ§Ã£o que jÃ¡ posiciona como referÃªncia. O prÃ³ximo nÃ­vel nÃ£o exige mudar o que vocÃª faz â exige ampliar como o mercado enxerga o que vocÃª entrega.`:''}</p>
 </div>
 
 
-<p style="text-align:center;font-style:italic;color:#666;font-size:9pt;margin-bottom:20px">"Toda semana: em quantas conversas você genuinamente aprendeu algo sobre o outro que não sabia antes — e o que isso diz sobre a qualidade da sua presença?"</p>
+<p style="text-align:center;font-style:italic;color:#666;font-size:9pt;margin-bottom:20px">"Toda semana: em quantas conversas vocÃª genuinamente aprendeu algo sobre o outro que nÃ£o sabia antes â e o que isso diz sobre a qualidade da sua presenÃ§a?"</p>
 
 
 <div class="frase-box">
-  <div class="frase-big">${nomePessoa.split(" ")[0]||"Você"}, você já sabe chegar.<br>O próximo nível é fazer as pessoas quererem que você fique.</div>
-  <div class="frase-sub">"Relacionamento não é sobre ter muitos contatos. É sobre ser indispensável para os que importam."</div>
+  <div class="frase-big">${nomePessoa.split(" ")[0]||"VocÃª"}, vocÃª jÃ¡ sabe chegar.<br>O prÃ³ximo nÃ­vel Ã© fazer as pessoas quererem que vocÃª fique.</div>
+  <div class="frase-sub">"Relacionamento nÃ£o Ã© sobre ter muitos contatos. Ã sobre ser indispensÃ¡vel para os que importam."</div>
 </div>
 
 
@@ -5108,14 +5109,14 @@ ${MENTORIA_LINK || true ? `
 <div class="pb" style="background:#f9f7f3;border-top:1px solid #e0ddd8;padding:28px 40px;text-align:center">
   <div style="font-size:8pt;font-weight:700;color:#a07814;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Mentoria Individual</div>
   <div style="font-size:14pt;font-weight:700;color:#1a1a1a;margin-bottom:8px">Quer desenvolver esse plano com mais profundidade?</div>
-  <p style="font-size:9pt;color:#555;line-height:1.7;margin:0 auto 14px;max-width:500px">Se fizer sentido para você, posso te ajudar em uma mentoria individual para transformar esse diagnóstico em um plano prático de relacionamento, posicionamento e geração de oportunidades.</p>
-  ${MENTORIA_LINK ? `<a href="${MENTORIA_LINK}" target="_blank" style="display:inline-block;background:#c9a227;color:#0d0d0f;border-radius:6px;padding:10px 24px;font-size:10pt;font-weight:700;text-decoration:none">Quero desenvolver meu plano</a>` : `<div style="font-size:9pt;color:#888;font-style:italic">Em breve você poderá solicitar sua mentoria por aqui.</div>`}
+  <p style="font-size:9pt;color:#555;line-height:1.7;margin:0 auto 14px;max-width:500px">Se fizer sentido para vocÃª, posso te ajudar em uma mentoria individual para transformar esse diagnÃ³stico em um plano prÃ¡tico de relacionamento, posicionamento e geraÃ§Ã£o de oportunidades.</p>
+  ${MENTORIA_LINK ? `<a href="${MENTORIA_LINK}" target="_blank" style="display:inline-block;background:#c9a227;color:#0d0d0f;border-radius:6px;padding:10px 24px;font-size:10pt;font-weight:700;text-decoration:none">Quero desenvolver meu plano</a>` : `<div style="font-size:9pt;color:#888;font-style:italic">Em breve vocÃª poderÃ¡ solicitar sua mentoria por aqui.</div>`}
 </div>` : ''}
 
 
 <div class="footer-bar" style="margin-top:20px">
   <div class="footer-bar-l">${BRAND.name}</div>
-  <div class="footer-bar-r">"Networking, além do cafezinho" · Rafael Milléo<br>Diagnóstico Relacional Profissional · ${new Date().toLocaleDateString('pt-BR')}</div>
+  <div class="footer-bar-r">"Networking, alÃ©m do cafezinho" Â· Rafael MillÃ©o<br>DiagnÃ³stico Relacional Profissional Â· ${new Date().toLocaleDateString('pt-BR')}</div>
 </div>
 
 
@@ -5123,7 +5124,7 @@ ${MENTORIA_LINK || true ? `
 
 
       const win=window.open("","_blank");
-      if(!win){alert("Permita pop-ups para abrir o relatório.");return;}
+      if(!win){alert("Permita pop-ups para abrir o relatÃ³rio.");return;}
       win.document.write(html);
       win.document.close();
     };
@@ -5138,11 +5139,11 @@ ${MENTORIA_LINK || true ? `
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, fontStyle: "italic", margin: "0 0 6px" }}>{pf?.tagline}</p>
             <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: C.gold }}>Score geral: {assessment.overall}%</div>
           </div>
-          {/* Download do relatório/PDF é gratuito para todos os usuários (Free e PRO) — decisão de produto: não cobrar pelo assessment em si */}
-          <Btn small onClick={downloadReport}>⬇ Baixar relatório</Btn>
+          {/* Download do relatÃ³rio/PDF Ã© gratuito para todos os usuÃ¡rios (Free e PRO) â decisÃ£o de produto: nÃ£o cobrar pelo assessment em si */}
+          <Btn small onClick={downloadReport}>â¬ Baixar relatÃ³rio</Btn>
           {false && (
             <button onClick={() => setShowUpgrade(true)} style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}50`, borderRadius: 10, padding: "10px 16px", cursor: "pointer", textAlign: "center" }}>
-              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.gold, marginBottom: 2 }}>🔒 PRO</div>
+              <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 700, color: C.gold, marginBottom: 2 }}>ð PRO</div>
               <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>Fazer upgrade</div>
             </button>
           )}
@@ -5151,20 +5152,20 @@ ${MENTORIA_LINK || true ? `
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 16, display: "flex", justifyContent: "center" }}>{isPro && <RadarChart scores={sc} />}</div>
         {!isPro && (
           <ProLock
-            title="Sua Trajetória completa é PRO"
-            desc="Veja suas 6 dimensões com comportamento observado (não só o que você declarou), forças, riscos, análise profunda e suas 3 ações prioritárias."
+            title="Sua TrajetÃ³ria completa Ã© PRO"
+            desc="Veja suas 6 dimensÃµes com comportamento observado (nÃ£o sÃ³ o que vocÃª declarou), forÃ§as, riscos, anÃ¡lise profunda e suas 3 aÃ§Ãµes prioritÃ¡rias."
             onKey={openAccessKey}
             user={user}
           />
         )}
         {isPro && (<>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Suas 6 dimensões</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 12 }}>Toque numa dimensão pra ver o porquê e uma sugestão concreta.</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Suas 6 dimensÃµes</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 12 }}>Toque numa dimensÃ£o pra ver o porquÃª e uma sugestÃ£o concreta.</div>
           {DIMS.map((d, i) => { const v = sc[d.key] || 0;
             const obs = dimObservation?.[d.key];
             const OBS_COLOR = { evoluindo: C.grn, estavel: C.amb, perdendo_intensidade: C.cor };
-            const OBS_LABEL = { evoluindo: 'Evoluindo', estavel: 'Estável', perdendo_intensidade: 'Perdendo intensidade' };
+            const OBS_LABEL = { evoluindo: 'Evoluindo', estavel: 'EstÃ¡vel', perdendo_intensidade: 'Perdendo intensidade' };
             const isOpen = expandedDim === d.key;
             const insight = isOpen ? buildDimensionInsight(d.key, obs) : null;
             return (
@@ -5188,7 +5189,7 @@ ${MENTORIA_LINK || true ? `
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM, lineHeight: 1.5, marginBottom: insight.action ? 8 : 0 }}>{insight.diagnosis}</div>
                   {insight.action && (
                     <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 6, padding: '7px 10px' }}>
-                      <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.06em' }}>→ Ação: </span>
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase', letterSpacing: '.06em' }}>â AÃ§Ã£o: </span>
                       <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{insight.action}</span>
                     </div>
                   )}
@@ -5198,20 +5199,20 @@ ${MENTORIA_LINK || true ? `
           ); })}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-          {(pf?.strengths || []).map((s, i) => <div key={i} style={{ background: C.grnD, border: `1px solid ${C.grn}28`, borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 4 }}>✓ Força</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{s}</div></div>)}
-          {(pf?.risks || []).map((r, i) => <div key={i} style={{ background: C.corD, border: `1px solid ${C.cor}28`, borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.cor, marginBottom: 4 }}>⚠ Risco</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{r}</div></div>)}
+          {(pf?.strengths || []).map((s, i) => <div key={i} style={{ background: C.grnD, border: `1px solid ${C.grn}28`, borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.grn, marginBottom: 4 }}>â ForÃ§a</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{s}</div></div>)}
+          {(pf?.risks || []).map((r, i) => <div key={i} style={{ background: C.corD, border: `1px solid ${C.cor}28`, borderRadius: 10, padding: 12 }}><div style={{ fontFamily: "'DM Sans'", fontSize: 10, fontWeight: 600, color: C.cor, marginBottom: 4 }}>â  Risco</div><div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>{r}</div></div>)}
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Análise profunda</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>AnÃ¡lise profunda</div>
           <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, lineHeight: 1.65, margin: 0 }}>{pf?.desc}</p>
         </div>
         <div style={{ background: `${C.gold}08`, border: `1px solid ${C.gL}`, borderRadius: 14, padding: 24 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 4 }}>Você é {pf?.name}.</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 14 }}>Suas 3 ações prioritárias:</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.gold, textTransform: "uppercase", marginBottom: 4 }}>VocÃª Ã© {pf?.name}.</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: C.txt, marginBottom: 14 }}>Suas 3 aÃ§Ãµes prioritÃ¡rias:</div>
           <ArchetypeActionsChecklist userId={user?.id} pf={pf} hideHeader />
         </div>
         {cts.length > 0 && (() => {
-          // Distribuição por categoria
+          // DistribuiÃ§Ã£o por categoria
           const catCount = {};
           cts.forEach(c => { catCount[c.category] = (catCount[c.category] || 0) + 1; });
           const catEntries = Object.entries(catCount).sort((a, b) => b[1] - a[1]);
@@ -5221,7 +5222,7 @@ ${MENTORIA_LINK || true ? `
           const catColor = (v) => CATS.find(c => c.value === v)?.color || C.gold;
 
 
-          // Distribuição por empresa
+          // DistribuiÃ§Ã£o por empresa
           const empCount = {};
           cts.forEach(c => { if (c.company) { empCount[c.company] = (empCount[c.company] || 0) + 1; } });
           const empEntries = Object.entries(empCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -5229,12 +5230,12 @@ ${MENTORIA_LINK || true ? `
           const topEmpPct = topEmp ? Math.round(topEmp[1] / cts.length * 100) : 0;
 
 
-          // Contatos sem próxima ação
+          // Contatos sem prÃ³xima aÃ§Ã£o
           const semAcao = cts.filter(c => !c.nextAction && c.status === 'active').length;
           const semInteracao = cts.filter(c => !c.lastInteraction).length;
 
 
-          // Interações recentes
+          // InteraÃ§Ãµes recentes
           const recentIts = its.slice(0, 8);
           const sentPos = its.filter(i => i.sentiment === 'positivo').length;
           const sentNeg = its.filter(i => i.sentiment === 'negativo').length;
@@ -5243,11 +5244,11 @@ ${MENTORIA_LINK || true ? `
 
           return (
             <>
-              {/* Painel: Sua Rede em Números */}
+              {/* Painel: Sua Rede em NÃºmeros */}
               <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 14 }}>
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>📊 Sua rede em números</div>
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>ð Sua rede em nÃºmeros</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                  {[{ l: 'Total de contatos', v: cts.length, c: C.gold }, { l: 'Sem próxima ação', v: semAcao, c: semAcao > 0 ? C.amb : C.grn }, { l: 'Sem interação registrada', v: semInteracao, c: semInteracao > 0 ? C.cor : C.grn }, { l: 'Interações positivas', v: `${sentPct}%`, c: sentPct >= 70 ? C.grn : C.amb }].map((m, i) => (
+                  {[{ l: 'Total de contatos', v: cts.length, c: C.gold }, { l: 'Sem prÃ³xima aÃ§Ã£o', v: semAcao, c: semAcao > 0 ? C.amb : C.grn }, { l: 'Sem interaÃ§Ã£o registrada', v: semInteracao, c: semInteracao > 0 ? C.cor : C.grn }, { l: 'InteraÃ§Ãµes positivas', v: `${sentPct}%`, c: sentPct >= 70 ? C.grn : C.amb }].map((m, i) => (
                     <div key={i} style={{ background: C.sf, border: `1px solid ${C.brd}`, borderRadius: 10, padding: '12px 14px' }}>
                       <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, marginBottom: 4 }}>{m.l}</div>
                       <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 20, fontWeight: 700, color: m.c }}>{m.v}</div>
@@ -5256,8 +5257,8 @@ ${MENTORIA_LINK || true ? `
                 </div>
 
 
-                {/* Distribuição por categoria */}
-                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Distribuição por categoria</div>
+                {/* DistribuiÃ§Ã£o por categoria */}
+                <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>DistribuiÃ§Ã£o por categoria</div>
                 {catEntries.map(([cat, count], i) => {
                   const pct = Math.round(count / cts.length * 100);
                   const cc = catColor(cat);
@@ -5276,32 +5277,32 @@ ${MENTORIA_LINK || true ? `
               </div>
 
 
-              {/* Alerta de concentração */}
+              {/* Alerta de concentraÃ§Ã£o */}
               {(dominantPct > 60 || topEmpPct > 60) && (
                 <div style={{ background: `${C.amb}08`, border: `1px solid ${C.amb}30`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>⚠ Alerta de concentração</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.amb, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>â  Alerta de concentraÃ§Ã£o</div>
                   {dominantPct > 60 && (
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, marginBottom: 6 }}>
-                      <strong style={{ color: C.txt }}>{dominantPct}% dos seus contatos são "{catLabel(dominantCat[0])}".</strong> Redes diversas geram mais oportunidades. Busque contatos nas categorias menos representadas.
+                      <strong style={{ color: C.txt }}>{dominantPct}% dos seus contatos sÃ£o "{catLabel(dominantCat[0])}".</strong> Redes diversas geram mais oportunidades. Busque contatos nas categorias menos representadas.
                     </div>
                   )}
                   {topEmpPct > 60 && (
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6 }}>
-                      <strong style={{ color: C.txt }}>{topEmpPct}% dos seus contatos são da {topEmp[0]}.</strong> Diversifique para reduzir dependência e ampliar oportunidades externas.
+                      <strong style={{ color: C.txt }}>{topEmpPct}% dos seus contatos sÃ£o da {topEmp[0]}.</strong> Diversifique para reduzir dependÃªncia e ampliar oportunidades externas.
                     </div>
                   )}
                   <div style={{ background: `${C.gold}0A`, border: `1px solid ${C.gL}`, borderRadius: 6, padding: '8px 12px', marginTop: 10 }}>
-                    <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase' }}>→ Ação: </span>
-                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>Cadastre 2 contatos de empresas ou categorias diferentes nos próximos 7 dias.</span>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 9, fontWeight: 600, color: C.gold, textTransform: 'uppercase' }}>â AÃ§Ã£o: </span>
+                    <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt }}>Cadastre 2 contatos de empresas ou categorias diferentes nos prÃ³ximos 7 dias.</span>
                   </div>
                 </div>
               )}
 
 
-              {/* Distribuição por empresa */}
+              {/* DistribuiÃ§Ã£o por empresa */}
               {empEntries.length > 0 && (
                 <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 14 }}>
-                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>🏢 Empresas na sua rede</div>
+                  <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>ð¢ Empresas na sua rede</div>
                   {empEntries.map(([emp, count], i) => {
                     const pct = Math.round(count / cts.length * 100);
                     return (
@@ -5323,28 +5324,28 @@ ${MENTORIA_LINK || true ? `
               )}
 
 
-              {/* Interações recentes */}
+              {/* InteraÃ§Ãµes recentes */}
               {recentIts.length > 0 && (
                 <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em' }}>💬 Interações recentes</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em' }}>ð¬ InteraÃ§Ãµes recentes</div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.grn, background: `${C.grn}12`, border: `1px solid ${C.grn}30`, borderRadius: 4, padding: '2px 8px' }}>↑ {sentPos} positivas</span>
-                      {sentNeg > 0 && <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.cor, background: `${C.cor}12`, border: `1px solid ${C.cor}30`, borderRadius: 4, padding: '2px 8px' }}>↓ {sentNeg} negativas</span>}
+                      <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.grn, background: `${C.grn}12`, border: `1px solid ${C.grn}30`, borderRadius: 4, padding: '2px 8px' }}>â {sentPos} positivas</span>
+                      {sentNeg > 0 && <span style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.cor, background: `${C.cor}12`, border: `1px solid ${C.cor}30`, borderRadius: 4, padding: '2px 8px' }}>â {sentNeg} negativas</span>}
                     </div>
                   </div>
                   {recentIts.map((it, i) => {
                     const contact = cts.find(c => c.id === it.contactId);
-                    const typeLabel = { ligacao: 'Ligança', mensagem: 'Mensagem', reuniao: 'Reunião', email: 'E-mail', outro: 'Outro' }[it.type] || it.type;
+                    const typeLabel = { ligacao: 'LiganÃ§a', mensagem: 'Mensagem', reuniao: 'ReuniÃ£o', email: 'E-mail', outro: 'Outro' }[it.type] || it.type;
                     const sentColor = it.sentiment === 'positivo' ? C.grn : it.sentiment === 'negativo' ? C.cor : C.txL;
-                    const sentIcon = it.sentiment === 'positivo' ? '↑' : it.sentiment === 'negativo' ? '↓' : '→';
+                    const sentIcon = it.sentiment === 'positivo' ? 'â' : it.sentiment === 'negativo' ? 'â' : 'â';
                     const daysAgo = Math.floor((Date.now() - new Date(it.createdAt).getTime()) / 86400000);
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 8, marginBottom: 8, borderBottom: i < recentIts.length - 1 ? `1px solid ${C.brd}` : 'none' }}>
                         <div style={{ width: 28, height: 28, borderRadius: 7, background: `${sentColor}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{sentIcon}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txt, fontWeight: 500 }}>{contact?.name || 'Contato'}</div>
-                          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{typeLabel} · {daysAgo === 0 ? 'hoje' : `${daysAgo}d atrás`}</div>
+                          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL }}>{typeLabel} Â· {daysAgo === 0 ? 'hoje' : `${daysAgo}d atrÃ¡s`}</div>
                         </div>
                         <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: sentColor, background: `${sentColor}12`, border: `1px solid ${sentColor}30`, borderRadius: 4, padding: '2px 8px', flexShrink: 0 }}>{it.sentiment || 'neutro'}</div>
                       </div>
@@ -5361,7 +5362,7 @@ ${MENTORIA_LINK || true ? `
   };
 
 
-  // ── Aba Perfil ────────────────────────────────────────────
+  // ââ Aba Perfil ââââââââââââââââââââââââââââââââââââââââââââ
   const renderPerfilForm = () => (
     <div>
       <PerfilForm
@@ -5374,18 +5375,18 @@ ${MENTORIA_LINK || true ? `
       />
       {profile?.organization_id && profile?.org_role === "membro" && profile?.org_consent_status === "accepted" && (
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Organização</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>OrganizaÃ§Ã£o</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14, lineHeight: 1.55 }}>
-            Seu admin vê um resumo categórico da sua tendência semanal por dimensão e a quantidade de contatos e interações que você registra. A identidade dos seus contatos e o conteúdo de qualquer conversa continuam privados. Você pode sair a qualquer momento — isso não afeta seus dados individuais.
+            Seu admin vÃª um resumo categÃ³rico da sua tendÃªncia semanal por dimensÃ£o e a quantidade de contatos e interaÃ§Ãµes que vocÃª registra. A identidade dos seus contatos e o conteÃºdo de qualquer conversa continuam privados. VocÃª pode sair a qualquer momento â isso nÃ£o afeta seus dados individuais.
           </div>
-          <Btn variant="ghost" small onClick={leaveOrganization} disabled={orgConsentBusy}>Sair da organização</Btn>
+          <Btn variant="ghost" small onClick={leaveOrganization} disabled={orgConsentBusy}>Sair da organizaÃ§Ã£o</Btn>
         </div>
       )}
       {!profile?.organization_id && (
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 20, marginTop: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Tem um código de empresa?</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, fontWeight: 600, color: C.txL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Tem um cÃ³digo de empresa?</div>
           <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, marginBottom: 14, lineHeight: 1.55 }}>
-            Se sua empresa usa o {BRAND.name}, digite o código que ela te passou. Antes de qualquer coisa aparecer pro admin, você ainda vai confirmar o que fica visível.
+            Se sua empresa usa o {BRAND.name}, digite o cÃ³digo que ela te passou. Antes de qualquer coisa aparecer pro admin, vocÃª ainda vai confirmar o que fica visÃ­vel.
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <input
@@ -5404,17 +5405,17 @@ ${MENTORIA_LINK || true ? `
   );
 
 
-  // ── "Insights" (âncora principal, coluna lateral) = IA + Plano + Relatório ──
-  // Cadastro/atualização de perfil NÃO fica aqui — só no botão "Perfil" do
-  // rodapé da barra lateral (view="perfil", renderPerfilForm acima). São 2
-  // destinos diferentes agora, cada um com um conteúdo diferente:
-  //   - "Insights" (coluna lateral): chamariz pra IA, com Plano/Relatório juntos
-  //   - "Perfil" (rodapé, área da conta): só cadastro/dados pessoais
+  // ââ "Insights" (Ã¢ncora principal, coluna lateral) = IA + Plano + RelatÃ³rio ââ
+  // Cadastro/atualizaÃ§Ã£o de perfil NÃO fica aqui â sÃ³ no botÃ£o "Perfil" do
+  // rodapÃ© da barra lateral (view="perfil", renderPerfilForm acima). SÃ£o 2
+  // destinos diferentes agora, cada um com um conteÃºdo diferente:
+  //   - "Insights" (coluna lateral): chamariz pra IA, com Plano/RelatÃ³rio juntos
+  //   - "Perfil" (rodapÃ©, Ã¡rea da conta): sÃ³ cadastro/dados pessoais
   const [insightsSubTab, setInsightsSubTab] = useState("ia");
   const INSIGHTS_TABS = [
     { id: "ia", label: "Insights" },
     { id: "plano", label: "Plano" },
-    { id: "report", label: "Trajetória" },
+    { id: "report", label: "TrajetÃ³ria" },
   ];
   const renderInsightsHub = () => (
     <div>
@@ -5438,10 +5439,10 @@ ${MENTORIA_LINK || true ? `
   }, []);
 
 
-  // ── Tour de uso (primeira vez) ─────────────────────────────
-  // Mostra automaticamente só na primeira visita (profile.tour_completed
-  // ainda não true). Depois disso só reabre pela lâmpada de dicas, e nunca
-  // mais de forma automática — fechar em qualquer ponto já marca como visto.
+  // ââ Tour de uso (primeira vez) âââââââââââââââââââââââââââââ
+  // Mostra automaticamente sÃ³ na primeira visita (profile.tour_completed
+  // ainda nÃ£o true). Depois disso sÃ³ reabre pela lÃ¢mpada de dicas, e nunca
+  // mais de forma automÃ¡tica â fechar em qualquer ponto jÃ¡ marca como visto.
   const [showTour, setShowTour] = useState(false);
   useEffect(() => {
     if (profile && profile.tour_completed !== true) setShowTour(true);
@@ -5462,22 +5463,22 @@ ${MENTORIA_LINK || true ? `
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
-      {/* Ajuda: automática na 1ª vez (boas-vindas), depois sempre contextual
-          ao que a pessoa está vendo — não é mais um tour fixo do app inteiro. */}
+      {/* Ajuda: automÃ¡tica na 1Âª vez (boas-vindas), depois sempre contextual
+          ao que a pessoa estÃ¡ vendo â nÃ£o Ã© mais um tour fixo do app inteiro. */}
       {showTour && <TourModal onClose={closeTour} onFinish={closeTour} steps={getHelpSteps(["dash", "contacts", "perfil", "insights", "startNetwork"].includes(view) ? view : "dash")} />}
-      {/* Guardrail de consentimento — vínculo a organização nunca é
-          silencioso. Sem X, sem clique-fora: só decide clicando num dos
-          dois botões. Enquanto pending, o admin não vê nada desta pessoa
+      {/* Guardrail de consentimento â vÃ­nculo a organizaÃ§Ã£o nunca Ã©
+          silencioso. Sem X, sem clique-fora: sÃ³ decide clicando num dos
+          dois botÃµes. Enquanto pending, o admin nÃ£o vÃª nada desta pessoa
           (get_org_team_overview exige org_consent_status='accepted'). */}
       {profile?.organization_id && profile?.org_consent_status === "pending" && profile?.org_role !== "admin" && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: C.card, border: `1px solid ${C.brdH}`, borderRadius: 16, width: "100%", maxWidth: 440, padding: 28 }}>
-            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>Sua organização convidou você</h3>
+            <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 700, color: C.txt, margin: "0 0 14px" }}>Sua organizaÃ§Ã£o convidou vocÃª</h3>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 10px" }}>
-              Se você aceitar, o admin da sua organização passa a ver um resumo <strong>categórico</strong> da sua tendência comportamental semanal por dimensão (ex.: "Presença: Evoluindo") e a <strong>quantidade</strong> de contatos e interações que você registra — nunca números de desempenho, nunca quem são seus contatos, nunca o conteúdo de nada.
+              Se vocÃª aceitar, o admin da sua organizaÃ§Ã£o passa a ver um resumo <strong>categÃ³rico</strong> da sua tendÃªncia comportamental semanal por dimensÃ£o (ex.: "PresenÃ§a: Evoluindo") e a <strong>quantidade</strong> de contatos e interaÃ§Ãµes que vocÃª registra â nunca nÃºmeros de desempenho, nunca quem sÃ£o seus contatos, nunca o conteÃºdo de nada.
             </p>
             <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, lineHeight: 1.6, margin: "0 0 20px" }}>
-              A identidade dos seus contatos e o que foi dito em qualquer conversa continuam 100% privados em qualquer um dos dois casos. Você pode sair da organização quando quiser, sem perder nada do seu {BRAND.name}.
+              A identidade dos seus contatos e o que foi dito em qualquer conversa continuam 100% privados em qualquer um dos dois casos. VocÃª pode sair da organizaÃ§Ã£o quando quiser, sem perder nada do seu {BRAND.name}.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <Btn small onClick={() => respondOrgInvite(true)} disabled={orgConsentBusy}>Aceitar</Btn>
@@ -5488,7 +5489,7 @@ ${MENTORIA_LINK || true ? `
       )}
       <HelpButton onClick={() => setShowTour(true)} bottom={isMobile ? 78 : 20} />
       {/* PRO Activation Toast */}
-      {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
+      {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>â¨ PRO ativado com sucesso!</div>}
       {!isMobile && (
         <nav style={{ width: 190, flexShrink: 0, background: C.sf, borderRight: `1px solid ${C.brd}`, padding: "20px 12px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px 18px", borderBottom: `1px solid ${C.brd}`, marginBottom: 14 }}>
@@ -5518,7 +5519,7 @@ ${MENTORIA_LINK || true ? `
             {admin && <Tag color={C.vio} small>Admin</Tag>}
           </div>
           <button onClick={() => setView("perfil")} style={{ width:"100%", display:"flex", alignItems:"center", gap:10, background: view==="perfil" ? C.gD : "transparent", border: view==="perfil" ? `1px solid ${C.gL}` : "1px solid transparent", borderRadius:7, padding:"9px 12px", cursor:"pointer", marginBottom:3 }}>
-            <span style={{ fontSize:12, color: view==="perfil" ? C.gold : C.txL }}>👤</span>
+            <span style={{ fontSize:12, color: view==="perfil" ? C.gold : C.txL }}>ð¤</span>
             <span style={{ fontFamily:"'DM Sans'", fontSize:13, fontWeight:500, color: view==="perfil" ? C.gold : C.txM }}>Perfil</span>
           </button>
           <Btn variant="ghost" small onClick={onReset}>Sair</Btn>
@@ -5540,7 +5541,7 @@ ${MENTORIA_LINK || true ? `
               </a>
             )}
             <button onClick={() => { setView("perfil"); setSelId(null); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: 6 }}>
-              <span style={{ fontSize: 14 }}>👤</span>
+              <span style={{ fontSize: 14 }}>ð¤</span>
               <span style={{ fontFamily: "'DM Sans'", fontSize: 11, color: view === "perfil" ? C.gold : C.txL, fontWeight: view === "perfil" ? 700 : 400, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile?.name || "Perfil"}</span>
             </button>
             <button
@@ -5625,39 +5626,39 @@ ${MENTORIA_LINK || true ? `
           <Inp label="Cargo" value={cf.role} onChange={v => setCf({ ...cf, role: v })} placeholder="Cargo" />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="📱 WhatsApp" value={cf.whatsapp} onChange={v => setCf({ ...cf, whatsapp: v })} placeholder="(00) 00000-0000" />
-          <Inp label="✉️ Email" value={cf.contactEmail} onChange={v => setCf({ ...cf, contactEmail: v })} placeholder="email@empresa.com" type="email" />
+          <Inp label="ð± WhatsApp" value={cf.whatsapp} onChange={v => setCf({ ...cf, whatsapp: v })} placeholder="(00) 00000-0000" />
+          <Inp label="âï¸ Email" value={cf.contactEmail} onChange={v => setCf({ ...cf, contactEmail: v })} placeholder="email@empresa.com" type="email" />
         </div>
-        <Inp label="🔗 LinkedIn" value={cf.linkedin} onChange={v => setCf({ ...cf, linkedin: v })} placeholder="linkedin.com/in/nome" />
+        <Inp label="ð LinkedIn" value={cf.linkedin} onChange={v => setCf({ ...cf, linkedin: v })} placeholder="linkedin.com/in/nome" />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="🎂 Aniversário" value={cf.birthday} onChange={v => setCf({ ...cf, birthday: v })} type="date" />
-          <Sel label="🌱 Cultura principal" value={cf.mainCulture} onChange={v => setCf({ ...cf, mainCulture: v })} options={MAIN_CULTURES} placeholder="Selecione..." />
+          <Inp label="ð AniversÃ¡rio" value={cf.birthday} onChange={v => setCf({ ...cf, birthday: v })} type="date" />
+          <Sel label="ð± Cultura principal" value={cf.mainCulture} onChange={v => setCf({ ...cf, mainCulture: v })} options={MAIN_CULTURES} placeholder="Selecione..." />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="📍 Cidade" value={cf.city} onChange={v => setCf({ ...cf, city: v })} placeholder="Cidade" />
+          <Inp label="ð Cidade" value={cf.city} onChange={v => setCf({ ...cf, city: v })} placeholder="Cidade" />
           <Sel label="Estado" value={cf.stateCode} onChange={v => setCf({ ...cf, stateCode: v })} options={UFS} placeholder="UF" />
         </div>
-        <Inp label="🎯 Hobbies / Interesses" value={cf.hobbies} onChange={v => setCf({ ...cf, hobbies: v })} placeholder="Pesca, futebol, leitura..." />
+        <Inp label="ð¯ Hobbies / Interesses" value={cf.hobbies} onChange={v => setCf({ ...cf, hobbies: v })} placeholder="Pesca, futebol, leitura..." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
           <Sel label="Categoria" value={cf.category} onChange={v => setCf({ ...cf, category: v })} options={CATS.map(c => ({ value: c.value, label: `${c.icon} ${c.label}` }))} />
           <Sel label="Proximidade" value={cf.proximity} onChange={v => setCf({ ...cf, proximity: v })} options={[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: `${n}/5` }))} />
           <Inp label="Freq. (dias)" value={cf.idealFreq} onChange={v => setCf({ ...cf, idealFreq: v })} type="number" />
         </div>
-        <Inp label="Como conheceu?" value={cf.howMet} onChange={v => setCf({ ...cf, howMet: v })} placeholder="Evento, indicação, campo..." />
+        <Inp label="Como conheceu?" value={cf.howMet} onChange={v => setCf({ ...cf, howMet: v })} placeholder="Evento, indicaÃ§Ã£o, campo..." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="📋 Próxima ação" value={cf.nextAction} onChange={v => setCf({ ...cf, nextAction: v })} placeholder="Ligar, enviar artigo..." />
-          <Inp label="📅 Data da ação" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
+          <Inp label="ð PrÃ³xima aÃ§Ã£o" value={cf.nextAction} onChange={v => setCf({ ...cf, nextAction: v })} placeholder="Ligar, enviar artigo..." />
+          <Inp label="ð Data da aÃ§Ã£o" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
         </div>
-        <Inp label="📝 Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
+        <Inp label="ð Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
         {isPro ? (
           <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
-            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular a relevância.</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>RelevÃ¢ncia estratÃ©gica</div>
+            <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular a relevÃ¢ncia.</div>
             {[
-              { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
-              { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
-              { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar você a pessoas, ambientes ou conversas importantes?" },
-              { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relação tem conexão com seus objetivos dos próximos meses?" },
+              { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opiniÃ£o, decisÃµes ou conexÃµes ao redor dela?" },
+              { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negÃ³cio, projeto, indicaÃ§Ã£o ou aprendizado?" },
+              { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar vocÃª a pessoas, ambientes ou conversas importantes?" },
+              { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relaÃ§Ã£o tem conexÃ£o com seus objetivos dos prÃ³ximos meses?" },
             ].map(({ field, label, micro }) => (
               <div key={field} style={{ marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -5665,18 +5666,18 @@ ${MENTORIA_LINK || true ? `
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM }}>{label}</div>
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{micro}</div>
                   </div>
-                  <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: C.gold, minWidth: 28, textAlign: "right" }}>{cf[field] !== "" ? cf[field] : "—"}</div>
+                  <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: C.gold, minWidth: 28, textAlign: "right" }}>{cf[field] !== "" ? cf[field] : "â"}</div>
                 </div>
                 <input type="range" min="0" max="10" step="1" value={cf[field] !== "" ? cf[field] : 5} onChange={e => setCf({ ...cf, [field]: e.target.value })} style={{ width: "100%", accentColor: C.gold, height: 4, cursor: "pointer" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Sans'", fontSize: 9, color: C.txL, marginTop: 2 }}><span>0</span><span>5</span><span>10</span></div>
               </div>
             ))}
-            {(() => { const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null }); return rs !== null ? (<div style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}><span style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM }}>Relevância</span><span style={{ fontFamily:"'JetBrains Mono'", fontSize:14, fontWeight:700, color:getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span></div>) : (<div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic" }}>Preencha os 4 campos para calcular.</div>); })()}
+            {(() => { const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null }); return rs !== null ? (<div style={{ background:`${C.gold}10`, border:`1px solid ${C.gL}`, borderRadius:8, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center" }}><span style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM }}>RelevÃ¢ncia</span><span style={{ fontFamily:"'JetBrains Mono'", fontSize:14, fontWeight:700, color:getRelevanceLabelColor(rs) }}>{rs}% â {getRelevanceLabel(rs)}</span></div>) : (<div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, fontStyle:"italic" }}>Preencha os 4 campos para calcular.</div>); })()}
           </div>
         ) : (
           <div style={{ borderTop:`1px solid ${C.brd}`, marginTop:16, paddingTop:16, background:`${C.gold}06`, borderRadius:8, padding:14 }}>
-            <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:600, color:C.gold, marginBottom:4 }}>🔒 Relevância estratégica — PRO</div>
-            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:8 }}>Quer saber quem realmente importa na sua rede? A leitura de relevância está disponível no PRO.</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:600, color:C.gold, marginBottom:4 }}>ð RelevÃ¢ncia estratÃ©gica â PRO</div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, marginBottom:8 }}>Quer saber quem realmente importa na sua rede? A leitura de relevÃ¢ncia estÃ¡ disponÃ­vel no PRO.</div>
             <button onClick={openAccessKey} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:10, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>Tenho uma chave de acesso</button>
           </div>
         )}
@@ -5689,38 +5690,38 @@ ${MENTORIA_LINK || true ? `
           <Inp label="Cargo" value={cf.role} onChange={v => setCf({ ...cf, role: v })} placeholder="Cargo" />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="📱 WhatsApp" value={cf.whatsapp} onChange={v => setCf({ ...cf, whatsapp: v })} placeholder="(00) 00000-0000" />
-          <Inp label="✉️ Email" value={cf.contactEmail} onChange={v => setCf({ ...cf, contactEmail: v })} placeholder="email@empresa.com" type="email" />
+          <Inp label="ð± WhatsApp" value={cf.whatsapp} onChange={v => setCf({ ...cf, whatsapp: v })} placeholder="(00) 00000-0000" />
+          <Inp label="âï¸ Email" value={cf.contactEmail} onChange={v => setCf({ ...cf, contactEmail: v })} placeholder="email@empresa.com" type="email" />
         </div>
-        <Inp label="🔗 LinkedIn" value={cf.linkedin} onChange={v => setCf({ ...cf, linkedin: v })} placeholder="linkedin.com/in/nome" />
+        <Inp label="ð LinkedIn" value={cf.linkedin} onChange={v => setCf({ ...cf, linkedin: v })} placeholder="linkedin.com/in/nome" />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="🎂 Aniversário" value={cf.birthday} onChange={v => setCf({ ...cf, birthday: v })} type="date" />
-          <Sel label="🌱 Cultura principal" value={cf.mainCulture} onChange={v => setCf({ ...cf, mainCulture: v })} options={MAIN_CULTURES} placeholder="Selecione..." />
+          <Inp label="ð AniversÃ¡rio" value={cf.birthday} onChange={v => setCf({ ...cf, birthday: v })} type="date" />
+          <Sel label="ð± Cultura principal" value={cf.mainCulture} onChange={v => setCf({ ...cf, mainCulture: v })} options={MAIN_CULTURES} placeholder="Selecione..." />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="📍 Cidade" value={cf.city} onChange={v => setCf({ ...cf, city: v })} placeholder="Cidade" />
+          <Inp label="ð Cidade" value={cf.city} onChange={v => setCf({ ...cf, city: v })} placeholder="Cidade" />
           <Sel label="Estado" value={cf.stateCode} onChange={v => setCf({ ...cf, stateCode: v })} options={UFS} placeholder="UF" />
         </div>
-        <Inp label="🎯 Hobbies / Interesses" value={cf.hobbies} onChange={v => setCf({ ...cf, hobbies: v })} placeholder="Pesca, futebol, leitura..." />
+        <Inp label="ð¯ Hobbies / Interesses" value={cf.hobbies} onChange={v => setCf({ ...cf, hobbies: v })} placeholder="Pesca, futebol, leitura..." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
           <Sel label="Categoria" value={cf.category} onChange={v => setCf({ ...cf, category: v })} options={CATS.map(c => ({ value: c.value, label: `${c.icon} ${c.label}` }))} />
           <Sel label="Proximidade" value={cf.proximity} onChange={v => setCf({ ...cf, proximity: v })} options={[1,2,3,4,5].map(n => ({ value: String(n), label: `${n}/5` }))} />
           <Inp label="Freq. (dias)" value={cf.idealFreq} onChange={v => setCf({ ...cf, idealFreq: v })} type="number" />
         </div>
-        <Inp label="Como conheceu?" value={cf.howMet} onChange={v => setCf({ ...cf, howMet: v })} placeholder="Evento, indicação, campo..." />
+        <Inp label="Como conheceu?" value={cf.howMet} onChange={v => setCf({ ...cf, howMet: v })} placeholder="Evento, indicaÃ§Ã£o, campo..." />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Inp label="📋 Próxima ação" value={cf.nextAction} onChange={v => setCf({ ...cf, nextAction: v })} placeholder="Ligar, enviar artigo..." />
-          <Inp label="📅 Data da ação" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
+          <Inp label="ð PrÃ³xima aÃ§Ã£o" value={cf.nextAction} onChange={v => setCf({ ...cf, nextAction: v })} placeholder="Ligar, enviar artigo..." />
+          <Inp label="ð Data da aÃ§Ã£o" value={cf.nextActionDate} onChange={v => setCf({ ...cf, nextActionDate: v })} type="date" />
         </div>
-        <Inp label="📝 Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
+        <Inp label="ð Notas" value={cf.notes} onChange={v => setCf({ ...cf, notes: v })} placeholder="O que importa saber sobre essa pessoa..." textarea />
         <div style={{ borderTop: `1px solid ${C.brd}`, marginTop: 16, paddingTop: 16 }}>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Relevância estratégica</div>
-          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular a relevância.</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>RelevÃ¢ncia estratÃ©gica</div>
+          <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginBottom: 14 }}>Avalie de 0 a 10. Preencha os 4 para calcular a relevÃ¢ncia.</div>
           {[
-            { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opinião, decisões ou conexões ao redor dela?" },
-            { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negócio, projeto, indicação ou aprendizado?" },
-            { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar você a pessoas, ambientes ou conversas importantes?" },
-            { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relação tem conexão com seus objetivos dos próximos meses?" },
+            { field: "influenciaPessoas", label: "Influencia outras pessoas?", micro: "Essa pessoa movimenta opiniÃ£o, decisÃµes ou conexÃµes ao redor dela?" },
+            { field: "geraOportunidade",  label: "Pode gerar oportunidade?",  micro: "Existe chance real de parceria, negÃ³cio, projeto, indicaÃ§Ã£o ou aprendizado?" },
+            { field: "abrePortas",        label: "Pode abrir portas?",        micro: "Essa pessoa pode conectar vocÃª a pessoas, ambientes ou conversas importantes?" },
+            { field: "momentoAtual",      label: "Faz sentido para meu momento atual?", micro: "Essa relaÃ§Ã£o tem conexÃ£o com seus objetivos dos prÃ³ximos meses?" },
           ].map(({ field, label, micro }) => (
             <div key={field} style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -5729,7 +5730,7 @@ ${MENTORIA_LINK || true ? `
                   <div style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL }}>{micro}</div>
                 </div>
                 <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: C.gold, minWidth: 28, textAlign: "right" }}>
-                  {cf[field] !== "" ? cf[field] : "—"}
+                  {cf[field] !== "" ? cf[field] : "â"}
                 </div>
               </div>
               <input type="range" min="0" max="10" step="1"
@@ -5746,15 +5747,15 @@ ${MENTORIA_LINK || true ? `
             const rs = calculateRelevanceScore({ influenciaPessoas: cf.influenciaPessoas !== "" ? parseInt(cf.influenciaPessoas) : null, geraOportunidade: cf.geraOportunidade !== "" ? parseInt(cf.geraOportunidade) : null, abrePortas: cf.abrePortas !== "" ? parseInt(cf.abrePortas) : null, momentoAtual: cf.momentoAtual !== "" ? parseInt(cf.momentoAtual) : null });
             return rs !== null ? (
               <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gL}`, borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>Relevância</span>
-                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: getRelevanceLabelColor(rs) }}>{rs}% — {getRelevanceLabel(rs)}</span>
+                <span style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txM }}>RelevÃ¢ncia</span>
+                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: getRelevanceLabelColor(rs) }}>{rs}% â {getRelevanceLabel(rs)}</span>
               </div>
             ) : (
               <div style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, fontStyle: "italic" }}>Preencha os 4 campos para calcular.</div>
             );
           })()}
         </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => { setModal(null); setEditId(null); }}>Cancelar</Btn><Btn small onClick={saveEditC} disabled={!cf.name.trim()}>Salvar alterações</Btn></div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => { setModal(null); setEditId(null); }}>Cancelar</Btn><Btn small onClick={saveEditC} disabled={!cf.name.trim()}>Salvar alteraÃ§Ãµes</Btn></div>
       </Modal>}
       {/* Access Key Modal */}
       {showAccessKey && <Modal title="Ativar chave de acesso" onClose={() => setShowAccessKey(false)}>
@@ -5782,22 +5783,22 @@ ${MENTORIA_LINK || true ? `
         </div>
         <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" onClick={() => setShowAccessKey(false)}
           style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center" }}>
-          💳 Assinar PRO — R$ 39,90/mês
+          ð³ Assinar PRO â R$ 39,90/mÃªs
         </a>
       </Modal>}
 
 
-      {/* Limite interações por contato Free */}
+      {/* Limite interaÃ§Ãµes por contato Free */}
       {modal === "limiteIt" && <Modal title="Limite do plano gratuito" onClose={() => setModal(null)}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
-          <div style={{ fontSize:32, marginBottom:10 }}>🔒</div>
+          <div style={{ fontSize:32, marginBottom:10 }}>ð</div>
           <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.7 }}>
-            No plano Free você pode registrar até <strong style={{ color:C.txt }}>3 interações por contato</strong>. Assine o PRO para interações ilimitadas, Relevance Score e ações inteligentes.
+            No plano Free vocÃª pode registrar atÃ© <strong style={{ color:C.txt }}>3 interaÃ§Ãµes por contato</strong>. Assine o PRO para interaÃ§Ãµes ilimitadas, Relevance Score e aÃ§Ãµes inteligentes.
           </p>
         </div>
         <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
           style={{ display:"block", background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center", marginBottom:10 }}>
-          Assinar PRO — R$ 39,90/mês
+          Assinar PRO â R$ 39,90/mÃªs
         </a>
         <button onClick={() => { setModal(null); openAccessKey(); }}
           style={{ display:"block", width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>
@@ -5809,14 +5810,14 @@ ${MENTORIA_LINK || true ? `
       {/* Limite contatos Free */}
       {modal === "limiteCt" && <Modal title="Limite do plano gratuito" onClose={() => setModal(null)}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
-          <div style={{ fontSize:32, marginBottom:10 }}>🔒</div>
+          <div style={{ fontSize:32, marginBottom:10 }}>ð</div>
           <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txM, lineHeight:1.7 }}>
-            No plano Free você pode gerenciar até <strong style={{ color:C.txt }}>5 contatos</strong>. Assine o PRO para contatos ilimitados, Relevance Score e ações inteligentes.
+            No plano Free vocÃª pode gerenciar atÃ© <strong style={{ color:C.txt }}>5 contatos</strong>. Assine o PRO para contatos ilimitados, Relevance Score e aÃ§Ãµes inteligentes.
           </p>
         </div>
         <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer" onClick={() => setModal(null)}
           style={{ display:"block", background:C.gold, color:C.bg, borderRadius:8, padding:"11px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, textDecoration:"none", textAlign:"center", marginBottom:10 }}>
-          Assinar PRO — R$ 39,90/mês
+          Assinar PRO â R$ 39,90/mÃªs
         </a>
         <button onClick={() => { setModal(null); openAccessKey(); }}
           style={{ display:"block", width:"100%", background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", textDecoration:"underline" }}>
@@ -5825,12 +5826,12 @@ ${MENTORIA_LINK || true ? `
       </Modal>}
 
 
-      {modal === "addI" && <Modal title="Registrar interação" onClose={() => setModal(null)}>
+      {modal === "addI" && <Modal title="Registrar interaÃ§Ã£o" onClose={() => setModal(null)}>
         <div style={{ marginBottom: 16 }}><label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 6 }}>Tipo</label><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{ITYPES.map(t => <button key={t.value} onClick={() => setInf({ ...inf, type: t.value })} style={{ background: inf.type === t.value ? C.gD : C.sf, border: `1px solid ${inf.type === t.value ? C.gL : C.brd}`, borderRadius: 6, padding: "8px 14px", cursor: "pointer", fontFamily: "'DM Sans'", fontSize: 12, color: inf.type === t.value ? C.gold : C.txM }}>{t.icon} {t.label}</button>)}</div></div>
-        <Inp label="O que aconteceu? *" value={inf.desc} onChange={v => setInf({ ...inf, desc: v })} placeholder="Descreva a interação..." textarea />
+        <Inp label="O que aconteceu? *" value={inf.desc} onChange={v => setInf({ ...inf, desc: v })} placeholder="Descreva a interaÃ§Ã£o..." textarea />
         <div style={{ marginBottom: 16 }}><label style={{ fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 500, color: C.txM, display: "block", marginBottom: 6 }}>Sentimento</label><div style={{ display: "flex", gap: 8 }}>{SENTS.map(s => <button key={s.value} onClick={() => setInf({ ...inf, sentiment: s.value })} style={{ flex: 1, background: inf.sentiment === s.value ? `${s.color}14` : C.sf, border: `1px solid ${inf.sentiment === s.value ? `${s.color}40` : C.brd}`, borderRadius: 6, padding: "10px 0", cursor: "pointer", textAlign: "center", fontFamily: "'DM Sans'", fontSize: 12, color: inf.sentiment === s.value ? s.color : C.txL }}>{s.icon} {s.label}</button>)}</div></div>
-        <div style={{ marginBottom: 16 }}><button onClick={() => setInf({ ...inf, valueGen: !inf.valueGen })} style={{ display: "flex", alignItems: "center", gap: 10, background: inf.valueGen ? C.grnD : C.sf, border: `1px solid ${inf.valueGen ? `${C.grn}40` : C.brd}`, borderRadius: 8, padding: "12px 14px", cursor: "pointer", width: "100%" }}><span style={{ fontSize: 16 }}>{inf.valueGen ? "💎" : "○"}</span><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: inf.valueGen ? C.grn : C.txM }}>Gerei valor nesta interação</span></button></div>
-        <Inp label="Tags (vírgula)" value={inf.tags} onChange={v => setInf({ ...inf, tags: v })} placeholder="café, projeto, follow-up..." />
+        <div style={{ marginBottom: 16 }}><button onClick={() => setInf({ ...inf, valueGen: !inf.valueGen })} style={{ display: "flex", alignItems: "center", gap: 10, background: inf.valueGen ? C.grnD : C.sf, border: `1px solid ${inf.valueGen ? `${C.grn}40` : C.brd}`, borderRadius: 8, padding: "12px 14px", cursor: "pointer", width: "100%" }}><span style={{ fontSize: 16 }}>{inf.valueGen ? "ð" : "â"}</span><span style={{ fontFamily: "'DM Sans'", fontSize: 13, color: inf.valueGen ? C.grn : C.txM }}>Gerei valor nesta interaÃ§Ã£o</span></button></div>
+        <Inp label="Tags (vÃ­rgula)" value={inf.tags} onChange={v => setInf({ ...inf, tags: v })} placeholder="cafÃ©, projeto, follow-up..." />
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}><Btn variant="ghost" small onClick={() => setModal(null)}>Cancelar</Btn><Btn variant="success" small onClick={addI} disabled={!inf.desc.trim() || savingInteraction}>{savingInteraction ? "Registrando..." : "Registrar"}</Btn></div>
       </Modal>}
     </div>
@@ -5838,7 +5839,7 @@ ${MENTORIA_LINK || true ? `
 }
 
 
-/* ═══ SPLASH SCREEN ════════════════════════════════════════ */
+/* âââ SPLASH SCREEN ââââââââââââââââââââââââââââââââââââââââ */
 function SplashScreen({ onDone }) {
   const [phase, setPhase] = useState('in'); // 'in' | 'hold' | 'out'
   const done = useCallback(() => { setPhase('out'); setTimeout(onDone, 1000); }, [onDone]);
@@ -5855,7 +5856,7 @@ function SplashScreen({ onDone }) {
       <div style={{ opacity, transition, textAlign: 'center', maxWidth: 360 }}>
         <ConexiaIcon size={96} dark={true} style={{ margin: '0 auto 32px', display: 'block' }} />
         <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 600, color: C.gold, lineHeight: 1.5, margin: '0 0 28px', letterSpacing: '.02em' }}>
-          "Para ser intencional<br/>precisa ser estratégico."
+          "Para ser intencional<br/>precisa ser estratÃ©gico."
         </p>
         <div style={{ width: 40, height: 1, background: C.gD, margin: '0 auto 20px' }} />
         <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL, letterSpacing: '.12em', textTransform: 'uppercase' }}>{BRAND.name}</div>
@@ -5866,11 +5867,11 @@ function SplashScreen({ onDone }) {
 }
 
 
-/* ═══ ROOT ════════════════════════════════════════════════ */
-/* ═══ PUBLIC LANDING ═══════════════════════════════════════ */
-/* ─── Ilustração original: rede/constelação de nós, com um gerador
-   pseudo-aleatório determinístico (mesma seed = mesmo desenho sempre,
-   sem depender de imagem externa, sem custo de carregamento). ─── */
+/* âââ ROOT ââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* âââ PUBLIC LANDING âââââââââââââââââââââââââââââââââââââââ */
+/* âââ IlustraÃ§Ã£o original: rede/constelaÃ§Ã£o de nÃ³s, com um gerador
+   pseudo-aleatÃ³rio determinÃ­stico (mesma seed = mesmo desenho sempre,
+   sem depender de imagem externa, sem custo de carregamento). âââ */
 function mulberry32(seed) {
   return function () {
     seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -5921,8 +5922,8 @@ function ConstellationArt({ seed = 7, n = 34 }) {
 }
 
 
-/* Converte 6 valores (0–100) em pontos de polígono SVG, eixo a eixo,
-   começando no topo e girando em sentido horário — mesma orientação usada
+/* Converte 6 valores (0â100) em pontos de polÃ­gono SVG, eixo a eixo,
+   comeÃ§ando no topo e girando em sentido horÃ¡rio â mesma orientaÃ§Ã£o usada
    no radar do resultado do assessment, pra manter familiaridade visual. */
 function radarPoints(values, cx = 150, cy = 150, maxR = 110) {
   return values.map((v, i) => {
@@ -5969,11 +5970,11 @@ function HeroRadar({ values, size = 280 }) {
 }
 
 
-/* Moldura de celular genérica (não reproduz hardware/UI de nenhuma marca
-   específica) com uma conversa estilo app de mensagens, demonstrando o
-   assistente de WhatsApp do CONÉXIA. Reutilizável — cada cena passa suas
-   próprias bolhas como children. Conteúdo ilustrativo — nome e números
-   fictícios, deixado explícito na legenda logo abaixo de cada cena na página. */
+/* Moldura de celular genÃ©rica (nÃ£o reproduz hardware/UI de nenhuma marca
+   especÃ­fica) com uma conversa estilo app de mensagens, demonstrando o
+   assistente de WhatsApp do CONÃXIA. ReutilizÃ¡vel â cada cena passa suas
+   prÃ³prias bolhas como children. ConteÃºdo ilustrativo â nome e nÃºmeros
+   fictÃ­cios, deixado explÃ­cito na legenda logo abaixo de cada cena na pÃ¡gina. */
 function ChatBubble({ from, children }) {
   return (
     <div style={{ display:"flex", justifyContent: from === "bot" ? "flex-start" : "flex-end", marginBottom:10 }}>
@@ -5996,9 +5997,9 @@ function PhoneMockup({ subtitle = "assistente relacional", height = 560, childre
         <div style={{ position:"absolute", top:8, left:"50%", transform:"translateX(-50%)", width:64, height:18, background:"#000", borderRadius:20, zIndex:2 }} />
         <div style={{ paddingTop:34, display:"flex", flexDirection:"column", height:"100%" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 16px 12px", borderBottom:`1px solid ${C.brd}` }}>
-            <div style={{ width:26, height:26, borderRadius:"50%", background:`${C.gold}22`, border:`1px solid ${C.gL}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>◈</div>
+            <div style={{ width:26, height:26, borderRadius:"50%", background:`${C.gold}22`, border:`1px solid ${C.gL}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>â</div>
             <div>
-              <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:700, color:C.txt }}>CONÉXIA</div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:12, fontWeight:700, color:C.txt }}>CONÃXIA</div>
               <div style={{ fontFamily:"'DM Sans'", fontSize:9, color:C.txL }}>{subtitle}</div>
             </div>
           </div>
@@ -6012,22 +6013,22 @@ function PhoneMockup({ subtitle = "assistente relacional", height = 560, childre
 }
 
 
-/* Ícones das 6 dimensões dispostos em roda, ecoando o radar — peça visual
-   pura; a leitura (label + descrição) vem na lista logo abaixo. */
-/* Prévia grande da Teia — mesma lógica visual da tela real do app (anéis
-   concêntricos = % de saúde do relacionamento, distância do centro = saúde,
-   cor do nó = status de prioridade), com contatos de exemplo. Contatos e
-   nomes fictícios, deixado explícito na legenda logo abaixo na página. */
+/* Ãcones das 6 dimensÃµes dispostos em roda, ecoando o radar â peÃ§a visual
+   pura; a leitura (label + descriÃ§Ã£o) vem na lista logo abaixo. */
+/* PrÃ©via grande da Teia â mesma lÃ³gica visual da tela real do app (anÃ©is
+   concÃªntricos = % de saÃºde do relacionamento, distÃ¢ncia do centro = saÃºde,
+   cor do nÃ³ = status de prioridade), com contatos de exemplo. Contatos e
+   nomes fictÃ­cios, deixado explÃ­cito na legenda logo abaixo na pÃ¡gina. */
 const TEIA_PRIO_COLORS = { alta: "#4caf50", media: "#E8A020", baixa: "#ff9800" };
 const TEIA_EXAMPLE = [
-  { name: "Marina Costa", health: 88, prio: "alta", interações: 5 },
-  { name: "João Kaminski", health: 74, prio: "alta", interações: 4 },
-  { name: "Patrícia Nunes", health: 60, prio: "media", interações: 3 },
-  { name: "Eduardo Reis", health: 45, prio: "media", interações: 2 },
-  { name: "Camila Torres", health: 30, prio: "baixa", interações: 1 },
-  { name: "Rafael Sanches", health: 68, prio: "media", interações: 3 },
-  { name: "Beatriz Lima", health: 82, prio: "alta", interações: 5 },
-  { name: "Diego Farah", health: 22, prio: "baixa", interações: 1 },
+  { name: "Marina Costa", health: 88, prio: "alta", interaÃ§Ãµes: 5 },
+  { name: "JoÃ£o Kaminski", health: 74, prio: "alta", interaÃ§Ãµes: 4 },
+  { name: "PatrÃ­cia Nunes", health: 60, prio: "media", interaÃ§Ãµes: 3 },
+  { name: "Eduardo Reis", health: 45, prio: "media", interaÃ§Ãµes: 2 },
+  { name: "Camila Torres", health: 30, prio: "baixa", interaÃ§Ãµes: 1 },
+  { name: "Rafael Sanches", health: 68, prio: "media", interaÃ§Ãµes: 3 },
+  { name: "Beatriz Lima", health: 82, prio: "alta", interaÃ§Ãµes: 5 },
+  { name: "Diego Farah", health: 22, prio: "baixa", interaÃ§Ãµes: 1 },
 ];
 function TeiaPreview({ size = 340 }) {
   const cx = 200, cy = 200, R = 168;
@@ -6035,7 +6036,7 @@ function TeiaPreview({ size = 340 }) {
   const nodes = TEIA_EXAMPLE.map((c, i) => {
     const a = -Math.PI / 2 + i * step;
     const d = R * Math.max(0.15, c.health / 100);
-    return { ...c, x: cx + d * Math.cos(a), y: cy + d * Math.sin(a), col: TEIA_PRIO_COLORS[c.prio], r: 6 + c["interações"] * 2 };
+    return { ...c, x: cx + d * Math.cos(a), y: cy + d * Math.sin(a), col: TEIA_PRIO_COLORS[c.prio], r: 6 + c["interaÃ§Ãµes"] * 2 };
   });
   return (
     <svg viewBox="0 0 400 400" style={{ width: "100%", maxWidth: size, display: "block", margin: "0 auto" }}>
@@ -6047,7 +6048,7 @@ function TeiaPreview({ size = 340 }) {
         <line key={i} x1={cx} y1={cy} x2={n.x} y2={n.y} stroke={n.col} strokeWidth={1} opacity={0.25} />
       ))}
       <circle cx={cx} cy={cy} r={9} fill={C.gold} opacity={0.9} />
-      <text x={cx} y={cy + 22} textAnchor="middle" fontSize={9} fontFamily="DM Sans" fill={C.txL}>Você</text>
+      <text x={cx} y={cy + 22} textAnchor="middle" fontSize={9} fontFamily="DM Sans" fill={C.txL}>VocÃª</text>
       {nodes.map((n, i) => (
         <g key={i}>
           <circle cx={n.x} cy={n.y} r={n.r} fill={n.col} opacity={0.88}
@@ -6080,9 +6081,9 @@ function DimensionWheel({ size = 260 }) {
 }
 
 
-/* Revela um "momento" (seção de tela cheia) suavemente quando entra na
-   viewport — um único disparo por seção, não animação repetida por scroll.
-   Respeita "reduzir movimento" via a regra global já existente no index.html. */
+/* Revela um "momento" (seÃ§Ã£o de tela cheia) suavemente quando entra na
+   viewport â um Ãºnico disparo por seÃ§Ã£o, nÃ£o animaÃ§Ã£o repetida por scroll.
+   Respeita "reduzir movimento" via a regra global jÃ¡ existente no index.html. */
 function useReveal() {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -6114,11 +6115,11 @@ function Moment({ children, minH = true, style = {} }) {
 }
 
 
-// Média real das 6 dimensões nas redes já mapeadas na base — checado
+// MÃ©dia real das 6 dimensÃµes nas redes jÃ¡ mapeadas na base â checado
 // manualmente via Supabase em 10/09/2026 (RLS de `profiles` bloqueia leitura
-// anônima, então isto não é uma consulta ao vivo — atualizar à mão quando
-// fizer sentido revisitar). Só os agregados aparecem na página; a contagem
-// de amostra não é exposta publicamente por escolha do fundador.
+// anÃ´nima, entÃ£o isto nÃ£o Ã© uma consulta ao vivo â atualizar Ã  mÃ£o quando
+// fizer sentido revisitar). SÃ³ os agregados aparecem na pÃ¡gina; a contagem
+// de amostra nÃ£o Ã© exposta publicamente por escolha do fundador.
 const REDE_STATS_VALUES = [73.1, 62.5, 60.4, 61.3, 74.8, 82.6]; // mesma ordem de DIMS
 
 
@@ -6130,13 +6131,13 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
   const weakest = dimsRanked[dimsRanked.length - 1];
 
 
-  // Toque em qualquer ponto "neutro" da página avança pra próxima seção —
-  // como em Stories. Elementos com sua própria ação (botões, perfis
-  // clicáveis) marcam data-noadvance pra não disparar os dois ao mesmo tempo.
-  // Em celular, um simples onClick falha com frequência: o navegador trata
-  // qualquer toque com leve deslocamento como rolagem, não clique. Por isso
-  // medimos o toque na mão (touchstart/touchend) e só avançamos se foi um
-  // toque de verdade (pouco movimento, rápido) — onClick fica só de reforço
+  // Toque em qualquer ponto "neutro" da pÃ¡gina avanÃ§a pra prÃ³xima seÃ§Ã£o â
+  // como em Stories. Elementos com sua prÃ³pria aÃ§Ã£o (botÃµes, perfis
+  // clicÃ¡veis) marcam data-noadvance pra nÃ£o disparar os dois ao mesmo tempo.
+  // Em celular, um simples onClick falha com frequÃªncia: o navegador trata
+  // qualquer toque com leve deslocamento como rolagem, nÃ£o clique. Por isso
+  // medimos o toque na mÃ£o (touchstart/touchend) e sÃ³ avanÃ§amos se foi um
+  // toque de verdade (pouco movimento, rÃ¡pido) â onClick fica sÃ³ de reforÃ§o
   // pra quem usa mouse.
   const touchRef = useRef(null);
   const isAdvanceTarget = (target) => !target.closest("button, a, [data-noadvance]");
@@ -6168,7 +6169,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       style={{ background:C.bg, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", overflowX:"hidden", cursor:"pointer" }}>
 
 
-      {/* ═══ 1. HERO — ilustração + assinatura ═══ */}
+      {/* âââ 1. HERO â ilustraÃ§Ã£o + assinatura âââ */}
       <div style={{ minHeight:"100vh", width:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative", padding:"24px 20px" }}>
         <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"min(640px, 92vw)", aspectRatio:"3 / 4", maxHeight:"88vh" }}>
           <ConstellationArt seed={7} n={34} />
@@ -6179,35 +6180,35 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           <div style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, letterSpacing:".12em", textTransform:"uppercase", marginBottom:60 }}>{BRAND.platformTag}</div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10, opacity:0.7 }}>
             <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, letterSpacing:".05em" }}>Role pra conhecer</div>
-            <div style={{ fontSize:18, color:C.gold, animation:"bounce 1.8s infinite" }}>↓</div>
+            <div style={{ fontSize:18, color:C.gold, animation:"bounce 1.8s infinite" }}>â</div>
           </div>
         </div>
       </div>
 
 
-      {/* ═══ 2. AFIRMAÇÃO CENTRAL ═══ */}
+      {/* âââ 2. AFIRMAÃÃO CENTRAL âââ */}
       <Moment style={{ position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:`radial-gradient(circle at 50% 35%, #8a6b24 0%, #3a2f18 32%, #17140e 68%, #0d0c09 100%)`, backgroundSize:"cover", backgroundPosition:"center" }} />
         <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}CC, ${C.bg}66 40%, ${C.bg}CC)` }} />
         <div style={{ position:"relative", zIndex:1 }}>
           <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.txt, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"0 20px" }}>
-            Sua rede não é uma lista de contatos.
+            Sua rede nÃ£o Ã© uma lista de contatos.
           </h1>
           <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:38, fontWeight:700, color:C.gold, lineHeight:1.25, textAlign:"center", maxWidth:380, margin:"6px 20px 0" }}>
-            É um mapa.
+            Ã um mapa.
           </h1>
         </div>
       </Moment>
 
 
-      {/* ═══ 3. O PROBLEMA ═══ */}
+      {/* âââ 3. O PROBLEMA âââ */}
       <Moment style={{ position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:`linear-gradient(135deg, #101510 0%, #243128 48%, #0d0f0d 100%)`, backgroundSize:"cover", backgroundPosition:"center 30%" }} />
         <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}E6 0%, ${C.bg}99 45%, ${C.bg}F2 100%)` }} />
         <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:18 }}>O QUE NORMALMENTE ACONTECE</div>
           <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
-            Você não falha em relacionamentos profissionais por falta de esforço. Falha por falta de clareza.
+            VocÃª nÃ£o falha em relacionamentos profissionais por falta de esforÃ§o. Falha por falta de clareza.
           </p>
         </div>
       </Moment>
@@ -6217,18 +6218,18 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         <div style={{ position:"absolute", inset:0, backgroundImage:`linear-gradient(135deg, #11130d 0%, #2d3024 48%, #0d0e0a 100%)`, backgroundSize:"cover", backgroundPosition:"center 35%" }} />
         <div style={{ position:"absolute", inset:0, background:`linear-gradient(180deg, ${C.bg}E6 0%, ${C.bg}80 45%, ${C.bg}F2 100%)` }} />
         <div style={{ position:"relative", maxWidth:400, textAlign:"center", padding:"0 24px" }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.gold, letterSpacing:".08em", marginBottom:18 }}>O QUE O CONÉXIA MUDA</div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.gold, letterSpacing:".08em", marginBottom:18 }}>O QUE O CONÃXIA MUDA</div>
           <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:600, color:C.txt, lineHeight:1.45, margin:0 }}>
-            Um diagnóstico que mostra onde sua rede é forte, onde ela racha, e o que fazer amanhã de manhã.
+            Um diagnÃ³stico que mostra onde sua rede Ã© forte, onde ela racha, e o que fazer amanhÃ£ de manhÃ£.
           </p>
         </div>
       </Moment>
 
 
-      {/* ═══ 4. O RADAR — prova por dado, sem depoimento ═══ */}
+      {/* âââ 4. O RADAR â prova por dado, sem depoimento âââ */}
       <Moment>
         <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", textAlign:"center", marginBottom:8 }}>
-          O QUE AS REDES JÁ MAPEADAS REVELAM
+          O QUE AS REDES JÃ MAPEADAS REVELAM
         </div>
         <HeroRadar values={radarValues} size={320} />
         <div style={{ display:"flex", justifyContent:"center", gap:32, margin:"20px 0 16px" }}>
@@ -6243,16 +6244,16 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           </div>
         </div>
         <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontStyle:"italic", color:C.txt, lineHeight:1.5, textAlign:"center", maxWidth:340, margin:0 }}>
-          Em média, as pessoas confiam mais nelas mesmas do que aparecem.
+          Em mÃ©dia, as pessoas confiam mais nelas mesmas do que aparecem.
         </p>
       </Moment>
 
 
-      {/* ═══ 5-7. COMO FUNCIONA — um passo por tela ═══ */}
+      {/* âââ 5-7. COMO FUNCIONA â um passo por tela âââ */}
       {[
-        { n:"01", t:"Diagnóstico gratuito", d:"18 perguntas cobrindo as 6 dimensões que sustentam uma rede relacional saudável — menos de 10 minutos." },
-        { n:"02", t:"Seu perfil relacional", d:"Entre 8 perfis mapeados, descubra qual descreve como você constrói e mantém relações hoje." },
-        { n:"03", t:"Sua rede, de verdade", d:"Cadastre suas conexões e veja o mapa da sua rede — a Teia — priorizado por quem precisa de atenção agora, com assistente de WhatsApp." },
+        { n:"01", t:"DiagnÃ³stico gratuito", d:"18 perguntas cobrindo as 6 dimensÃµes que sustentam uma rede relacional saudÃ¡vel â menos de 10 minutos." },
+        { n:"02", t:"Seu perfil relacional", d:"Entre 8 perfis mapeados, descubra qual descreve como vocÃª constrÃ³i e mantÃ©m relaÃ§Ãµes hoje." },
+        { n:"03", t:"Sua rede, de verdade", d:"Cadastre suas conexÃµes e veja o mapa da sua rede â a Teia â priorizado por quem precisa de atenÃ§Ã£o agora, com assistente de WhatsApp." },
       ].map(s => (
         <Moment key={s.n}>
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:64, fontWeight:700, color:C.gL, lineHeight:1, marginBottom:8 }}>{s.n}</div>
@@ -6262,7 +6263,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       ))}
 
 
-      {/* ═══ 7.4 — A TEIA, EM GRANDE ═══ */}
+      {/* âââ 7.4 â A TEIA, EM GRANDE âââ */}
       <Moment>
         <div style={{ textAlign:"center", marginBottom:16, padding:"0 24px" }}>
           <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>A TEIA DA SUA REDE</div>
@@ -6272,7 +6273,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
         </div>
         <TeiaPreview size={360} />
         <div style={{ display:"flex", gap:18, justifyContent:"center", marginTop:16, flexWrap:"wrap" }}>
-          {[{c:"#4caf50",l:"Presente e importante"},{c:"#E8A020",l:"Talvez mereça atenção"},{c:"#ff9800",l:"Relação tranquila"}].map(x => (
+          {[{c:"#4caf50",l:"Presente e importante"},{c:"#E8A020",l:"Talvez mereÃ§a atenÃ§Ã£o"},{c:"#ff9800",l:"RelaÃ§Ã£o tranquila"}].map(x => (
             <div key={x.l} style={{ display:"flex", alignItems:"center", gap:6 }}>
               <div style={{ width:8, height:8, borderRadius:"50%", background:x.c }} />
               <div style={{ fontFamily:"'DM Sans'", fontSize:10.5, color:C.txL }}>{x.l}</div>
@@ -6280,62 +6281,62 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
           ))}
         </div>
         <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", maxWidth:320, margin:"20px 24px 0" }}>
-          Exemplo ilustrativo — sua Teia real mostra seus próprios contatos, com cor e distância calculadas pelo histórico de cada relação.
+          Exemplo ilustrativo â sua Teia real mostra seus prÃ³prios contatos, com cor e distÃ¢ncia calculadas pelo histÃ³rico de cada relaÃ§Ã£o.
         </p>
       </Moment>
 
 
-      {/* ═══ 7.5 — O ASSISTENTE DE WHATSAPP EM AÇÃO ═══ */}
+      {/* âââ 7.5 â O ASSISTENTE DE WHATSAPP EM AÃÃO âââ */}
       <Moment>
         <div style={{ textAlign:"center", marginBottom:28, padding:"0 24px" }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>ENQUANTO VOCÊ TRABALHA</div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>ENQUANTO VOCÃ TRABALHA</div>
           <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.35, maxWidth:340, margin:"0 auto" }}>
-            O CONÉXIA avisa antes de você esquecer — direto no WhatsApp.
+            O CONÃXIA avisa antes de vocÃª esquecer â direto no WhatsApp.
           </h2>
         </div>
         <PhoneMockup>
-          <ChatBubble from="bot">Bom dia! Você não fala com a <b>Marina Costa</b> há 42 dias — ela foi peça-chave na sua última negociação. Bora reativar?</ChatBubble>
+          <ChatBubble from="bot">Bom dia! VocÃª nÃ£o fala com a <b>Marina Costa</b> hÃ¡ 42 dias â ela foi peÃ§a-chave na sua Ãºltima negociaÃ§Ã£o. Bora reativar?</ChatBubble>
           <ChatBubble from="user">Boa, manda uma ideia</ChatBubble>
-          <ChatBubble from="bot">"Marina, lembrei de você — como está a expansão do projeto que comentou? Bora marcar um café?" ✍️</ChatBubble>
-          <ChatBubble from="bot">📊 Sua Carta de Evolução da semana: Health Score 74 <span style={{color:"#6FCF97"}}>(+3)</span>. Consistência subiu 8 pontos.</ChatBubble>
+          <ChatBubble from="bot">"Marina, lembrei de vocÃª â como estÃ¡ a expansÃ£o do projeto que comentou? Bora marcar um cafÃ©?" âï¸</ChatBubble>
+          <ChatBubble from="bot">ð Sua Carta de EvoluÃ§Ã£o da semana: Health Score 74 <span style={{color:"#6FCF97"}}>(+3)</span>. ConsistÃªncia subiu 8 pontos.</ChatBubble>
         </PhoneMockup>
         <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", maxWidth:300, margin:"24px 24px 0" }}>
-          Exemplo ilustrativo do assistente — os alertas reais usam os contatos e o histórico da sua própria rede.
+          Exemplo ilustrativo do assistente â os alertas reais usam os contatos e o histÃ³rico da sua prÃ³pria rede.
         </p>
       </Moment>
 
 
-      {/* ═══ 7.6 — BRIEFING ANTES DE UMA REUNIÃO ═══ */}
+      {/* âââ 7.6 â BRIEFING ANTES DE UMA REUNIÃO âââ */}
       <Moment>
         <div style={{ textAlign:"center", marginBottom:28, padding:"0 24px" }}>
-          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>ANTES DE UMA REUNIÃO IMPORTANTE</div>
+          <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txL, letterSpacing:".08em", marginBottom:10 }}>ANTES DE UMA REUNIÃO IMPORTANTE</div>
           <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:700, color:C.txt, lineHeight:1.35, maxWidth:340, margin:"0 auto" }}>
-            "Vou falar com o João. O que eu preciso saber?"
+            "Vou falar com o JoÃ£o. O que eu preciso saber?"
           </h2>
         </div>
         <PhoneMockup subtitle="briefing de contato" height={600}>
-          <ChatBubble from="user">Vou almoçar com o João Kaminski daqui a pouco, me dá um briefing</ChatBubble>
+          <ChatBubble from="user">Vou almoÃ§ar com o JoÃ£o Kaminski daqui a pouco, me dÃ¡ um briefing</ChatBubble>
           <ChatBubble from="bot">
-            <div style={{ fontWeight:700, marginBottom:4 }}>📋 João Kaminski</div>
-            <div style={{ marginBottom:6 }}><b>Estado:</b> relação sólida, mas 51 dias sem contato direto desde a reunião sobre expansão da fazenda.</div>
-            <div style={{ marginBottom:6 }}><b>Atenção:</b> ele mencionou decisão de compra "até o fim do trimestre" — prazo vence essa semana.</div>
-            <div style={{ marginBottom:6 }}><b>Gancho:</b> pergunte como ficou a decisão sobre a área nova antes de qualquer coisa.</div>
-            <div><b>Próximo passo:</b> propor visita técnica em até 7 dias.</div>
+            <div style={{ fontWeight:700, marginBottom:4 }}>ð JoÃ£o Kaminski</div>
+            <div style={{ marginBottom:6 }}><b>Estado:</b> relaÃ§Ã£o sÃ³lida, mas 51 dias sem contato direto desde a reuniÃ£o sobre expansÃ£o da fazenda.</div>
+            <div style={{ marginBottom:6 }}><b>AtenÃ§Ã£o:</b> ele mencionou decisÃ£o de compra "atÃ© o fim do trimestre" â prazo vence essa semana.</div>
+            <div style={{ marginBottom:6 }}><b>Gancho:</b> pergunte como ficou a decisÃ£o sobre a Ã¡rea nova antes de qualquer coisa.</div>
+            <div><b>PrÃ³ximo passo:</b> propor visita tÃ©cnica em atÃ© 7 dias.</div>
           </ChatBubble>
         </PhoneMockup>
         <p style={{ fontFamily:"'DM Sans'", fontSize:12.5, color:C.txL, lineHeight:1.6, textAlign:"center", maxWidth:300, margin:"24px 24px 0" }}>
-          Exemplo ilustrativo — o briefing real é gerado pela IA a partir do histórico de cada contato, com perguntas sugeridas e objetivo estratégico.
+          Exemplo ilustrativo â o briefing real Ã© gerado pela IA a partir do histÃ³rico de cada contato, com perguntas sugeridas e objetivo estratÃ©gico.
         </p>
       </Moment>
 
 
-      {/* ═══ 8. AS 6 DIMENSÕES ═══ */}
+      {/* âââ 8. AS 6 DIMENSÃES âââ */}
       <Moment minH={false} style={{ padding:"80px 0" }}>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 6px", padding:"0 20px" }}>
-          As 6 dimensões que medimos
+          As 6 dimensÃµes que medimos
         </h2>
         <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 40px", padding:"0 20px" }}>
-          Nenhuma rede é forte ou fraca de um jeito só.
+          Nenhuma rede Ã© forte ou fraca de um jeito sÃ³.
         </p>
         <div style={{ width:"100%" }}>
           {DIMS.map((d, i) => (
@@ -6355,10 +6356,10 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </Moment>
 
 
-      {/* ═══ 9. 8 PERFIS — lista tipográfica, sem cartão ═══ */}
+      {/* âââ 9. 8 PERFIS â lista tipogrÃ¡fica, sem cartÃ£o âââ */}
       <Moment minH={false} style={{ padding:"80px 20px" }}>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:700, color:C.txt, textAlign:"center", margin:"0 0 6px" }}>
-          Qual é o seu perfil relacional?
+          Qual Ã© o seu perfil relacional?
         </h2>
         <p style={{ fontFamily:"'DM Sans'", fontSize:13, color:C.txL, textAlign:"center", margin:"0 0 32px" }}>
           Toque em cada um pra ver o que ele revela.
@@ -6375,7 +6376,7 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
                     <div style={{ fontFamily:"'DM Sans'", fontSize:15, fontWeight:700, color:C.txt }}>{p.name}</div>
                     <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:14, fontStyle:"italic", color:C.gold }}>{p.tagline}</div>
                   </div>
-                  <div style={{ fontSize:13, color:C.txL, transform: isOpen ? "rotate(180deg)" : "none", transition:`transform ${MOTION.fast}` }}>▾</div>
+                  <div style={{ fontSize:13, color:C.txL, transform: isOpen ? "rotate(180deg)" : "none", transition:`transform ${MOTION.fast}` }}>â¾</div>
                 </div>
                 {isOpen && (
                   <div style={{ fontFamily:"'DM Sans'", fontSize:13.5, color:C.txM, lineHeight:1.7, marginTop:14, paddingLeft:38 }}>
@@ -6389,37 +6390,37 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
       </Moment>
 
 
-      {/* ═══ 10. CTA FINAL ═══ */}
+      {/* âââ 10. CTA FINAL âââ */}
       <Moment>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.txt, textAlign:"center", lineHeight:1.3, maxWidth:360, margin:"0 0 8px" }}>
           Para ser intencional
         </h2>
         <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:700, color:C.gold, textAlign:"center", lineHeight:1.3, maxWidth:360, margin:"0 0 40px" }}>
-          precisa ser estratégico.
+          precisa ser estratÃ©gico.
         </h2>
         <div style={{ display:"flex", flexDirection:"column", gap:12, width:"100%", maxWidth:340, padding:"0 24px" }}>
           <button onClick={onSignup}
             style={{ background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:12, padding:"16px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:700, color:C.bg, cursor:"pointer", width:"100%" }}>
-            Fazer diagnóstico gratuito
+            Fazer diagnÃ³stico gratuito
           </button>
           <button onClick={onLogin}
             style={{ background:"transparent", border:`1.5px solid ${C.brd}`, borderRadius:12, padding:"14px 0", fontFamily:"'DM Sans'", fontSize:14, fontWeight:500, color:C.txM, cursor:"pointer", width:"100%" }}>
-            Já tenho conta — Entrar
+            JÃ¡ tenho conta â Entrar
           </button>
         </div>
 
 
         {urlKey && (
           <div style={{ marginTop:20, background:`${C.gold}12`, border:`1px solid ${C.gL}`, borderRadius:10, padding:"10px 20px", textAlign:"center", maxWidth:340 }}>
-            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.gold, fontWeight:600 }}>🎁 Chave de acesso detectada: <span style={{ fontFamily:"'JetBrains Mono'", letterSpacing:".06em" }}>{urlKey}</span></div>
+            <div style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.gold, fontWeight:600 }}>ð Chave de acesso detectada: <span style={{ fontFamily:"'JetBrains Mono'", letterSpacing:".06em" }}>{urlKey}</span></div>
             <div style={{ fontFamily:"'DM Sans'", fontSize:10, color:C.txL, marginTop:3 }}>Crie sua conta para ativar o acesso PRO automaticamente</div>
           </div>
         )}
         <div style={{ marginTop:24, fontFamily:"'DM Sans'", fontSize:11, color:C.txL, textAlign:"center" }}>
-          Criado por Rafael Milléo
+          Criado por Rafael MillÃ©o
         </div>
         <div style={{ marginTop:12, fontFamily:"'DM Sans'", fontSize:10, color:C.txL, opacity:0.7, textAlign:"center", lineHeight:1.5, paddingBottom:20 }}>
-          {BRAND.legalName} · CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}
+          {BRAND.legalName} Â· CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}
         </div>
       </Moment>
     </div>
@@ -6429,36 +6430,36 @@ function PublicLanding({ onSignup, onLogin, urlKey = "" }) {
 
 
 
-/* ═══ Traduz mensagens de erro do Supabase Auth pra português simples ═══ */
-function friendlyAuthError(e, fallback = "Erro de conexão.") {
+/* âââ Traduz mensagens de erro do Supabase Auth pra portuguÃªs simples âââ */
+function friendlyAuthError(e, fallback = "Erro de conexÃ£o.") {
   const raw = e?.message || "";
   const m = raw.toLowerCase();
   if (m.includes("password") && (m.includes("character") || m.includes("weak") || m.includes("should contain") || m.includes("at least"))) {
-    return "A senha deve conter pelo menos 1 letra maiúscula, 1 número e 1 caractere especial.";
+    return "A senha deve conter pelo menos 1 letra maiÃºscula, 1 nÃºmero e 1 caractere especial.";
   }
   if (m.includes("password") && m.includes("6 characters")) {
-    return "A senha precisa ter no mínimo 6 caracteres.";
+    return "A senha precisa ter no mÃ­nimo 6 caracteres.";
   }
   if (m.includes("invalid login credentials")) {
     return "Email ou senha incorretos.";
   }
   if (m.includes("user already registered") || (m.includes("already") && m.includes("registered"))) {
-    return "Já existe uma conta com esse email. Tenta entrar em vez de criar uma nova.";
+    return "JÃ¡ existe uma conta com esse email. Tenta entrar em vez de criar uma nova.";
   }
   if (m.includes("email") && m.includes("invalid")) {
-    return "Digite um email válido.";
+    return "Digite um email vÃ¡lido.";
   }
   if (m.includes("rate limit") || m.includes("too many")) {
     return "Muitas tentativas seguidas. Espera um minuto e tenta de novo.";
   }
   if (m.includes("network") || m.includes("fetch")) {
-    return "Erro de conexão. Confere sua internet e tenta de novo.";
+    return "Erro de conexÃ£o. Confere sua internet e tenta de novo.";
   }
   return raw || fallback;
 }
 
 
-/* ═══ AUTH ═════════════════════════════════════════════════ */
+/* âââ AUTH âââââââââââââââââââââââââââââââââââââââââââââââââ */
 function Auth({ onAuth, initialMode = "signup" }) {
   const [mode, setMode] = useState(initialMode || "signup");
   const [email, setEmail] = useState("");
@@ -6482,10 +6483,10 @@ function Auth({ onAuth, initialMode = "signup" }) {
         redirectTo: window.location.origin,
       });
       if (error) throw error;
-      setForgotMsg(`✅ Se esse email tiver uma conta no ${BRAND.name}, enviamos um link pra redefinir a senha. Confere sua caixa de entrada (e o spam) — o link é válido por 1 hora.`);
+      setForgotMsg(`â Se esse email tiver uma conta no ${BRAND.name}, enviamos um link pra redefinir a senha. Confere sua caixa de entrada (e o spam) â o link Ã© vÃ¡lido por 1 hora.`);
     } catch (e) {
       console.error("[ForgotPassword]", e);
-      setForgotMsg("Não consegui enviar agora. Tenta de novo em instantes.");
+      setForgotMsg("NÃ£o consegui enviar agora. Tenta de novo em instantes.");
     }
     setForgotBusy(false);
   };
@@ -6496,7 +6497,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
     try {
       if (mode === "signup") {
         if (!name.trim()) { setErr("Informe seu nome."); setBusy(false); return; }
-        if (!lgpd) { setErr("Você precisa aceitar a Política de Privacidade para continuar."); setBusy(false); return; }
+        if (!lgpd) { setErr("VocÃª precisa aceitar a PolÃ­tica de Privacidade para continuar."); setBusy(false); return; }
         const { data, error } = await supabase.auth.signUp({
           email, password: pass,
           options: { data: {
@@ -6510,12 +6511,12 @@ function Auth({ onAuth, initialMode = "signup" }) {
         if (data?.user) {
           supabase.from("page_events").insert({ user_id: data.user.id, event_type: "signup_completed", tab_name: "auth" }).then(() => {}, () => {});
         }
-        // O aceite LGPD é gravado no servidor pelo gatilho handle_new_user,
-        // de forma confiável independente de haver sessão ativa neste momento
-        // (necessário pois signUp pode não retornar sessão se a confirmação
+        // O aceite LGPD Ã© gravado no servidor pelo gatilho handle_new_user,
+        // de forma confiÃ¡vel independente de haver sessÃ£o ativa neste momento
+        // (necessÃ¡rio pois signUp pode nÃ£o retornar sessÃ£o se a confirmaÃ§Ã£o
         // de e-mail estiver habilitada no projeto).
         if (data?.session) { onAuth(data.session, data.user); return; }
-        if (data?.user) { setErr("Conta criada! Faça login."); setMode("login"); }
+        if (data?.user) { setErr("Conta criada! FaÃ§a login."); setMode("login"); }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
@@ -6531,7 +6532,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
       <div style={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
         <div style={{ width: 60, height: 60, borderRadius: 16, background: `linear-gradient(135deg,${C.gold},${C.gB})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 700, color: C.bg }}>C</div>
         <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 700, color: C.txt, margin: "0 0 6px" }}>{BRAND.name}</h1>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, margin: "0 0 28px" }}>Seu sistema pessoal de inteligência relacional.</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, margin: "0 0 28px" }}>Seu sistema pessoal de inteligÃªncia relacional.</p>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 28, textAlign: "left" }}>
           <div style={{ display: "flex", marginBottom: 22 }}>
             {["login", "signup"].map(m => (
@@ -6541,14 +6542,14 @@ function Auth({ onAuth, initialMode = "signup" }) {
           {err && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, background: C.corD, borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>{err}</div>}
           {mode === "signup" && <Inp label="Seu nome" value={name} onChange={setName} placeholder="Como podemos te chamar?" />}
           <Inp label="Email" value={email} onChange={setEmail} placeholder="seu@email.com" type="email" />
-          <Inp label="Senha" value={pass} onChange={setPass} placeholder="Mínimo 6 caracteres" type="password" />
+          <Inp label="Senha" value={pass} onChange={setPass} placeholder="MÃ­nimo 6 caracteres" type="password" />
           {mode === "signup" && (
             <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:16, marginTop:4 }}>
               <div
                 onClick={() => setLgpd(!lgpd)}
                 style={{ width:18, height:18, minWidth:18, borderRadius:4, border:`2px solid ${lgpd ? C.gold : C.brd}`, background: lgpd ? C.gold : "transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", marginTop:1 }}
               >
-                {lgpd && <span style={{ color:C.bg, fontSize:11, fontWeight:700, lineHeight:1 }}>✓</span>}
+                {lgpd && <span style={{ color:C.bg, fontSize:11, fontWeight:700, lineHeight:1 }}>â</span>}
               </div>
               <span style={{ fontFamily:"'DM Sans'", fontSize:11, color:C.txL, lineHeight:1.5 }}>
                 Li e aceito a{" "}
@@ -6556,7 +6557,7 @@ function Auth({ onAuth, initialMode = "signup" }) {
                   onClick={() => setShowPrivacy(true)}
                   style={{ color:C.gold, cursor:"pointer", textDecoration:"underline" }}
                 >
-                  Política de Privacidade
+                  PolÃ­tica de Privacidade
                 </span>
                 {" "}e os{" "}
                 <span
@@ -6573,18 +6574,18 @@ function Auth({ onAuth, initialMode = "signup" }) {
             <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
               <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"80vh", overflowY:"auto" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                  <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:0 }}>Política de Privacidade e Termos de Uso</h2>
-                  <button onClick={() => setShowPrivacy(false)} style={{ background:"none", border:"none", color:C.txL, fontSize:20, cursor:"pointer", lineHeight:1 }}>×</button>
+                  <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:0 }}>PolÃ­tica de Privacidade e Termos de Uso</h2>
+                  <button onClick={() => setShowPrivacy(false)} style={{ background:"none", border:"none", color:C.txL, fontSize:20, cursor:"pointer", lineHeight:1 }}>Ã</button>
                 </div>
                 <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7 }}>
-                  <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligência relacional para profissionais do agronegócio, operada por {BRAND.legalName}, CNPJ {BRAND.legalCnpj}, com sede em {BRAND.legalAddress}.</p>
-                  <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Coletamos nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
-                  <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Os dados são utilizados exclusivamente para personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
-                  <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>O tratamento é realizado com base no consentimento do titular (Art. 7º, I) e para execução do contrato de uso da plataforma (Art. 7º, V).</p>
-                  <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados não são vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
-                  <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Você pode solicitar acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento pelo e-mail: <strong>{BRAND.supportEmail}</strong>.</p>
-                  <p><strong style={{color:C.txt}}>7. Retenção</strong><br/>Os dados são mantidos enquanto a conta estiver ativa. Após exclusão, os dados são removidos em até 30 dias.</p>
-                  <p><strong style={{color:C.txt}}>8. Termos de Uso</strong><br/>O uso da plataforma é pessoal e intransferível. É vedado o uso para fins ilícitos, spam ou coleta de dados de terceiros sem consentimento.</p>
+                  <p><strong style={{color:C.txt}}>1. ResponsÃ¡vel pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligÃªncia relacional para profissionais do agronegÃ³cio, operada por {BRAND.legalName}, CNPJ {BRAND.legalCnpj}, com sede em {BRAND.legalAddress}.</p>
+                  <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Coletamos nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histÃ³rico de interaÃ§Ãµes com contatos.</p>
+                  <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Os dados sÃ£o utilizados exclusivamente para personalizar os insights de inteligÃªncia relacional, gerar diagnÃ³sticos e recomendaÃ§Ãµes dentro da plataforma.</p>
+                  <p><strong style={{color:C.txt}}>4. Base legal (LGPD â Lei 13.709/2018)</strong><br/>O tratamento Ã© realizado com base no consentimento do titular (Art. 7Âº, I) e para execuÃ§Ã£o do contrato de uso da plataforma (Art. 7Âº, V).</p>
+                  <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados nÃ£o sÃ£o vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
+                  <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>VocÃª pode solicitar acesso, correÃ§Ã£o, exclusÃ£o ou portabilidade dos seus dados a qualquer momento pelo e-mail: <strong>{BRAND.supportEmail}</strong>.</p>
+                  <p><strong style={{color:C.txt}}>7. RetenÃ§Ã£o</strong><br/>Os dados sÃ£o mantidos enquanto a conta estiver ativa. ApÃ³s exclusÃ£o, os dados sÃ£o removidos em atÃ© 30 dias.</p>
+                  <p><strong style={{color:C.txt}}>8. Termos de Uso</strong><br/>O uso da plataforma Ã© pessoal e intransferÃ­vel. Ã vedado o uso para fins ilÃ­citos, spam ou coleta de dados de terceiros sem consentimento.</p>
                 </div>
                 <button onClick={() => { setLgpd(true); setShowPrivacy(false); }} style={{ width:"100%", marginTop:16, background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer" }}>Li e aceito os termos</button>
               </div>
@@ -6596,24 +6597,24 @@ function Auth({ onAuth, initialMode = "signup" }) {
           )}
           {mode === "login" && forgotOpen && (
             <div style={{ marginTop:4 }}>
-              <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:12 }}>Digite seu email pra receber o link de redefinição de senha:</div>
+              <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:12 }}>Digite seu email pra receber o link de redefiniÃ§Ã£o de senha:</div>
               <Inp label="Email" value={forgotEmail} onChange={setForgotEmail} placeholder="seu@email.com" type="email" />
-              {forgotMsg && <div style={{ fontFamily:"'DM Sans'", fontSize:12, color: forgotMsg.startsWith("✅") ? C.grn : C.cor, background: forgotMsg.startsWith("✅") ? C.grnD : C.corD, borderRadius:8, padding:"10px 14px", marginBottom:14, lineHeight:1.5 }}>{forgotMsg}</div>}
-              <Btn onClick={sendResetEmail} disabled={forgotBusy || !forgotEmail} full>{forgotBusy ? "Enviando..." : "Enviar link de redefinição"}</Btn>
-              <button onClick={() => setForgotOpen(false)} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>← Voltar pro login</button>
+              {forgotMsg && <div style={{ fontFamily:"'DM Sans'", fontSize:12, color: forgotMsg.startsWith("â") ? C.grn : C.cor, background: forgotMsg.startsWith("â") ? C.grnD : C.corD, borderRadius:8, padding:"10px 14px", marginBottom:14, lineHeight:1.5 }}>{forgotMsg}</div>}
+              <Btn onClick={sendResetEmail} disabled={forgotBusy || !forgotEmail} full>{forgotBusy ? "Enviando..." : "Enviar link de redefiniÃ§Ã£o"}</Btn>
+              <button onClick={() => setForgotOpen(false)} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>â Voltar pro login</button>
             </div>
           )}
         </div>
-        <button onClick={() => window.history.back()} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>← Voltar para a página inicial</button>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 8 }}>"Networking, além do cafezinho" · Rafael Milléo</p>
-        <p style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, opacity: 0.7, marginTop: 10, lineHeight: 1.5 }}>{BRAND.legalName} · CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}</p>
+        <button onClick={() => window.history.back()} style={{ background:"none", border:"none", fontFamily:"'DM Sans'", fontSize:11, color:C.txL, cursor:"pointer", marginTop:14, display:"block", width:"100%", textAlign:"center" }}>â Voltar para a pÃ¡gina inicial</button>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 11, color: C.txL, marginTop: 8 }}>"Networking, alÃ©m do cafezinho" Â· Rafael MillÃ©o</p>
+        <p style={{ fontFamily: "'DM Sans'", fontSize: 10, color: C.txL, opacity: 0.7, marginTop: 10, lineHeight: 1.5 }}>{BRAND.legalName} Â· CNPJ {BRAND.legalCnpj}<br/>{BRAND.legalAddress}</p>
       </div>
     </div>
   );
 }
 
 
-/* ═══ RESET DE SENHA ══════════════════════════════════════ */
+/* âââ RESET DE SENHA ââââââââââââââââââââââââââââââââââââââ */
 function ResetPassword({ onDone }) {
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
@@ -6623,8 +6624,8 @@ function ResetPassword({ onDone }) {
 
   const submit = async () => {
     setErr("");
-    if (pass.length < 6) { setErr("A senha precisa ter no mínimo 6 caracteres."); return; }
-    if (pass !== pass2) { setErr("As senhas não conferem."); return; }
+    if (pass.length < 6) { setErr("A senha precisa ter no mÃ­nimo 6 caracteres."); return; }
+    if (pass !== pass2) { setErr("As senhas nÃ£o conferem."); return; }
     setBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: pass });
@@ -6632,7 +6633,7 @@ function ResetPassword({ onDone }) {
       onDone();
     } catch (e) {
       console.error("[ResetPassword]", e);
-      setErr(friendlyAuthError(e, "Não consegui atualizar a senha. Tenta gerar um novo link."));
+      setErr(friendlyAuthError(e, "NÃ£o consegui atualizar a senha. Tenta gerar um novo link."));
     }
     setBusy(false);
   };
@@ -6646,7 +6647,7 @@ function ResetPassword({ onDone }) {
         <p style={{ fontFamily: "'DM Sans'", fontSize: 14, color: C.txM, margin: "0 0 24px" }}>Defina sua nova senha de acesso ao {BRAND.name}.</p>
         <div style={{ background: C.card, border: `1px solid ${C.brd}`, borderRadius: 14, padding: 28, textAlign: "left" }}>
           {err && <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.cor, background: C.corD, borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>{err}</div>}
-          <Inp label="Nova senha" value={pass} onChange={setPass} placeholder="Mínimo 6 caracteres" type="password" />
+          <Inp label="Nova senha" value={pass} onChange={setPass} placeholder="MÃ­nimo 6 caracteres" type="password" />
           <Inp label="Confirme a nova senha" value={pass2} onChange={setPass2} placeholder="Repita a senha" type="password" />
           <Btn onClick={submit} disabled={busy || pass.length < 6} full>{busy ? "Salvando..." : "Salvar nova senha"}</Btn>
         </div>
@@ -6656,11 +6657,11 @@ function ResetPassword({ onDone }) {
 }
 
 
-/* ═══ ROOT ════════════════════════════════════════════════ */
-function ProLock({ title = "Recurso disponível no PRO", desc = `Desbloqueie o ${BRAND.name} completo para transformar diagnóstico em ação prática.`, cta = "Assinar PRO — R$ 39,90/mês", onKey, user }) {
+/* âââ ROOT ââââââââââââââââââââââââââââââââââââââââââââââââ */
+function ProLock({ title = "Recurso disponÃ­vel no PRO", desc = `Desbloqueie o ${BRAND.name} completo para transformar diagnÃ³stico em aÃ§Ã£o prÃ¡tica.`, cta = "Assinar PRO â R$ 39,90/mÃªs", onKey, user }) {
   return (
     <div style={{ background:"#161618", border:"1px solid #2a2825", borderRadius:12, padding:24, textAlign:"center", margin:"8px 0" }}>
-      <div style={{ fontSize:28, marginBottom:10 }}>🔒</div>
+      <div style={{ fontSize:28, marginBottom:10 }}>ð</div>
       <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:17, fontWeight:700, color:"#e8e4da", marginBottom:6 }}>{title}</div>
       <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:"#6a6460", lineHeight:1.6, marginBottom:16, maxWidth:340, margin:"0 auto 16px" }}>{desc}</div>
       <a href={buildStripeCheckoutUrl(STRIPE.checkoutUrl, user)} target="_blank" rel="noreferrer"
@@ -6679,7 +6680,7 @@ function ProLock({ title = "Recurso disponível no PRO", desc = `Desbloqueie o $
 function App() {
   const [state, setState]       = useState("loading"); // loading | landing | auth_signup | auth_login | onboard | assess | app | reset_password
   const [splashDone, setSplashDone] = useState(false);
-  const [splashShown, setSplashShown] = useState(false); // splash já foi exibida nesta sessão
+  const [splashShown, setSplashShown] = useState(false); // splash jÃ¡ foi exibida nesta sessÃ£o
   const [user, setUser]         = useState(null);
   const [profile, setProfile]   = useState(null);
   const [assessment, setAssessment] = useState(null);
@@ -6688,8 +6689,8 @@ function App() {
   const [needsConsent, setNeedsConsent] = useState(false);
   const [consentBusy, setConsentBusy] = useState(false);
   // Contas afetadas pelo bug de 24/07 (objectives salvo como string em vez de
-  // array, rejeitado pelo Postgres). onboarding ficou marcado como concluído
-  // mas o campo nunca foi persistido. Pede pra corrigir só esse campo no login.
+  // array, rejeitado pelo Postgres). onboarding ficou marcado como concluÃ­do
+  // mas o campo nunca foi persistido. Pede pra corrigir sÃ³ esse campo no login.
   const [needsObjectivesFix, setNeedsObjectivesFix] = useState(false);
   const [objectivesFixSel, setObjectivesFixSel] = useState([]);
   const [objectivesFixBusy, setObjectivesFixBusy] = useState(false);
@@ -6721,25 +6722,25 @@ function App() {
       state === "onboard" ? "onboarding_view" : "assessment_view",
       state
     );
-    // assessment_started / assessment_resumed agora são disparados dentro do
-    // próprio componente Assess, que sabe se havia um rascunho (profile.
-    // assessment_draft) — aqui não dá pra distinguir os dois casos.
+    // assessment_started / assessment_resumed agora sÃ£o disparados dentro do
+    // prÃ³prio componente Assess, que sabe se havia um rascunho (profile.
+    // assessment_draft) â aqui nÃ£o dÃ¡ pra distinguir os dois casos.
   }, [state, user?.id, trackActivationEvent]);
 
 
   useEffect(() => {
-    // Verificar sessão atual ao iniciar
+    // Verificar sessÃ£o atual ao iniciar
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
         loadUserData(session.user.id);
       } else {
-        setState("landing");   // Sem sessão → landing pública
+        setState("landing");   // Sem sessÃ£o â landing pÃºblica
       }
     });
 
 
-    // Escutar mudanças de auth
+    // Escutar mudanÃ§as de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         setUser(session?.user || null);
@@ -6762,9 +6763,9 @@ function App() {
 
   const loadUserData = async (userId) => {
     const lsKey = BRAND.storagePrefix + "_done_" + userId;
-    // Dispara sem esperar (fire-and-forget) — se falhar, não deve travar o
+    // Dispara sem esperar (fire-and-forget) â se falhar, nÃ£o deve travar o
     // carregamento do perfil. Usado pelo cron de check-in de inatividade
-    // (api/relationship-inactivity-cron.js) para saber quem está ausente.
+    // (api/relationship-inactivity-cron.js) para saber quem estÃ¡ ausente.
     supabase.from("profiles").update({ last_access_at: new Date().toISOString() }).eq("id", userId).then(() => {}, () => {});
     try {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -6775,14 +6776,14 @@ function App() {
       }
 
 
-      // Contas criadas antes da correção do registro de consentimento LGPD
-      // não têm esse aceite gravado. Verifica e pede pra confirmar agora.
+      // Contas criadas antes da correÃ§Ã£o do registro de consentimento LGPD
+      // nÃ£o tÃªm esse aceite gravado. Verifica e pede pra confirmar agora.
       try {
         // Nunca usar .maybeSingle() aqui: se existir mais de uma linha de
-        // consentimento pro mesmo usuário (aceite antigo + reaceite), o
-        // Postgrest lança erro de "multiple rows", cai no catch abaixo e
-        // reabre o modal — isso é o que fazia o aviso de LGPD voltar a
-        // cada troca de aba/navegação, mesmo já tendo sido aceito.
+        // consentimento pro mesmo usuÃ¡rio (aceite antigo + reaceite), o
+        // Postgrest lanÃ§a erro de "multiple rows", cai no catch abaixo e
+        // reabre o modal â isso Ã© o que fazia o aviso de LGPD voltar a
+        // cada troca de aba/navegaÃ§Ã£o, mesmo jÃ¡ tendo sido aceito.
         const { data: consent } = await supabase.from("consent_logs").select("id").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
         if (!consent || consent.length === 0) setNeedsConsent(true);
       } catch { setNeedsConsent(true); }
@@ -6805,7 +6806,7 @@ function App() {
         setState("app");
         return;
       }
-      // Sem assessment no DB — verifica fallbacks
+      // Sem assessment no DB â verifica fallbacks
       if (p?.assessment_completed || localStorage.getItem(lsKey)) { setState("app"); return; }
       if (!p?.onboarding_completed) setState("onboard");
       else setState("assess");
@@ -6841,17 +6842,17 @@ function App() {
         objectives: form.objectives, onboarding_completed: true, onboarding_completed_at: new Date().toISOString(),
       });
       if (error) {
-        // Antes este erro era silenciosamente ignorado — a tela seguia pro
+        // Antes este erro era silenciosamente ignorado â a tela seguia pro
         // quiz como se tivesse salvo, mas nada persistia no banco. Agora
-        // avisa e não deixa perder os dados do onboarding sem o usuário saber.
+        // avisa e nÃ£o deixa perder os dados do onboarding sem o usuÃ¡rio saber.
         console.error("[handleOnboard] falha ao salvar perfil:", error);
-        alert("Não consegui salvar seus dados de perfil (" + (error.message || "erro desconhecido") + "). Tenta de novo em instantes — se persistir, avisa o suporte.");
+        alert("NÃ£o consegui salvar seus dados de perfil (" + (error.message || "erro desconhecido") + "). Tenta de novo em instantes â se persistir, avisa o suporte.");
         return;
       }
       setProfile({ ...profile, ...form, first_name: form.name, onboarding_completed: true });
     } catch (e) {
       console.error("[handleOnboard] erro inesperado:", e);
-      alert("Não consegui salvar seus dados de perfil. Tenta de novo em instantes — se persistir, avisa o suporte.");
+      alert("NÃ£o consegui salvar seus dados de perfil. Tenta de novo em instantes â se persistir, avisa o suporte.");
       return;
     }
     void trackActivationEvent("onboarding_completed", "onboard");
@@ -6904,11 +6905,11 @@ function App() {
     const fullScores = { ...scores, profileKey: result.profileKey, profileName: result.profileName, overall: result.overall };
 
 
-    // Idempotência: se uma tentativa anterior já inseriu o assessment mas
+    // IdempotÃªncia: se uma tentativa anterior jÃ¡ inseriu o assessment mas
     // falhou no update do perfil logo depois, uma nova tentativa (mesmo
-    // `result`, mesma sessão) não deve criar um segundo registro. Verifica
-    // se já existe um assessment igual (mesmo overall + profileKey) nos
-    // últimos 10 minutos para este usuário antes de inserir.
+    // `result`, mesma sessÃ£o) nÃ£o deve criar um segundo registro. Verifica
+    // se jÃ¡ existe um assessment igual (mesmo overall + profileKey) nos
+    // Ãºltimos 10 minutos para este usuÃ¡rio antes de inserir.
     const tenMinAgoISO = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { data: existingAttempt } = await supabase.from("assessments")
       .select("id")
@@ -6929,7 +6930,7 @@ function App() {
       });
       if (insertError) {
         console.error("[Assess] insert em assessments falhou:", insertError);
-        throw insertError; // crítico: sem isso não há diagnóstico salvo — o usuário precisa poder tentar de novo
+        throw insertError; // crÃ­tico: sem isso nÃ£o hÃ¡ diagnÃ³stico salvo â o usuÃ¡rio precisa poder tentar de novo
       }
     }
 
@@ -6942,8 +6943,8 @@ function App() {
       profile_key: result.profileKey,
       profile_name: result.profileName,
       assessment_scores: fullScores,
-      // Limpa o rascunho — o assessment foi concluído, não faz sentido
-      // restaurar respostas antigas numa próxima visita a esta tela.
+      // Limpa o rascunho â o assessment foi concluÃ­do, nÃ£o faz sentido
+      // restaurar respostas antigas numa prÃ³xima visita a esta tela.
       assessment_draft: null,
       assessment_draft_step: null,
     };
@@ -6954,15 +6955,15 @@ function App() {
       updateError = retry.error;
       if (updateError) console.error("[Assess] retry do update em profiles falhou:", updateError);
     }
-    if (updateError) throw updateError; // crítico: sem isso o app nunca sai da tela de assessment (assessment_completed continuaria false)
+    if (updateError) throw updateError; // crÃ­tico: sem isso o app nunca sai da tela de assessment (assessment_completed continuaria false)
 
 
-    // Daqui pra baixo é best-effort — não deve impedir a navegação nem
-    // acionar o retry do usuário se falhar (nada aqui é indispensável para
+    // Daqui pra baixo Ã© best-effort â nÃ£o deve impedir a navegaÃ§Ã£o nem
+    // acionar o retry do usuÃ¡rio se falhar (nada aqui Ã© indispensÃ¡vel para
     // ele seguir em frente).
     try {
-      // Ativa o plano mensurável: cria user_plans se ainda não existir para este usuário.
-      // Isso liga o trigger update_plan_progress (interactions -> plan_progress) que já existe no banco.
+      // Ativa o plano mensurÃ¡vel: cria user_plans se ainda nÃ£o existir para este usuÃ¡rio.
+      // Isso liga o trigger update_plan_progress (interactions -> plan_progress) que jÃ¡ existe no banco.
       const { data: existingPlan } = await supabase.from("user_plans").select("id").eq("user_id", user.id).maybeSingle();
       if (!existingPlan) {
         const dimEntries = DIMS.map(d => ({ label: d.label, score: scores?.[d.key] ?? 0 }));
@@ -6976,7 +6977,7 @@ function App() {
         });
         if (planError) console.error("[Assess] falha ao criar user_plans:", planError);
       }
-    } catch (e) { console.error("[Assess] excecao (não-crítica):", e); }
+    } catch (e) { console.error("[Assess] excecao (nÃ£o-crÃ­tica):", e); }
 
 
     sendToMake(result);
@@ -7014,7 +7015,7 @@ function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null); setProfile(null); setAssessment(null);
-    // onAuthStateChange disparará SIGNED_OUT e irá para landing
+    // onAuthStateChange dispararÃ¡ SIGNED_OUT e irÃ¡ para landing
   };
 
 
@@ -7076,15 +7077,15 @@ function App() {
       {needsConsent && user && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:99999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
           <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
-            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Atualizamos nossa Política de Privacidade</h2>
-            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Pra continuar usando o {BRAND.name}, precisamos que você confirme sua ciência sobre o tratamento dos seus dados, conforme a LGPD.</p>
+            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Atualizamos nossa PolÃ­tica de Privacidade</h2>
+            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Pra continuar usando o {BRAND.name}, precisamos que vocÃª confirme sua ciÃªncia sobre o tratamento dos seus dados, conforme a LGPD.</p>
             <div style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, lineHeight:1.7, marginBottom:16 }}>
-              <p><strong style={{color:C.txt}}>1. Responsável pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligência relacional para profissionais do agronegócio.</p>
-              <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histórico de interações com contatos.</p>
-              <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Personalizar os insights de inteligência relacional, gerar diagnósticos e recomendações dentro da plataforma.</p>
-              <p><strong style={{color:C.txt}}>4. Base legal (LGPD — Lei 13.709/2018)</strong><br/>Consentimento do titular (Art. 7º, I) e execução do contrato de uso da plataforma (Art. 7º, V).</p>
-              <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados não são vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
-              <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Acesso, correção, exclusão ou portabilidade dos seus dados a qualquer momento: <strong>{BRAND.supportEmail}</strong>.</p>
+              <p><strong style={{color:C.txt}}>1. ResponsÃ¡vel pelo tratamento</strong><br/>{BRAND.name}, plataforma de inteligÃªncia relacional para profissionais do agronegÃ³cio.</p>
+              <p><strong style={{color:C.txt}}>2. Dados coletados</strong><br/>Nome, e-mail, empresa, cargo, WhatsApp, LinkedIn, Instagram, cidade, estado, objetivos profissionais e histÃ³rico de interaÃ§Ãµes com contatos.</p>
+              <p><strong style={{color:C.txt}}>3. Finalidade</strong><br/>Personalizar os insights de inteligÃªncia relacional, gerar diagnÃ³sticos e recomendaÃ§Ãµes dentro da plataforma.</p>
+              <p><strong style={{color:C.txt}}>4. Base legal (LGPD â Lei 13.709/2018)</strong><br/>Consentimento do titular (Art. 7Âº, I) e execuÃ§Ã£o do contrato de uso da plataforma (Art. 7Âº, V).</p>
+              <p><strong style={{color:C.txt}}>5. Compartilhamento</strong><br/>Seus dados nÃ£o sÃ£o vendidos ou compartilhados com terceiros. Utilizamos provedores de infraestrutura (Supabase, Vercel, Google Gemini) sob acordos de confidencialidade.</p>
+              <p><strong style={{color:C.txt}}>6. Seus direitos</strong><br/>Acesso, correÃ§Ã£o, exclusÃ£o ou portabilidade dos seus dados a qualquer momento: <strong>{BRAND.supportEmail}</strong>.</p>
             </div>
             <button onClick={acceptConsentNow} disabled={consentBusy} style={{ width:"100%", background:`linear-gradient(135deg,${C.gold},${C.gB})`, border:"none", borderRadius:10, padding:"12px 0", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, color:C.bg, cursor:"pointer" }}>{consentBusy ? "Aguarde..." : "Li e aceito"}</button>
           </div>
@@ -7093,8 +7094,8 @@ function App() {
       {needsObjectivesFix && user && !needsConsent && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:99998, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
           <div style={{ background:C.card, border:`1px solid ${C.brd}`, borderRadius:14, padding:24, maxWidth:480, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
-            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>Só falta um detalhe</h2>
-            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Seus objetivos de networking não foram salvos por uma falha técnica. Selecione de novo pra deixar seu diagnóstico completo.</p>
+            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:700, color:C.txt, margin:"0 0 6px" }}>SÃ³ falta um detalhe</h2>
+            <p style={{ fontFamily:"'DM Sans'", fontSize:12, color:C.txM, marginBottom:16, lineHeight:1.6 }}>Seus objetivos de networking nÃ£o foram salvos por uma falha tÃ©cnica. Selecione de novo pra deixar seu diagnÃ³stico completo.</p>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:20 }}>
               {OBJECTIVES.map(o => {
                 const sel = objectivesFixSel.includes(o.value);
@@ -7135,4 +7136,3 @@ function App() {
 
 
 export default App;
-
