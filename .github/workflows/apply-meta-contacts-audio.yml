@@ -1,0 +1,36 @@
+name: Apply Meta Contacts Audio
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply patch
+        run: python scripts/patch_meta_contacts_audio.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add api/meta-whatsapp-webhook.js
+          git add api/whatsapp-webhook.js
+
+          git diff --cached --quiet && exit 0
+
+          git commit -m "Fix Meta shared contacts and audio"
+          git push
