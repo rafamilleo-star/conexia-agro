@@ -3,7 +3,7 @@
 // Mantém toda a inteligência existente no whatsapp-webhook.js
 // e troca somente a camada de transporte para Meta Cloud API.
 
-import { handleIncomingMessage } from './whatsapp-webhook.js';
+import { handleIncomingMessage, handleSharedContactData } from './whatsapp-webhook.js';
 
 const META_WHATSAPP_TOKEN = process.env.META_WHATSAPP_TOKEN;
 
@@ -15,6 +15,9 @@ const META_WEBHOOK_VERIFY_TOKEN =
 
 const META_GRAPH_API_VERSION =
   process.env.META_GRAPH_API_VERSION || 'v26.0';
+
+const GEMINI_KEY =
+  process.env.GEMINI_API_KEY;
 
 // ---------------------------------------------------------
 // ENVIO DE MENSAGEM PELA META CLOUD API
@@ -105,6 +108,169 @@ async function sendWhatsappMeta(
 
   return data;
 }
+
+
+// ---------------------------------------------------------
+// DOWNLOAD DE MÍDIA DA META
+// ---------------------------------------------------------
+
+async function downloadMetaMedia(mediaId) {
+
+  if (!META_WHATSAPP_TOKEN) {
+    throw new Error('META_WHATSAPP_TOKEN não configurado');
+  }
+
+  const infoRes = await fetch(
+    `https://graph.facebook.com/${META_GRAPH_API_VERSION}/${mediaId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${META_WHATSAPP_TOKEN}`,
+      },
+    }
+  );
+
+  const info =
+    await infoRes.json().catch(() => ({}));
+
+  if (!infoRes.ok || !info?.url) {
+    throw new Error(
+      info?.error?.message ||
+      `Falha ao obter mídia Meta HTTP ${infoRes.status}`
+    );
+  }
+
+  const mediaRes =
+    await fetch(
+      info.url,
+      {
+        headers: {
+          Authorization:
+            `Bearer ${META_WHATSAPP_TOKEN}`,
+        },
+      }
+    );
+
+  if (!mediaRes.ok) {
+    throw new Error(
+      `Falha ao baixar mídia Meta HTTP ${mediaRes.status}`
+    );
+  }
+
+  const buffer =
+    Buffer.from(
+      await mediaRes.arrayBuffer()
+    );
+
+  return {
+    buffer,
+    mimeType:
+      info?.mime_type ||
+      mediaRes.headers.get('content-type') ||
+      'audio/ogg',
+  };
+}
+
+
+// ---------------------------------------------------------
+// TRANSCRIÇÃO DE ÁUDIO
+// ---------------------------------------------------------
+
+async function transcribeMetaAudio(mediaId) {
+
+  if (!GEMINI_KEY) {
+    throw new Error(
+      'GEMINI_API_KEY não configurada'
+    );
+  }
+
+  const {
+    buffer,
+    mimeType,
+  } =
+    await downloadMetaMedia(mediaId);
+
+  if (
+    buffer.length >
+    15 * 1024 * 1024
+  ) {
+    throw new Error(
+      'Áudio maior que 15 MB'
+    );
+  }
+
+  const response =
+    await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text:
+                    'Transcreva exatamente este áudio em português. ' +
+                    'Retorne somente a transcrição. ' +
+                    'Não explique nada. Preserve nomes, empresas, datas e números.',
+                },
+                {
+                  inlineData: {
+                    mimeType,
+                    data:
+                      buffer.toString('base64'),
+                  },
+                },
+              ],
+            },
+          ],
+
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 1200,
+
+            thinkingConfig: {
+              thinkingBudget: 0,
+            },
+          },
+        }),
+      }
+    );
+
+  const data =
+    await response
+      .json()
+      .catch(() => ({}));
+
+  if (!response.ok) {
+
+    throw new Error(
+      data?.error?.message ||
+      `Gemini HTTP ${response.status}`
+    );
+  }
+
+  const text =
+    data
+      ?.candidates
+      ?.[0]
+      ?.content
+      ?.parts
+      ?.map(
+        (part) =>
+          part?.text || ''
+      )
+      ?.join(' ')
+      ?.trim();
+
+  return text || '';
+}
+
 
 // ---------------------------------------------------------
 // WEBHOOK
@@ -366,6 +532,113 @@ export default async function handler(req, res) {
 
             continue;
           }
+
+          // -----------------------------------------------
+          // CONTATO COMPARTILHADO
+          // -----------------------------------------------
+
+          if (
+            message.type ===
+            'contacts'
+          ) {
+
+            const sharedContacts =
+              Array.isArray(
+                message?.contacts
+              )
+                ? message.contacts
+                : [];
+
+            if (
+              !sharedContacts.length
+            ) {
+
+              await sendReplyFromIncomingNumber(
+                from,
+                'Recebi o contato, mas não consegui ler os dados. Tenta compartilhar novamente.'
+              );
+
+              continue;
+            }
+
+            await handleSharedContactData(
+              from,
+              sharedContacts,
+              sendReplyFromIncomingNumber,
+              messageId
+            );
+
+            continue;
+          }
+
+
+          // -----------------------------------------------
+          // ÁUDIO
+          // -----------------------------------------------
+
+          if (
+            message.type ===
+            'audio'
+          ) {
+
+            const mediaId =
+              message?.audio?.id;
+
+            if (!mediaId) {
+
+              await sendReplyFromIncomingNumber(
+                from,
+                'Recebi seu áudio, mas não consegui acessar o arquivo. Tenta enviar novamente.'
+              );
+
+              continue;
+            }
+
+            try {
+
+              const transcript =
+                await transcribeMetaAudio(
+                  mediaId
+                );
+
+              if (!transcript) {
+
+                await sendReplyFromIncomingNumber(
+                  from,
+                  'Ouvi seu áudio, mas não consegui entender. Pode tentar novamente?'
+                );
+
+                continue;
+              }
+
+              console.log(
+                '[META WHATSAPP] Áudio transcrito:',
+                transcript.slice(0, 180)
+              );
+
+              await handleIncomingMessage(
+                from,
+                transcript,
+                sendReplyFromIncomingNumber,
+                messageId
+              );
+
+            } catch (error) {
+
+              console.error(
+                '[META WHATSAPP] Erro no áudio:',
+                error
+              );
+
+              await sendReplyFromIncomingNumber(
+                from,
+                'Recebi seu áudio, mas tive um problema para transcrever agora. Tenta novamente em instantes.'
+              );
+            }
+
+            continue;
+          }
+
 
           // -----------------------------------------------
           // OUTROS TIPOS

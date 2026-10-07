@@ -621,6 +621,405 @@ export async function handleSharedContact(number, mediaUrl, sendReply) {
   await sendReply(number, `✅ *${created.name}* cadastrado na sua rede a partir do contato compartilhado!${org ? ` (${org})` : ''}${tel}\n\nPróximo passo: manda "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.${APP_ENRICHMENT_NUDGE}`);
 }
 
+
+// =========================================================
+// CONTATO COMPARTILHADO — META CLOUD API
+// =========================================================
+
+export async function handleSharedContactData(
+  number,
+  sharedContacts,
+  sendReply,
+  messageId = null
+) {
+
+  if (!SUPABASE_SERVICE_KEY) {
+
+    await sendReply(
+      number,
+      '⚠️ Assistente ainda não configurado.'
+    );
+
+    return;
+  }
+
+
+  const normalized =
+    normalizePhone(number);
+
+  const variants =
+    waVariants(normalized);
+
+
+  const profiles =
+    await sb(
+      `profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,whatsapp,whatsapp_trial_started_at`
+    );
+
+
+  const profile =
+    profiles?.[0];
+
+
+  if (!profile) {
+
+    await sendReply(
+      number,
+      '👋 Não encontrei sua conta vinculada a este número. Cadastre seu WhatsApp no CONÉXIA.'
+    );
+
+    return;
+  }
+
+
+  const userId =
+    profile.id;
+
+
+  if (
+    await alreadyProcessedMessage(
+      messageId,
+      userId
+    )
+  ) {
+    return;
+  }
+
+
+  if (
+    !(await checkRateLimit(userId))
+  ) {
+
+    await sendReply(
+      number,
+      '⏳ Muitas mensagens foram enviadas. Tente novamente daqui a pouco.'
+    );
+
+    return;
+  }
+
+
+  const isPro =
+    !!profile.is_pro ||
+    (
+      profile.plan === 'pro' &&
+      (
+        !profile.pro_expires_at ||
+        new Date(
+          profile.pro_expires_at
+        ) >
+        new Date()
+      )
+    );
+
+
+  if (!isPro) {
+
+    const days =
+      profile
+        .whatsapp_trial_started_at
+
+        ? (
+            Date.now() -
+            new Date(
+              profile.whatsapp_trial_started_at
+            ).getTime()
+          ) /
+          86400000
+
+        : 0;
+
+
+    if (days > 10) {
+
+      await sendReply(
+        number,
+        'Seu período gratuito do WhatsApp terminou. Ative o PRO para continuar.'
+      );
+
+      return;
+    }
+  }
+
+
+  const incoming =
+    Array.isArray(
+      sharedContacts
+    )
+      ? sharedContacts
+      : [];
+
+
+  const existing =
+    await sb(
+      `contacts?user_id=eq.${userId}&select=id,name,whatsapp`
+    );
+
+
+  const added = [];
+  const duplicates = [];
+
+
+  for (
+    const raw of incoming
+  ) {
+
+
+    const name =
+
+      raw
+        ?.name
+        ?.formatted_name
+
+      ||
+
+      [
+        raw?.name?.first_name,
+        raw?.name?.middle_name,
+        raw?.name?.last_name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+
+    const phoneEntry =
+
+      (raw?.phones || [])
+        .find(
+          p => p?.wa_id
+        )
+
+      ||
+
+      raw?.phones?.[0];
+
+
+    const phone =
+      normalizePhone(
+        phoneEntry?.wa_id ||
+        phoneEntry?.phone ||
+        ''
+      );
+
+
+    const company =
+      raw?.org?.company ||
+      null;
+
+
+    const role =
+      raw?.org?.title ||
+      null;
+
+
+    const email =
+      raw
+        ?.emails
+        ?.[0]
+        ?.email ||
+      null;
+
+
+    if (!name) {
+      continue;
+    }
+
+
+    const duplicateName =
+      findExistingContactByName(
+        existing,
+        name
+      );
+
+
+    const duplicatePhone =
+      phone
+
+        ? existing.find(
+            c =>
+              normalizePhone(
+                c?.whatsapp
+              ) ===
+              phone
+          )
+
+        : null;
+
+
+    const duplicate =
+      duplicateName ||
+      duplicatePhone;
+
+
+    if (duplicate) {
+
+      duplicates.push(
+        duplicate.name ||
+        name
+      );
+
+      continue;
+    }
+
+
+    const created =
+      await createContactFromWhatsapp(
+        userId,
+        {
+
+          contact_name:
+            name,
+
+          company,
+
+          role,
+
+          how_met:
+            'Contato compartilhado via WhatsApp',
+
+          contact_email:
+            email,
+
+          whatsapp:
+            phone || null,
+        }
+      );
+
+
+    if (!created) {
+      continue;
+    }
+
+
+    existing.push({
+      id:
+        created.id,
+
+      name:
+        created.name,
+
+      whatsapp:
+        phone,
+    });
+
+
+    added.push({
+      name:
+        created.name,
+
+      phone,
+
+      company,
+
+      role,
+    });
+  }
+
+
+  const lines = [];
+
+
+  if (
+    added.length === 1
+  ) {
+
+    const item =
+      added[0];
+
+
+    const details =
+      [
+        item.role,
+        item.company,
+      ]
+        .filter(Boolean)
+        .join(' na ');
+
+
+    lines.push(
+      `✅ *${item.name}* cadastrado na sua rede.`
+    );
+
+
+    if (details) {
+
+      lines.push(
+        `${details}`
+      );
+    }
+
+
+    if (
+      item.phone
+    ) {
+
+      lines.push(
+        `📞 ${item.phone}`
+      );
+    }
+  }
+
+
+  if (
+    added.length > 1
+  ) {
+
+    lines.push(
+      `✅ ${added.length} contatos cadastrados na sua rede.`
+    );
+
+
+    added.forEach(
+      item => {
+
+        lines.push(
+          `• ${item.name}`
+        );
+      }
+    );
+  }
+
+
+  if (
+    duplicates.length
+  ) {
+
+    lines.push(
+      `ℹ️ Já estava(m) cadastrado(s): ${duplicates.join(', ')}`
+    );
+  }
+
+
+  if (
+    !added.length &&
+    !duplicates.length
+  ) {
+
+    lines.push(
+      'Recebi o contato, mas não encontrei dados suficientes para cadastrar.'
+    );
+  }
+
+
+  if (
+    added.length
+  ) {
+
+    lines.push(
+      '',
+      'Quando conversar com essa pessoa, é só me contar por aqui que eu registro a interação.'
+    );
+  }
+
+
+  await sendReply(
+    number,
+    lines.join('\n')
+  );
+}
+
+
 // Cria o contato de fato — reaproveitado tanto no cadastro direto (1 mensagem
 // com dados suficientes) quanto no fluxo de esclarecimento (nome veio depois).
 async function createContactFromWhatsapp(userId, { contact_name, company, role, category, how_met, hobbies, birthday, contact_email, whatsapp }) {
