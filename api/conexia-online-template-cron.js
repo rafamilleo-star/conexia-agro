@@ -1,17 +1,18 @@
 // api/conexia-online-template-cron.js
 //
 // Disparo automático e idempotente do template conexia_online.
-// Funciona para a base atual e também para novos usuários.
 //
 // Regras:
+//
 // - WhatsApp cadastrado
 // - onboarding concluído
 // - notifications_enabled != false
 // - whatsapp_opt_in != false
 // - respeita quiet hours
-// - respeita limite de 1 mensagem proativa/dia
-// - envia uma única vez por usuário
-// - lote pequeno para proteger qualidade do template
+// - respeita limite diário
+// - nunca envia duas vezes para quem já recebeu
+// - máximo de 5 TENTATIVAS por execução
+// - retorna erro detalhado da Meta para diagnóstico
 
 import {
   supabaseRest as sb,
@@ -33,8 +34,13 @@ import {
 } from './_lib/relationshipAssistant/timeWindow.js';
 
 
+// =========================================================
+// CONFIGURAÇÕES
+// =========================================================
+
 const CRON_SECRET =
-  process.env.CRON_SECRET || '';
+  process.env.CRON_SECRET ||
+  '';
 
 const TEMPLATE_NAME =
   process.env.CONEXIA_ONLINE_TEMPLATE_NAME ||
@@ -57,6 +63,10 @@ const BATCH_SIZE =
   );
 
 
+// =========================================================
+// HANDLER
+// =========================================================
+
 export default async function handler(
   req,
   res
@@ -64,15 +74,16 @@ export default async function handler(
 
   try {
 
-    // -----------------------------------------------------
-    // SEGURANÇA
-    // -----------------------------------------------------
+    // =====================================================
+    // SEGURANÇA DO CRON
+    // =====================================================
 
     if (CRON_SECRET) {
 
       const auth =
         req.headers?.authorization ||
         '';
+
 
       if (
         auth !==
@@ -83,11 +94,16 @@ export default async function handler(
           .status(401)
           .json({
             ok: false,
-            error: 'unauthorized',
+            error:
+              'unauthorized',
           });
       }
     }
 
+
+    // =====================================================
+    // CONFIGURAÇÕES OBRIGATÓRIAS
+    // =====================================================
 
     if (
       !process.env
@@ -98,6 +114,7 @@ export default async function handler(
         .status(200)
         .json({
           ok: false,
+
           error:
             'SUPABASE_SERVICE_KEY ausente',
         });
@@ -118,83 +135,149 @@ export default async function handler(
         .status(200)
         .json({
           ok: false,
+
           error:
             'Provider atual não suporta template Meta',
         });
     }
 
 
-    // -----------------------------------------------------
-    // BUSCA PERFIS
-    // -----------------------------------------------------
+    // =====================================================
+    // BUSCA USUÁRIOS
+    // =====================================================
 
     const profiles =
       await sb(
-        `profiles?select=id,first_name,name,whatsapp,timezone,notifications_enabled,whatsapp_opt_in,onboarding_completed&whatsapp=not.is.null&onboarding_completed=eq.true&order=created_at.asc`
+        'profiles' +
+        '?select=' +
+        'id,' +
+        'first_name,' +
+        'name,' +
+        'whatsapp,' +
+        'timezone,' +
+        'notifications_enabled,' +
+        'whatsapp_opt_in,' +
+        'onboarding_completed,' +
+        'created_at' +
+        '&whatsapp=not.is.null' +
+        '&onboarding_completed=eq.true' +
+        '&order=created_at.asc'
       );
 
 
-    let enviados = 0;
-    let jaReceberam = 0;
-    let pulados = 0;
-    let falhas = 0;
+    // =====================================================
+    // CONTADORES
+    // =====================================================
 
+    let enviados =
+      0;
+
+    let jaReceberam =
+      0;
+
+    let pulados =
+      0;
+
+    let falhas =
+      0;
+
+    let tentativas =
+      0;
+
+    const erros =
+      [];
+
+
+    // =====================================================
+    // PROCESSAMENTO
+    // =====================================================
 
     for (
       const profile of
       profiles || []
     ) {
 
-      // lote por execução
+      // ---------------------------------------------------
+      // LIMITE REAL DE TENTATIVAS
+      // ---------------------------------------------------
+
       if (
-        enviados >=
+        tentativas >=
         BATCH_SIZE
       ) {
+
         break;
       }
 
 
+      // ---------------------------------------------------
+      // WHATSAPP
+      // ---------------------------------------------------
+
       if (
         !profile?.whatsapp
       ) {
+
         pulados++;
+
         continue;
       }
 
+
+      // ---------------------------------------------------
+      // NOTIFICAÇÕES DESATIVADAS
+      // ---------------------------------------------------
 
       if (
         profile
           .notifications_enabled ===
         false
       ) {
+
         pulados++;
+
         continue;
       }
 
+
+      // ---------------------------------------------------
+      // OPT-IN WHATSAPP
+      // ---------------------------------------------------
 
       if (
         profile
           .whatsapp_opt_in ===
         false
       ) {
+
         pulados++;
+
         continue;
       }
 
+
+      // ---------------------------------------------------
+      // QUIET HOURS
+      // ---------------------------------------------------
 
       if (
         isQuietHours(
           profile.timezone
         )
       ) {
+
         pulados++;
+
         continue;
       }
 
 
-      // ---------------------------------------------------
-      // IDEMPOTÊNCIA: UMA VEZ NA VIDA POR USUÁRIO
-      // ---------------------------------------------------
+      // ===================================================
+      // IDEMPOTÊNCIA
+      //
+      // usuário que recebeu conexia_online_v1
+      // nunca recebe de novo
+      // ===================================================
 
       const idempotencyKey =
         buildIdempotencyKey({
@@ -214,14 +297,16 @@ export default async function handler(
           idempotencyKey
         )
       ) {
+
         jaReceberam++;
+
         continue;
       }
 
 
-      // ---------------------------------------------------
-      // NÃO BRIGA COM OUTRAS MENSAGENS PROATIVAS
-      // ---------------------------------------------------
+      // ===================================================
+      // LIMITE DE MENSAGEM AUTOMÁTICA DO DIA
+      // ===================================================
 
       const localDate =
         localDateISO(
@@ -235,36 +320,84 @@ export default async function handler(
           localDate
         )
       ) {
+
         pulados++;
+
         continue;
       }
 
 
-      // ---------------------------------------------------
-      // LOG
-      // ---------------------------------------------------
+      // ===================================================
+      // A PARTIR DAQUI CONTA COMO TENTATIVA
+      // ===================================================
 
-      const logRow =
-        await logScheduled({
-          userId:
+      tentativas++;
+
+
+      // ===================================================
+      // LOG SCHEDULED
+      // ===================================================
+
+      let logRow =
+        null;
+
+
+      try {
+
+        logRow =
+          await logScheduled({
+            userId:
+              profile.id,
+
+            notificationType:
+              'CONEXIA_ONLINE_ANNOUNCEMENT',
+
+            channel:
+              'whatsapp',
+
+            content:
+              `template:${TEMPLATE_NAME}`,
+
+            idempotencyKey,
+          });
+
+
+      } catch (logError) {
+
+        falhas++;
+
+
+        const detail = {
+          profileId:
             profile.id,
 
-          notificationType:
-            'CONEXIA_ONLINE_ANNOUNCEMENT',
+          etapa:
+            'notification_log',
 
-          channel:
-            'whatsapp',
-
-          content:
-            `template:${TEMPLATE_NAME}`,
-
-          idempotencyKey,
-        });
+          error:
+            logError?.message ||
+            'log_error',
+        };
 
 
-      // ---------------------------------------------------
-      // ENVIO
-      // ---------------------------------------------------
+        erros.push(
+          detail
+        );
+
+
+        console.error(
+          '[conexia-online-template-cron] erro notification_log',
+          JSON.stringify(detail)
+        );
+
+
+        continue;
+      }
+
+
+      // ===================================================
+      // ENVIO DO TEMPLATE META
+      // ===================================================
 
       const result =
         await provider
@@ -280,9 +413,16 @@ export default async function handler(
           });
 
 
-      if (!result.ok) {
+      // ===================================================
+      // FALHA META
+      // ===================================================
+
+      if (
+        !result.ok
+      ) {
 
         falhas++;
+
 
         if (
           logRow?.id
@@ -290,21 +430,75 @@ export default async function handler(
 
           await markFailed(
             logRow.id,
-            result.error ||
-            'template_send_failed'
+
+            [
+              result.error,
+              result.errorCode,
+              result.errorSubcode,
+              result.errorType,
+            ]
+              .filter(Boolean)
+              .join(' | ')
           );
         }
 
 
-        console.error(
-          '[conexia-online-template-cron] falha',
-          profile.id,
-          result.error
+        const detail = {
+
+          profileId:
+            profile.id,
+
+          etapa:
+            'meta',
+
+          error:
+            result.error ||
+            null,
+
+          errorCode:
+            result.errorCode ||
+            null,
+
+          errorSubcode:
+            result.errorSubcode ||
+            null,
+
+          errorType:
+            result.errorType ||
+            null,
+
+          errorData:
+            result.errorData ||
+            null,
+
+          errorDetails:
+            result.errorDetails ||
+            null,
+
+          fbtraceId:
+            result.fbtraceId ||
+            null,
+        };
+
+
+        erros.push(
+          detail
         );
+
+
+        console.error(
+          '[conexia-online-template-cron] falha Meta',
+          JSON.stringify(detail)
+        );
+
 
         continue;
       }
 
+
+      // ===================================================
+      // SUCESSO
+      // ===================================================
 
       if (
         logRow?.id
@@ -312,6 +506,7 @@ export default async function handler(
 
         await markSent(
           logRow.id,
+
           result
             .providerMessageId
         );
@@ -321,7 +516,21 @@ export default async function handler(
       enviados++;
 
 
-      // pequena pausa para não fazer rajada
+      console.log(
+        '[conexia-online-template-cron] enviado',
+        JSON.stringify({
+          profileId:
+            profile.id,
+
+          providerMessageId:
+            result
+              .providerMessageId ||
+            null,
+        })
+      );
+
+
+      // pequena pausa entre envios
       await new Promise(
         resolve =>
           setTimeout(
@@ -332,14 +541,22 @@ export default async function handler(
     }
 
 
+    // =====================================================
+    // RESPOSTA
+    // =====================================================
+
     return res
       .status(200)
       .json({
+
         ok:
           falhas === 0,
 
         template:
           TEMPLATE_NAME,
+
+        language:
+          TEMPLATE_LANGUAGE,
 
         batchSize:
           BATCH_SIZE,
@@ -348,17 +565,28 @@ export default async function handler(
           profiles?.length ||
           0,
 
+        tentativas,
+
         enviados,
+
         jaReceberam,
+
         pulados,
+
         falhas,
+
+        erros:
+          erros.slice(
+            0,
+            5
+          ),
       });
 
 
   } catch (err) {
 
     console.error(
-      '[conexia-online-template-cron] erro:',
+      '[conexia-online-template-cron] erro geral:',
       err
     );
 
@@ -366,7 +594,9 @@ export default async function handler(
     return res
       .status(200)
       .json({
+
         ok: false,
+
         error:
           err?.message ||
           'unknown_error',
