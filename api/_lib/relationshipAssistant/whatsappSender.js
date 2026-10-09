@@ -293,6 +293,131 @@ async function sendViaMeta(number, text) {
   }
 }
 
+
+// ─────────────────────────────────────────────
+// META TEMPLATE MESSAGE
+// Usado para mensagens business-initiated fora da janela de 24h.
+// ─────────────────────────────────────────────
+
+async function sendTemplateViaMeta(
+  number,
+  templateName,
+  languageCode = 'pt_BR'
+) {
+
+  if (!META_WHATSAPP_TOKEN) {
+    return {
+      ok: false,
+      channel: 'meta',
+      error: 'meta_token_not_configured',
+    };
+  }
+
+  if (!META_PHONE_NUMBER_ID) {
+    return {
+      ok: false,
+      channel: 'meta',
+      error: 'meta_phone_number_id_not_configured',
+    };
+  }
+
+  const to =
+    toDigits(number);
+
+  if (!to) {
+    return {
+      ok: false,
+      channel: 'meta',
+      error: 'invalid_destination_number',
+    };
+  }
+
+  try {
+
+    const res =
+      await fetch(
+        `https://graph.facebook.com/${META_GRAPH_API_VERSION}/${META_PHONE_NUMBER_ID}/messages`,
+        {
+          method: 'POST',
+
+          headers: {
+            Authorization:
+              `Bearer ${META_WHATSAPP_TOKEN}`,
+
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+            messaging_product:
+              'whatsapp',
+
+            recipient_type:
+              'individual',
+
+            to,
+
+            type:
+              'template',
+
+            template: {
+              name:
+                templateName,
+
+              language: {
+                code:
+                  languageCode,
+              },
+            },
+          }),
+        }
+      );
+
+    const data =
+      await res
+        .json()
+        .catch(() => ({}));
+
+    if (!res.ok) {
+
+      return {
+        ok: false,
+        channel: 'meta',
+
+        error:
+          data?.error?.message ||
+          `meta_http_${res.status}`,
+
+        errorCode:
+          data?.error?.code ||
+          null,
+      };
+    }
+
+    return {
+      ok: true,
+      channel: 'meta',
+
+      providerMessageId:
+        data
+          ?.messages
+          ?.[0]
+          ?.id ||
+        null,
+    };
+
+  } catch (e) {
+
+    return {
+      ok: false,
+      channel: 'meta',
+      error:
+        e.message,
+    };
+  }
+}
+
+
 // ─────────────────────────────────────────────
 // PROVIDER ATUAL
 // TWILIO -> EVOLUTION FALLBACK
@@ -352,6 +477,19 @@ const MetaWhatsAppProvider = {
     return sendViaMeta(
       number,
       text
+    );
+  },
+
+  async sendTemplate({
+    number,
+    templateName,
+    languageCode = 'pt_BR',
+  }) {
+
+    return sendTemplateViaMeta(
+      number,
+      templateName,
+      languageCode
     );
   },
 };

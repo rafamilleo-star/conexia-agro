@@ -3,28 +3,68 @@
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Pragma", "value": "no-cache" },
-        { "key": "Expires", "value": "0" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
       ]
     }
   ],
   "rewrites": [
-    { "source": "/((?!assets/|api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!assets/|api/).*)",
+      "destination": "/index.html"
+    }
   ],
   "crons": [
-    { "path": "/api/whatsapp-reminder-cron", "schedule": "0 11 * * *" },
-    { "path": "/api/relationship-onboarding-cron", "schedule": "0 */6 * * *" },
-    { "path": "/api/relationship-inactivity-cron", "schedule": "0 12 * * *" },
-    { "path": "/api/relationship-weekly-summary-cron", "schedule": "0 11 * * *" },
-    { "path": "/api/relationship-attention-cron", "schedule": "0 13 * * *" },
-    { "path": "/api/relationship-calendar-sync-cron", "schedule": "0 14 * * *" },
-    { "path": "/api/interaction-intent-classifier-cron", "schedule": "0 9 * * *" }
+    {
+      "path": "/api/whatsapp-reminder-cron",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/relationship-onboarding-cron",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/relationship-inactivity-cron",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/relationship-weekly-summary-cron",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/relationship-attention-cron",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/relationship-calendar-sync-cron",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/interaction-intent-classifier-cron",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/conexia-online-template-cron",
+      "schedule": "30 */6 * * *"
+    }
   ]
 }
