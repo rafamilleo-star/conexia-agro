@@ -1,18 +1,19 @@
 // api/conexia-online-template-cron.js
 //
-// Disparo automático e idempotente do template conexia_online.
+// CONÉXIA — disparo automático do template conexia_online
+//
+// IMPORTANTE:
+// Este endpoint envia o template diretamente pela Graph API,
+// no mesmo formato validado no Graph API Explorer.
 //
 // Regras:
-//
-// - WhatsApp cadastrado
-// - onboarding concluído
-// - notifications_enabled != false
-// - whatsapp_opt_in != false
+// - máximo 5 tentativas por execução
+// - não repete para quem já recebeu
+// - respeita notification_log
 // - respeita quiet hours
 // - respeita limite diário
-// - nunca envia duas vezes para quem já recebeu
-// - máximo de 5 TENTATIVAS por execução
-// - retorna erro detalhado da Meta para diagnóstico
+// - usa o template aprovado conexia_online
+// - não altera o fluxo normal de respostas do WhatsApp
 
 import {
   supabaseRest as sb,
@@ -25,22 +26,25 @@ import {
 } from './_lib/relationshipAssistant/notificationLog.js';
 
 import {
-  getWhatsAppProvider,
-} from './_lib/relationshipAssistant/whatsappSender.js';
-
-import {
   isQuietHours,
   localDateISO,
 } from './_lib/relationshipAssistant/timeWindow.js';
 
 
 // =========================================================
-// CONFIGURAÇÕES
+// CONFIGURAÇÃO
 // =========================================================
 
-const CRON_SECRET =
-  process.env.CRON_SECRET ||
-  '';
+const META_WHATSAPP_TOKEN =
+  process.env.META_WHATSAPP_TOKEN;
+
+const META_PHONE_NUMBER_ID =
+  process.env.META_PHONE_NUMBER_ID ||
+  '1367865376400864';
+
+const META_GRAPH_API_VERSION =
+  process.env.META_GRAPH_API_VERSION ||
+  'v26.0';
 
 const TEMPLATE_NAME =
   process.env.CONEXIA_ONLINE_TEMPLATE_NAME ||
@@ -50,17 +54,287 @@ const TEMPLATE_LANGUAGE =
   process.env.CONEXIA_ONLINE_TEMPLATE_LANGUAGE ||
   'pt_BR';
 
+const CRON_SECRET =
+  process.env.CRON_SECRET ||
+  '';
+
 const BATCH_SIZE =
   Math.max(
     1,
     Math.min(
-      50,
+      5,
       Number(
         process.env.CONEXIA_ONLINE_TEMPLATE_BATCH_SIZE ||
         5
       )
     )
   );
+
+
+// =========================================================
+// NÚMERO
+// =========================================================
+
+function normalizePhone(value) {
+
+  return String(value || '')
+    .replace(/\D/g, '');
+}
+
+
+// =========================================================
+// ENVIO DIRETO META
+//
+// Mesmo conceito da chamada validada no Graph API Explorer.
+// =========================================================
+
+async function sendTemplateDirect(
+  number
+) {
+
+  if (!META_WHATSAPP_TOKEN) {
+
+    return {
+      ok: false,
+      error:
+        'META_WHATSAPP_TOKEN ausente',
+    };
+  }
+
+
+  if (!META_PHONE_NUMBER_ID) {
+
+    return {
+      ok: false,
+      error:
+        'META_PHONE_NUMBER_ID ausente',
+    };
+  }
+
+
+  const to =
+    normalizePhone(
+      number
+    );
+
+
+  if (!to) {
+
+    return {
+      ok: false,
+      error:
+        'Número inválido',
+    };
+  }
+
+
+  // -------------------------------------------------------
+  // PARÂMETROS NO FORMATO GRAPH API
+  // -------------------------------------------------------
+
+  const params =
+    new URLSearchParams();
+
+
+  params.set(
+    'messaging_product',
+    'whatsapp'
+  );
+
+
+  params.set(
+    'recipient_type',
+    'individual'
+  );
+
+
+  params.set(
+    'to',
+    to
+  );
+
+
+  params.set(
+    'type',
+    'template'
+  );
+
+
+  params.set(
+    'template',
+    JSON.stringify({
+      name:
+        TEMPLATE_NAME,
+
+      language: {
+        code:
+          TEMPLATE_LANGUAGE,
+      },
+    })
+  );
+
+
+  // O Graph API Explorer autentica a requisição
+  // utilizando o access token da chamada.
+  params.set(
+    'access_token',
+    META_WHATSAPP_TOKEN
+  );
+
+
+  const url =
+    `https://graph.facebook.com/` +
+    `${META_GRAPH_API_VERSION}/` +
+    `${META_PHONE_NUMBER_ID}/messages`;
+
+
+  try {
+
+    const response =
+      await fetch(
+        url,
+        {
+          method:
+            'POST',
+
+          headers: {
+            'Content-Type':
+              'application/x-www-form-urlencoded',
+          },
+
+          body:
+            params.toString(),
+        }
+      );
+
+
+    const raw =
+      await response
+        .text()
+        .catch(() => '');
+
+
+    let data =
+      {};
+
+
+    try {
+
+      data =
+        raw
+          ? JSON.parse(raw)
+          : {};
+
+    } catch {
+
+      data = {
+        raw,
+      };
+    }
+
+
+    // -----------------------------------------------------
+    // ERRO META
+    // -----------------------------------------------------
+
+    if (!response.ok) {
+
+      const metaError =
+        data?.error ||
+        {};
+
+
+      return {
+        ok: false,
+
+        httpStatus:
+          response.status,
+
+        error:
+          metaError?.message ||
+          `Meta HTTP ${response.status}`,
+
+        errorCode:
+          metaError?.code ||
+          null,
+
+        errorSubcode:
+          metaError?.error_subcode ||
+          null,
+
+        errorType:
+          metaError?.type ||
+          null,
+
+        errorData:
+          metaError?.error_data ||
+          null,
+
+        errorDetails:
+          metaError?.error_user_msg ||
+          metaError?.details ||
+          null,
+
+        fbtraceId:
+          metaError?.fbtrace_id ||
+          null,
+      };
+    }
+
+
+    // -----------------------------------------------------
+    // META ACEITOU
+    // -----------------------------------------------------
+
+    const message =
+      data
+        ?.messages
+        ?.[0] ||
+      {};
+
+
+    const contact =
+      data
+        ?.contacts
+        ?.[0] ||
+      {};
+
+
+    return {
+      ok: true,
+
+      providerMessageId:
+        message?.id ||
+        null,
+
+      messageStatus:
+        message?.message_status ||
+        'accepted',
+
+      waId:
+        contact?.wa_id ||
+        null,
+
+      input:
+        contact?.input ||
+        to,
+    };
+
+
+  } catch (error) {
+
+    return {
+      ok: false,
+
+      error:
+        error?.message ||
+        'Falha de conexão com Meta',
+
+      errorType:
+        'fetch_exception',
+    };
+  }
+}
 
 
 // =========================================================
@@ -75,7 +349,7 @@ export default async function handler(
   try {
 
     // =====================================================
-    // SEGURANÇA DO CRON
+    // PROTEÇÃO DO CRON
     // =====================================================
 
     if (CRON_SECRET) {
@@ -102,7 +376,7 @@ export default async function handler(
 
 
     // =====================================================
-    // CONFIGURAÇÕES OBRIGATÓRIAS
+    // CONFIGURAÇÃO
     // =====================================================
 
     if (
@@ -121,14 +395,8 @@ export default async function handler(
     }
 
 
-    const provider =
-      getWhatsAppProvider();
-
-
     if (
-      typeof provider
-        ?.sendTemplate !==
-      'function'
+      !META_WHATSAPP_TOKEN
     ) {
 
       return res
@@ -137,13 +405,13 @@ export default async function handler(
           ok: false,
 
           error:
-            'Provider atual não suporta template Meta',
+            'META_WHATSAPP_TOKEN ausente',
         });
     }
 
 
     // =====================================================
-    // BUSCA USUÁRIOS
+    // PERFIS
     // =====================================================
 
     const profiles =
@@ -159,6 +427,7 @@ export default async function handler(
         'whatsapp_opt_in,' +
         'onboarding_completed,' +
         'created_at' +
+
         '&whatsapp=not.is.null' +
         '&onboarding_completed=eq.true' +
         '&order=created_at.asc'
@@ -168,6 +437,9 @@ export default async function handler(
     // =====================================================
     // CONTADORES
     // =====================================================
+
+    let tentativas =
+      0;
 
     let enviados =
       0;
@@ -181,10 +453,11 @@ export default async function handler(
     let falhas =
       0;
 
-    let tentativas =
-      0;
 
     const erros =
+      [];
+
+    const sucessos =
       [];
 
 
@@ -198,7 +471,7 @@ export default async function handler(
     ) {
 
       // ---------------------------------------------------
-      // LIMITE REAL DE TENTATIVAS
+      // LIMITE ABSOLUTO DE 5 TENTATIVAS
       // ---------------------------------------------------
 
       if (
@@ -225,7 +498,7 @@ export default async function handler(
 
 
       // ---------------------------------------------------
-      // NOTIFICAÇÕES DESATIVADAS
+      // NOTIFICAÇÕES
       // ---------------------------------------------------
 
       if (
@@ -241,7 +514,7 @@ export default async function handler(
 
 
       // ---------------------------------------------------
-      // OPT-IN WHATSAPP
+      // OPT-IN
       // ---------------------------------------------------
 
       if (
@@ -273,10 +546,7 @@ export default async function handler(
 
 
       // ===================================================
-      // IDEMPOTÊNCIA
-      //
-      // usuário que recebeu conexia_online_v1
-      // nunca recebe de novo
+      // CHAVE ÚNICA
       // ===================================================
 
       const idempotencyKey =
@@ -292,6 +562,10 @@ export default async function handler(
         });
 
 
+      // ===================================================
+      // JÁ RECEBEU
+      // ===================================================
+
       if (
         await alreadySent(
           idempotencyKey
@@ -305,7 +579,7 @@ export default async function handler(
 
 
       // ===================================================
-      // LIMITE DE MENSAGEM AUTOMÁTICA DO DIA
+      // LIMITE DIÁRIO
       // ===================================================
 
       const localDate =
@@ -328,14 +602,14 @@ export default async function handler(
 
 
       // ===================================================
-      // A PARTIR DAQUI CONTA COMO TENTATIVA
+      // CONTA TENTATIVA
       // ===================================================
 
       tentativas++;
 
 
       // ===================================================
-      // LOG SCHEDULED
+      // LOG
       // ===================================================
 
       let logRow =
@@ -362,12 +636,12 @@ export default async function handler(
           });
 
 
-      } catch (logError) {
+      } catch (error) {
 
         falhas++;
 
 
-        const detail = {
+        erros.push({
           profileId:
             profile.id,
 
@@ -375,20 +649,9 @@ export default async function handler(
             'notification_log',
 
           error:
-            logError?.message ||
-            'log_error',
-        };
-
-
-        erros.push(
-          detail
-        );
-
-
-        console.error(
-          '[conexia-online-template-cron] erro notification_log',
-          JSON.stringify(detail)
-        );
+            error?.message ||
+            'notification_log_error',
+        });
 
 
         continue;
@@ -396,25 +659,17 @@ export default async function handler(
 
 
       // ===================================================
-      // ENVIO DO TEMPLATE META
+      // ENVIA DIRETO PARA META
       // ===================================================
 
       const result =
-        await provider
-          .sendTemplate({
-            number:
-              profile.whatsapp,
-
-            templateName:
-              TEMPLATE_NAME,
-
-            languageCode:
-              TEMPLATE_LANGUAGE,
-          });
+        await sendTemplateDirect(
+          profile.whatsapp
+        );
 
 
       // ===================================================
-      // FALHA META
+      // FALHA
       // ===================================================
 
       if (
@@ -435,7 +690,6 @@ export default async function handler(
               result.error,
               result.errorCode,
               result.errorSubcode,
-              result.errorType,
             ]
               .filter(Boolean)
               .join(' | ')
@@ -449,7 +703,11 @@ export default async function handler(
             profile.id,
 
           etapa:
-            'meta',
+            'meta_direct',
+
+          httpStatus:
+            result.httpStatus ||
+            null,
 
           error:
             result.error ||
@@ -487,7 +745,7 @@ export default async function handler(
 
 
         console.error(
-          '[conexia-online-template-cron] falha Meta',
+          '[CONEXIA ONLINE META ERROR]',
           JSON.stringify(detail)
         );
 
@@ -516,33 +774,56 @@ export default async function handler(
       enviados++;
 
 
+      sucessos.push({
+
+        profileId:
+          profile.id,
+
+        messageStatus:
+          result.messageStatus,
+
+        waId:
+          result.waId,
+
+        providerMessageId:
+          result.providerMessageId,
+      });
+
+
       console.log(
-        '[conexia-online-template-cron] enviado',
+        '[CONEXIA ONLINE META OK]',
         JSON.stringify({
           profileId:
             profile.id,
 
+          messageStatus:
+            result.messageStatus,
+
+          waId:
+            result.waId,
+
           providerMessageId:
-            result
-              .providerMessageId ||
-            null,
+            result.providerMessageId,
         })
       );
 
 
-      // pequena pausa entre envios
+      // ---------------------------------------------------
+      // PEQUENA PAUSA
+      // ---------------------------------------------------
+
       await new Promise(
         resolve =>
           setTimeout(
             resolve,
-            350
+            400
           )
       );
     }
 
 
     // =====================================================
-    // RESPOSTA
+    // RESULTADO
     // =====================================================
 
     return res
@@ -552,11 +833,17 @@ export default async function handler(
         ok:
           falhas === 0,
 
+        mode:
+          'meta_graph_direct',
+
         template:
           TEMPLATE_NAME,
 
         language:
           TEMPLATE_LANGUAGE,
+
+        phoneNumberId:
+          META_PHONE_NUMBER_ID,
 
         batchSize:
           BATCH_SIZE,
@@ -575,6 +862,12 @@ export default async function handler(
 
         falhas,
 
+        sucessos:
+          sucessos.slice(
+            0,
+            5
+          ),
+
         erros:
           erros.slice(
             0,
@@ -583,11 +876,11 @@ export default async function handler(
       });
 
 
-  } catch (err) {
+  } catch (error) {
 
     console.error(
-      '[conexia-online-template-cron] erro geral:',
-      err
+      '[CONEXIA ONLINE ERRO GERAL]',
+      error
     );
 
 
@@ -598,7 +891,7 @@ export default async function handler(
         ok: false,
 
         error:
-          err?.message ||
+          error?.message ||
           'unknown_error',
       });
   }
