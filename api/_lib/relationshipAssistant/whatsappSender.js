@@ -5,27 +5,36 @@
 //   WHATSAPP_PROVIDER=webhook -> Twilio com Evolution como fallback
 //   WHATSAPP_PROVIDER=meta    -> Meta WhatsApp Cloud API
 
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_ACCOUNT_SID =
+  process.env.TWILIO_ACCOUNT_SID;
+
+const TWILIO_AUTH_TOKEN =
+  process.env.TWILIO_AUTH_TOKEN;
+
 const TWILIO_WHATSAPP_NUMBER =
-  process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+  process.env.TWILIO_WHATSAPP_NUMBER ||
+  'whatsapp:+14155238886';
 
 const EVO_URL = (
   process.env.EVOLUTION_API_URL ||
   'https://evolution-api-production-0c6a.up.railway.app'
 ).replace(/\/$/, '');
 
-const EVO_KEY = process.env.EVOLUTION_API_KEY;
-const EVO_INSTANCE = process.env.EVOLUTION_INSTANCE || 'conexia';
+const EVO_KEY =
+  process.env.EVOLUTION_API_KEY;
+
+const EVO_INSTANCE =
+  process.env.EVOLUTION_INSTANCE ||
+  'conexia';
 
 const WHATSAPP_PROVIDER =
-  process.env.WHATSAPP_PROVIDER || 'webhook';
+  process.env.WHATSAPP_PROVIDER ||
+  'webhook';
 
-// ─────────────────────────────────────────────
+
+// =========================================================
 // META WHATSAPP CLOUD API
-// Aceita os dois nomes porque o projeto hoje usa
-// nomenclaturas diferentes em arquivos distintos.
-// ─────────────────────────────────────────────
+// =========================================================
 
 const META_WHATSAPP_TOKEN =
   process.env.META_WHATSAPP_TOKEN;
@@ -35,32 +44,47 @@ const META_PHONE_NUMBER_ID =
   process.env.META_WHATSAPP_PHONE_NUMBER_ID;
 
 const META_GRAPH_API_VERSION =
-  process.env.META_GRAPH_API_VERSION || 'v26.0';
+  process.env.META_GRAPH_API_VERSION ||
+  'v26.0';
 
-// ─────────────────────────────────────────────
+
+// =========================================================
 // NORMALIZAÇÃO DE NÚMERO
-// ─────────────────────────────────────────────
+// =========================================================
 
 function toE164(number) {
-  const n = String(number || '').trim();
+
+  const n =
+    String(number || '')
+      .trim();
 
   return n.startsWith('+')
     ? n
     : `+${n}`;
 }
 
+
 function toDigits(number) {
+
   return String(number || '')
     .replace(/\D/g, '');
 }
 
-// ─────────────────────────────────────────────
+
+// =========================================================
 // TWILIO
-// ─────────────────────────────────────────────
+// =========================================================
 
-async function sendViaTwilio(number, text) {
+async function sendViaTwilio(
+  number,
+  text
+) {
 
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+  if (
+    !TWILIO_ACCOUNT_SID ||
+    !TWILIO_AUTH_TOKEN
+  ) {
+
     return {
       ok: false,
       channel: 'twilio',
@@ -68,269 +92,223 @@ async function sendViaTwilio(number, text) {
     };
   }
 
+
   try {
 
-    const auth = Buffer
-      .from(
-        `${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`
-      )
-      .toString('base64');
+    const auth =
+      Buffer
+        .from(
+          `${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`
+        )
+        .toString('base64');
 
-    const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
-      {
-        method: 'POST',
 
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type':
-            'application/x-www-form-urlencoded',
-        },
+    const res =
+      await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+        {
+          method: 'POST',
 
-        body: new URLSearchParams({
-          From: TWILIO_WHATSAPP_NUMBER,
-          To: `whatsapp:${toE164(number)}`,
-          Body: text,
-        }).toString(),
-      }
-    );
+          headers: {
+            Authorization:
+              `Basic ${auth}`,
+
+            'Content-Type':
+              'application/x-www-form-urlencoded',
+          },
+
+          body:
+            new URLSearchParams({
+              From:
+                TWILIO_WHATSAPP_NUMBER,
+
+              To:
+                `whatsapp:${toE164(number)}`,
+
+              Body:
+                text,
+            }).toString(),
+        }
+      );
+
 
     const data =
-      await res.json().catch(() => ({}));
+      await res
+        .json()
+        .catch(() => ({}));
+
 
     if (!res.ok) {
 
       return {
         ok: false,
         channel: 'twilio',
+
         error:
           data?.message ||
           `http_${res.status}`,
       };
     }
 
+
     return {
       ok: true,
       channel: 'twilio',
+
       providerMessageId:
-        data?.sid || null,
+        data?.sid ||
+        null,
     };
+
 
   } catch (e) {
 
     return {
       ok: false,
       channel: 'twilio',
-      error: e.message,
+
+      error:
+        e.message,
     };
   }
 }
 
-// ─────────────────────────────────────────────
-// EVOLUTION API
-// ─────────────────────────────────────────────
 
-async function sendViaEvolution(number, text) {
+// =========================================================
+// EVOLUTION API
+// =========================================================
+
+async function sendViaEvolution(
+  number,
+  text
+) {
 
   if (!EVO_KEY) {
 
     return {
       ok: false,
       channel: 'evolution',
-      error: 'evolution_not_configured',
+
+      error:
+        'evolution_not_configured',
     };
   }
 
+
   try {
 
-    const res = await fetch(
-      `${EVO_URL}/message/sendText/${EVO_INSTANCE}`,
-      {
-        method: 'POST',
+    const res =
+      await fetch(
+        `${EVO_URL}/message/sendText/${EVO_INSTANCE}`,
+        {
+          method: 'POST',
 
-        headers: {
-          'Content-Type':
-            'application/json',
-          apikey: EVO_KEY,
-        },
+          headers: {
+            'Content-Type':
+              'application/json',
 
-        body: JSON.stringify({
-          number,
-          text,
-        }),
-      }
-    );
+            apikey:
+              EVO_KEY,
+          },
+
+          body:
+            JSON.stringify({
+              number,
+              text,
+            }),
+        }
+      );
+
 
     if (!res.ok) {
 
       const body =
-        await res.text().catch(() => '');
+        await res
+          .text()
+          .catch(() => '');
+
 
       return {
         ok: false,
         channel: 'evolution',
+
         error:
           body?.slice(0, 300) ||
           `http_${res.status}`,
       };
     }
 
+
     return {
       ok: true,
       channel: 'evolution',
-      providerMessageId: null,
+
+      providerMessageId:
+        null,
     };
+
 
   } catch (e) {
 
     return {
       ok: false,
       channel: 'evolution',
-      error: e.message,
+
+      error:
+        e.message,
     };
   }
 }
 
-// ─────────────────────────────────────────────
-// META WHATSAPP CLOUD API
-// ─────────────────────────────────────────────
 
-async function sendViaMeta(number, text) {
+// =========================================================
+// META - TEXTO LIVRE
+// =========================================================
+
+async function sendViaMeta(
+  number,
+  text
+) {
 
   if (!META_WHATSAPP_TOKEN) {
 
     return {
       ok: false,
       channel: 'meta',
-      error: 'meta_token_not_configured',
+
+      error:
+        'meta_token_not_configured',
     };
   }
+
 
   if (!META_PHONE_NUMBER_ID) {
 
     return {
       ok: false,
       channel: 'meta',
+
       error:
         'meta_phone_number_id_not_configured',
     };
   }
 
-  const to = toDigits(number);
-
-  if (!to) {
-
-    return {
-      ok: false,
-      channel: 'meta',
-      error: 'invalid_destination_number',
-    };
-  }
-
-  try {
-
-    const res = await fetch(
-      `https://graph.facebook.com/${META_GRAPH_API_VERSION}/${META_PHONE_NUMBER_ID}/messages`,
-      {
-        method: 'POST',
-
-        headers: {
-          Authorization:
-            `Bearer ${META_WHATSAPP_TOKEN}`,
-          'Content-Type':
-            'application/json',
-        },
-
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to,
-
-          type: 'text',
-
-          text: {
-            preview_url: false,
-            body: String(text || ''),
-          },
-        }),
-      }
-    );
-
-    const data =
-      await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-
-      return {
-        ok: false,
-        channel: 'meta',
-
-        error:
-          data?.error?.message ||
-          `meta_http_${res.status}`,
-
-        errorCode:
-          data?.error?.code || null,
-      };
-    }
-
-    return {
-      ok: true,
-      channel: 'meta',
-
-      providerMessageId:
-        data?.messages?.[0]?.id ||
-        null,
-    };
-
-  } catch (e) {
-
-    return {
-      ok: false,
-      channel: 'meta',
-      error: e.message,
-    };
-  }
-}
-
-
-// ─────────────────────────────────────────────
-// META TEMPLATE MESSAGE
-// Usado para mensagens business-initiated fora da janela de 24h.
-// ─────────────────────────────────────────────
-
-async function sendTemplateViaMeta(
-  number,
-  templateName,
-  languageCode = 'pt_BR'
-) {
-
-  if (!META_WHATSAPP_TOKEN) {
-    return {
-      ok: false,
-      channel: 'meta',
-      error: 'meta_token_not_configured',
-    };
-  }
-
-  if (!META_PHONE_NUMBER_ID) {
-    return {
-      ok: false,
-      channel: 'meta',
-      error: 'meta_phone_number_id_not_configured',
-    };
-  }
 
   const to =
     toDigits(number);
 
+
   if (!to) {
+
     return {
       ok: false,
       channel: 'meta',
-      error: 'invalid_destination_number',
+
+      error:
+        'invalid_destination_number',
     };
   }
+
 
   try {
 
@@ -348,35 +326,36 @@ async function sendTemplateViaMeta(
               'application/json',
           },
 
-          body: JSON.stringify({
-            messaging_product:
-              'whatsapp',
+          body:
+            JSON.stringify({
+              messaging_product:
+                'whatsapp',
 
-            recipient_type:
-              'individual',
+              recipient_type:
+                'individual',
 
-            to,
+              to,
 
-            type:
-              'template',
+              type:
+                'text',
 
-            template: {
-              name:
-                templateName,
+              text: {
+                preview_url:
+                  false,
 
-              language: {
-                code:
-                  languageCode,
+                body:
+                  String(text || ''),
               },
-            },
-          }),
+            }),
         }
       );
+
 
     const data =
       await res
         .json()
         .catch(() => ({}));
+
 
     if (!res.ok) {
 
@@ -391,8 +370,202 @@ async function sendTemplateViaMeta(
         errorCode:
           data?.error?.code ||
           null,
+
+        errorSubcode:
+          data?.error?.error_subcode ||
+          null,
+
+        errorType:
+          data?.error?.type ||
+          null,
+
+        errorData:
+          data?.error?.error_data ||
+          null,
+
+        errorDetails:
+          data?.error?.details ||
+          null,
+
+        rawError:
+          data?.error ||
+          null,
       };
     }
+
+
+    return {
+      ok: true,
+      channel: 'meta',
+
+      providerMessageId:
+        data?.messages?.[0]?.id ||
+        null,
+    };
+
+
+  } catch (e) {
+
+    return {
+      ok: false,
+      channel: 'meta',
+
+      error:
+        e.message,
+    };
+  }
+}
+
+
+// =========================================================
+// META - TEMPLATE APROVADO
+// =========================================================
+
+async function sendTemplateViaMeta(
+  number,
+  templateName,
+  languageCode = 'pt_BR'
+) {
+
+  if (!META_WHATSAPP_TOKEN) {
+
+    return {
+      ok: false,
+      channel: 'meta',
+
+      error:
+        'meta_token_not_configured',
+    };
+  }
+
+
+  if (!META_PHONE_NUMBER_ID) {
+
+    return {
+      ok: false,
+      channel: 'meta',
+
+      error:
+        'meta_phone_number_id_not_configured',
+    };
+  }
+
+
+  const to =
+    toDigits(number);
+
+
+  if (!to) {
+
+    return {
+      ok: false,
+      channel: 'meta',
+
+      error:
+        'invalid_destination_number',
+    };
+  }
+
+
+  try {
+
+    const payload = {
+      messaging_product:
+        'whatsapp',
+
+      recipient_type:
+        'individual',
+
+      to,
+
+      type:
+        'template',
+
+      template: {
+        name:
+          templateName,
+
+        language: {
+          code:
+            languageCode,
+        },
+      },
+    };
+
+
+    const res =
+      await fetch(
+        `https://graph.facebook.com/${META_GRAPH_API_VERSION}/${META_PHONE_NUMBER_ID}/messages`,
+        {
+          method: 'POST',
+
+          headers: {
+            Authorization:
+              `Bearer ${META_WHATSAPP_TOKEN}`,
+
+            'Content-Type':
+              'application/json',
+          },
+
+          body:
+            JSON.stringify(
+              payload
+            ),
+        }
+      );
+
+
+    const data =
+      await res
+        .json()
+        .catch(() => ({}));
+
+
+    if (!res.ok) {
+
+      const metaError =
+        data?.error ||
+        {};
+
+
+      return {
+        ok: false,
+        channel: 'meta',
+
+        error:
+          metaError?.message ||
+          `meta_http_${res.status}`,
+
+        errorCode:
+          metaError?.code ||
+          null,
+
+        errorSubcode:
+          metaError?.error_subcode ||
+          null,
+
+        errorType:
+          metaError?.type ||
+          null,
+
+        errorData:
+          metaError?.error_data ||
+          null,
+
+        errorDetails:
+          metaError?.details ||
+          metaError?.error_user_msg ||
+          null,
+
+        fbtraceId:
+          metaError?.fbtrace_id ||
+          null,
+
+        rawError:
+          metaError,
+      };
+    }
+
 
     return {
       ok: true,
@@ -406,22 +579,27 @@ async function sendTemplateViaMeta(
         null,
     };
 
+
   } catch (e) {
 
     return {
       ok: false,
       channel: 'meta',
+
       error:
         e.message,
+
+      errorType:
+        'exception',
     };
   }
 }
 
 
-// ─────────────────────────────────────────────
-// PROVIDER ATUAL
-// TWILIO -> EVOLUTION FALLBACK
-// ─────────────────────────────────────────────
+// =========================================================
+// WEBHOOK PROVIDER
+// TWILIO -> EVOLUTION
+// =========================================================
 
 const WebhookWhatsAppProvider = {
 
@@ -436,9 +614,14 @@ const WebhookWhatsAppProvider = {
         text
       );
 
-    if (twilioResult.ok) {
+
+    if (
+      twilioResult.ok
+    ) {
+
       return twilioResult;
     }
+
 
     const evolutionResult =
       await sendViaEvolution(
@@ -446,9 +629,14 @@ const WebhookWhatsAppProvider = {
         text
       );
 
-    if (evolutionResult.ok) {
+
+    if (
+      evolutionResult.ok
+    ) {
+
       return evolutionResult;
     }
+
 
     return {
       ok: false,
@@ -463,9 +651,10 @@ const WebhookWhatsAppProvider = {
   },
 };
 
-// ─────────────────────────────────────────────
+
+// =========================================================
 // META PROVIDER
-// ─────────────────────────────────────────────
+// =========================================================
 
 const MetaWhatsAppProvider = {
 
@@ -479,6 +668,7 @@ const MetaWhatsAppProvider = {
       text
     );
   },
+
 
   async sendTemplate({
     number,
@@ -494,16 +684,21 @@ const MetaWhatsAppProvider = {
   },
 };
 
-// ─────────────────────────────────────────────
+
+// =========================================================
 // ESCOLHA DO PROVIDER
-// ─────────────────────────────────────────────
+// =========================================================
 
 export function getWhatsAppProvider() {
 
-  return WHATSAPP_PROVIDER === 'meta'
+  return (
+    WHATSAPP_PROVIDER ===
+    'meta'
+  )
     ? MetaWhatsAppProvider
     : WebhookWhatsAppProvider;
 }
+
 
 export {
   WebhookWhatsAppProvider,
