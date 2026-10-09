@@ -76,9 +76,14 @@ function DecisionCard({
   onOpenContact,
   onTalkToDanna,
 }) {
+  const [showWhy, setShowWhy] = useState(false);
+
   if (!item) return null;
 
-  const Icon = actionIcon(item.actionType);
+  const action = item.nextMove || item.title;
+  const name = item.contactName || "Contato";
+  const hasOpen = typeof onOpenContact === "function";
+  const hasDanna = typeof onTalkToDanna === "function";
 
   return (
     <article
@@ -88,216 +93,138 @@ function DecisionCard({
           principal ? UI.goldBorder : UI.borderSoft
         }`,
         background: principal ? UI.goldSoft : UI.card,
-        padding: 18,
+        padding: principal ? 16 : 14,
         boxSizing: "border-box",
         width: "100%",
       }}
     >
+      {principal && (
+        <div
+          style={{
+            color: UI.gold,
+            fontSize: 10,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.12em",
+            marginBottom: 6,
+          }}
+        >
+          Agora
+        </div>
+      )}
+
       <div
         style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 14,
+          color: UI.text,
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: principal ? 18 : 15,
+          fontWeight: 700,
+          lineHeight: 1.3,
         }}
       >
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            minWidth: 42,
-            borderRadius: 13,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: principal
-              ? "rgba(214,179,76,0.16)"
-              : "rgba(255,255,255,0.055)",
-            color: principal ? UI.gold : UI.textMuted,
-          }}
-        >
-          <Icon size={20} />
-        </div>
-
-        <div
-          style={{
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 7,
-              marginBottom: 9,
-            }}
-          >
-            {principal && (
-              <span
-                style={{
-                  borderRadius: 999,
-                  background: "rgba(214,179,76,0.16)",
-                  color: UI.gold,
-                  padding: "4px 8px",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.10em",
-                }}
-              >
-                Primeiro olhar
-              </span>
-            )}
-
-            <span
-              style={{
-                fontSize: 11,
-                color: UI.textSoft,
-              }}
-            >
-              {scoreLabel(item.score)}
-            </span>
-
-            {item.confidence >= 0.9 && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  color: UI.green,
-                  fontSize: 11,
-                }}
-              >
-                <CheckCircle2 size={12} />
-                evidência forte
-              </span>
-            )}
-          </div>
-
-          <h3
-            style={{
-              margin: 0,
-              color: UI.text,
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 16,
-              lineHeight: 1.35,
-              fontWeight: 700,
-            }}
-          >
-            {item.title}
-          </h3>
-
-          <p
-            style={{
-              margin: "8px 0 0",
-              color: UI.textMuted,
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13,
-              lineHeight: 1.65,
-            }}
-          >
-            {item.reason}
-          </p>
-
-          {item.nextMove && (
-            <div
-              style={{
-                marginTop: 14,
-                padding: "12px 13px",
-                borderRadius: 13,
-                border: `1px solid ${UI.borderSoft}`,
-                background: "rgba(0,0,0,0.18)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 6,
-                  color: UI.gold,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.09em",
-                }}
-              >
-                <ArrowRight size={13} />
-                Próximo movimento
-              </div>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: UI.text,
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13,
-                  lineHeight: 1.55,
-                }}
-              >
-                {item.nextMove}
-              </p>
-            </div>
-          )}
-
-          {(typeof onOpenContact === "function" ||
-            typeof onTalkToDanna === "function") && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 8,
-                marginTop: 14,
-              }}
-            >
-              {typeof onOpenContact === "function" && (
-                <button
-                  type="button"
-                  onClick={() => onOpenContact(item.contactId)}
-                  style={{
-                    borderRadius: 10,
-                    border: `1px solid ${UI.border}`,
-                    background: "rgba(255,255,255,0.035)",
-                    color: UI.text,
-                    padding: "9px 12px",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Abrir {firstName(item.contactName)}
-                </button>
-              )}
-
-              {typeof onTalkToDanna === "function" && (
-                <button
-                  type="button"
-                  onClick={() => onTalkToDanna(item)}
-                  style={{
-                    borderRadius: 10,
-                    border: `1px solid ${UI.goldBorder}`,
-                    background: UI.gold,
-                    color: "#11120F",
-                    padding: "9px 12px",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <MessageCircle size={14} />
-                  Falar com Danna
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        {name}
       </div>
+
+      <p
+        style={{
+          margin: "4px 0 0",
+          color: UI.textMuted,
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: 14,
+          lineHeight: 1.5,
+        }}
+      >
+        {action}
+      </p>
+
+      {(hasOpen || hasDanna) && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 12,
+          }}
+        >
+          {hasOpen && (
+            <button
+              type="button"
+              onClick={() => onOpenContact(item.contactId)}
+              style={{
+                borderRadius: 10,
+                border: `1px solid ${UI.border}`,
+                background: "rgba(255,255,255,0.035)",
+                color: UI.text,
+                padding: "9px 12px",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Abrir {firstName(name)}
+            </button>
+          )}
+
+          {hasDanna && (
+            <button
+              type="button"
+              onClick={() => onTalkToDanna(item)}
+              style={{
+                borderRadius: 10,
+                border: `1px solid ${UI.goldBorder}`,
+                background: UI.gold,
+                color: "#11120F",
+                padding: "9px 12px",
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <MessageCircle size={14} />
+              Falar com Danna
+            </button>
+          )}
+
+          {item.reason && (
+            <button
+              type="button"
+              onClick={() => setShowWhy((v) => !v)}
+              aria-expanded={showWhy}
+              style={{
+                background: "none",
+                border: "none",
+                color: UI.textSoft,
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 12,
+                cursor: "pointer",
+                padding: "9px 4px",
+              }}
+            >
+              {showWhy ? "Ocultar" : "Por quê?"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {showWhy && item.reason && (
+        <p
+          style={{
+            margin: "10px 0 0",
+            color: UI.textMuted,
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 13,
+            lineHeight: 1.6,
+          }}
+        >
+          {item.reason}
+        </p>
+      )}
     </article>
   );
 }
@@ -515,7 +442,7 @@ export default function HomeToday({
             onTalkToDanna={onTalkToDanna}
           />
 
-          {secondary.map((item) => (
+          {secondary.slice(0, 2).map((item) => (
             <DecisionCard
               key={item.recommendationId}
               item={item}
