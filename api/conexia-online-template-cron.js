@@ -174,14 +174,8 @@ async function sendTemplateDirect(
   );
 
 
-  // O Graph API Explorer autentica a requisição
-  // utilizando o access token da chamada.
-  params.set(
-    'access_token',
-    META_WHATSAPP_TOKEN
-  );
-
-
+  // Token enviado no header Authorization (não no corpo),
+  // para não vazar em logs de URL/corpo.
   const url =
     `https://graph.facebook.com/` +
     `${META_GRAPH_API_VERSION}/` +
@@ -200,6 +194,8 @@ async function sendTemplateDirect(
           headers: {
             'Content-Type':
               'application/x-www-form-urlencoded',
+            'Authorization':
+              `Bearer ${META_WHATSAPP_TOKEN}`,
           },
 
           body:
