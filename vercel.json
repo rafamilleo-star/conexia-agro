@@ -61,10 +61,6 @@
     {
       "path": "/api/interaction-intent-classifier-cron",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/conexia-online-template-cron",
-      "schedule": "30 */6 * * *"
     }
   ]
 }
