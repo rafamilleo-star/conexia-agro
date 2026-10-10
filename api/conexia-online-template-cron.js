@@ -511,12 +511,14 @@ export default async function handler(
 
       // ---------------------------------------------------
       // OPT-IN
+      // Mensagem de marketing: exige consentimento explícito.
+      // Quem não tem opt-in registrado (null/undefined) é pulado.
       // ---------------------------------------------------
 
       if (
         profile
-          .whatsapp_opt_in ===
-        false
+          .whatsapp_opt_in !==
+        true
       ) {
 
         pulados++;
