@@ -80,27 +80,7 @@ export default async function handler(req, res) {
     let query =
       supabase
         .from("contacts")
-        .select(`
-          id,
-          name,
-          company,
-          role,
-          category,
-          proximity,
-          influence,
-          trust,
-          ideal_frequency_days,
-          how_met,
-          personal_notes,
-          professional_notes,
-          interests,
-          challenges,
-          next_action,
-          next_action_date,
-          last_interaction_at,
-          health_score,
-          status
-        `)
+        .select('id,name,company,role,category,proximity,ideal_frequency_days,how_met,notes,personal_notes,hobbies,next_action,next_action_date,last_interaction_at,status')
         .eq("user_id", user.id);
 
     if (contactId) {
@@ -170,9 +150,6 @@ export default async function handler(req, res) {
           sentiment,
           tags,
           value_generated,
-          asked_for_something,
-          next_action,
-          next_action_date,
           created_at
         `)
         .eq("user_id", user.id)
@@ -200,14 +177,6 @@ export default async function handler(req, res) {
         proximity:
           contact.proximity,
 
-        influence:
-          contact.influence,
-
-        trust:
-          contact.trust,
-
-        healthScore:
-          contact.health_score,
 
         idealFrequencyDays:
           contact.ideal_frequency_days,
@@ -224,16 +193,10 @@ export default async function handler(req, res) {
 
       knownContext: {
         interests:
-          contact.interests,
-
-        challenges:
-          contact.challenges,
+          contact.hobbies,
 
         personalNotes:
-          contact.personal_notes,
-
-        professionalNotes:
-          contact.professional_notes,
+          contact.personal_notes || contact.notes,
       },
 
       openLoop: {
@@ -267,14 +230,6 @@ export default async function handler(req, res) {
             valueGenerated:
               item.value_generated,
 
-            askedForSomething:
-              item.asked_for_something,
-
-            nextAction:
-              item.next_action,
-
-            nextActionDate:
-              item.next_action_date,
           })
         ),
     };

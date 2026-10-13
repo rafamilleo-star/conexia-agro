@@ -39,7 +39,8 @@ export function isNetworkQuestion(text) {
 export function buildNetworkOverview(
   contacts = [],
   interactions = [],
-  now = new Date()
+  now = new Date(),
+  completeHistory = false
 ) {
   const end = now.getTime();
   const start = end - 30 * 86400000;
@@ -86,8 +87,8 @@ export function buildNetworkOverview(
     ).length,
 
     recentLinkedRecords: recentTotal,
-    sampleLimit: 500,
-    sampleMayBeLimited: interactions.length >= 500,
+    sampleLimit: completeHistory ? null : 500,
+    sampleMayBeLimited: !completeHistory && interactions.length >= 500,
     people: rows,
 
     interpretation:

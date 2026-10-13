@@ -5,6 +5,7 @@ import { buildContextCard } from "../../shared/contextCard.js";
 import { supabase } from "../utils/supabase";
 import ConversationRehearsal from './ConversationRehearsal.jsx';
 import NetworkStructureCard from './NetworkStructureCard.jsx';
+import { publishDannaWorkspace } from '../lib/dannaWorkspaceContext.js';
 
 // Rede de segurança: mesmo com a proibição no prompt, o Gemini às vezes
 // deixa escapar um score bruto ("(80)", "60%"). Isso remove esses padrões
@@ -20,8 +21,8 @@ function sanitizeInsightText(text) {
     .trim();
 }
 
-export function AbaIA({ userId, contacts, interactions, assessment, profile, pf, isPro, openAccessKey }) {
-  const [secao, setSecao] = useState("insights");
+export function AbaIA({ userId, contacts, interactions, assessment, profile, pf, isPro, openAccessKey, initialSection = 'insights' }) {
+  const [secao, setSecao] = useState(['insights', 'metas', 'briefing', 'agenda'].includes(initialSection) ? initialSection : 'insights');
   const [selContact, setSelContact] = useState(null);
 
   // ── Agenda: convidados de reunião sem match na rede ──
@@ -86,6 +87,11 @@ export function AbaIA({ userId, contacts, interactions, assessment, profile, pf,
   const [briefing, setBriefing] = useState(null);
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefErr, setBriefErr] = useState(null);
+
+  useEffect(() => {
+    publishDannaWorkspace(userId, 'ai_view', { section: secao, insights, goals: aiGoals,
+      briefing: briefing ? { person: selContact?.name, content: briefing } : null });
+  }, [userId, secao, insights, aiGoals, briefing, selContact]);
 
   const cacheKey = `${BRAND.storagePrefix}_ia_insights_${userId}`;
   const goalsKey = `${BRAND.storagePrefix}_ia_goals_${userId}`;
@@ -613,7 +619,8 @@ Sem texto extra. Seja específico e use os dados reais.`;
                 </div>
               </div>
 
-              <ConversationRehearsal key={`${userId}-${selContact.id}`} contact={selContact} interactions={interactions} />
+              <ConversationRehearsal key={`${userId}-${selContact.id}`} contact={selContact} interactions={interactions}
+                onFeedback={(feedback, goal) => publishDannaWorkspace(userId, 'rehearsal_feedback', { person: selContact.name, goal, feedback })} />
               {briefLoading && (
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, textAlign: 'center', padding: '32px 0' }}>
                   📋 Gerando briefing para {selContact.name}...

@@ -5,7 +5,7 @@ import { REHEARSAL_SCENARIOS, REHEARSAL_STANCES, requestRehearsal } from '../lib
 const field = { width: '100%', boxSizing: 'border-box', padding: 10, background: C.sf, color: C.txt, border: `1px solid ${C.brd}`, borderRadius: 8, fontFamily: "'DM Sans'", fontSize: 14 };
 const button = { padding: '10px 14px', background: C.gD, color: C.gold, border: `1px solid ${C.gL}`, borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans'", fontSize: 13 };
 
-export default function ConversationRehearsal({ contact, interactions = [] }) {
+export default function ConversationRehearsal({ contact, interactions = [], onFeedback }) {
   const [open, setOpen] = useState(false);
   const [scenario, setScenario] = useState('retomar');
   const [stance, setStance] = useState('receptivo');
@@ -38,7 +38,7 @@ export default function ConversationRehearsal({ contact, interactions = [] }) {
     try {
       const result = await requestRehearsal({ contact, interactions, scenario, stance, goal, messages: next, feedback: review }, controller.signal);
       if (request.current !== controller) return;
-      if (review) setFeedback(result);
+      if (review) { setFeedback(result); onFeedback?.(result, goal); }
       else { setMessages([...next, { role: 'assistant', text: result.resposta }]); setDraft(''); }
     } catch (e) {
       if (request.current === controller) setError(e.name === 'AbortError' ? 'O ensaio demorou a responder. Tente novamente.' : e.message);

@@ -3,6 +3,7 @@
 // Analisa intenção com Gemini, grava no Supabase, responde via Twilio
 
 import { relationshipMomentum } from '../shared/priorityEngine.js';
+import { answerDannaReadIntent, DANNA_READ_INTENTS } from './_lib/dannaKnowledge.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -253,6 +254,7 @@ Outras intenções:
 - query_health: especificamente sobre a saúde/estatística geral da rede como um todo (total de contatos, quantos esfriando) — não sobre um filtro específico como categoria (isso é query_data_simple).
 - query_insights: pedidos ABERTOS de insight, dica, análise geral SOBRE A REDE COMO UM TODO, sem uma pergunta analítica concreta e sem nomear um contato específico (ex.: "me dê insights", "alguma dica pra essa semana"). Se o usuário nomear um contato, é contact_coaching. Se o usuário fizer uma pergunta analítica concreta sobre os dados (não um pedido aberto), é query_data_analysis.
 - help: pede ajuda, não sabe o que o assistente faz.
+- query_app: pergunta sobre diagnóstico pessoal, arquétipo, dimensões, plano, progresso, metas, integrações, notificações ou recursos do CONÉXIA. Não é unknown. Pedido de ensaio também usa query_app para orientar a abrir a Danna do aplicativo.
 - unknown: só use se a mensagem realmente não tiver relação nenhuma com networking/contatos (ex: só "oi", saudação vazia sem contexto) — nunca use unknown só porque faltou um dado, veja a regra do register_contact acima.
 
 Se a mensagem contiver MAIS DE UMA intenção ao mesmo tempo (ex.: "Conheci um produtor e preciso ligar pra
@@ -263,7 +265,7 @@ Retorne APENAS JSON, sem markdown, sem texto fora do JSON, em UM dos dois format
 
 FORMATO 1 — uma intenção só:
 {
-  "intent": "register_interaction" | "schedule_action" | "relationship_narrative" | "register_contact" | "briefing" | "contact_coaching" | "query_last_interaction" | "relationship_history_summary" | "query_data_simple" | "query_data_analysis" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "help" | "unknown",
+  "intent": "register_interaction" | "schedule_action" | "relationship_narrative" | "register_contact" | "briefing" | "contact_coaching" | "query_last_interaction" | "relationship_history_summary" | "query_data_simple" | "query_data_analysis" | "query_contacts" | "query_next_actions" | "query_health" | "query_insights" | "query_app" | "help" | "unknown",
   "confidence": 0.0 a 1.0,
   "fields": {
     "contact_name": string ou null,
@@ -621,7 +623,6 @@ export async function handleSharedContact(number, mediaUrl, sendReply) {
   await sendReply(number, `✅ *${created.name}* cadastrado na sua rede a partir do contato compartilhado!${org ? ` (${org})` : ''}${tel}\n\nPróximo passo: manda "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.${APP_ENRICHMENT_NUDGE}`);
 }
 
-
 // =========================================================
 // CONTATO COMPARTILHADO — META CLOUD API
 // =========================================================
@@ -643,23 +644,19 @@ export async function handleSharedContactData(
     return;
   }
 
-
   const normalized =
     normalizePhone(number);
 
   const variants =
     waVariants(normalized);
 
-
   const profiles =
     await sb(
       `profiles?whatsapp=in.(${variants.join(',')})&select=id,name,first_name,is_pro,plan,pro_expires_at,whatsapp,whatsapp_trial_started_at`
     );
 
-
   const profile =
     profiles?.[0];
-
 
   if (!profile) {
 
@@ -671,10 +668,8 @@ export async function handleSharedContactData(
     return;
   }
 
-
   const userId =
     profile.id;
-
 
   if (
     await alreadyProcessedMessage(
@@ -684,7 +679,6 @@ export async function handleSharedContactData(
   ) {
     return;
   }
-
 
   if (
     !(await checkRateLimit(userId))
@@ -698,7 +692,6 @@ export async function handleSharedContactData(
     return;
   }
 
-
   const isPro =
     !!profile.is_pro ||
     (
@@ -711,7 +704,6 @@ export async function handleSharedContactData(
         new Date()
       )
     );
-
 
   if (!isPro) {
 
@@ -729,7 +721,6 @@ export async function handleSharedContactData(
 
         : 0;
 
-
     if (days > 10) {
 
       await sendReply(
@@ -741,7 +732,6 @@ export async function handleSharedContactData(
     }
   }
 
-
   const incoming =
     Array.isArray(
       sharedContacts
@@ -749,21 +739,17 @@ export async function handleSharedContactData(
       ? sharedContacts
       : [];
 
-
   const existing =
     await sb(
       `contacts?user_id=eq.${userId}&select=id,name,whatsapp`
     );
 
-
   const added = [];
   const duplicates = [];
-
 
   for (
     const raw of incoming
   ) {
-
 
     const name =
 
@@ -782,7 +768,6 @@ export async function handleSharedContactData(
         .join(' ')
         .trim();
 
-
     const phoneEntry =
 
       (raw?.phones || [])
@@ -794,7 +779,6 @@ export async function handleSharedContactData(
 
       raw?.phones?.[0];
 
-
     const phone =
       normalizePhone(
         phoneEntry?.wa_id ||
@@ -802,16 +786,13 @@ export async function handleSharedContactData(
         ''
       );
 
-
     const company =
       raw?.org?.company ||
       null;
 
-
     const role =
       raw?.org?.title ||
       null;
-
 
     const email =
       raw
@@ -820,18 +801,15 @@ export async function handleSharedContactData(
         ?.email ||
       null;
 
-
     if (!name) {
       continue;
     }
-
 
     const duplicateName =
       findExistingContactByName(
         existing,
         name
       );
-
 
     const duplicatePhone =
       phone
@@ -846,11 +824,9 @@ export async function handleSharedContactData(
 
         : null;
 
-
     const duplicate =
       duplicateName ||
       duplicatePhone;
-
 
     if (duplicate) {
 
@@ -861,7 +837,6 @@ export async function handleSharedContactData(
 
       continue;
     }
-
 
     const created =
       await createContactFromWhatsapp(
@@ -886,11 +861,9 @@ export async function handleSharedContactData(
         }
       );
 
-
     if (!created) {
       continue;
     }
-
 
     existing.push({
       id:
@@ -902,7 +875,6 @@ export async function handleSharedContactData(
       whatsapp:
         phone,
     });
-
 
     added.push({
       name:
@@ -916,9 +888,7 @@ export async function handleSharedContactData(
     });
   }
 
-
   const lines = [];
-
 
   if (
     added.length === 1
@@ -926,7 +896,6 @@ export async function handleSharedContactData(
 
     const item =
       added[0];
-
 
     const details =
       [
@@ -936,11 +905,9 @@ export async function handleSharedContactData(
         .filter(Boolean)
         .join(' na ');
 
-
     lines.push(
       `✅ *${item.name}* cadastrado na sua rede.`
     );
-
 
     if (details) {
 
@@ -948,7 +915,6 @@ export async function handleSharedContactData(
         `${details}`
       );
     }
-
 
     if (
       item.phone
@@ -960,7 +926,6 @@ export async function handleSharedContactData(
     }
   }
 
-
   if (
     added.length > 1
   ) {
@@ -968,7 +933,6 @@ export async function handleSharedContactData(
     lines.push(
       `✅ ${added.length} contatos cadastrados na sua rede.`
     );
-
 
     added.forEach(
       item => {
@@ -980,7 +944,6 @@ export async function handleSharedContactData(
     );
   }
 
-
   if (
     duplicates.length
   ) {
@@ -989,7 +952,6 @@ export async function handleSharedContactData(
       `ℹ️ Já estava(m) cadastrado(s): ${duplicates.join(', ')}`
     );
   }
-
 
   if (
     !added.length &&
@@ -1001,7 +963,6 @@ export async function handleSharedContactData(
     );
   }
 
-
   if (
     added.length
   ) {
@@ -1012,13 +973,11 @@ export async function handleSharedContactData(
     );
   }
 
-
   await sendReply(
     number,
     lines.join('\n')
   );
 }
-
 
 // Cria o contato de fato — reaproveitado tanto no cadastro direto (1 mensagem
 // com dados suficientes) quanto no fluxo de esclarecimento (nome veio depois).
@@ -1323,6 +1282,18 @@ async function setFocusContact(userIdProfile, contactId) {
 // EXATAMENTE o mesmo que já existia — só foi movido pra uma função separada
 // pra poder ser chamado em loop sem duplicar nenhuma lógica de handler.
 export async function executeIntent(intentData, { userIdProfile, contacts, number, sendReply, text, firstName, isPro }) {
+  if (DANNA_READ_INTENTS.has(intentData.intent)) {
+    try {
+      const result = await answerDannaReadIntent(intentData, {
+        userId: userIdProfile, question: text, isPro, generate: geminiText,
+      });
+      await sendReply(number, result.answer);
+      if (result.contactId) await setFocusContact(userIdProfile, result.contactId);
+    } catch {
+      await sendReply(number, 'Não consegui consultar o contexto completo do CONÉXIA agora. Tente novamente; seus registros continuam preservados.');
+    }
+    return;
+  }
   if (intentData.intent === 'register_contact') {
     if (!intentData.contact_name) {
       await setPendingAction(userIdProfile, 'register_contact_missing_name', {
@@ -1356,302 +1327,6 @@ export async function executeIntent(intentData, { userIdProfile, contacts, numbe
     }
     const detalhes = [intentData.role, intentData.company].filter(Boolean).join(' na ');
     await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${detalhes ? ` (${detalhes})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.${APP_ENRICHMENT_NUDGE}`);
-    return;
-  }
-
-  if (intentData.intent === 'briefing') {
-    if (!isPro) {
-      await sendReply(number, `🔒 Preparação de reunião com IA é um recurso PRO.\n\nNo PRO, antes de cada conversa você recebe uma leitura completa da relação — contexto, histórico e sugestão de abordagem — não só os dados brutos.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
-      return;
-    }
-    const match = (contacts || []).find(c =>
-      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
-    );
-    if (!match) {
-      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
-      return;
-    }
-    const full = await sb(`contacts?id=eq.${match.id}&select=id,name,company,role,category,how_met,hobbies,last_interaction_at,ideal_frequency_days,next_action,next_action_date`);
-    const c = full?.[0];
-    if (!c) { await sendReply(number, `Não encontrei os detalhes de "${match.name}".`); return; }
-    const diasSemContato = c.last_interaction_at ? Math.floor((Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000) : null;
-
-    // Momentum (mesmo motor da Home/Perfil — shared/priorityEngine.js) —
-    // "o que mudou" do briefing, seção 9 do prompt mestre. Silencioso
-    // quando não há base pra afirmar nada (insufficient_data/new), igual
-    // em qualquer outro lugar que usa momentum.
-    const contactHistory = await sb(`interactions?contact_id=eq.${c.id}&select=created_at&order=created_at.asc`);
-    const momentum = relationshipMomentum(c, contactHistory, new Date());
-    const MOMENTUM_BRIEFING_LINES = {
-      cooling: 'O ritmo de contato com essa relação caiu em relação ao histórico de vocês.',
-      strengthening: 'Vocês têm se falado com mais frequência que o normal ultimamente.',
-      reactivated: 'Você está retomando essa relação depois de um tempo sem contato.',
-    };
-    const momentumLine = MOMENTUM_BRIEFING_LINES[momentum] || null;
-
-    // Histórico real das últimas interações — sem isso a preparação de
-    // reunião vira ficha cadastral disfarçada, igual ao contact_coaching.
-    const recentInteractions = await sb(`interactions?contact_id=eq.${c.id}&order=created_at.desc&limit=5&select=type,description,sentiment,created_at`);
-    const historico = (recentInteractions || []).length
-      ? recentInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description || 'sem detalhes'}`).join('\n')
-      : 'Nenhuma interação registrada ainda.';
-
-    const briefingPrompt = `Você é o assessor pessoal de ${firstName || 'o usuário'}, ajudando ele a se
-preparar pra falar ou se reunir com um contato profissional da rede dele no agronegócio. Fale como um
-assessor experiente falaria com a pessoa que assessora — direto, natural, em português, sem listar campos
-de cadastro como se fosse uma ficha e sem usar marcadores ou títulos de seção.
-
-Dados do contato:
-- Nome: ${c.name}
-- Cargo/Empresa: ${[c.role, c.company].filter(Boolean).join(' na ') || 'não informado'}
-- Categoria da relação: ${c.category || 'não classificada'}
-- Como se conheceram: ${c.how_met || 'não informado'}
-- Hobbies/interesses pessoais conhecidos: ${c.hobbies || 'nenhum registrado'}
-- Última interação: ${diasSemContato !== null ? `há ${diasSemContato} dia(s)` : 'nenhuma registrada ainda'}
-${momentumLine ? `- Sinal de momentum: ${momentumLine}` : ''}
-- Próxima ação já planejada: ${c.next_action ? `${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'nenhuma'}
-
-Histórico das últimas interações registradas:
-${historico}
-
-Monte uma preparação de reunião curta (5 a 7 frases corridas, pode quebrar em 2 parágrafos, mas sem
-bullets nem rótulos de campo). Cubra de forma conectada: (1) quem é essa pessoa e o contexto da relação,
-puxando algo concreto do histórico quando houver; (2) onde a relação está agora, só se houver sinal de
-momentum que valha mencionar; (3) se houver próxima ação já combinada, lembre que ela precisa ser
-fechada nessa conversa. Se não houver histórico nenhum, diga isso com naturalidade e explique que a
-sugestão final vai ser sobre como abrir uma primeira conversa mais estruturada.
-
-Depois disso, feche SEMPRE com uma última frase separada, começando exatamente por "Minha sugestão:" — uma
-recomendação concreta e específica pra ESSA reunião (não um conselho genérico que serviria pra qualquer
-contato), amarrada a um fato real do histórico ou dos dados acima: o que levar, que pergunta fazer, ou que
-gancho puxar. Essa frase final é a parte mais importante da resposta — não pode faltar em nenhuma
-situação, mesmo sem histórico.
-
-Nunca invente fato que não esteja nos dados acima.`;
-
-    const resposta = await geminiText(briefingPrompt, 500);
-    if (resposta) {
-      await sendReply(number, `📋 *${c.name}*\n\n${resposta}`);
-    } else {
-      // Fallback estático — nunca deixa o usuário sem resposta se o Gemini falhar.
-      const linhas = [
-        `📋 *Briefing — ${c.name}*`,
-        c.role || c.company ? `${[c.role, c.company].filter(Boolean).join(' na ')}` : null,
-        c.category ? `Categoria: ${c.category}` : null,
-        c.how_met ? `Como conheceu: ${c.how_met}` : null,
-        diasSemContato !== null ? `Última interação: há ${diasSemContato} dia(s)` : 'Última interação: nenhuma registrada ainda',
-        momentumLine,
-        c.next_action ? `Próxima ação: ${c.next_action}${c.next_action_date ? ` (${new Date(c.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR')})` : ''}` : 'Sem próxima ação definida',
-      ].filter(Boolean);
-      await sendReply(number, linhas.join('\n'));
-    }
-    await setFocusContact(userIdProfile, match.id);
-    return;
-  }
-
-  if (intentData.intent === 'query_last_interaction') {
-    if (!isPro) {
-      await sendReply(number, `🔒 Histórico de interações com leitura da IA é um recurso PRO.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
-      return;
-    }
-    const match = (contacts || []).find(c =>
-      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
-    );
-    if (!match) {
-      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
-      return;
-    }
-    // Traz até 5 interações — cobre tanto "qual foi a última" quanto "faça
-    // um resumo"/"história das conversas", que caem na mesma intenção.
-    const recentInteractions = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.desc&limit=5&select=type,description,sentiment,created_at`);
-    if (!recentInteractions?.length) {
-      await sendReply(number, `Ainda não tenho nenhuma interação registrada com *${match.name}*.`);
-      await setFocusContact(userIdProfile, match.id);
-      return;
-    }
-    const historico = recentInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description || 'sem detalhes'}`).join('\n');
-    const diasAtras = Math.floor((Date.now() - new Date(recentInteractions[0].created_at).getTime()) / 86400000);
-    const pergunta = intentData.note || text;
-
-    const historyPrompt = `Você é o assessor pessoal de ${firstName || 'o usuário'}, ajudando ele a lembrar
-do histórico de conversas com um contato profissional. Fale de forma natural, em português, como um
-assessor contando pra pessoa que assessora o que já aconteceu — nunca como uma lista de registros de
-sistema, sem bullets nem rótulos de campo.
-
-Pergunta de ${firstName || 'o usuário'}: "${pergunta}"
-
-Histórico registrado com ${match.name} (mais recente primeiro; a última interação foi há ${diasAtras}
-dia(s)):
-${historico}
-
-Responda de forma fluida (3 a 6 frases): comece pelo que foi tratado na conversa mais recente e conecte
-com o que veio antes quando ajudar a dar contexto de pra onde a relação está indo — conte como uma
-continuidade, não como itens separados. Se fizer sentido pela pergunta, feche com uma observação ou
-sugestão de próximo passo. Use só o que está no histórico acima — nunca invente detalhe que não esteja
-lá.`;
-
-    const resposta = await geminiText(historyPrompt, 450);
-    if (resposta) {
-      await sendReply(number, `💬 *${match.name}*\n\n${resposta}`);
-    } else {
-      // Fallback estático — nunca deixa o usuário sem resposta se o Gemini falhar.
-      const i = recentInteractions[0];
-      await sendReply(number, `💬 *Última interação com ${match.name}* (há ${diasAtras} dia(s), ${i.type}):\n\n${i.description || 'Sem detalhes registrados.'}`);
-    }
-    await setFocusContact(userIdProfile, match.id);
-    return;
-  }
-
-  if (intentData.intent === 'relationship_history_summary') {
-    if (!isPro) {
-      await sendReply(number, `🔒 Resumo completo da relação com IA é um recurso PRO.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
-      return;
-    }
-    const match = (contacts || []).find(c =>
-      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
-    );
-    if (!match) {
-      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede.`);
-      return;
-    }
-    const full = await sb(`contacts?id=eq.${match.id}&select=name,company,role,category,how_met,last_interaction_at`);
-    const c = full?.[0];
-    // Teto de 40 interações: cobre a esmagadora maioria das relações reais
-    // sem estourar o limite de tokens do prompt. Se um dia isso não for
-    // suficiente, o certo é resumir em blocos, não simplesmente subir o
-    // número — mas 40 já é mais histórico do que cabe numa memória humana
-    // de "resumo rápido" mesmo.
-    const allInteractions = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.asc&limit=40&select=type,description,sentiment,created_at`);
-    if (!allInteractions?.length) {
-      await sendReply(number, `Ainda não tenho nenhuma interação registrada com *${match.name}* pra te dar um resumo.`);
-      await setFocusContact(userIdProfile, match.id);
-      return;
-    }
-    const totalRegistrado = allInteractions.length;
-    const primeiraData = new Date(allInteractions[0].created_at).toLocaleDateString('pt-BR');
-    const historicoCompleto = allInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description || 'sem detalhes'}`).join('\n');
-
-    const summaryPrompt = `Você é o assessor pessoal de ${firstName || 'o usuário'}, ajudando ele a
-relembrar TODA a história de relação com um contato profissional no agronegócio — não só a conversa mais
-recente. Fale de forma natural, em português, como um assessor contando a trajetória da relação pra pessoa
-que assessora — nunca como uma lista de registros de sistema, sem bullets nem rótulos de campo.
-
-Dados do contato: ${match.name}${c?.role || c?.company ? `, ${[c?.role, c?.company].filter(Boolean).join(' na ')}` : ''}${c?.category ? ` (categoria: ${c.category})` : ''}.
-
-Histórico completo registrado, do mais antigo ao mais recente (${totalRegistrado} interação(ões) desde
-${primeiraData}):
-${historicoCompleto}
-
-Monte um resumo corrido (6 a 9 frases, pode ter 2 parágrafos) contando a trajetória: como a relação
-começou/evoluiu, quais foram os temas que mais se repetiram ou que tiveram mais peso, se o tom geral foi
-positivo ou teve altos e baixos, e onde a relação está agora. Feche com uma observação sobre pra onde essa
-relação parece estar indo ou uma sugestão de próximo passo, se fizer sentido. Use só o que está no
-histórico acima — nunca invente fato que não esteja lá.`;
-
-    const resposta = await geminiText(summaryPrompt, 600);
-    if (resposta) {
-      await sendReply(number, `📖 *${match.name}*\n\n${resposta}`);
-    } else {
-      // Fallback estático — nunca deixa o usuário sem resposta se o Gemini falhar.
-      await sendReply(number, `📖 *Histórico com ${match.name}* (${totalRegistrado} interação(ões) desde ${primeiraData}):\n\n${historicoCompleto}`);
-    }
-    await setFocusContact(userIdProfile, match.id);
-    return;
-  }
-
-  if (intentData.intent === 'query_data_simple') {
-    if (!(contacts || []).length) {
-      await sendReply(number, 'Você ainda não tem contatos cadastrados.');
-      return;
-    }
-    const pergunta = intentData.note || text;
-    const dataPrompt = `Você é um assistente de consulta de dados do CRM Conéxia. Responda a pergunta do
-usuário usando EXCLUSIVAMENTE os dados cadastrados abaixo — nunca invente, deduza ou complete informação
-que não está explícita neles.
-
-Dados cadastrados (${contacts.length} contato(s)):
-${buildContactsDataBlock(contacts)}
-
-Pergunta do usuário: "${pergunta}"
-
-Responda de forma objetiva: se for contagem, dê o número exato e liste os nomes correspondentes. Se for
-lista/filtro, liste só os nomes que atendem ao critério. Se a pergunta pedir algo que não está nos dados
-acima, diga claramente que essa informação não está cadastrada — não invente. Não dê conselhos, opiniões
-nem interpretações, só o fato. Responda em português, direto, sem preâmbulo.`;
-    const resposta = await geminiText(dataPrompt, 500);
-    await sendReply(number, resposta || 'Não consegui consultar seus dados agora. Tenta de novo em instantes.');
-    return;
-  }
-
-  if (intentData.intent === 'query_data_analysis') {
-    if (!isPro) {
-      await sendReply(number, `🔒 Análises sobre sua rede são um recurso PRO.\n\nNo Free você já consulta contagens e filtros objetivos sobre seus contatos. No PRO, a IA interpreta os dados e te ajuda a decidir.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
-      return;
-    }
-    if (!(contacts || []).length) {
-      await sendReply(number, 'Você ainda não tem contatos cadastrados pra eu analisar.');
-      return;
-    }
-    const pergunta = intentData.note || text;
-    const analysisPrompt = `Você é um mentor estratégico de networking ajudando ${firstName || 'o usuário'} a
-interpretar a rede de contatos dele no agronegócio.
-
-Dados cadastrados (${contacts.length} contato(s)):
-${buildContactsDataBlock(contacts)}
-
-Pergunta do usuário: "${pergunta}"
-
-Responda de forma direta e acionável (máximo 5 frases), baseando-se SOMENTE nos dados acima — nunca invente
-informação que não está lá. Se os dados não forem suficientes pra responder com segurança, diga isso e
-explique o que falta.`;
-    const resposta = await geminiText(analysisPrompt, 400);
-    await sendReply(number, `🧠 ${resposta || 'Não consegui analisar agora. Tenta de novo em instantes.'}`);
-    return;
-  }
-
-  if (intentData.intent === 'contact_coaching') {
-    if (!isPro) {
-      await sendReply(number, `🔒 Orientação sobre como agir com um contato é um recurso PRO.\n\nNo PRO a IA analisa o histórico da relação e te diz como puxar a conversa, não só os dados cadastrados.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
-      return;
-    }
-    const match = (contacts || []).find(c =>
-      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
-    );
-    if (!match) {
-      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede pra te orientar. Confere o nome?`);
-      return;
-    }
-    const full = await sb(`contacts?id=eq.${match.id}&select=name,company,role,category,how_met,hobbies,last_interaction_at,next_action,next_action_date`);
-    const c = full?.[0];
-    if (!c) { await sendReply(number, `Não encontrei os detalhes de "${match.name}".`); return; }
-    // Últimas interações reais — sem isso o conselho fica genérico igual ao
-    // briefing. É essa diferença que justifica o intent existir separado.
-    const recentInteractions = await sb(`interactions?contact_id=eq.${match.id}&order=created_at.desc&limit=5&select=type,description,sentiment,created_at`);
-    const diasSemContato = c.last_interaction_at ? Math.floor((Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000) : null;
-    const historico = (recentInteractions || []).length
-      ? recentInteractions.map(i => `- ${new Date(i.created_at).toLocaleDateString('pt-BR')} (${i.type}, ${i.sentiment}): ${i.description}`).join('\n')
-      : 'Nenhuma interação registrada ainda.';
-    const anguloDaDuvida = intentData.note ? `\nA dúvida específica do usuário: ${intentData.note}` : '\nA pergunta foi genérica (só "como devo agir"), então cubra: abertura da conversa, assunto pra puxar, e um ponto de atenção.';
-    const coachingPrompt = `Você é um mentor de networking estratégico ajudando ${firstName || 'o usuário'} a se relacionar melhor com um contato profissional dele no agronegócio.
-
-Dados do contato:
-- Nome: ${c.name}
-- Cargo/Empresa: ${[c.role, c.company].filter(Boolean).join(' na ') || 'não informado'}
-- Categoria da relação: ${c.category || 'não classificada'}
-- Como se conheceram: ${c.how_met || 'não informado'}
-- Última interação: ${diasSemContato !== null ? `há ${diasSemContato} dia(s)` : 'nenhuma registrada'}
-- Próxima ação já planejada: ${c.next_action || 'nenhuma'}
-
-Histórico das últimas interações:
-${historico}
-${anguloDaDuvida}
-
-Dê um conselho curto, direto e ACIONÁVEL (máximo 4 frases, sem enrolação, sem tom de coach genérico) sobre
-como ${firstName || 'o usuário'} deve conduzir essa relação agora — puxando de algo concreto do histórico
-acima sempre que possível, não conselho genérico que serviria pra qualquer contato.`;
-    const conselho = await geminiText(coachingPrompt, 300);
-    await sendReply(number, `🧭 *Como agir com ${c.name}*\n\n${conselho || 'Não consegui gerar uma orientação agora. Tenta de novo em instantes.'}`);
-    await setFocusContact(userIdProfile, match.id);
     return;
   }
 
@@ -1776,44 +1451,6 @@ acima sempre que possível, não conselho genérico que serviria pra qualquer co
       possible_person_relationship: intentData.possible_person_relationship || null,
     });
     await sendReply(number, `Entendi isso:\n${bullets.map(b => `• ${b}`).join('\n')}\n\nRegistrar? Responde *sim* ou *não*.`);
-    return;
-  }
-
-  if (intentData.intent === 'query_next_actions') {
-    const pending = (contacts || []).filter(c => c.next_action).slice(0, 8);
-    if (!pending.length) { await sendReply(number, 'Você não tem próximas ações pendentes registradas. 🎉'); return; }
-    const list = pending.map(c => `• *${c.name}*: ${c.next_action}${c.next_action_date ? ` (${c.next_action_date})` : ''}`).join('\n');
-    await sendReply(number, `📋 Suas próximas ações:\n\n${list}`);
-    return;
-  }
-
-  if (intentData.intent === 'query_contacts') {
-    const sorted = [...(contacts || [])].sort((a, b) => new Date(a.last_interaction_at || 0) - new Date(b.last_interaction_at || 0)).slice(0, 8);
-    if (!sorted.length) { await sendReply(number, 'Você ainda não tem contatos cadastrados.'); return; }
-    const list = sorted.map(c => `• *${c.name}* — ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'sem interação registrada'}`).join('\n');
-    await sendReply(number, `👥 Contatos sem contato recente:\n\n${list}`);
-    return;
-  }
-
-  if (intentData.intent === 'query_health') {
-    const total = (contacts || []).length;
-    const cooling = (contacts || []).filter(c => {
-      if (!c.last_interaction_at) return true;
-      const days = (Date.now() - new Date(c.last_interaction_at).getTime()) / 86400000;
-      return days > 30;
-    }).length;
-    await sendReply(number, `💚 Saúde da sua rede:\n\n${total} contatos no total\n${cooling} esfriando (30+ dias sem contato)\n${total - cooling} saudáveis`);
-    return;
-  }
-
-  if (intentData.intent === 'query_insights') {
-    if (!isPro) {
-      await sendReply(number, `🔒 Insights e recomendações estratégicas são um recurso PRO.\n\nNo Free você já acompanha saúde da rede e próximas ações. No PRO, a IA analisa sua rede e recomenda o que fazer.\n\nAcesse conexia-agro-chi.vercel.app pra ativar (chave de acesso ou assinatura).`);
-      return;
-    }
-    const summary = (contacts || []).map(c => `${c.name}: última interação ${c.last_interaction_at ? new Date(c.last_interaction_at).toLocaleDateString('pt-BR') : 'nunca'}`).join('; ');
-    const insight = await geminiText(`Com base nesta rede de contatos: ${summary || 'sem contatos ainda'}. Dê 1 insight curto e acionável (máx. 3 frases) para ${firstName || 'o usuário'} sobre como cuidar da rede esta semana.`, 200);
-    await sendReply(number, `🧠 ${insight || 'Cadastre mais contatos e interações para eu gerar insights.'}`);
     return;
   }
 

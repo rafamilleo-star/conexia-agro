@@ -2909,6 +2909,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [openedFromCircle, setOpenedFromCircle] = useState(false);
   const [circleSaveNotice, setCircleSaveNotice] = useState("");
   const [view, setView] = useState("dash");
+  const [dannaIaSection, setDannaIaSection] = useState('insights');
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
   const [orgOverviewError, setOrgOverviewError] = useState("");
@@ -4104,6 +4105,19 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
           }}
           onDataChanged={load}
           network={network}
+          appAccess={{ isPro, orgAdmin: Boolean(profile?.organization_id && profile?.org_role === 'admin') }}
+          methodology={{ archetype: pf, dimensions: DIMS.map(({ key, label, desc }) => ({ key, label, desc })), activationPlan: PLAN }}
+          onNavigate={area => {
+            if (area === 'today') { setView('dash'); return; }
+            if (area === 'contacts') { setRedeSubTab('pessoas'); setView('contacts'); return; }
+            if (area === 'network' && isPro) { setRedeSubTab('teia'); setView('contacts'); return; }
+            if (area === 'profile') { setView('perfil'); return; }
+            if (area === 'report') { setInsightsSubTab('report'); setView('insights'); return; }
+            if (area === 'plan') { setInsightsSubTab('plano'); setView('insights'); return; }
+            if (area === 'company' && profile?.organization_id && profile?.org_role === 'admin') { setView('empresa'); return; }
+            const section = { insights: 'insights', goals: 'metas', briefing: 'briefing', calendar: 'agenda' }[area];
+            if (section && isPro) { setDannaIaSection(section); setInsightsSubTab('ia'); setView('insights'); }
+          }}
           voiceEngine={voiceEngine}
           autoStart={true}
           key={`danna-${user?.id}-${voiceEngine}`}
@@ -5424,7 +5438,7 @@ ${MENTORIA_LINK || true ? `
           <button key={t.id} onClick={() => setInsightsSubTab(t.id)} style={{ background: insightsSubTab === t.id ? C.gD : "transparent", border: `1px solid ${insightsSubTab === t.id ? C.gL : C.brd}`, borderRadius: 8, padding: "7px 14px", fontFamily: "'DM Sans'", fontSize: 12, fontWeight: 600, color: insightsSubTab === t.id ? C.gold : C.txM, cursor: "pointer" }}>{t.label}</button>
         ))}
       </div>
-      {insightsSubTab === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
+      {insightsSubTab === "ia" && <AbaIA key={`ia-${user?.id}`} userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} initialSection={dannaIaSection} />}
       {insightsSubTab === "plano" && renderPlan()}
       {insightsSubTab === "report" && renderReport()}
     </div>
@@ -5580,7 +5594,7 @@ ${MENTORIA_LINK || true ? `
         {view === "contacts" && renderContacts()}
         {view === "teia" && renderTeia()}
         {view === "plano" && renderPlan()}
-        {view === "ia" && <AbaIA userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} />}
+        {view === "ia" && <AbaIA key={`ia-${user?.id}`} userId={user?.id} contacts={cts} interactions={its} assessment={assessment} profile={profile} pf={pf} isPro={isPro} openAccessKey={openAccessKey} initialSection={dannaIaSection} />}
         {view === "empresa" && profile?.organization_id && profile?.org_role === "admin" && renderEmpresa()}
         {view === "report" && renderReport()}
         {view === "mentor" && admin && renderMentor()}

@@ -15,6 +15,11 @@ import DannaLive from "../lib/dannaLive";
 import DannaGeminiLive from "../lib/dannaGeminiLive";
 import DannaFishLive from "../lib/dannaFishLive";
 import { buildDannaGreeting } from "../lib/dannaGreeting.js";
+import { loadDannaAppKnowledge, projectDannaContact, selectDannaHistory } from '../../shared/dannaAppKnowledge.js';
+import { DANNA_GROUNDING_RULES, dannaCapabilities, detectDannaNavigation, resolveDannaContact } from '../../shared/dannaCapabilities.js';
+import { advanceDannaRehearsal, isDannaRehearsalRequest } from '../lib/dannaRehearsal.js';
+import DannaRehearsalView from './DannaRehearsalView.jsx';
+import { getDannaWorkspace, publishDannaWorkspace } from '../lib/dannaWorkspaceContext.js';
 import {
   resolveDannaSpokenName, isNetworkQuestion,
   buildNetworkOverview, extractPendingPersonName,
@@ -618,6 +623,9 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   onOpenContact,
   onDataChanged,
   network,
+  appAccess = {},
+  methodology = null,
+  onNavigate,
   voiceEngine = "openai",
   autoStart = false,
 }, ref) {
@@ -659,6 +667,10 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   const recentTurnsRef = useRef([]);
   const turnSeqRef = useRef(0);
   const lastSavedContextRef = useRef(null);
+  const userTurnHandlerRef = useRef(null);
+  const rehearsalRef = useRef(null);
+  const rehearsalRequestRef = useRef(null);
+  const [rehearsal, setRehearsal] = useState(null);
 
   const isStaleTurn = turnId =>
     Boolean(turnId) && turnId !== turnSeqRef.current;
@@ -674,6 +686,8 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
 
   useEffect(() => {
     return () => {
+      turnSeqRef.current += 1;
+      rehearsalRequestRef.current?.abort();
       try { liveRef.current?.disconnect("unmount"); } catch {}
       liveRef.current = null;
     };
@@ -804,12 +818,12 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
     };
   }, [priorities, pending, patterns, onOpenContact]);
 
-  const speak = (text, resumeListening = true) => {
+  const speak = (text, resumeListening = true, { simulated = false } = {}) => {
     const raw = String(text || "").trim();
 
     if (!raw) return;
 
-    addTurn("assistant", raw);
+    if (!simulated) addTurn("assistant", raw);
 
     if (!liveRef.current?.connected) {
       setAnswer(raw);
@@ -830,6 +844,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
 
   const stopConversation = () => {
     turnSeqRef.current += 1;
+    rehearsalRequestRef.current?.abort();
     conversationActiveRef.current = false;
     greetedThisSessionRef.current = false;
 
@@ -943,7 +958,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
         live.interrupt();
         setInput(clean);
 
-        void handleUserTurn(clean);
+        void userTurnHandlerRef.current?.(clean);
       },
 
       onTranscript: () => {},
@@ -1048,17 +1063,7 @@ const ConexiaLabHome = forwardRef(function ConexiaLabHome({
   }, [autoStart, userId, prefsLoading]);
 
   const findContactByName = name => {
-    const n = normalize(name);
-
-    if (!n) return null;
-
-    return (
-      contacts.find(c => normalize(c.name) === n) ||
-      contacts.find(c =>
-        normalize(c.name).includes(n) ||
-        n.includes(normalize(c.name))
-      )
-    );
+    return resolveDannaContact(name, contacts).contact;
   };
 
   const analyzeCapture = async (text, turnId = null) => {
@@ -1196,7 +1201,7 @@ Responda SOMENTE JSON válido:
       true
     );
   };
-    const loadDannaKnowledge = async () => {
+    const loadDannaKnowledge = async (question = '') => {
     if (!userId) {
       throw new Error("Sessão não autenticada.");
     }
@@ -1211,6 +1216,25 @@ Responda SOMENTE JSON válido:
     const alertsRes = { data: raw.alerts };
     const eventsRes = { data: raw.events };
     const profileRes = { data: raw.profile };
+    let storage = null;
+    try { storage = typeof window !== 'undefined' ? window.localStorage : null; } catch {}
+    const appKnowledge = await loadDannaAppKnowledge(supabase, userId, {
+      raw, isPro: Boolean(appAccess.isPro), methodology, storage, now,
+    });
+    appKnowledge.currentSession = getDannaWorkspace(userId);
+    if (appAccess.isPro && /convidad|pessoas novas.*reuniao|quem apareceu.*reuniao/.test(normalize(question))) {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const response = await fetch('/api/calendar-meeting-attendees', {
+          headers: { Authorization: `Bearer ${sessionData?.session?.access_token || ''}` },
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error('Agenda indisponível.');
+        appKnowledge.calendarCandidates = { connected: result.connected,
+          candidates: (result.candidates || []).map(c => ({ name: c.name, source: c.source, meetings: c.meetings })) };
+        appKnowledge.sources.calendarCandidates = { status: result.connected ? result.candidates?.length ? 'available' : 'empty' : 'unavailable', source: 'calendar-meeting-attendees' };
+      } catch { appKnowledge.sources.calendarCandidates = { status: 'unavailable', source: 'calendar-meeting-attendees' }; }
+    }
     const signalsRes = await supabase.from('signals')
       .select('id,contact_id,source,type,title,summary,identity_confidence,detected_at,expires_at,status')
       .eq('user_id', userId).in('status', ['new', 'evaluated', 'relevant'])
@@ -1222,6 +1246,7 @@ Responda SOMENTE JSON válido:
     const contactName = id => contactById.get(id)?.name || null;
 
     const contactsForAI = people.map(c => ({
+      ...projectDannaContact(c),
       id: c.id,
       name: c.name,
       company: c.company || "",
@@ -1271,7 +1296,7 @@ Responda SOMENTE JSON válido:
       createdAt: a.created_at,
     }));
 
-    const signalsForAI = (signalsRes.data || []).map(sg => ({
+    const signalsForAI = (signalsRes.data || []).filter(sg => !sg.expires_at || Date.parse(sg.expires_at) >= now.getTime()).map(sg => ({
       person: contactName(sg.contact_id),
       source: sg.source,
       type: sg.type,
@@ -1435,6 +1460,8 @@ Responda SOMENTE JSON válido:
     const profile = profileRes.data || null;
 
     return {
+      rawContacts: people,
+      rawInteractions: raw.interactions,
       contacts: contactsForAI,
       interactions: interactionsForAI,
       overview: {
@@ -1442,6 +1469,9 @@ Responda SOMENTE JSON válido:
         today: intelligence.today,
         timezone: tz,
         relationship_intelligence: intelligence,
+        app_knowledge: appKnowledge,
+        conversation_preferences: prefs ? { preferredName: prefs.preferred_name, conversationStyle: prefs.conversation_style, primaryGoal: prefs.primary_goal } : null,
+        source_status: { ...appKnowledge.sources, signals: { status: signalsRes.error ? 'unavailable' : signalsForAI.length ? 'available' : 'empty', count: signalsForAI.length, limit: 100 } },
         profile: profile
           ? {
               name: profile.first_name || profile.name || null,
@@ -1454,7 +1484,7 @@ Responda SOMENTE JSON válido:
                 contactName(profile.last_discussed_contact_id),
               lastDiscussedAt:
                 profile.last_discussed_contact_at || null,
-              calendarConnected: Boolean(profile.calendar_ics_url),
+              calendarConnected: Boolean(profile.calendar_ics_url) || appKnowledge.calendar.some(c => c.status === 'active'),
             }
           : null,
         network_overview: buildNetworkOverview(people, interactionsRes.data || [], now, true),
@@ -1487,7 +1517,7 @@ Responda SOMENTE JSON válido:
     let brain = null;
 
     try {
-      brain = await loadDannaKnowledge();
+      brain = await loadDannaKnowledge(text);
     } catch (e) {
       console.warn(
         "[Danna Brain] snapshot indisponível; usando dados da Home.",
@@ -1509,29 +1539,9 @@ Responda SOMENTE JSON válido:
         c.last_interaction_at || c.lastInteractionAt || null,
     }));
 
-    const contactMap = new Map(
-      contacts.map(c => [c.id, c.name])
-    );
-
-    const recent = brain?.interactions || [...interactions]
-      .sort(
-        (a, b) =>
-          new Date(interactionDate(b) || 0) -
-          new Date(interactionDate(a) || 0)
-      )
-      .slice(0, 120)
-      .map(i => ({
-        person:
-          contactMap.get(interactionContactId(i)) ||
-          "desconhecido",
-        date: interactionDate(i),
-        type: i.type || "",
-        description:
-          (i.description || i.note || i.notes || "")
-            .slice(0, 500),
-        tags: i.tags || [],
-        sentiment: i.sentiment || "",
-      }));
+    const selectedHistory = selectDannaHistory(text, brain?.rawContacts || contacts, brain?.rawInteractions || interactions,
+      isNetworkQuestion(text) ? null : sessionContextRef.current.activePerson);
+    const recent = selectedHistory.records;
 
     const networkScope = isNetworkQuestion(text);
     const conversationContext = networkScope
@@ -1550,10 +1560,14 @@ Responda SOMENTE JSON válido:
               .filter(id => networkRef.current.assignments[id] === c.id),
           }))
         : [],
+      networkOrganizationStatus: networkRef.current?.error ? 'unavailable' : networkRef.current?.loading ? 'loading' : 'available',
     };
 
     const prompt = `
 Você é o CONÉXIA, um cérebro conversacional especializado EXCLUSIVAMENTE em inteligência relacional.
+
+REGRAS COMPARTILHADAS DO CÉREBRO:
+${DANNA_GROUNDING_RULES}
 
 MISSÃO:
 Ajudar o usuário a compreender melhor pessoas, relações, interações, contexto, reuniões, riscos, oportunidades, conexões, pendências, padrões e próximos movimentos.
@@ -1629,6 +1643,12 @@ ${JSON.stringify(people)}
 INTERAÇÕES REGISTRADAS:
 ${JSON.stringify(recent)}
 
+COBERTURA DO HISTÓRICO SELECIONADO:
+${JSON.stringify(selectedHistory.coverage)}
+
+RECURSOS DA CONTA:
+${JSON.stringify(brain?.overview?.app_knowledge?.capabilities || dannaCapabilities(appAccess))}
+
 Responda SOMENTE JSON válido:
 {
   "answer":"resposta natural, fluida, direta e útil",
@@ -1645,7 +1665,8 @@ Responda SOMENTE JSON válido:
 REGRAS DE RESPOSTA:
 - AGENDA: para "minha semana", "amanhã", "próximas reuniões" ou similares, use week_overview e upcoming_events do SNAPSHOT; nunca invente compromissos fora dele;
 - DECISÃO CENTRAL: para quem merece atenção agora, use relationship_intelligence.decisions: pessoa, motivo, nextMove, confidence e evidence. Não reordene por suposição. Padrões e dimensões explicam a rede; não comprovam urgência de uma pessoa. Se status for no_supported_action, não invente urgência.
-- MEMÓRIA: relational_memory são fatos/compromissos já consolidados; use-os como evidência forte, citando a pessoa;
+- MEMÓRIA: relational_memory contém registros; use apenas memórias confirmadas e vigentes como evidência forte. Informe confiança e origem quando houver incerteza;
+- PRODUTO: app_knowledge traz diagnóstico, plano, progresso, metas, insights salvos, integrações, notificações, estrutura e visão agregada da equipe. Use sources para diferenciar vazio de indisponível. Nunca use cache de IA como fato registrado;
 - ATENÇÃO: attention traz ações vencidas, aniversários próximos e contatos esfriando; traga só o que for relevante para a pergunta;
 - DATAS: não cite datas exatas automaticamente; resuma temporalidade em linguagem natural. Cite data exata apenas quando ela for relevante para decisão/urgência/cadência ou quando o usuário pedir;
 - para MEETING_PREP: use até 8 frases se necessário e priorize: histórico relevante, pontos de atenção, pendências, objetivo provável, perguntas recomendadas;
@@ -1747,6 +1768,7 @@ reunião, ligação, mensagem, encontro, promessa, compromisso, contexto novo so
 
 relational
 = pergunta, análise, reflexão, preparação, busca sobre pessoa, risco, conexão, padrão, oportunidade, próximo movimento ou continuação natural da conversa.
+Inclui perguntas sobre o CONÉXIA, perfil pessoal, diagnóstico, arquétipo, dimensões, plano, metas, progresso, insights, círculos, agenda, integrações e a própria equipe autorizada. Esses temas NÃO são out_of_scope.
 
 out_of_scope
 = assunto sem relação com pessoas, relações, interações, contexto profissional/pessoal relacional, preparação de conversas, networking ou inteligência relacional.
@@ -1789,13 +1811,60 @@ Responda SOMENTE JSON:
 
     const turnId = ++turnSeqRef.current;
 
-    addTurn("user", line);
     setLastQuestion(line);
     setInput(line);
     setVoiceState("thinking");
     setError("");
 
     const n = normalize(line);
+
+    if (/^(para|pare|parar|stop|silencio|fica quieta|pode parar|pare de falar|para de falar)[.! ]*$/.test(n)) {
+      rehearsalRequestRef.current?.abort();
+      const live = liveRef.current;
+      if (typeof live?.silence === 'function') live.silence();
+      else live?.interrupt();
+      setVoiceState('listening');
+      return;
+    }
+
+    // Texto e motores de voz chegam ao mesmo fluxo. O ensaio é tratado ANTES
+    // do roteador de captura e não contamina recentTurns/lastSavedInteraction.
+    if (rehearsalRef.current || isDannaRehearsalRequest(line)) {
+      if (!rehearsalRef.current && (draft || pendingContactRef.current || pendingGroupingRef.current)) {
+        speak('Há um registro aguardando sua decisão. Confirme ou cancele esse registro antes de começar o ensaio.', true);
+        return;
+      }
+      rehearsalRequestRef.current?.abort();
+      const controller = new AbortController();
+      rehearsalRequestRef.current = controller;
+      const timer = setTimeout(() => controller.abort(), 30000);
+      try {
+        const result = await advanceDannaRehearsal(rehearsalRef.current, line, {
+          contacts, interactions, activePerson: sessionContextRef.current.activePerson,
+          isPro: Boolean(appAccess.isPro), signal: controller.signal,
+        });
+        if (isStaleTurn(turnId)) return;
+        rehearsalRef.current = result.state;
+        if (result.state?.feedback) publishDannaWorkspace(userId, 'rehearsal_feedback', {
+          person: result.state.contact?.name, goal: result.state.goal, feedback: result.state.feedback,
+        });
+        setRehearsal(result.state);
+        setAnswer(result.answer);
+        setCurrentView(result.state ? 'rehearsal' : 'answer');
+        speak(result.answer, true, { simulated: true });
+      } catch (e) {
+        if (!isStaleTurn(turnId)) {
+          setError(e.name === 'AbortError' ? 'O ensaio demorou a responder. Tente novamente.' : e.message);
+          setVoiceState('idle');
+        }
+      } finally {
+        clearTimeout(timer);
+        if (rehearsalRequestRef.current === controller) rehearsalRequestRef.current = null;
+      }
+      return;
+    }
+
+    addTurn('user', line);
 
     if (
       /^(para|pare|parar|stop|silencio|fica quieta|pode parar|pare de falar|para de falar)[.! ]*$/.test(n)
@@ -1853,13 +1922,13 @@ Responda SOMENTE JSON:
 
     if (currentView === "capture" && draft) {
       if (
-        /^(sim|pode|salva|salvar|confirma|confirmar|correto|isso|certo|exato|perfeito)/.test(n)
+        /^(sim|pode|salva|salvar|confirma|confirmar|correto|isso|certo|exato|perfeito)[.! ]*$/.test(n)
       ) {
         await confirmCapture();
         return;
       }
 
-      if (/^(nao|não|corrige|corrigir|cancela|cancelar)/.test(n)) {
+      if (/^(nao|não|corrige|corrigir|cancela|cancelar)[.! ]*$/.test(n)) {
         setDraft(null);
         setCurrentView("today");
 
@@ -1907,6 +1976,19 @@ Responda SOMENTE JSON:
       return;
     }
 
+    const destination = detectDannaNavigation(line);
+    if (destination && onNavigate) {
+      const capability = dannaCapabilities(appAccess).find(c => c.id === destination);
+      if (!capability?.available) {
+        speak('Essa área não está disponível para sua conta. Posso ajudar com os recursos aos quais você tem acesso.', true);
+        setCurrentView('answer');
+        return;
+      }
+      setVoiceState(conversationActiveRef.current ? 'listening' : 'idle');
+      onNavigate(destination);
+      return;
+    }
+
     try {
       const intent = await classifyIntent(line);
 
@@ -1935,6 +2017,8 @@ Responda SOMENTE JSON:
       setVoiceState("idle");
     }
   };
+
+  userTurnHandlerRef.current = handleUserTurn;
 
   const refreshCaptureData = async () => {
     try { await onDataChanged?.(); }
@@ -2297,6 +2381,9 @@ Responda SOMENTE JSON:
         padding: 20,
         boxShadow: "0 16px 42px rgba(0,0,0,.20)",
       }}>
+        {currentView === 'rehearsal' && rehearsal && <DannaRehearsalView
+          session={rehearsal} answer={answer} busy={voiceState === 'thinking'} onCommand={handleUserTurn}
+        />}
         {currentView === "today" && (
           <InsightView
             title={todayInsight.title}
