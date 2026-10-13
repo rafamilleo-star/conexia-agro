@@ -3,6 +3,8 @@ import { C } from "../utils/theme.js";
 import { BRAND } from "../config/brand";
 import { buildContextCard } from "../../shared/contextCard.js";
 import { supabase } from "../utils/supabase";
+import ConversationRehearsal from './ConversationRehearsal.jsx';
+import NetworkStructureCard from './NetworkStructureCard.jsx';
 
 // Rede de segurança: mesmo com a proibição no prompt, o Gemini às vezes
 // deixa escapar um score bruto ("(80)", "60%"). Isso remove esses padrões
@@ -425,7 +427,7 @@ Sem texto extra. Seja específico e use os dados reais.`;
       <p style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, margin: "0 0 20px" }}>Sua rede analisada pela IA — insights, metas e briefings personalizados.</p>
 
       {/* Tabs internas */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: `1px solid ${C.brd}`, paddingBottom: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20, borderBottom: `1px solid ${C.brd}`, paddingBottom: 12 }}>
         {[
           { id: 'insights', label: '🧠 Insights' },
           { id: 'metas', label: '🎯 Metas 90 dias' },
@@ -442,6 +444,10 @@ Sem texto extra. Seja específico e use os dados reais.`;
       {/* ── SEÇÃO: INSIGHTS ── */}
       {secao === 'insights' && (
         <div>
+          {isPro && <NetworkStructureCard contacts={contacts} onSelectContact={id => {
+            const contact = contacts.find(c => c.id === id);
+            if (contact) { setSecao('briefing'); generateBriefing(contact); }
+          }} />}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
             <div>
               <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 19, fontWeight: 600, color: C.gold }}>Análise inteligente da sua rede</div>
@@ -607,6 +613,7 @@ Sem texto extra. Seja específico e use os dados reais.`;
                 </div>
               </div>
 
+              <ConversationRehearsal key={`${userId}-${selContact.id}`} contact={selContact} interactions={interactions} />
               {briefLoading && (
                 <div style={{ fontFamily: "'DM Sans'", fontSize: 13, color: C.txM, textAlign: 'center', padding: '32px 0' }}>
                   📋 Gerando briefing para {selContact.name}...
