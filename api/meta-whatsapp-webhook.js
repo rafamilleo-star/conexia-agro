@@ -3,7 +3,7 @@
 // Mantém toda a inteligência existente no whatsapp-webhook.js
 // e troca somente a camada de transporte para Meta Cloud API.
 
-import { handleIncomingMessage, handleSharedContactData } from './whatsapp-webhook.js';
+import { handleIncomingMessage, handleSharedContactData, handleIncomingPhoto } from './whatsapp-webhook.js';
 
 const META_WHATSAPP_TOKEN = process.env.META_WHATSAPP_TOKEN;
 
@@ -530,6 +530,11 @@ export default async function handler(req, res) {
               );
             }
 
+            continue;
+          }
+
+          if (message.type === 'image') {
+            await handleIncomingPhoto(from, () => downloadMetaMedia(message.image.id), sendReplyFromIncomingNumber, messageId);
             continue;
           }
 

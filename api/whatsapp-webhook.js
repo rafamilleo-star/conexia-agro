@@ -4,6 +4,70 @@
 
 import { relationshipMomentum } from '../shared/priorityEngine.js';
 import { answerDannaReadIntent, DANNA_READ_INTENTS } from './_lib/dannaKnowledge.js';
+import { loadCaptureContacts, signedProposal, saveCapture, extractContactPhoto, exportGoogleContact } from './_lib/contactCapture.js';
+
+function photoProposalMessage(item) {
+  const c = item.candidate;
+  const details = [c.name, c.contact_email, c.whatsapp, c.company, c.role].filter(Boolean).join('\n');
+  if (!c.name && !item.matches.length) return `Encontrei estes dados:\n${details}\n\nQual é o nome? Responda "nome: Nome Completo". Nada foi salvo.`;
+  const matches = item.matches.map((m, i) => `${i + 1}. ${m.name}${m.company ? ' — ' + m.company : ''}`).join('\n');
+  return `Encontrei estes dados:\n${details}\n\n${item.matches.length ? `Possível cadastro existente:\n${matches}\nÉ a mesma pessoa? Responda ${item.matches.length === 1 ? 'MESMA' : 'o número da pessoa'}. Vou preencher somente campos vazios.` : 'Essa pessoa é relevante para sua rede? Responda SIM para cadastrar.'}\n${item.reason !== 'email_telefone' && item.matches.length ? 'Se é outra pessoa, responda NOVA.\n' : ''}Responda NÃO para ignorar. Acrescente GOOGLE para salvar também nos Contatos do Google. Nada foi salvo ainda.`;
+}
+async function storePhotoQueue(uid, queue) {
+  if (!queue.length) return clearPendingAction(uid);
+  await sb('whatsapp_pending_actions?on_conflict=user_id', {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify({ user_id: uid, intent: 'capture_photo', data: { queue }, expires_at: new Date(Date.now() + 1800000).toISOString() }),
+  });
+}
+export async function handleIncomingPhoto(number, download, sendReply, messageId) {
+  try {
+    const normalized = normalizePhone(number);
+    if (!normalized) return;
+    const profiles = await sb(`profiles?whatsapp=in.(${waVariants(normalized).join(',')})&select=id,is_pro,plan,pro_expires_at`);
+    if (profiles?.length !== 1) return sendReply(number, 'Não identifiquei uma conta única para este WhatsApp. Confira seu perfil no Conexia.');
+    const p = profiles[0];
+    if (!(p.is_pro || (p.plan === 'pro' && (!p.pro_expires_at || new Date(p.pro_expires_at) > new Date())))) return sendReply(number, 'Cadastro por foto é um recurso PRO.');
+    const pending = await getPendingAction(p.id);
+    if (pending) return sendReply(number, 'Conclua ou cancele a confirmação pendente antes de enviar outra foto.');
+    if (await alreadyProcessedMessage(messageId, p.id)) return;
+    if (!(await checkRateLimit(p.id))) return sendReply(number, 'Limite de mensagens atingido. Tente mais tarde.');
+    const { buffer, mimeType } = await download();
+    const contacts = await loadCaptureContacts(p.id);
+    const candidates = await extractContactPhoto(buffer, mimeType);
+    const queue = candidates.map(c => signedProposal(p.id, c, contacts, 'foto WhatsApp')).filter(p => p.kind !== 'known');
+    if (!queue.length) return sendReply(number, 'Não encontrei contato novo ou complemento legível na foto. Você pode mandar uma imagem mais nítida.');
+    await storePhotoQueue(p.id, queue);
+    await sendReply(number, photoProposalMessage(queue[0]));
+  } catch (e) { await sendReply(number, e.message || 'Não consegui ler a foto agora.'); }
+}
+async function handlePhotoConfirmation(uid, pending, text, number, sendReply) {
+  const queue = pending.data?.queue || [], item = queue[0];
+  if (!item) { await clearPendingAction(uid); return; }
+  const answer = text.trim().toLowerCase();
+  if (/^nome:\s*\S/.test(answer)) {
+    const candidate = { ...item.candidate, name: text.replace(/^nome:\s*/i, '').trim() };
+    queue[0] = signedProposal(uid, candidate, await loadCaptureContacts(uid), 'foto WhatsApp');
+    await storePhotoQueue(uid, queue); await sendReply(number, photoProposalMessage(queue[0])); return;
+  }
+  if (/^(n[aã]o|cancelar|ignorar)$/.test(answer)) {
+    if (answer === 'cancelar') queue.length = 0; else queue.shift();
+    await storePhotoQueue(uid, queue); await sendReply(number, queue.length ? photoProposalMessage(queue[0]) : 'Combinado. Nada mais foi cadastrado.'); return;
+  }
+  const command = answer.replace(/\s+google$/, '');
+  const selected = /^\d+$/.test(command) ? item.matches[Number(command) - 1] : command === 'mesma' && item.matches.length === 1 ? item.matches[0] : null;
+  if (!(selected || (!item.matches.length && command === 'sim') || command === 'nova')) { await sendReply(number, photoProposalMessage(item)); return; }
+  try {
+    const saved = await saveCapture(uid, { token: item.token, targetId: selected?.id, newPerson: command === 'nova' });
+    queue.shift(); await storePhotoQueue(uid, queue);
+    let receipt = saved.action === 'created' ? `${saved.contact.name} cadastrado na sua rede.` : `${saved.contact.name}: cadastro conferido, apenas campos vazios completados.`;
+    if (answer.endsWith(' google')) {
+      try { receipt += ' ' + (await exportGoogleContact(uid, saved.contact.id)).message; }
+      catch (e) { receipt += ' Salvo no Conexia. Google: ' + e.message; }
+    }
+    await sendReply(number, receipt + (queue.length ? '\n\n' + photoProposalMessage(queue[0]) : ''));
+  } catch (e) { await sendReply(number, e.message); }
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -447,7 +511,7 @@ async function alreadyProcessedMessage(messageId, userId) {
 // Usa a tabela whatsapp_rate_limits, que já existia no schema mas nunca
 // tinha sido conectada a nenhuma lógica real.
 const RATE_LIMIT_PER_HOUR = 30;
-async function checkRateLimit(userId) {
+export async function checkRateLimit(userId) {
   const hourBucket = new Date();
   hourBucket.setMinutes(0, 0, 0);
   const hourISO = hourBucket.toISOString();
@@ -1088,6 +1152,10 @@ export async function handleIncomingMessage(number, text, sendReply, messageId) 
   // cadastro de contato quando falta o nome) Se sim, esta mensagem é a
   // resposta a ela — não passa pelo analyzeIntent normal.
   const pending = await getPendingAction(userIdProfile);
+  if (pending?.intent === 'capture_photo') {
+    await handlePhotoConfirmation(userIdProfile, pending, text, number, sendReply);
+    return;
+  }
   if (pending?.intent === 'register_contact_missing_name') {
     const name = text.trim();
     if (!name) {

@@ -1,3 +1,4 @@
+import { loadCaptureContacts, signedProposal } from './_lib/contactCapture.js';
 // api/calendar-meeting-attendees.js
 //
 // GET, chamado pelo frontend com Authorization: Bearer <supabase access
@@ -121,7 +122,7 @@ export default async function handler(req, res) {
     const untilISO = new Date(Date.now() + LOOKAHEAD_DAYS * 86400000).toISOString();
     const [events, contacts] = await Promise.all([
       listGoogleEvents(accessToken, sinceISO, untilISO),
-      sb(`contacts?user_id=eq.${uid}&select=id,name`),
+      loadCaptureContacts(uid),
     ]);
 
     const selfNameHints = [profile.first_name, profile.name].filter(Boolean);
@@ -138,7 +139,7 @@ export default async function handler(req, res) {
 
     const eventsWithoutAttendees = [];
     for (const event of events || []) {
-      if (matchContactToEvent(event, contacts || [])) continue; // já é contato — nada a perguntar
+      // Cada convidado é analisado, mesmo se outro já está na rede.
       const candidatosEstruturados = suggestNewContactCandidatesFromEvent(event, { selfNameHints });
       if (candidatosEstruturados.length) {
         candidatosEstruturados.forEach((c) => addCandidate(c.name, c.email, event, 'convidado_google'));
@@ -156,7 +157,7 @@ export default async function handler(req, res) {
       for (const rawName of names) {
         const isSelf = selfNameHints.some((h) => normalize(rawName).includes(normalize(h)));
         if (isSelf) continue;
-        if (looseNameMatch(rawName, contacts || [])) continue; // já é contato (match frouxo)
+        // Homônimos precisam de confirmação, nunca de associação automática.
         addCandidate(rawName, null, event, 'titulo_ia');
       }
     });
@@ -167,7 +168,8 @@ export default async function handler(req, res) {
       return db.localeCompare(da); // mais recente primeiro
     });
 
-    return res.status(200).json({ ok: true, connected: true, isPro: true, candidates });
+    const proposals = candidates.map(c => ({ ...c, ...signedProposal(uid, c, contacts, c.source === 'titulo_ia' ? 'título da agenda (IA)' : 'Google Calendar') })).filter(c => c.kind !== 'known');
+    return res.status(200).json({ ok: true, connected: true, isPro: true, candidates: proposals });
   } catch (err) {
     console.error('[calendar-meeting-attendees] erro:', err);
     return res.status(500).json({ ok: false, error: err.message });

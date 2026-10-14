@@ -31,12 +31,13 @@ export function googleCalendarConfigured() {
   return !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REDIRECT_URI);
 }
 
-export function buildGoogleAuthUrl(state) {
+export function buildGoogleAuthUrl(state, includeContacts = false) {
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: GOOGLE_REDIRECT_URI,
     response_type: 'code',
-    scope: SCOPE,
+    scope: includeContacts ? SCOPE + ' https://www.googleapis.com/auth/contacts' : SCOPE,
+    include_granted_scopes: 'true',
     access_type: 'offline',   // exige refresh_token
     prompt: 'consent',        // garante refresh_token mesmo se o usuário já autorizou antes
     state,
@@ -88,26 +89,28 @@ export async function listGoogleEvents(accessToken, sinceISO, untilISO) {
     timeMax: untilISO,
     singleEvents: 'true',
     orderBy: 'startTime',
-    maxResults: '50',
+    maxResults: '2500',
   });
-  const res = await fetch(`${EVENTS_ENDPOINT}?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (res.status === 401) {
-    const err = new Error('google access token expirado/inválido');
-    err.code = 'GOOGLE_TOKEN_EXPIRED';
-    throw err;
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`google events falhou: ${data.error?.message || res.status}`);
+  const items = []; let pageToken;
+  do {
+    if (pageToken) params.set('pageToken', pageToken);
+    const res = await fetch(`${EVENTS_ENDPOINT}?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(20000),
+    });
+    const page = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(res.status === 401 ? 'google access token expirado/inválido' : `google events falhou: ${page.error?.message || res.status}`);
+    items.push(...(page.items || []).filter(e => e.status !== 'cancelled'));
+    pageToken = page.nextPageToken;
+  } while (pageToken);
+  const data = { items };
 
   return (data.items || []).map((ev) => {
     const attendees = (ev.attendees || [])
-      .filter((a) => !a.self) // exclui o próprio dono do calendário
+      .filter((a) => !a.self && !a.resource && a.responseStatus !== 'declined') // exclui o próprio dono do calendário
       .map((a) => ({ name: a.displayName || null, email: a.email ? a.email.toLowerCase() : null }));
     const attendeeNames = attendees.map((a) => a.name).filter(Boolean);
     const organizer = ev.organizer
-      ? { name: ev.organizer.displayName || null, email: ev.organizer.email ? ev.organizer.email.toLowerCase() : null }
+      ? { self: !!ev.organizer.self, name: ev.organizer.displayName || null, email: ev.organizer.email ? ev.organizer.email.toLowerCase() : null }
       : null;
     if (organizer?.name && !organizer.self && !attendeeNames.includes(organizer.name)) {
       attendeeNames.push(organizer.name);

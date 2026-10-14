@@ -1,3 +1,4 @@
+import { contactProposal } from '../../../shared/contactCapture.js';
 // api/_lib/relationshipAssistant/icsImport.js
 //
 // Parser .ics mínimo (RFC 5545) — só o suficiente para a Captura Passiva via
@@ -105,6 +106,8 @@ export { normalize };
 // nunca por primeiro nome isolado, pra evitar falso positivo (ex.: "João"
 // sozinho não deve casar com qualquer "João" da agenda).
 export function matchContactToEvent(event, contacts) {
+  const exactContacts = (event.attendees || []).map(a => contactProposal(a, contacts)).filter(p => p.reason === 'email_telefone' && p.matches.length === 1);
+  if (exactContacts.length) return contacts.find(c => c.id === exactContacts[0].matches[0].id);
   const candidateNames = [
     ...(event.attendeeNames || []),
     ...(event.summary ? [event.summary] : []),
@@ -161,15 +164,15 @@ function isAutomatedEmail(email) {
 export function suggestNewContactCandidatesFromEvent(event, { selfNameHints = [] } = {}) {
   const hints = (selfNameHints || []).map(normalize).filter(Boolean);
   const candidatos = (event.attendees || []).filter((a) => {
-    if (!a.name) return false;
+    if (!a.name && !a.email) return false;
     const n = normalize(a.name);
-    if (n.split(' ').length < 2) return false; // exige nome completo
+    if (!a.email && n.split(' ').length < 2) return false;
     if (isAutomatedEmail(a.email)) return false;
     if (hints.some((h) => n.includes(h))) return false; // é o próprio usuário
     return true;
   });
 
-  if (candidatos.length < 1 || candidatos.length > 4) return [];
+  if (candidatos.length < 1) return [];
   return candidatos;
 }
 

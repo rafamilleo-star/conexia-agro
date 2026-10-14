@@ -3104,6 +3104,12 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
 
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const changed = event => { if (event.detail?.userId === user?.id) load(); };
+    window.addEventListener('conexia-contacts-changed', changed);
+    return () => window.removeEventListener('conexia-contacts-changed', changed);
+  }, [user?.id, load]);
+
 
 
   // ── Métricas administrativas: acompanhamento do produto CONÉXIA ──

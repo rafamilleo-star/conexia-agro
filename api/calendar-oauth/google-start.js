@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     if (!uid) return res.status(401).json({ ok: false, error: 'sessão inválida' });
 
     const state = createOAuthState({ uid, provider: 'google' });
-    const authUrl = buildGoogleAuthUrl(state);
+    const authUrl = buildGoogleAuthUrl(state, req.query?.contacts === '1');
 
     return res.status(200).json({ ok: true, authUrl });
   } catch (err) {

@@ -1,3 +1,4 @@
+import ContactCaptureCard from './ContactCaptureCard.jsx';
 import useRelationshipIntelligence, { invalidateRelationshipIntelligence } from '../lib/useRelationshipIntelligence.js';
 import { loadRelationshipData } from '../../shared/relationshipData.js';
 import { computeRelationshipIntelligence } from '../../shared/relationshipIntelligence.js';
@@ -2610,6 +2611,8 @@ Responda SOMENTE JSON:
             {showText ? "Fechar texto" : "Prefiro escrever"}
           </button>
         </div>
+
+        <ContactCaptureCard userId={userId} isPro={appAccess?.isPro} compact />
 
         {showText && (
           <div style={{

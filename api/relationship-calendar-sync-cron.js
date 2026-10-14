@@ -1,3 +1,5 @@
+import { loadCaptureContacts, signedProposal } from './_lib/contactCapture.js';
+import { suggestNewContactCandidatesFromEvent } from './_lib/relationshipAssistant/icsImport.js';
 // api/relationship-calendar-sync-cron.js
 // Job: sync-calendar-ics
 //
@@ -75,9 +77,25 @@ async function fetchICS(url) {
 async function processRecentEvents({ profile, recentEvents, todayISO }) {
   if (!recentEvents.length) return { sent: false, hadEvents: false };
 
-  const contacts = await sb(`contacts?user_id=eq.${profile.id}&select=id,name`);
+  const contacts = await loadCaptureContacts(profile.id);
 
   for (const event of recentEvents) {
+    const proposals = suggestNewContactCandidatesFromEvent(event, { selfNameHints: [profile.first_name, profile.name].filter(Boolean) })
+      .map(c => signedProposal(profile.id, c, contacts, 'Google Calendar')).filter(p => p.kind !== 'known');
+    if (proposals.length) {
+      const item = proposals[0], c = item.candidate;
+      if (!c.name && !item.matches.length) continue; // O app pede o nome antes de salvar.
+      const options = item.matches.map((m, i) => `${i + 1}. ${m.name}${m.company ? ' — ' + m.company : ''}`).join('\n');
+      const text = `Encontrei na agenda: ${[c.name, c.contact_email].filter(Boolean).join(' · ')}.\n` +
+        (item.matches.length ? `Pode ser alguém da rede:\n${options}\nResponda ${item.matches.length === 1 ? 'MESMA' : 'o número'} para completar apenas campos vazios.` : 'É relevante adicionar à sua rede? Responda SIM.') +
+        (item.matches.length && item.reason !== 'email_telefone' ? '\nSe é outra pessoa, responda NOVA.' : '') + '\nNÃO ignora. Não registrei uma interação.';
+      const result = await sendProactiveNotification({ profile, notificationType: 'CALENDAR_NEW_CONTACT_SUGGESTION', scopeKey: `${event.uid || todayISO}:${item.key}`, text });
+      if (result.sent) {
+        await setPendingAction(profile.id, 'capture_photo', { queue: [item] });
+        return { sent: true, hadEvents: true };
+      }
+      continue;
+    }
     const match = matchContactToEvent(event, contacts || []);
 
     if (match) {
@@ -111,32 +129,7 @@ async function processRecentEvents({ profile, recentEvents, todayISO }) {
       continue;
     }
 
-    // Sem match — tenta sugerir CONTATO NOVO (convidado real, reunião
-    // pequena, e-mail não-automático; nunca o próprio dono do calendário).
-    const candidato = suggestNewContactFromEvent(event, {
-      selfNameHints: [profile.first_name].filter(Boolean),
-    });
-    if (!candidato) continue;
 
-    const text = calendarNewContactSuggestionMessage({
-      firstName: profile.first_name,
-      contactName: candidato.name,
-      eventSummary: event.summary,
-    });
-    const result = await sendProactiveNotification({
-      profile,
-      notificationType: 'CALENDAR_NEW_CONTACT_SUGGESTION',
-      scopeKey: event.uid || `${candidato.email || candidato.name}:${todayISO}`,
-      text,
-    });
-    if (result.sent) {
-      await setPendingAction(profile.id, 'calendar_new_contact_suggestion', {
-        contact_name: candidato.name,
-        contact_email: candidato.email || null,
-        event_summary: event.summary || null,
-      });
-      return { sent: true, hadEvents: true };
-    }
   }
 
   return { sent: false, hadEvents: true };
