@@ -1,34 +1,27 @@
-import { loadCaptureContacts, signedProposal } from './_lib/contactCapture.js';
-import { suggestNewContactCandidatesFromEvent } from './_lib/relationshipAssistant/icsImport.js';
+import {
+  loadCaptureContacts,
+  signedProposal
+} from './_lib/contactCapture.js';
 
-// api/relationship-calendar-sync-cron.js
-// Job: sync-calendar-ics
-//
-// Captura Passiva via Calendário.
-// Dois canais:
-// 1. calendar_ics_url legado
-// 2. Google Calendar via OAuth
-//
-// Além do processamento normal, registra:
-// - última sincronização Google bem-sucedida
-// - limpeza de last_error após sucesso
-// - quantidade de eventos encontrados
-// - resumo da execução no log
+import {
+  suggestNewContactCandidatesFromEvent,
+  matchContactToEvent,
+  parseICSEvents,
+  eventsInWindow
+} from './_lib/relationshipAssistant/icsImport.js';
 
-import { supabaseRest as sb } from './_lib/relationshipAssistant/notificationLog.js';
-import { sendProactiveNotification } from './_lib/relationshipAssistant/sendProactiveNotification.js';
+import {
+  supabaseRest as sb
+} from './_lib/relationshipAssistant/notificationLog.js';
+
+import {
+  sendProactiveNotification
+} from './_lib/relationshipAssistant/sendProactiveNotification.js';
+
 import {
   calendarInteractionSuggestionMessage,
-  calendarNewContactSuggestionMessage,
   preMeetingBriefingMessage
 } from './_lib/relationshipAssistant/messages.js';
-
-import {
-  parseICSEvents,
-  eventsInWindow,
-  matchContactToEvent,
-  suggestNewContactFromEvent
-} from './_lib/relationshipAssistant/icsImport.js';
 
 import {
   localDateISO,
@@ -40,25 +33,29 @@ import {
   refreshGoogleAccessToken
 } from './_lib/relationshipAssistant/googleCalendar.js';
 
-import { buildContextCard } from '../shared/contextCard.js';
+import {
+  buildContextCard
+} from '../shared/contextCard.js';
+
 
 const LOOKAHEAD_HOURS = 36;
 
-const CRON_SECRET = process.env.CRON_SECRET || '';
-
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
-  'https://goopogicgwqqovmphqrj.supabase.co';
+const CRON_SECRET =
+  process.env.CRON_SECRET || '';
 
 const SUPABASE_SERVICE_KEY =
   process.env.SUPABASE_SERVICE_KEY;
 
 
-// ─────────────────────────────────────────────────────────────
+// ============================================================
 // PENDING ACTION
-// ─────────────────────────────────────────────────────────────
+// ============================================================
 
-async function setPendingAction(userId, intent, data) {
+async function setPendingAction(
+  userId,
+  intent,
+  data
+) {
 
   await sb(
     `whatsapp_pending_actions?user_id=eq.${userId}`,
@@ -67,61 +64,119 @@ async function setPendingAction(userId, intent, data) {
     }
   ).catch(() => {});
 
+
   await sb(
     'whatsapp_pending_actions',
     {
       method: 'POST',
+
       body: JSON.stringify({
         user_id: userId,
         intent,
         data: data || {}
       })
     }
-  ).catch((e) =>
+  ).catch(error => {
+
     console.error(
-      '[relationship-calendar-sync-cron] falha ao gravar pending action:',
-      e.message
-    )
-  );
+      '[CONEXIA CALENDAR] pending action error',
+      error.message
+    );
+
+  });
 }
 
 
-// ─────────────────────────────────────────────────────────────
+// ============================================================
 // ICS
-// ─────────────────────────────────────────────────────────────
+// ============================================================
 
 async function fetchICS(url) {
 
   try {
 
-    const res = await fetch(
-      url,
-      {
-        headers: {
-          Accept: 'text/calendar'
+    const response =
+      await fetch(
+        url,
+        {
+          headers: {
+            Accept: 'text/calendar'
+          }
         }
-      }
-    );
+      );
 
-    if (!res.ok) return null;
 
-    return await res.text();
+    if (!response.ok) {
+      return null;
+    }
 
-  } catch (e) {
+
+    return await response.text();
+
+  } catch (error) {
 
     console.error(
-      '[relationship-calendar-sync-cron] falha ao buscar .ics:',
-      e.message
+      '[CONEXIA CALENDAR] ICS fetch error',
+      error.message
     );
+
 
     return null;
   }
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// EVENTOS RECENTES
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// EVENT DIAGNOSTIC
+// ============================================================
+
+function eventDiagnostic(event) {
+
+  return {
+
+    uid:
+      event?.uid || null,
+
+    summary:
+      event?.summary || null,
+
+    startISO:
+      event?.startISO || null,
+
+    attendeeNames:
+      event?.attendeeNames || [],
+
+    attendees:
+      (event?.attendees || [])
+        .map(attendee => ({
+          name:
+            attendee?.name || null,
+
+          email:
+            attendee?.email || null
+        })),
+
+    organizer:
+      event?.organizer
+        ? {
+            name:
+              event.organizer.name || null,
+
+            email:
+              event.organizer.email || null,
+
+            self:
+              !!event.organizer.self
+          }
+        : null
+
+  };
+}
+
+
+// ============================================================
+// RECENT EVENTS
+// ============================================================
 
 async function processRecentEvents({
   profile,
@@ -130,135 +185,54 @@ async function processRecentEvents({
 }) {
 
   if (!recentEvents.length) {
+
     return {
       sent: false,
-      hadEvents: false
+      hadEvents: false,
+      matched: false,
+      reason: 'no_events'
     };
   }
 
+
   const contacts =
-    await loadCaptureContacts(profile.id);
+    await loadCaptureContacts(
+      profile.id
+    );
+
+
+  console.info(
+    '[CONEXIA CALENDAR] recent contacts loaded',
+    {
+      userId:
+        profile.id,
+
+      contacts:
+        contacts?.length || 0
+    }
+  );
 
 
   for (const event of recentEvents) {
 
-    const proposals =
-      suggestNewContactCandidatesFromEvent(
-        event,
-        {
-          selfNameHints: [
-            profile.first_name,
-            profile.name
-          ].filter(Boolean)
-        }
-      )
-        .map((c) =>
-          signedProposal(
-            profile.id,
-            c,
-            contacts,
-            'Google Calendar'
-          )
-        )
-        .filter((p) =>
-          p.kind !== 'known'
-        );
+    console.info(
+      '[CONEXIA CALENDAR] recent event',
+      eventDiagnostic(event)
+    );
 
 
-    // ─────────────────────────────────────────────
-    // POSSÍVEL NOVO CONTATO
-    // ─────────────────────────────────────────────
-
-    if (proposals.length) {
-
-      const item = proposals[0];
-      const c = item.candidate;
-
-      if (
-        !c.name &&
-        !item.matches.length
-      ) {
-        continue;
-      }
-
-
-      const options =
-        item.matches
-          .map(
-            (m, i) =>
-              `${i + 1}. ${m.name}${
-                m.company
-                  ? ' — ' + m.company
-                  : ''
-              }`
-          )
-          .join('\n');
-
-
-      const text =
-        `Encontrei na agenda: ${
-          [
-            c.name,
-            c.contact_email
-          ]
-            .filter(Boolean)
-            .join(' · ')
-        }.\n` +
-
-        (
-          item.matches.length
-            ? `Pode ser alguém da rede:\n${options}\nResponda ${
-                item.matches.length === 1
-                  ? 'MESMA'
-                  : 'o número'
-              } para completar apenas campos vazios.`
-            : 'É relevante adicionar à sua rede? Responda SIM.'
-        ) +
-
-        (
-          item.matches.length &&
-          item.reason !== 'email_telefone'
-            ? '\nSe é outra pessoa, responda NOVA.'
-            : ''
-        ) +
-
-        '\nNÃO ignora. Não registrei uma interação.';
-
-
-      const result =
-        await sendProactiveNotification({
-          profile,
-          notificationType:
-            'CALENDAR_NEW_CONTACT_SUGGESTION',
-          scopeKey:
-            `${event.uid || todayISO}:${item.key}`,
-          text
-        });
-
-
-      if (result.sent) {
-
-        await setPendingAction(
-          profile.id,
-          'capture_photo',
-          {
-            queue: [item]
-          }
-        );
-
-        return {
-          sent: true,
-          hadEvents: true
-        };
-      }
-
-      continue;
-    }
-
-
-    // ─────────────────────────────────────────────
-    // CONTATO JÁ EXISTENTE
-    // ─────────────────────────────────────────────
+    // ========================================================
+    // PRIMEIRO: VERIFICA SE JÁ EXISTE NA REDE
+    //
+    // IMPORTANTE:
+    // antes o sistema tentava sugerir "novo contato"
+    // antes de fazer o match.
+    //
+    // Agora a prioridade correta é:
+    //
+    // EXISTENTE -> interação
+    // NÃO EXISTENTE -> sugestão de cadastro
+    // ========================================================
 
     const match =
       matchContactToEvent(
@@ -269,22 +243,58 @@ async function processRecentEvents({
 
     if (match) {
 
+      console.info(
+        '[CONEXIA CALENDAR] MATCH EXISTENTE',
+        {
+          event:
+            event.summary || null,
+
+          contactId:
+            match.id,
+
+          contactName:
+            match.name
+        }
+      );
+
+
       const jaRegistrada =
         await sb(
-          `interactions?user_id=eq.${profile.id}` +
+
+          `interactions?` +
+          `user_id=eq.${profile.id}` +
           `&contact_id=eq.${match.id}` +
           `&created_at=gte.${todayISO}T00:00:00` +
-          `&select=id&limit=1`
+          `&select=id` +
+          `&limit=1`
+
         );
 
 
       if (jaRegistrada?.length) {
-        continue;
+
+        console.info(
+          '[CONEXIA CALENDAR] match encontrado mas interação já registrada',
+          {
+            contact:
+              match.name
+          }
+        );
+
+
+        return {
+          sent: false,
+          hadEvents: true,
+          matched: true,
+          reason:
+            'interaction_already_registered'
+        };
       }
 
 
       const text =
         calendarInteractionSuggestionMessage({
+
           firstName:
             profile.first_name,
 
@@ -298,6 +308,7 @@ async function processRecentEvents({
 
       const result =
         await sendProactiveNotification({
+
           profile,
 
           notificationType:
@@ -311,11 +322,28 @@ async function processRecentEvents({
         });
 
 
-      if (result.sent) {
+      console.info(
+        '[CONEXIA CALENDAR] interaction notification result',
+        {
+          contact:
+            match.name,
+
+          sent:
+            !!result?.sent,
+
+          result
+        }
+      );
+
+
+      if (result?.sent) {
 
         await setPendingAction(
+
           profile.id,
+
           'calendar_interaction_suggestion',
+
           {
             contact_id:
               match.id,
@@ -326,30 +354,250 @@ async function processRecentEvents({
             event_summary:
               event.summary || null
           }
+
         );
 
 
         return {
           sent: true,
-          hadEvents: true
+          hadEvents: true,
+          matched: true,
+          reason:
+            'interaction_suggestion_sent'
         };
       }
 
-      continue;
+
+      // MUITO IMPORTANTE:
+      // encontrou o contato, mas a notificação
+      // não foi enviada.
+      //
+      // Isso NÃO é semMatch.
+
+      return {
+        sent: false,
+        hadEvents: true,
+        matched: true,
+        reason:
+          'notification_not_sent'
+      };
     }
+
+
+    // ========================================================
+    // NÃO ENCONTROU CONTATO EXISTENTE
+    // AGORA SIM PROCURA CANDIDATO NOVO
+    // ========================================================
+
+    const candidates =
+      suggestNewContactCandidatesFromEvent(
+
+        event,
+
+        {
+          selfNameHints: [
+            profile.first_name,
+            profile.name
+          ].filter(Boolean)
+        }
+
+      );
+
+
+    const proposals =
+      candidates
+
+        .map(candidate =>
+          signedProposal(
+            profile.id,
+            candidate,
+            contacts,
+            'Google Calendar'
+          )
+        )
+
+        .filter(proposal =>
+          proposal.kind !== 'known'
+        );
+
+
+    if (proposals.length) {
+
+      const item =
+        proposals[0];
+
+      const candidate =
+        item.candidate;
+
+
+      console.info(
+        '[CONEXIA CALENDAR] candidato novo',
+        {
+          event:
+            event.summary || null,
+
+          candidate:
+            candidate,
+
+          possibleMatches:
+            item.matches?.map(
+              match => ({
+                id:
+                  match.id,
+
+                name:
+                  match.name
+              })
+            ) || []
+        }
+      );
+
+
+      if (
+        !candidate?.name &&
+        !item.matches?.length
+      ) {
+
+        continue;
+      }
+
+
+      const options =
+        (item.matches || [])
+
+          .map(
+            (match, index) =>
+              `${index + 1}. ${match.name}${
+                match.company
+                  ? ` — ${match.company}`
+                  : ''
+              }`
+          )
+
+          .join('\n');
+
+
+      const identification =
+        [
+          candidate?.name,
+          candidate?.contact_email ||
+          candidate?.email
+        ]
+          .filter(Boolean)
+          .join(' · ');
+
+
+      const text =
+        `Encontrei na agenda: ${identification}.\n` +
+
+        (
+          item.matches?.length
+
+            ? `Pode ser alguém da sua rede:\n${options}\n` +
+              `Responda ${
+                item.matches.length === 1
+                  ? 'MESMA'
+                  : 'o número'
+              } para confirmar.`
+
+            : 'Essa pessoa é relevante para sua rede? Responda SIM para adicionar.'
+        ) +
+
+        (
+          item.matches?.length &&
+          item.reason !== 'email_telefone'
+
+            ? '\nSe for outra pessoa, responda NOVA.'
+
+            : ''
+        ) +
+
+        '\nNÃO ignora. Nenhuma interação foi registrada automaticamente.';
+
+
+      const result =
+        await sendProactiveNotification({
+
+          profile,
+
+          notificationType:
+            'CALENDAR_NEW_CONTACT_SUGGESTION',
+
+          scopeKey:
+            `${event.uid || todayISO}:${item.key}`,
+
+          text
+        });
+
+
+      console.info(
+        '[CONEXIA CALENDAR] new contact notification result',
+        {
+          sent:
+            !!result?.sent,
+
+          result
+        }
+      );
+
+
+      if (result?.sent) {
+
+        await setPendingAction(
+
+          profile.id,
+
+          'capture_photo',
+
+          {
+            queue: [item]
+          }
+
+        );
+
+
+        return {
+          sent: true,
+          hadEvents: true,
+          matched: false,
+          newContactCandidate: true,
+          reason:
+            'new_contact_suggestion_sent'
+        };
+      }
+
+
+      return {
+        sent: false,
+        hadEvents: true,
+        matched: false,
+        newContactCandidate: true,
+        reason:
+          'new_contact_notification_not_sent'
+      };
+    }
+
+
+    console.info(
+      '[CONEXIA CALENDAR] evento sem match',
+      eventDiagnostic(event)
+    );
   }
 
 
   return {
     sent: false,
-    hadEvents: true
+    hadEvents: true,
+    matched: false,
+    reason:
+      'no_match'
   };
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// BRIEFING PRÉ-REUNIÃO
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// UPCOMING EVENTS / PRE-MEETING BRIEFING
+// ============================================================
 
 async function processUpcomingEvents({
   profile,
@@ -360,19 +608,52 @@ async function processUpcomingEvents({
 
     return {
       sent: false,
-      hadEvents: false
+      hadEvents: false,
+      matched: false,
+      reason:
+        'no_upcoming_events'
     };
   }
 
 
+  // ==========================================================
+  // CORREÇÃO:
+  //
+  // Usa loadCaptureContacts aqui também.
+  //
+  // Assim o briefing recebe exatamente o mesmo shape
+  // de contato do fluxo recente, incluindo dados utilizados
+  // pelo matcher (email / telefone / nome etc.).
+  //
+  // Antes essa função fazia uma query reduzida que não
+  // carregava email.
+  // ==========================================================
+
   const contacts =
-    await sb(
-      `contacts?user_id=eq.${profile.id}` +
-      `&select=id,name,ideal_frequency_days,last_interaction_at,next_action,next_action_date,created_at`
+    await loadCaptureContacts(
+      profile.id
     );
 
 
+  console.info(
+    '[CONEXIA CALENDAR] upcoming contacts loaded',
+    {
+      userId:
+        profile.id,
+
+      contacts:
+        contacts?.length || 0
+    }
+  );
+
+
   for (const event of upcomingEvents) {
+
+    console.info(
+      '[CONEXIA CALENDAR] upcoming event',
+      eventDiagnostic(event)
+    );
+
 
     const match =
       matchContactToEvent(
@@ -382,15 +663,42 @@ async function processUpcomingEvents({
 
 
     if (!match) {
+
+      console.info(
+        '[CONEXIA CALENDAR] upcoming sem match',
+        {
+          event:
+            event.summary || null
+        }
+      );
+
       continue;
     }
 
 
+    console.info(
+      '[CONEXIA CALENDAR] PRE-MEETING MATCH',
+      {
+        event:
+          event.summary || null,
+
+        contactId:
+          match.id,
+
+        contactName:
+          match.name
+      }
+    );
+
+
     const interactions =
       await sb(
-        `interactions?user_id=eq.${profile.id}` +
+
+        `interactions?` +
+        `user_id=eq.${profile.id}` +
         `&contact_id=eq.${match.id}` +
         `&select=contact_id,created_at,description`
+
       );
 
 
@@ -404,7 +712,9 @@ async function processUpcomingEvents({
 
     const eventDateLocal =
       localDateISOFor(
-        new Date(event.startISO),
+        new Date(
+          event.startISO
+        ),
         profile.timezone
       );
 
@@ -417,19 +727,27 @@ async function processUpcomingEvents({
 
     const tomorrowLocal =
       localDateISOFor(
+
         new Date(
           Date.now() +
           24 * 3600 * 1000
         ),
+
         profile.timezone
+
       );
 
 
     const eventWhen =
+
       eventDateLocal === todayLocal
+
         ? 'hoje'
+
         : eventDateLocal === tomorrowLocal
+
           ? 'amanhã'
+
           : null;
 
 
@@ -448,6 +766,7 @@ async function processUpcomingEvents({
         eventWhen,
 
         card
+
       });
 
 
@@ -467,29 +786,59 @@ async function processUpcomingEvents({
           `${match.id}:${eventDateLocal}`,
 
         text
+
       });
 
 
-    if (result.sent) {
+    console.info(
+      '[CONEXIA CALENDAR] briefing notification result',
+      {
+        contact:
+          match.name,
+
+        sent:
+          !!result?.sent,
+
+        result
+      }
+    );
+
+
+    if (result?.sent) {
 
       return {
         sent: true,
-        hadEvents: true
+        hadEvents: true,
+        matched: true,
+        reason:
+          'briefing_sent'
       };
     }
+
+
+    return {
+      sent: false,
+      hadEvents: true,
+      matched: true,
+      reason:
+        'briefing_notification_not_sent'
+    };
   }
 
 
   return {
     sent: false,
-    hadEvents: true
+    hadEvents: true,
+    matched: false,
+    reason:
+      'upcoming_no_match'
   };
 }
 
 
-// ─────────────────────────────────────────────────────────────
+// ============================================================
 // HANDLER
-// ─────────────────────────────────────────────────────────────
+// ============================================================
 
 export default async function handler(
   req,
@@ -498,14 +847,15 @@ export default async function handler(
 
   try {
 
-    // ─────────────────────────────────────────────
-    // SEGURANÇA DO CRON
-    // ─────────────────────────────────────────────
+    // ========================================================
+    // SECURITY
+    // ========================================================
 
     if (CRON_SECRET) {
 
       const auth =
-        req.headers['authorization'] || '';
+        req.headers.authorization || '';
+
 
       if (
         auth !==
@@ -516,7 +866,8 @@ export default async function handler(
           .status(401)
           .json({
             ok: false,
-            error: 'unauthorized'
+            error:
+              'unauthorized'
           });
       }
     }
@@ -534,8 +885,16 @@ export default async function handler(
     }
 
 
+    // ========================================================
+    // WINDOWS
+    // ========================================================
+
+    const now =
+      new Date();
+
+
     const untilISO =
-      new Date().toISOString();
+      now.toISOString();
 
 
     const sinceISO =
@@ -554,23 +913,38 @@ export default async function handler(
       ).toISOString();
 
 
-    let sugestoesEnviadas = 0;
-    let semMatch = 0;
-    let semEvento = 0;
-    let comErro = 0;
+    // ========================================================
+    // COUNTERS
+    // ========================================================
+
     let avaliados = 0;
+
+    let sugestoesEnviadas = 0;
+
     let briefingsEnviados = 0;
 
+    let semEvento = 0;
 
-    // ─────────────────────────────────────────────
-    // CANAL 1 — ICS LEGADO
-    // ─────────────────────────────────────────────
+    let semMatch = 0;
+
+    let matchesEncontrados = 0;
+
+    let notificacoesBloqueadas = 0;
+
+    let novosContatosDetectados = 0;
+
+    let comErro = 0;
+
+
+    // ========================================================
+    // CHANNEL 1 — LEGACY ICS
+    // ========================================================
 
     const perfisIcs =
       await sb(
 
         `profiles?` +
-        `select=id,first_name,whatsapp,timezone,notifications_enabled,whatsapp_opt_in,is_pro,calendar_ics_url` +
+        `select=id,first_name,name,whatsapp,timezone,notifications_enabled,whatsapp_opt_in,is_pro,calendar_ics_url` +
         `&onboarding_completed=eq.true` +
         `&whatsapp=not.is.null` +
         `&is_pro=eq.true` +
@@ -620,7 +994,7 @@ export default async function handler(
         const upcomingEvents =
           eventsInWindow(
             allEvents,
-            new Date().toISOString(),
+            untilISO,
             lookaheadUntilISO
           );
 
@@ -631,7 +1005,7 @@ export default async function handler(
           );
 
 
-        const result =
+        const recentResult =
           await processRecentEvents({
             profile,
             recentEvents,
@@ -639,20 +1013,48 @@ export default async function handler(
           });
 
 
-        if (!result.hadEvents) {
+        if (!recentResult.hadEvents) {
+
           semEvento++;
+
+        } else {
+
+          if (recentResult.matched) {
+
+            matchesEncontrados++;
+
+          } else if (
+            recentResult.reason ===
+            'no_match'
+          ) {
+
+            semMatch++;
+          }
+
+
+          if (
+            recentResult.newContactCandidate
+          ) {
+
+            novosContatosDetectados++;
+          }
+
+
+          if (
+            recentResult.reason ===
+              'notification_not_sent' ||
+            recentResult.reason ===
+              'new_contact_notification_not_sent'
+          ) {
+
+            notificacoesBloqueadas++;
+          }
         }
 
 
-        if (result.sent) {
+        if (recentResult.sent) {
 
           sugestoesEnviadas++;
-
-        } else if (
-          result.hadEvents
-        ) {
-
-          semMatch++;
         }
 
 
@@ -663,30 +1065,44 @@ export default async function handler(
           });
 
 
+        if (briefingResult.matched) {
+
+          matchesEncontrados++;
+        }
+
+
         if (
-          briefingResult.sent
+          briefingResult.reason ===
+          'briefing_notification_not_sent'
         ) {
+
+          notificacoesBloqueadas++;
+        }
+
+
+        if (briefingResult.sent) {
 
           briefingsEnviados++;
         }
 
 
-      } catch (err) {
+      } catch (error) {
 
         console.error(
-          '[relationship-calendar-sync-cron] erro no usuário (.ics)',
+          '[CONEXIA CALENDAR] ICS user error',
           profile.id,
-          err
+          error
         );
+
 
         comErro++;
       }
     }
 
 
-    // ─────────────────────────────────────────────
-    // CANAL 2 — GOOGLE CALENDAR
-    // ─────────────────────────────────────────────
+    // ========================================================
+    // CHANNEL 2 — GOOGLE CALENDAR
+    // ========================================================
 
     const rawGoogle =
       await sb(
@@ -707,12 +1123,12 @@ export default async function handler(
       of rawGoogle || []
     ) {
 
-      const profs =
+      const profiles =
         await sb(
 
           `profiles?` +
           `id=eq.${row.user_id}` +
-          `&select=id,first_name,whatsapp,timezone,notifications_enabled,whatsapp_opt_in,is_pro` +
+          `&select=id,first_name,name,whatsapp,timezone,notifications_enabled,whatsapp_opt_in,is_pro` +
           `&onboarding_completed=eq.true` +
           `&whatsapp=not.is.null` +
           `&is_pro=eq.true`
@@ -720,24 +1136,24 @@ export default async function handler(
         );
 
 
-      if (profs?.[0]) {
+      if (profiles?.[0]) {
 
         googleRows.push({
           ...row,
           profile:
-            profs[0]
+            profiles[0]
         });
       }
     }
 
 
     for (
-      const conn
+      const connection
       of googleRows
     ) {
 
       const profile =
-        conn.profile;
+        connection.profile;
 
 
       avaliados++;
@@ -746,30 +1162,31 @@ export default async function handler(
       try {
 
         let accessToken =
-          conn.access_token;
+          connection.access_token;
 
 
-        const expiraEm =
-          conn.token_expires_at
+        const expiresAt =
+          connection.token_expires_at
             ? new Date(
-                conn.token_expires_at
+                connection.token_expires_at
               ).getTime()
             : 0;
 
 
-        // Renova token automaticamente
-        // com 5 minutos de folga.
+        // ====================================================
+        // REFRESH TOKEN
+        // ====================================================
 
         if (
           !accessToken ||
-          expiraEm -
+          expiresAt -
           Date.now() <
           5 * 60 * 1000
         ) {
 
           const refreshed =
             await refreshGoogleAccessToken(
-              conn.refresh_token
+              connection.refresh_token
             );
 
 
@@ -777,25 +1194,30 @@ export default async function handler(
             refreshed.access_token;
 
 
-          const novaExpiracao =
+          const newExpiration =
             new Date(
+
               Date.now() +
+
               (
                 refreshed.expires_in ||
                 3600
               ) *
+
               1000
+
             ).toISOString();
 
 
           await sb(
 
             `calendar_connections?` +
-            `user_id=eq.${conn.user_id}` +
+            `user_id=eq.${connection.user_id}` +
             `&provider=eq.google`,
 
             {
-              method: 'PATCH',
+              method:
+                'PATCH',
 
               body:
                 JSON.stringify({
@@ -804,7 +1226,7 @@ export default async function handler(
                     accessToken,
 
                   token_expires_at:
-                    novaExpiracao,
+                    newExpiration,
 
                   updated_at:
                     new Date()
@@ -812,13 +1234,14 @@ export default async function handler(
 
                 })
             }
+
           );
         }
 
 
-        // ─────────────────────────────────────────
-        // LEITURA REAL DO GOOGLE CALENDAR
-        // ─────────────────────────────────────────
+        // ====================================================
+        // GOOGLE EVENTS
+        // ====================================================
 
         const recentEvents =
           await listGoogleEvents(
@@ -836,9 +1259,34 @@ export default async function handler(
           );
 
 
-        // IMPORTANTE:
-        // só marca como sincronizado depois que
-        // as duas consultas ao Google tiveram sucesso.
+        console.info(
+          '[CONEXIA CALENDAR] GOOGLE EVENTS',
+          {
+            userId:
+              connection.user_id,
+
+            recentCount:
+              recentEvents.length,
+
+            upcomingCount:
+              upcomingEvents.length,
+
+            recent:
+              recentEvents.map(
+                eventDiagnostic
+              ),
+
+            upcoming:
+              upcomingEvents.map(
+                eventDiagnostic
+              )
+          }
+        );
+
+
+        // ====================================================
+        // SYNC STATUS
+        // ====================================================
 
         const syncTimestamp =
           new Date().toISOString();
@@ -847,11 +1295,12 @@ export default async function handler(
         await sb(
 
           `calendar_connections?` +
-          `user_id=eq.${conn.user_id}` +
+          `user_id=eq.${connection.user_id}` +
           `&provider=eq.google`,
 
           {
-            method: 'PATCH',
+            method:
+              'PATCH',
 
             body:
               JSON.stringify({
@@ -867,26 +1316,13 @@ export default async function handler(
 
               })
           }
+
         );
 
 
-        console.info(
-          '[CONEXIA CALENDAR] Google sync OK',
-          {
-            userId:
-              conn.user_id,
-
-            recentEvents:
-              recentEvents.length,
-
-            upcomingEvents:
-              upcomingEvents.length,
-
-            syncedAt:
-              syncTimestamp
-          }
-        );
-
+        // ====================================================
+        // RECENT
+        // ====================================================
 
         const todayISO =
           localDateISO(
@@ -894,7 +1330,7 @@ export default async function handler(
           );
 
 
-        const result =
+        const recentResult =
           await processRecentEvents({
             profile,
             recentEvents,
@@ -902,25 +1338,54 @@ export default async function handler(
           });
 
 
-        if (
-          !result.hadEvents
-        ) {
+        if (!recentResult.hadEvents) {
 
           semEvento++;
+
+        } else {
+
+          if (recentResult.matched) {
+
+            matchesEncontrados++;
+
+          } else if (
+            recentResult.reason ===
+            'no_match'
+          ) {
+
+            semMatch++;
+          }
+
+
+          if (
+            recentResult.newContactCandidate
+          ) {
+
+            novosContatosDetectados++;
+          }
+
+
+          if (
+            recentResult.reason ===
+              'notification_not_sent' ||
+            recentResult.reason ===
+              'new_contact_notification_not_sent'
+          ) {
+
+            notificacoesBloqueadas++;
+          }
         }
 
 
-        if (result.sent) {
+        if (recentResult.sent) {
 
           sugestoesEnviadas++;
-
-        } else if (
-          result.hadEvents
-        ) {
-
-          semMatch++;
         }
 
+
+        // ====================================================
+        // UPCOMING
+        // ====================================================
 
         const briefingResult =
           await processUpcomingEvents({
@@ -929,46 +1394,58 @@ export default async function handler(
           });
 
 
+        if (briefingResult.matched) {
+
+          matchesEncontrados++;
+        }
+
+
         if (
-          briefingResult.sent
+          briefingResult.reason ===
+          'briefing_notification_not_sent'
         ) {
+
+          notificacoesBloqueadas++;
+        }
+
+
+        if (briefingResult.sent) {
 
           briefingsEnviados++;
         }
 
 
-      } catch (err) {
+      } catch (error) {
 
         console.error(
-          '[relationship-calendar-sync-cron] erro no usuário (google)',
-          conn.user_id,
-          err.message
+          '[CONEXIA CALENDAR] GOOGLE ERROR',
+          connection.user_id,
+          error
         );
 
 
         comErro++;
 
 
-        // Mantém o erro registrado para diagnóstico.
-        // Se o refresh token foi revogado/inválido,
-        // a conexão passa para status error.
-
         const invalidToken =
-          err.code ===
+
+          error.code ===
             'GOOGLE_TOKEN_EXPIRED' ||
+
           /invalid_grant/i.test(
-            err.message || ''
+            error.message || ''
           );
 
 
         await sb(
 
           `calendar_connections?` +
-          `user_id=eq.${conn.user_id}` +
+          `user_id=eq.${connection.user_id}` +
           `&provider=eq.google`,
 
           {
-            method: 'PATCH',
+            method:
+              'PATCH',
 
             body:
               JSON.stringify({
@@ -981,7 +1458,7 @@ export default async function handler(
                   : {}),
 
                 last_error:
-                  err.message ||
+                  error.message ||
                   'Erro desconhecido na sincronização',
 
                 updated_at:
@@ -996,11 +1473,11 @@ export default async function handler(
     }
 
 
-    // ─────────────────────────────────────────────
-    // RESULTADO / MONITORAMENTO
-    // ─────────────────────────────────────────────
+    // ========================================================
+    // FINAL RESULT
+    // ========================================================
 
-    const resultado = {
+    const result = {
 
       ok: true,
 
@@ -1009,6 +1486,12 @@ export default async function handler(
       sugestoesEnviadas,
 
       briefingsEnviados,
+
+      matchesEncontrados,
+
+      novosContatosDetectados,
+
+      notificacoesBloqueadas,
 
       semMatch,
 
@@ -1020,23 +1503,21 @@ export default async function handler(
 
 
     console.info(
-      '[CONEXIA CALENDAR] Resultado da execução',
-      resultado
+      '[CONEXIA CALENDAR] FINAL',
+      result
     );
 
 
     return res
       .status(200)
-      .json(
-        resultado
-      );
+      .json(result);
 
 
-  } catch (err) {
+  } catch (error) {
 
     console.error(
-      '[relationship-calendar-sync-cron] erro:',
-      err
+      '[CONEXIA CALENDAR] FATAL',
+      error
     );
 
 
@@ -1045,7 +1526,7 @@ export default async function handler(
       .json({
         ok: false,
         error:
-          err.message
+          error.message
       });
   }
 }
