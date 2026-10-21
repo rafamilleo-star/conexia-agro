@@ -3,47 +3,38 @@ import { normalize } from '../../../shared/textNormalize.js';
 
 export { normalize };
 
-// api/_lib/relationshipAssistant/icsImport.js
-//
-// Parser + inteligência de match dos eventos de calendário.
-//
-// ORDEM DE MATCH:
-// 1. E-mail exato
-// 2. Match já existente do contactProposal
-// 3. Nome completo normalizado
-// 4. Nome inequívoco
-//
-// REGRA:
-// Nunca cria contato automaticamente.
-// Se não houver segurança suficiente, retorna null e deixa
-// o fluxo do CONÉXIA perguntar ao usuário.
 
-// ─────────────────────────────────────────────────────────────
-// NORMALIZAÇÃO
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// HELPERS
+// ============================================================
 
-function normalizeEmail(email) {
-  return String(email || '')
+function normalizeEmail(value) {
+  return String(value || '')
     .trim()
     .toLowerCase();
 }
 
-function normalizeName(name) {
-  return normalize(String(name || ''))
+function normalizeName(value) {
+  return normalize(String(value || ''))
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-function nameTokens(name) {
-  return normalizeName(name)
+function tokens(value) {
+  return normalizeName(value)
     .split(' ')
-    .filter(Boolean);
+    .map(v => v.trim())
+    .filter(v => v.length >= 3);
+}
+
+function unique(arr) {
+  return [...new Set(arr.filter(Boolean))];
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// ICS — UNFOLD
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// ICS
+// ============================================================
 
 function unfold(icsText) {
   return String(icsText || '')
@@ -63,10 +54,6 @@ function unfold(icsText) {
     }, []);
 }
 
-
-// ─────────────────────────────────────────────────────────────
-// NOME / E-MAIL
-// ─────────────────────────────────────────────────────────────
 
 function extractName(line) {
   const cnMatch = line.match(/CN=([^;:]+)/i);
@@ -92,19 +79,13 @@ function extractName(line) {
 
 function extractEmail(line) {
   const match =
-    line.match(
-      /mailto:([^;:\s]+@[^;:\s]+)/i
-    );
+    line.match(/mailto:([^;:\s]+@[^;:\s]+)/i);
 
   return match
     ? normalizeEmail(match[1])
     : null;
 }
 
-
-// ─────────────────────────────────────────────────────────────
-// DTSTART
-// ─────────────────────────────────────────────────────────────
 
 function parseDtstart(line) {
   const value =
@@ -114,18 +95,14 @@ function parseDtstart(line) {
       .join(':')
       .trim();
 
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   const match =
     value.match(
       /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?(Z)?$/
     );
 
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
 
   const [
     ,
@@ -143,38 +120,28 @@ function parseDtstart(line) {
     `T${hour}:${minute}:${second}` +
     `${utc ? 'Z' : ''}`;
 
-  const date =
-    new Date(iso);
+  const date = new Date(iso);
 
-  return Number.isNaN(
-    date.getTime()
-  )
+  return Number.isNaN(date.getTime())
     ? null
     : date.toISOString();
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// PARSER ICS
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// PARSE ICS
+// ============================================================
 
 export function parseICSEvents(icsText) {
-  const lines =
-    unfold(icsText);
+  const lines = unfold(icsText);
 
   const events = [];
 
   let current = null;
 
-
   for (const line of lines) {
 
-    if (
-      line.startsWith(
-        'BEGIN:VEVENT'
-      )
-    ) {
-
+    if (line.startsWith('BEGIN:VEVENT')) {
       current = {
         uid: null,
         summary: null,
@@ -187,13 +154,7 @@ export function parseICSEvents(icsText) {
       continue;
     }
 
-
-    if (
-      line.startsWith(
-        'END:VEVENT'
-      )
-    ) {
-
+    if (line.startsWith('END:VEVENT')) {
       if (current) {
         events.push(current);
       }
@@ -203,75 +164,57 @@ export function parseICSEvents(icsText) {
       continue;
     }
 
-
-    if (!current) {
-      continue;
-    }
+    if (!current) continue;
 
 
-    if (
-      line.startsWith('UID')
-    ) {
+    if (line.startsWith('UID')) {
 
       current.uid =
         line
           .split(':')
           .slice(1)
           .join(':')
-          .trim() ||
-        null;
+          .trim() || null;
 
-    } else if (
-      line.startsWith('SUMMARY')
-    ) {
+
+    } else if (line.startsWith('SUMMARY')) {
 
       current.summary =
         line
           .split(':')
           .slice(1)
           .join(':')
-          .trim() ||
-        null;
+          .trim() || null;
 
-    } else if (
-      line.startsWith('DTSTART')
-    ) {
+
+    } else if (line.startsWith('DTSTART')) {
 
       current.startISO =
         parseDtstart(line);
 
-    } else if (
-      line.startsWith('ORGANIZER')
-    ) {
+
+    } else if (line.startsWith('ORGANIZER')) {
 
       const name =
         extractName(line);
 
       const email =
         extractEmail(line);
-
 
       current.organizer = {
         name,
         email
       };
 
-
       if (
         name &&
-        !current.attendeeNames.includes(
-          name
-        )
+        !current.attendeeNames.includes(name)
       ) {
-
-        current.attendeeNames.push(
-          name
-        );
+        current.attendeeNames.push(name);
       }
 
-    } else if (
-      line.startsWith('ATTENDEE')
-    ) {
+
+    } else if (line.startsWith('ATTENDEE')) {
 
       const name =
         extractName(line);
@@ -279,25 +222,14 @@ export function parseICSEvents(icsText) {
       const email =
         extractEmail(line);
 
-
       if (
         name &&
-        !current.attendeeNames.includes(
-          name
-        )
+        !current.attendeeNames.includes(name)
       ) {
-
-        current.attendeeNames.push(
-          name
-        );
+        current.attendeeNames.push(name);
       }
 
-
-      if (
-        name ||
-        email
-      ) {
-
+      if (name || email) {
         current.attendees.push({
           name,
           email
@@ -306,183 +238,166 @@ export function parseICSEvents(icsText) {
     }
   }
 
-
   return events;
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// EXTRAÇÃO DOS E-MAILS DO CONTATO
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// CONTACT EMAILS
+// ============================================================
 
 function contactEmails(contact) {
-  const possible = [
-    contact?.email,
+  return unique([
     contact?.contact_email,
+    contact?.email,
     contact?.work_email,
     contact?.personal_email
-  ];
-
-  return possible
-    .map(normalizeEmail)
-    .filter(Boolean);
+  ].map(normalizeEmail));
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// MATCH 1 — E-MAIL EXATO
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// EVENT EMAILS
+// ============================================================
 
-function matchByEmail(
+function eventEmails(event) {
+  return unique([
+    ...(event?.attendees || [])
+      .map(a => normalizeEmail(a?.email)),
+
+    event?.organizer?.self
+      ? null
+      : normalizeEmail(
+          event?.organizer?.email
+        )
+  ]);
+}
+
+
+// ============================================================
+// EVENT NAMES
+// ============================================================
+
+function eventNames(event) {
+  return unique([
+    ...(event?.attendeeNames || []),
+
+    ...(event?.attendees || [])
+      .map(a => a?.name),
+
+    event?.organizer?.self
+      ? null
+      : event?.organizer?.name
+
+  ].map(normalizeName));
+}
+
+
+// ============================================================
+// 1 — EXACT EMAIL
+// ============================================================
+
+function matchExactEmail(
   event,
   contacts
 ) {
 
-  const eventEmails = [
-    ...(event?.attendees || [])
-      .map(
-        attendee =>
-          normalizeEmail(
-            attendee?.email
-          )
-      ),
+  const emails =
+    eventEmails(event);
 
-    normalizeEmail(
-      event?.organizer?.email
-    )
-  ].filter(Boolean);
-
-
-  if (!eventEmails.length) {
+  if (!emails.length) {
     return null;
   }
-
 
   const matches =
     (contacts || [])
       .filter(contact => {
 
-        const emails =
+        const cEmails =
           contactEmails(contact);
 
-        return emails.some(
+        return cEmails.some(
           email =>
-            eventEmails.includes(
-              email
-            )
+            emails.includes(email)
         );
       });
 
-
-  // Só aceita se houver UM único contato.
-  if (
-    matches.length === 1
-  ) {
-
-    return matches[0];
-  }
-
-
-  return null;
+  return matches.length === 1
+    ? matches[0]
+    : null;
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// MATCH 2 — CONTACT PROPOSAL EXISTENTE
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// 2 — EXISTING CONEXIA PROPOSAL
+// ============================================================
 
-function matchByExistingProposal(
+function matchExistingProposal(
   event,
   contacts
 ) {
 
-  const exactContacts =
-    (event.attendees || [])
-      .map(
-        attendee =>
-          contactProposal(
-            attendee,
-            contacts
-          )
+  const proposals =
+    (event?.attendees || [])
+
+      .map(attendee =>
+        contactProposal(
+          attendee,
+          contacts
+        )
       )
-      .filter(
-        proposal =>
-          proposal?.reason ===
-            'email_telefone' &&
-          proposal?.matches?.length === 1
+
+      .filter(proposal =>
+        proposal?.reason ===
+          'email_telefone' &&
+        proposal?.matches?.length === 1
       );
 
 
-  if (
-    !exactContacts.length
-  ) {
-
+  if (!proposals.length) {
     return null;
   }
 
 
-  const id =
-    exactContacts[0]
-      .matches[0]
-      .id;
+  const ids =
+    unique(
+      proposals.map(
+        proposal =>
+          proposal.matches[0]?.id
+      )
+    );
+
+
+  // Se diferentes convidados apontarem
+  // para contatos diferentes, não escolhe.
+
+  if (ids.length !== 1) {
+    return null;
+  }
 
 
   return (
     contacts || []
   ).find(
     contact =>
-      contact.id === id
+      contact.id === ids[0]
   ) || null;
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// NOMES PRESENTES NO EVENTO
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// 3 — FULL NAME
+// ============================================================
 
-function eventCandidateNames(event) {
-  const names = [
-    ...(event?.attendeeNames || []),
-
-    ...(event?.attendees || [])
-      .map(
-        attendee =>
-          attendee?.name
-      ),
-
-    event?.organizer?.name
-  ];
-
-
-  return [
-    ...new Set(
-      names
-        .map(normalizeName)
-        .filter(Boolean)
-    )
-  ];
-}
-
-
-// ─────────────────────────────────────────────────────────────
-// MATCH 3 — NOME COMPLETO NORMALIZADO
-// ─────────────────────────────────────────────────────────────
-
-function matchByFullName(
+function matchFullName(
   event,
   contacts
 ) {
 
-  const candidateNames =
-    eventCandidateNames(
-      event
-    );
+  const names =
+    eventNames(event);
 
-
-  if (
-    !candidateNames.length
-  ) {
-
+  if (!names.length) {
     return null;
   }
 
@@ -496,176 +411,261 @@ function matchByFullName(
             contact?.name
           );
 
-
         if (!contactName) {
           return false;
         }
 
 
-        const tokens =
-          nameTokens(
-            contactName
-          );
+        const contactTokens =
+          tokens(contactName);
 
-
-        // Aqui ainda exigimos
-        // pelo menos nome + sobrenome.
         if (
-          tokens.length < 2
+          contactTokens.length < 2
         ) {
-
           return false;
         }
 
 
-        return candidateNames.some(
-          candidate =>
+        return names.some(
+          eventName => {
 
-            candidate ===
-              contactName ||
+            const eventTokens =
+              tokens(eventName);
 
-            candidate.includes(
-              contactName
-            ) ||
+            if (
+              eventTokens.length < 2
+            ) {
+              return false;
+            }
 
-            contactName.includes(
-              candidate
-            )
+
+            if (
+              eventName === contactName
+            ) {
+              return true;
+            }
+
+
+            const common =
+              contactTokens.filter(
+                token =>
+                  eventTokens.includes(token)
+              );
+
+
+            // Nome + sobrenome em comum.
+
+            return common.length >= 2;
+          }
         );
       });
 
 
-  // Evita falso positivo.
-  if (
-    matches.length === 1
-  ) {
-
-    return matches[0];
-  }
-
-
-  return null;
+  return matches.length === 1
+    ? matches[0]
+    : null;
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// MATCH 4 — NOME INEQUÍVOCO
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// 4 — SUMMARY
 //
 // Exemplo:
 //
-// Rede CONÉXIA:
-// Rafael Milléo
+// contato:
 // João Pereira
-// Maria Souza
 //
-// Agenda:
-// "Reunião João"
-//
-// Se existir apenas UM João na rede,
-// podemos usar esse contato.
-//
-// Se houver:
-// João Pereira
-// João Silva
-//
-// NÃO casa.
-// Danna pergunta.
-// ─────────────────────────────────────────────────────────────
+// reunião:
+// "Alinhamento João Pereira"
+// "Reunião com João Pereira"
+// "João Pereira - Café"
+// ============================================================
 
-function matchByUniqueName(
+function matchSummary(
   event,
   contacts
 ) {
 
-  const candidateNames =
-    eventCandidateNames(
-      event
+  const summary =
+    normalizeName(
+      event?.summary
     );
 
-
-  if (
-    !candidateNames.length
-  ) {
-
+  if (!summary) {
     return null;
   }
 
 
-  for (
-    const candidateName
-    of candidateNames
-  ) {
-
-    const candidateTokens =
-      nameTokens(
-        candidateName
-      );
+  const summaryTokens =
+    tokens(summary);
 
 
-    if (
-      !candidateTokens.length
-    ) {
+  const scored =
+    (contacts || [])
+      .map(contact => {
 
-      continue;
-    }
-
-
-    // Não usa palavras muito pequenas
-    // como critério de identidade.
-
-    const usefulTokens =
-      candidateTokens
-        .filter(
-          token =>
-            token.length >= 3
-        );
-
-
-    if (
-      !usefulTokens.length
-    ) {
-
-      continue;
-    }
-
-
-    const possible =
-      (contacts || [])
-        .filter(contact => {
-
-          const contactTokens =
-            nameTokens(
-              contact?.name
-            );
-
-
-          if (
-            !contactTokens.length
-          ) {
-
-            return false;
-          }
-
-
-          return usefulTokens.some(
-            token =>
-              contactTokens.includes(
-                token
-              )
+        const name =
+          normalizeName(
+            contact?.name
           );
-        });
+
+        const contactTokens =
+          tokens(name);
 
 
-    // REGRA PRINCIPAL:
-    // só aceita se for absolutamente
-    // inequívoco dentro da rede.
+        if (!contactTokens.length) {
 
-    if (
-      possible.length === 1
-    ) {
+          return {
+            contact,
+            score: 0
+          };
+        }
 
-      return possible[0];
+
+        // Nome completo aparece no título.
+
+        if (
+          name.length >= 5 &&
+          summary.includes(name)
+        ) {
+
+          return {
+            contact,
+            score: 100
+          };
+        }
+
+
+        const common =
+          contactTokens.filter(
+            token =>
+              summaryTokens.includes(token)
+          );
+
+
+        // Nome + sobrenome.
+
+        if (common.length >= 2) {
+
+          return {
+            contact,
+            score: 80
+          };
+        }
+
+
+        // Apenas um token.
+        // Só será usado se for totalmente
+        // inequívoco na rede.
+
+        if (common.length === 1) {
+
+          return {
+            contact,
+            score: 40
+          };
+        }
+
+
+        return {
+          contact,
+          score: 0
+        };
+      });
+
+
+  const bestScore =
+    Math.max(
+      0,
+      ...scored.map(
+        item => item.score
+      )
+    );
+
+
+  if (!bestScore) {
+    return null;
+  }
+
+
+  const best =
+    scored.filter(
+      item =>
+        item.score === bestScore
+    );
+
+
+  // Só aceita se UM contato tiver
+  // a melhor pontuação.
+
+  if (best.length !== 1) {
+    return null;
+  }
+
+
+  return best[0].contact;
+}
+
+
+// ============================================================
+// 5 — UNIQUE PERSON NAME
+//
+// Caso Google entregue:
+//
+// Rafael
+//
+// E na rede exista somente:
+//
+// Rafael Milléo
+//
+// pode casar.
+//
+// Mas se existirem:
+//
+// Rafael Milléo
+// Rafael Souza
+//
+// não casa.
+// ============================================================
+
+function matchUniquePersonName(
+  event,
+  contacts
+) {
+
+  const names =
+    eventNames(event);
+
+
+  for (const eventName of names) {
+
+    const eventTokens =
+      tokens(eventName);
+
+
+    for (const token of eventTokens) {
+
+      const possible =
+        (contacts || [])
+          .filter(contact => {
+
+            const contactTokens =
+              tokens(
+                contact?.name
+              );
+
+            return contactTokens.includes(
+              token
+            );
+          });
+
+
+      if (
+        possible.length === 1
+      ) {
+
+        return possible[0];
+      }
     }
   }
 
@@ -674,9 +674,9 @@ function matchByUniqueName(
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// MATCH PRINCIPAL
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// MAIN MATCH
+// ============================================================
 
 export function matchContactToEvent(
   event,
@@ -693,77 +693,92 @@ export function matchContactToEvent(
   }
 
 
-  // 1 — E-MAIL EXATO
+  // ----------------------------------------------------------
+  // 1 — EMAIL
+  // ----------------------------------------------------------
 
-  const emailMatch =
-    matchByEmail(
+  const email =
+    matchExactEmail(
       event,
       contacts
     );
 
-
-  if (emailMatch) {
-
-    return emailMatch;
+  if (email) {
+    return email;
   }
 
 
-  // 2 — MECANISMO JÁ EXISTENTE
-  // DO CONÉXIA
+  // ----------------------------------------------------------
+  // 2 — EXISTING CONEXIA MATCHER
+  // ----------------------------------------------------------
 
-  const existingMatch =
-    matchByExistingProposal(
+  const existing =
+    matchExistingProposal(
       event,
       contacts
     );
 
-
-  if (existingMatch) {
-
-    return existingMatch;
+  if (existing) {
+    return existing;
   }
 
 
-  // 3 — NOME COMPLETO
+  // ----------------------------------------------------------
+  // 3 — FULL NAME
+  // ----------------------------------------------------------
 
-  const fullNameMatch =
-    matchByFullName(
+  const fullName =
+    matchFullName(
       event,
       contacts
     );
 
-
-  if (fullNameMatch) {
-
-    return fullNameMatch;
+  if (fullName) {
+    return fullName;
   }
 
 
-  // 4 — NOME INEQUÍVOCO
+  // ----------------------------------------------------------
+  // 4 — EVENT TITLE
+  // ----------------------------------------------------------
 
-  const uniqueNameMatch =
-    matchByUniqueName(
+  const summary =
+    matchSummary(
       event,
       contacts
     );
 
-
-  if (uniqueNameMatch) {
-
-    return uniqueNameMatch;
+  if (summary) {
+    return summary;
   }
 
 
-  // Segurança:
-  // dúvida = não casa.
+  // ----------------------------------------------------------
+  // 5 — UNIQUE NAME
+  // ----------------------------------------------------------
+
+  const uniqueName =
+    matchUniquePersonName(
+      event,
+      contacts
+    );
+
+  if (uniqueName) {
+    return uniqueName;
+  }
+
+
+  // ----------------------------------------------------------
+  // SEGURANÇA
+  // ----------------------------------------------------------
 
   return null;
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// EVENTOS DENTRO DA JANELA
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// WINDOW
+// ============================================================
 
 export function eventsInWindow(
   events,
@@ -776,7 +791,6 @@ export function eventsInWindow(
       sinceISO
     ).getTime();
 
-
   const until =
     new Date(
       untilISO
@@ -787,19 +801,14 @@ export function eventsInWindow(
     events || []
   ).filter(event => {
 
-    if (
-      !event.startISO
-    ) {
-
+    if (!event.startISO) {
       return false;
     }
-
 
     const time =
       new Date(
         event.startISO
       ).getTime();
-
 
     return (
       time >= since &&
@@ -809,45 +818,34 @@ export function eventsInWindow(
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// E-MAILS AUTOMÁTICOS
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// AUTOMATED EMAIL
+// ============================================================
 
 const AUTOMATED_EMAIL_PATTERNS = [
-
   /^no-?reply@/i,
-
   /^notifications?@/i,
-
   /calendar-notification@/i,
-
   /resource\.calendar\.google\.com$/i,
-
   /@group\.calendar\.google\.com$/i
-
 ];
 
 
-function isAutomatedEmail(
-  email
-) {
+function isAutomatedEmail(email) {
 
   return (
     !!email &&
     AUTOMATED_EMAIL_PATTERNS
-      .some(
-        regex =>
-          regex.test(
-            email
-          )
+      .some(pattern =>
+        pattern.test(email)
       )
   );
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// NOVOS CONTATOS ENCONTRADOS NO EVENTO
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// NEW CONTACT CANDIDATES
+// ============================================================
 
 export function suggestNewContactCandidatesFromEvent(
   event,
@@ -862,64 +860,50 @@ export function suggestNewContactCandidatesFromEvent(
       .filter(Boolean);
 
 
-  const candidatos =
-    (event.attendees || [])
+  const candidates =
+    (event?.attendees || [])
       .filter(attendee => {
 
         if (
-          !attendee.name &&
-          !attendee.email
+          !attendee?.name &&
+          !attendee?.email
         ) {
-
           return false;
         }
 
 
         const name =
           normalizeName(
-            attendee.name
+            attendee?.name
           );
 
 
-        // Sem e-mail exige nome completo.
-
         if (
-          !attendee.email &&
-          nameTokens(name).length < 2
+          !attendee?.email &&
+          tokens(name).length < 2
         ) {
-
           return false;
         }
 
-
-        // Nunca transforma robô/sistema
-        // em contato.
 
         if (
           isAutomatedEmail(
-            attendee.email
+            attendee?.email
           )
         ) {
-
           return false;
         }
 
 
-        // Remove o próprio usuário
-        // da lista de candidatos.
-
         if (
-          hints.some(
-            hint =>
-              name.includes(
-                hint
-              ) ||
-              hint.includes(
-                name
-              )
+          hints.some(hint =>
+            name &&
+            (
+              name.includes(hint) ||
+              hint.includes(name)
+            )
           )
         ) {
-
           return false;
         }
 
@@ -928,21 +912,13 @@ export function suggestNewContactCandidatesFromEvent(
       });
 
 
-  if (
-    candidatos.length < 1
-  ) {
-
-    return [];
-  }
-
-
-  return candidatos;
+  return candidates;
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// COMPATIBILIDADE COM FLUXO EXISTENTE
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// LEGACY COMPATIBILITY
+// ============================================================
 
 export function suggestNewContactFromEvent(
   event,
@@ -951,7 +927,7 @@ export function suggestNewContactFromEvent(
   } = {}
 ) {
 
-  const candidatos =
+  const candidates =
     suggestNewContactCandidatesFromEvent(
       event,
       {
@@ -960,8 +936,5 @@ export function suggestNewContactFromEvent(
     );
 
 
-  return (
-    candidatos[0] ||
-    null
-  );
+  return candidates[0] || null;
 }
