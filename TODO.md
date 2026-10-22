@@ -1,0 +1,7 @@
+# Correção WhatsApp Meta — 22/10/2026
+
+- [ ] Restaurar o funcionamento do WhatsApp Full pela Meta, que funcionava até 09/10 e depois parou, preservando a conta e o histórico do WhatsApp Business. A coexistência precisa voltar a `is_on_biz_app=true` e `platform_type=CLOUD_API`; não excluir, desregistrar ou migrar silenciosamente o número. **Pendente: login Meta bloqueado; não houve acesso ao painel para reparar o provisionamento.**
+- [x] Tornar Meta o canal padrão da integração e manter uma configuração consistente entre sender central, webhook, cron e diagnóstico, sem expor credenciais. Não encaminhar mensagens pelo Twilio/Evolution como substituição da Meta. **Evidência: helper compartilhado de configuração, aliases divergentes bloqueados, fallback legado desabilitado, cron de lembretes integrado ao sender central; 56 testes offline passaram e build Vite passou.**
+- [ ] Entregar a correção com evidência do estado publicado e distinguir código corrigido de reparo Meta ainda pendente. Não afirmar entrega ao aparelho apenas pelo retorno de um `wamid`. **Publicação ainda será confirmada após o push.**
+
+Mensagens proativas fora da janela de 24 horas exigem templates Meta aprovados que preservem a finalidade de cada notificação. O código não inventa templates nem substitui lembretes por anúncio genérico. Essa integração de templates permanece pendente; não é apresentada como restaurada.

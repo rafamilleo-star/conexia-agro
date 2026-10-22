@@ -2,18 +2,15 @@
 // Roda diariamente (via Vercel Cron, ver vercel.json). Dois tipos de lembrete:
 // 1) next_action_date vencendo hoje (ou atrasada) que ainda não gerou lembrete
 // 2) aniversário de contato caindo hoje, uma vez por ano
-// Envia por Twilio — mesmo canal já em uso e funcionando no assistente de WhatsApp
-// (a Evolution API usada aqui antes tinha entrega silenciosamente quebrada).
+// O envio passa pelo pipeline proativo, que usa a configuração Meta e aplica
+// opt-in, quiet hours, limite diário e log/idempotência.
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_WHATSAPP_NUMBER = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
-const EVO_URL = (process.env.EVOLUTION_API_URL || 'https://evolution-api-production-0c6a.up.railway.app').replace(/\/$/, '');
-const EVO_KEY = process.env.EVOLUTION_API_KEY;
-const EVO_INSTANCE = process.env.EVOLUTION_INSTANCE || 'conexia';
+const META_WHATSAPP_TOKEN = process.env.META_WHATSAPP_TOKEN;
 const CRON_SECRET = process.env.CRON_SECRET || '';
+
+import { sendProactiveNotification } from './_lib/relationshipAssistant/sendProactiveNotification.js';
 
 async function sb(path, opts = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -33,73 +30,35 @@ async function sb(path, opts = {}) {
   return data;
 }
 
-// Garante formato E.164 (com "+") — no banco a maioria está salvo só em dígitos.
-function toE164(number) {
-  const n = String(number || '').trim();
-  return n.startsWith('+') ? n : `+${n}`;
+const NON_INFRA_FAILURE_REASONS = new Set([
+  'no_whatsapp_number',
+  'notifications_disabled',
+  'weekly_summary_disabled',
+  'no_opt_in',
+  'quiet_hours',
+  'forbidden_tone_blocked',
+  'already_sent',
+  'daily_limit_reached',
+  'whatsapp_access_denied',
+]);
+
+// Não devolve mensagens da Meta ou conteúdo de contatos na resposta do cron.
+// Erros desconhecidos ficam agrupados em uma razão estável e não sensível.
+function safeFailureReason(reason) {
+  const value = String(reason || 'not_sent');
+  if (/^[a-z][a-z0-9_:-]{0,79}$/.test(value)) return value;
+  return 'provider_failed';
 }
 
-async function sendWhatsappTwilio(number, text) {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) return false;
-  try {
-    const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
-    const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          From: TWILIO_WHATSAPP_NUMBER,
-          To: `whatsapp:${toE164(number)}`,
-          Body: text,
-        }).toString(),
-      }
-    );
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error('[whatsapp-reminder-cron] falha ao enviar via Twilio:', res.status, body);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.error('[whatsapp-reminder-cron] erro ao enviar via Twilio:', e.message);
-    return false;
-  }
-}
-
-async function sendWhatsappEvolution(number, text) {
-  if (!EVO_KEY) return false;
-  try {
-    const res = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-      body: JSON.stringify({ number, text }),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error('[whatsapp-reminder-cron] falha ao enviar via Evolution:', res.status, body);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.error('[whatsapp-reminder-cron] erro ao enviar via Evolution:', e.message);
-    return false;
-  }
-}
-
-// Os dois canais rodam em paralelo, igual no webhook de entrada — hoje o
-// Twilio é quem entrega de verdade, mas quando o número Business (Evolution)
-// voltar a funcionar, este fallback passa a usá-lo sem precisar mexer em nada.
-async function sendWhatsapp(number, text) {
-  if (await sendWhatsappTwilio(number, text)) return true;
-  if (await sendWhatsappEvolution(number, text)) return true;
-  return false;
+function countFailure(state, reason) {
+  const safeReason = safeFailureReason(reason);
+  state.falhas += 1;
+  state.falhasPorMotivo[safeReason] = (state.falhasPorMotivo[safeReason] || 0) + 1;
+  if (!NON_INFRA_FAILURE_REASONS.has(safeReason)) state.infraFailure = true;
 }
 
 export default async function handler(req, res) {
+  const state = { enviados: 0, falhas: 0, falhasPorMotivo: {}, infraFailure: false };
   try {
     // Se CRON_SECRET estiver configurado nas env vars da Vercel, exige o header.
     // Se não estiver configurado, roda sem exigir (mais simples, mas menos travado).
@@ -110,8 +69,8 @@ export default async function handler(req, res) {
       }
     }
 
-    if (!SUPABASE_SERVICE_KEY) {
-      return res.status(200).json({ ok: false, error: 'SUPABASE_SERVICE_KEY ausente' });
+    if (!SUPABASE_SERVICE_KEY || !META_WHATSAPP_TOKEN) {
+      return res.status(503).json({ ok: false, error: 'configuration_missing' });
     }
 
     const hoje = new Date();
@@ -138,12 +97,17 @@ export default async function handler(req, res) {
     });
 
     if ((!pendentes || !pendentes.length) && !aniversariantesHoje.length) {
-      return res.status(200).json({ ok: true, enviados: 0 });
+      return res.status(200).json({
+        ok: true,
+        enviados: state.enviados,
+        falhas: state.falhas,
+        falhas_por_motivo: state.falhasPorMotivo,
+      });
     }
 
     // Busca os perfis (números de WhatsApp) dos donos, de uma vez só
     const userIds = [...new Set([...(pendentes || []).map(c => c.user_id), ...aniversariantesHoje.map(c => c.user_id)])];
-    const profiles = await sb(`profiles?id=in.(${userIds.join(',')})&select=id,whatsapp,first_name,name,is_pro,plan,pro_expires_at,whatsapp_trial_started_at`);
+    const profiles = await sb(`profiles?id=in.(${userIds.join(',')})&select=id,whatsapp,first_name,name,is_pro,plan,pro_expires_at,whatsapp_trial_started_at,timezone,notifications_enabled,weekly_summary_enabled,whatsapp_opt_in`);
     const profileById = Object.fromEntries((profiles || []).map(p => [p.id, p]));
 
     // Mesma regra de acesso usada no app e no webhook: PRO sempre libera;
@@ -159,11 +123,12 @@ export default async function handler(req, res) {
       return diasDeTrial <= 10;
     };
 
-    let enviados = 0;
-
     for (const contato of (pendentes || [])) {
       const profile = profileById[contato.user_id];
-      if (!hasWhatsappAccess(profile)) continue; // sem WhatsApp, ou Free fora do trial
+      if (!hasWhatsappAccess(profile)) {
+        countFailure(state, 'whatsapp_access_denied'); // sem WhatsApp, ou Free fora do trial
+        continue;
+      }
 
       const atrasada = contato.next_action_date < hojeISO;
       const dataFormatada = new Date(contato.next_action_date + 'T00:00:00').toLocaleDateString('pt-BR');
@@ -171,35 +136,71 @@ export default async function handler(req, res) {
         ? `⏰ Lembrete atrasado: *${contato.next_action}* com *${contato.name}* (era pra ${dataFormatada}).`
         : `⏰ Lembrete de hoje: *${contato.next_action}* com *${contato.name}*.`;
 
-      const ok = await sendWhatsapp(profile.whatsapp, texto);
-      if (!ok) continue;
+      // Lacuna conhecida: os textos existentes continuam sendo texto livre;
+      // este ajuste não inventa nem cadastra templates aprovados na Meta.
+      const result = await sendProactiveNotification({
+        profile,
+        notificationType: 'NEXT_BEST_ACTION',
+        scopeKey: `next-action:${contato.id}:${contato.next_action_date}`,
+        text: texto,
+        relationshipId: contato.id,
+      });
+      if (!result?.sent) {
+        countFailure(state, result?.reason);
+        continue;
+      }
 
+      state.enviados++;
       await sb(`contacts?id=eq.${contato.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ next_action_reminded_at: new Date().toISOString() }),
       });
-      enviados++;
     }
 
     for (const contato of aniversariantesHoje) {
       const profile = profileById[contato.user_id];
-      if (!hasWhatsappAccess(profile)) continue;
+      if (!hasWhatsappAccess(profile)) {
+        countFailure(state, 'whatsapp_access_denied');
+        continue;
+      }
 
       const texto = `🎂 Hoje é aniversário de *${contato.name}*! Boa hora pra mandar uma mensagem — reciprocidade genuína conta mais que qualquer ligação estratégica.`;
 
-      const ok = await sendWhatsapp(profile.whatsapp, texto);
-      if (!ok) continue;
+      // Aniversários usam o tipo permitido NEXT_BEST_ACTION; não criar
+      // BIRTHDAY, pois a constraint real do banco não aceita esse valor.
+      const result = await sendProactiveNotification({
+        profile,
+        notificationType: 'NEXT_BEST_ACTION',
+        scopeKey: `birthday:${contato.id}:${anoAtual}`,
+        text: texto,
+        relationshipId: contato.id,
+      });
+      if (!result?.sent) {
+        countFailure(state, result?.reason);
+        continue;
+      }
 
+      state.enviados++;
       await sb(`contacts?id=eq.${contato.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ birthday_last_reminded_year: anoAtual }),
       });
-      enviados++;
     }
 
-    return res.status(200).json({ ok: true, enviados });
+    return res.status(state.infraFailure ? 500 : 200).json({
+      ok: !state.infraFailure,
+      enviados: state.enviados,
+      falhas: state.falhas,
+      falhas_por_motivo: state.falhasPorMotivo,
+    });
   } catch (err) {
     console.error('[whatsapp-reminder-cron] erro:', err);
-    return res.status(200).json({ ok: false, error: err.message });
+    return res.status(500).json({
+      ok: false,
+      error: 'internal_error',
+      enviados: state.enviados,
+      falhas: state.falhas,
+      falhas_por_motivo: state.falhasPorMotivo,
+    });
   }
 }

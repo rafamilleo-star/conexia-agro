@@ -4,17 +4,16 @@
 // e troca somente a camada de transporte para Meta Cloud API.
 
 import { handleIncomingMessage, handleSharedContactData, handleIncomingPhoto } from './whatsapp-webhook.js';
+import {
+  getMetaWhatsAppConfig,
+  assertMetaWhatsAppConfig,
+} from './_lib/metaWhatsAppConfig.js';
 
-const META_WHATSAPP_TOKEN = process.env.META_WHATSAPP_TOKEN;
-
-const META_PHONE_NUMBER_ID =
-  process.env.META_PHONE_NUMBER_ID || '1367865376400864';
-
-const META_WEBHOOK_VERIFY_TOKEN =
-  process.env.META_WEBHOOK_VERIFY_TOKEN;
-
-const META_GRAPH_API_VERSION =
-  process.env.META_GRAPH_API_VERSION || 'v26.0';
+const META_CONFIG = getMetaWhatsAppConfig();
+const META_WHATSAPP_TOKEN = META_CONFIG.accessToken;
+const META_PHONE_NUMBER_ID = META_CONFIG.phoneNumberId;
+const META_WEBHOOK_VERIFY_TOKEN = META_CONFIG.webhookVerifyToken;
+const META_GRAPH_API_VERSION = META_CONFIG.graphApiVersion;
 
 const GEMINI_KEY =
   process.env.GEMINI_API_KEY;
@@ -279,6 +278,7 @@ async function transcribeMetaAudio(mediaId) {
 export default async function handler(req, res) {
 
   try {
+    assertMetaWhatsAppConfig(META_CONFIG);
 
     // -----------------------------------------------------
     // META WEBHOOK VERIFICATION

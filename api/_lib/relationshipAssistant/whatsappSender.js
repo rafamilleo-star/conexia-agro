@@ -2,8 +2,13 @@
 //
 // Ponto único de envio de WhatsApp para o CONÉXIA.
 // Provedores:
-//   WHATSAPP_PROVIDER=webhook -> Twilio com Evolution como fallback
+//   WHATSAPP_PROVIDER=webhook -> legacy desabilitado para envio outbound
 //   WHATSAPP_PROVIDER=meta    -> Meta WhatsApp Cloud API
+
+import {
+  getMetaWhatsAppConfig,
+  assertMetaWhatsAppConfig,
+} from '../metaWhatsAppConfig.js';
 
 const TWILIO_ACCOUNT_SID =
   process.env.TWILIO_ACCOUNT_SID;
@@ -27,25 +32,34 @@ const EVO_INSTANCE =
   process.env.EVOLUTION_INSTANCE ||
   'conexia';
 
-const WHATSAPP_PROVIDER =
-  process.env.WHATSAPP_PROVIDER ||
-  'webhook';
+const WHATSAPP_PROVIDER = String(
+  process.env.WHATSAPP_PROVIDER || 'meta'
+).trim().toLowerCase() || 'meta';
 
 
 // =========================================================
 // META WHATSAPP CLOUD API
 // =========================================================
 
+const META_CONFIG = getMetaWhatsAppConfig();
+
 const META_WHATSAPP_TOKEN =
-  process.env.META_WHATSAPP_TOKEN;
+  META_CONFIG.accessToken;
 
 const META_PHONE_NUMBER_ID =
-  process.env.META_PHONE_NUMBER_ID ||
-  process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+  META_CONFIG.phoneNumberId;
 
 const META_GRAPH_API_VERSION =
-  process.env.META_GRAPH_API_VERSION ||
-  'v26.0';
+  META_CONFIG.graphApiVersion;
+
+function metaConfigurationError() {
+  try {
+    assertMetaWhatsAppConfig(META_CONFIG);
+    return null;
+  } catch (error) {
+    return error.message;
+  }
+}
 
 
 // =========================================================
@@ -270,6 +284,18 @@ async function sendViaMeta(
   text
 ) {
 
+  const configurationError =
+    metaConfigurationError();
+
+  if (configurationError) {
+    return {
+      ok: false,
+      channel: 'meta',
+      error: 'meta_phone_number_id_conflict',
+      configurationError,
+    };
+  }
+
   if (!META_WHATSAPP_TOKEN) {
 
     return {
@@ -426,6 +452,18 @@ async function sendTemplateViaMeta(
   templateName,
   languageCode = 'pt_BR'
 ) {
+
+  const configurationError =
+    metaConfigurationError();
+
+  if (configurationError) {
+    return {
+      ok: false,
+      channel: 'meta',
+      error: 'meta_phone_number_id_conflict',
+      configurationError,
+    };
+  }
 
   if (!META_WHATSAPP_TOKEN) {
 
@@ -604,49 +642,25 @@ async function sendTemplateViaMeta(
 const WebhookWhatsAppProvider = {
 
   async sendMessage({
-    number,
-    text,
+    number: _number,
+    text: _text,
   }) {
-
-    const twilioResult =
-      await sendViaTwilio(
-        number,
-        text
-      );
-
-
-    if (
-      twilioResult.ok
-    ) {
-
-      return twilioResult;
-    }
-
-
-    const evolutionResult =
-      await sendViaEvolution(
-        number,
-        text
-      );
-
-
-    if (
-      evolutionResult.ok
-    ) {
-
-      return evolutionResult;
-    }
-
-
     return {
       ok: false,
       channel: 'webhook',
+      error: 'legacy_whatsapp_provider_disabled',
+      configurationError:
+        'WHATSAPP_PROVIDER=webhook é legado e está desabilitado para envio; configure WHATSAPP_PROVIDER=meta.',
+    };
+  },
 
-      error:
-        twilioResult.error,
-
-      fallbackError:
-        evolutionResult.error,
+  async sendTemplate() {
+    return {
+      ok: false,
+      channel: 'webhook',
+      error: 'legacy_whatsapp_provider_disabled',
+      configurationError:
+        'WHATSAPP_PROVIDER=webhook é legado e está desabilitado para envio; configure WHATSAPP_PROVIDER=meta.',
     };
   },
 };
@@ -689,14 +703,26 @@ const MetaWhatsAppProvider = {
 // ESCOLHA DO PROVIDER
 // =========================================================
 
+const UnsupportedWhatsAppProvider = {
+  async sendMessage() {
+    return {
+      ok: false,
+      channel: 'meta',
+      error: 'unsupported_whatsapp_provider',
+      configurationError:
+        'Provider de WhatsApp desconhecido; configure WHATSAPP_PROVIDER=meta.',
+    };
+  },
+  async sendTemplate() {
+    return this.sendMessage();
+  },
+};
+
 export function getWhatsAppProvider() {
 
-  return (
-    WHATSAPP_PROVIDER ===
-    'meta'
-  )
-    ? MetaWhatsAppProvider
-    : WebhookWhatsAppProvider;
+  if (WHATSAPP_PROVIDER === 'meta') return MetaWhatsAppProvider;
+  if (WHATSAPP_PROVIDER === 'webhook') return WebhookWhatsAppProvider;
+  return UnsupportedWhatsAppProvider;
 }
 
 

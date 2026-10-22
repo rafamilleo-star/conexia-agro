@@ -29,22 +29,26 @@ import {
   isQuietHours,
   localDateISO,
 } from './_lib/relationshipAssistant/timeWindow.js';
+import {
+  getMetaWhatsAppConfig,
+  assertMetaWhatsAppConfig,
+} from './_lib/metaWhatsAppConfig.js';
 
 
 // =========================================================
 // CONFIGURAÇÃO
 // =========================================================
 
+const META_CONFIG = getMetaWhatsAppConfig();
+
 const META_WHATSAPP_TOKEN =
-  process.env.META_WHATSAPP_TOKEN;
+  META_CONFIG.accessToken;
 
 const META_PHONE_NUMBER_ID =
-  process.env.META_PHONE_NUMBER_ID ||
-  '1367865376400864';
+  META_CONFIG.phoneNumberId;
 
 const META_GRAPH_API_VERSION =
-  process.env.META_GRAPH_API_VERSION ||
-  'v26.0';
+  META_CONFIG.graphApiVersion;
 
 const TEMPLATE_NAME =
   process.env.CONEXIA_ONLINE_TEMPLATE_NAME ||
@@ -347,6 +351,7 @@ export default async function handler(
 ) {
 
   try {
+    assertMetaWhatsAppConfig(META_CONFIG);
 
     // =====================================================
     // PROTEÇÃO DO CRON
