@@ -77,7 +77,7 @@ export function computeTeamAlerts(members, teamStats) {
   const noObsCount = (members || []).filter((m) => m.onboarding_completed && !m.dimension_observation).length;
   if (noObsCount > 0) {
     list.push({
-      text: `${noObsCount} ${noObsCount === 1 ? "pessoa" : "pessoas"} com onboarding concluído mas ainda sem observação semanal computada.`,
+      text: `${noObsCount} ${noObsCount === 1 ? "pessoa" : "pessoas"} com cadastro concluído, mas sem leitura semanal ainda.`,
       filter: { kind: "no_observation" },
     });
   }

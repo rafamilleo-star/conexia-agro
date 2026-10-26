@@ -38,7 +38,7 @@ export function weeklySummaryOpeningMessage(firstName) {
 // items: array de até 3 strings já formatadas (ex.: "Carlos está próximo da
 // frequência que você definiu."). suggestion: 1 frase, ou null.
 // Seções sem conteúdo não são renderizadas: nada de título seguido de vazio.
-export function weeklySummaryBodyMessage({ firstName, weekInteractionsCount, items, suggestion }) {
+export function weeklySummaryBodyMessage({ firstName, weekInteractionsCount, items, suggestion, ocultosPorFeedback = false }) {
   const temItens = Array.isArray(items) && items.length > 0;
   if (!temItens && !weekInteractionsCount) {
     return `Essa semana ainda está leve por aqui.\n\nQue tal escolher uma pessoa importante e começar com uma mensagem simples: "Como você está?"`;
@@ -51,7 +51,9 @@ export function weeklySummaryBodyMessage({ firstName, weekInteractionsCount, ite
     const lista = items.slice(0, 3).map((item, i) => `${i + 1}. ${item}`).join('\n');
     partes.push(`Para esta semana:\n\n${lista}`);
   } else {
-    partes.push('Nenhuma relação pede atenção urgente nesta semana.');
+    partes.push(ocultosPorFeedback
+      ? 'Os pontos desta semana já foram vistos ou dispensados por você.'
+      : 'Nada novo pede atenção nesta semana.');
   }
   if (suggestion) partes.push(`Minha sugestão para hoje: ${suggestion}`);
   return partes.join('\n\n');

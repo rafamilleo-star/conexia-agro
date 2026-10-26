@@ -258,17 +258,25 @@ export default async function handler(req, res) {
 
       const feedbackMap = buildFeedbackMap(alerts || []);
       const items = computeWeeklyAttentionItems(contacts, fullInteractions, feedbackMap);
+      // Lista vazia pode vir de duas causas: nada a sinalizar, ou itens já
+      // vistos/dispensados. Comparamos com o motor sem feedback para não
+      // afirmar "nada pede atenção" quando houve supressão.
+      const itemsSemFeedback = computeWeeklyAttentionItems(contacts, fullInteractions, {});
+      const ocultosPorFeedback = items.length === 0 && itemsSemFeedback.length > 0;
+      // computeNextBestActions não devolve suggestedMessage; a sugestão usa o
+      // título que o próprio motor já produziu, sem texto inventado aqui.
       const actions = computeNextBestActions(contacts, fullInteractions, feedbackMap);
-      const suggestion = actions[0]?.suggestedMessage
-        ? `que tal mandar uma mensagem simples para ${actions[0].contactName} hoje, só para retomar a conversa.`
-        : null;
+      const suggestion = actions[0]?.title ?? null;
+      // first_name pode vir com o nome completo; a saudação usa só o primeiro.
+      const primeiroNome = (profile.first_name || '').trim().split(/\s+/)[0] || null;
 
-      const abertura = weeklySummaryOpeningMessage(profile.first_name);
+      const abertura = weeklySummaryOpeningMessage(primeiroNome);
       const corpo = weeklySummaryBodyMessage({
-        firstName: profile.first_name,
+        firstName: primeiroNome,
         weekInteractionsCount: interactions?.length || 0,
         items,
         suggestion,
+        ocultosPorFeedback,
       });
       let text = `${abertura}\n\n${corpo}`;
 
