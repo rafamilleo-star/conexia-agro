@@ -3875,7 +3875,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
                   {!m.onboarding_completed ? (
                     <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Onboarding não concluído</div>
                   ) : !m.dimension_observation ? (
-                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem observação semanal computada ainda</div>
+                    <div style={{ fontFamily: "'DM Sans'", fontSize: 12, color: C.txL }}>Sem leitura semanal ainda</div>
                   ) : null}
                   {m.declining_dimensions && m.declining_dimensions.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
