@@ -37,16 +37,24 @@ export function weeklySummaryOpeningMessage(firstName) {
 
 // items: array de até 3 strings já formatadas (ex.: "Carlos está próximo da
 // frequência que você definiu."). suggestion: 1 frase, ou null.
+// Seções sem conteúdo não são renderizadas: nada de título seguido de vazio.
 export function weeklySummaryBodyMessage({ firstName, weekInteractionsCount, items, suggestion }) {
-  if (!items?.length && !weekInteractionsCount) {
+  const temItens = Array.isArray(items) && items.length > 0;
+  if (!temItens && !weekInteractionsCount) {
     return `Essa semana ainda está leve por aqui.\n\nQue tal escolher uma pessoa importante e começar com uma mensagem simples: "Como você está?"`;
   }
-  const intro = weekInteractionsCount
-    ? `Na última semana, você registrou ${weekInteractionsCount} interaç${weekInteractionsCount === 1 ? 'ão' : 'ões'} importante${weekInteractionsCount === 1 ? '' : 's'}.\n\n`
-    : '';
-  const lista = (items || []).slice(0, 3).map((item, i) => `${i + 1}. ${item}`).join('\n');
-  const sugestao = suggestion ? `\n\nMinha sugestão para hoje: ${suggestion}` : '';
-  return `${intro}Para esta semana:\n\n${lista}${sugestao}`;
+  const partes = [];
+  if (weekInteractionsCount) {
+    partes.push(`Nos últimos 7 dias você registrou ${weekInteractionsCount} interaç${weekInteractionsCount === 1 ? 'ão' : 'ões'} importante${weekInteractionsCount === 1 ? '' : 's'}.`);
+  }
+  if (temItens) {
+    const lista = items.slice(0, 3).map((item, i) => `${i + 1}. ${item}`).join('\n');
+    partes.push(`Para esta semana:\n\n${lista}`);
+  } else {
+    partes.push('Nenhuma relação pede atenção urgente nesta semana.');
+  }
+  if (suggestion) partes.push(`Minha sugestão para hoje: ${suggestion}`);
+  return partes.join('\n\n');
 }
 
 // reason vem do priorityEngine (shared/priorityEngine.js, via actionEngine.js)

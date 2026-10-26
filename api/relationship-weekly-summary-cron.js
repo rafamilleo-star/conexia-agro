@@ -202,17 +202,21 @@ async function buildOrgTeamSummarySection(organizationId) {
   const stats = computeTeamStats(members);
   const alerts = computeTeamAlerts(members, stats);
 
+  // Só contagens de pessoas, nunca pontuação ("10/10"): as diretrizes do
+  // projeto proíbem scores numéricos visíveis ao usuário, e rótulos internos
+  // ("Onboarding", "Observação computada") não dizem nada a quem lê.
+  const pessoas = stats.total === 1 ? 'pessoa' : 'pessoas';
   const lines = [
     '',
     '',
-    `🏢 *Sua equipe* — ${stats.total} ${stats.total === 1 ? 'pessoa' : 'pessoas'}`,
-    `Onboarding: ${stats.onboardingDone}/${stats.total} · Observação computada: ${stats.withObservation}/${stats.total}`,
+    `🏢 *Sua equipe* — ${stats.total} ${pessoas}`,
+    `${stats.onboardingDone} ${stats.onboardingDone === 1 ? 'concluiu' : 'concluíram'} o cadastro, e ${stats.withObservation} ${stats.withObservation === 1 ? 'já tem' : 'já têm'} leitura semanal.`,
   ];
   if (alerts.length > 0) {
     lines.push('Pontos de atenção:');
     alerts.forEach((a) => lines.push(`• ${a.text}`));
   } else {
-    lines.push('Nenhum ponto de atenção agregado esta semana.');
+    lines.push('Nenhum ponto de atenção esta semana.');
   }
   lines.push('Abra o app pra ver o detalhe por pessoa.');
 
@@ -256,7 +260,7 @@ export default async function handler(req, res) {
       const items = computeWeeklyAttentionItems(contacts, fullInteractions, feedbackMap);
       const actions = computeNextBestActions(contacts, fullInteractions, feedbackMap);
       const suggestion = actions[0]?.suggestedMessage
-        ? `mande uma mensagem simples para ${actions[0].contactName} perguntando como ${actions[0].contactName ? 'ele/ela' : 'a pessoa'} está.`
+        ? `que tal mandar uma mensagem simples para ${actions[0].contactName} hoje, só para retomar a conversa.`
         : null;
 
       const abertura = weeklySummaryOpeningMessage(profile.first_name);
