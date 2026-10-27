@@ -164,7 +164,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      const texto = `🎂 Hoje é aniversário de *${contato.name}*! Boa hora pra mandar uma mensagem — reciprocidade genuína conta mais que qualquer ligação estratégica.`;
+      const texto = `🎂 Hoje é aniversário de *${contato.name}*! Boa hora pra mandar uma mensagem — reciprocidade genuína conta mais que qualquer ligação estratégica.\n\nJá mandou os parabéns? Responde *sim* que eu registro essa conversa.`;
 
       // Aniversários usam o tipo permitido NEXT_BEST_ACTION; não criar
       // BIRTHDAY, pois a constraint real do banco não aceita esse valor.
@@ -181,6 +181,17 @@ export default async function handler(req, res) {
       }
 
       state.enviados++;
+      // Deixa a pergunta de parabéns pendente para a resposta do usuário (validade 48h).
+      await sb(`whatsapp_pending_actions?user_id=eq.${contato.user_id}`, { method: 'DELETE' }).catch(() => {});
+      await sb('whatsapp_pending_actions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: contato.user_id,
+          intent: 'birthday_congrats_suggestion',
+          data: { contact_id: contato.id, contact_name: contato.name },
+          expires_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+        }),
+      }).catch(e => console.error('[whatsapp-reminder-cron] falha ao gravar pendência de parabéns:', e.message));
       await sb(`contacts?id=eq.${contato.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ birthday_last_reminded_year: anoAtual }),
