@@ -1178,6 +1178,45 @@ export async function handleIncomingMessage(number, text, sendReply, messageId) 
     return;
   }
 
+  // 2.5b Pendência de parabéns (aniversário de hoje): "sim" registra a conversa, "não" só fecha.
+  if (pending?.intent === 'birthday_congrats_suggestion') {
+    const resposta = text.trim().toLowerCase();
+    const afirmativo = /^(sim|s|yes|claro|pode|ok|isso|já|ja)(\s|$|[.!,])/.test(resposta);
+    const negativo = /^(n[aã]o|n|nunca|not|ainda n[aã]o)(\s|$|[.!,])/.test(resposta);
+    if (afirmativo) {
+      await clearPendingAction(userIdProfile);
+      const cid = pending.data.contact_id;
+      if (await congratsAlreadyLoggedToday(userIdProfile, cid)) {
+        await sendReply(number, `Já tinha registrado os parabéns de hoje pro *${pending.data.contact_name}*. 👍`);
+        return;
+      }
+      await sb('interactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userIdProfile,
+          contact_id: cid,
+          type: 'mensagem',
+          description: CONGRATS_DESCRIPTION,
+          sentiment: 'positivo',
+          value_generated: false,
+        }),
+      });
+      await sb(`contacts?id=eq.${cid}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ last_interaction_at: new Date().toISOString(), next_action_reminded_at: null }),
+      });
+      await sendReply(number, `✅ Registrado! Parabéns pro *${pending.data.contact_name}* salvo na sua rede.`);
+      await setFocusContact(userIdProfile, cid);
+      return;
+    }
+    if (negativo) {
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, 'Combinado. Quando mandar, me fala que eu registro. 👍');
+      return;
+    }
+    // Resposta ambígua: deixa cair no fluxo normal.
+  }
+
   // 2.6 Havia uma sugestão de calendário em aberto (Bloco 2 — Captura
   // Passiva)? Reconhece sim/não por palavra-chave, sem precisar do Gemini —
   // mais rápido e mais confiável pra uma resposta binária simples.
@@ -1349,6 +1388,64 @@ async function setFocusContact(userIdProfile, contactId) {
 // várias (chamado uma vez por ação, na ordem). O corpo de cada `if` abaixo é
 // EXATAMENTE o mesmo que já existia — só foi movido pra uma função separada
 // pra poder ser chamado em loop sem duplicar nenhuma lógica de handler.
+// Helpers para atualização explícita de aniversário e desambiguação de contato.
+function findContactCandidates(contacts, name) {
+  if (!name) return [];
+  const n = name.toLowerCase().trim();
+  const exact = (contacts || []).filter(c => c.name.toLowerCase().trim() === n);
+  if (exact.length) return exact;
+  return (contacts || []).filter(c => c.name.toLowerCase().includes(n));
+}
+
+function isBirthdayUpdateRequest(text) {
+  const t = (text || '').toLowerCase();
+  return /anivers|faz anos/.test(t) && /atualiz|adicion|adiciona|salv|coloc|troc|mud|perfil/.test(t);
+}
+
+// Aceita "27/10" ou "hoje" (data de hoje em São Paulo). Ano placeholder 1900, como no prompt.
+function parseBirthdayFromText(text) {
+  const t = (text || '').toLowerCase();
+  const m = t.match(/(\d{1,2})\/(\d{1,2})/);
+  if (m) {
+    const day = parseInt(m[1], 10), month = parseInt(m[2], 10);
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+    return `1900-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  if (/\bhoje\b/.test(t)) {
+    const iso = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    return `1900-${iso.slice(5)}`;
+  }
+  return null;
+}
+
+function formatBirthdayDM(iso) {
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+}
+
+const CONGRATS_DESCRIPTION = 'Parabéns pelo aniversário';
+
+function todaySPISO() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
+// Já existe um registro de parabéns hoje para este contato? Evita duplicar.
+async function congratsAlreadyLoggedToday(userId, contactId) {
+  try {
+    const start = `${todaySPISO()}T00:00:00-03:00`;
+    const rows = await sb(`interactions?user_id=eq.${userId}&contact_id=eq.${contactId}&description=eq.${encodeURIComponent(CONGRATS_DESCRIPTION)}&created_at=gte.${encodeURIComponent(start)}&select=id`);
+    return (rows || []).length > 0;
+  } catch (e) {
+    console.error('[whatsapp-webhook] falha ao checar parabéns de hoje:', e.message);
+    return false;
+  }
+}
+
+// Pergunta, uma vez, se o usuário já mandou os parabéns. Fica como pendência até responder.
+async function askBirthdayCongrats(userId, contact, number, sendReply) {
+  await setPendingAction(userId, 'birthday_congrats_suggestion', { contact_id: contact.id, contact_name: contact.name });
+  await sendReply(number, `🎂 Hoje é aniversário do *${contact.name}*. Você já mandou os parabéns? Responde *sim* que eu registro essa conversa, ou *não* se ainda não mandou.`);
+}
+
 export async function executeIntent(intentData, { userIdProfile, contacts, number, sendReply, text, firstName, isPro }) {
   if (DANNA_READ_INTENTS.has(intentData.intent)) {
     try {
@@ -1399,11 +1496,35 @@ export async function executeIntent(intentData, { userIdProfile, contacts, numbe
   }
 
   if (intentData.intent === 'register_interaction') {
-    const match = (contacts || []).find(c =>
-      intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
-    );
-    if (!match) {
+    const candidates = findContactCandidates(contacts, intentData.contact_name);
+    if (candidates.length === 0) {
       await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
+      return;
+    }
+    if (candidates.length > 1) {
+      const nomes = candidates.map(c => c.name).join(', ');
+      await sendReply(number, `Encontrei mais de um contato com esse nome: ${nomes}. Qual deles? Escreve o nome completo.`);
+      return;
+    }
+    const match = candidates[0];
+
+    // Pedido explícito de aniversário: grava no campo do contato e NÃO registra interação.
+    // Antes, esse pedido caía no registro de interação e a confirmação dava a falsa impressão de que o dado tinha sido salvo.
+    if (isBirthdayUpdateRequest(text)) {
+      const bdayIso = intentData.birthday || parseBirthdayFromText(text);
+      if (!bdayIso) {
+        await sendReply(number, `Não consegui identificar a data. Me manda dia e mês, tipo "aniversário do ${match.name} é 27/10".`);
+        return;
+      }
+      await sb(`contacts?id=eq.${match.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ birthday: bdayIso }),
+      });
+      await sendReply(number, `✅ Aniversário do *${match.name}* salvo no perfil: ${formatBirthdayDM(bdayIso)}.`);
+      await setFocusContact(userIdProfile, match.id);
+      if (bdayIso.slice(5) === todaySPISO().slice(5)) {
+        await askBirthdayCongrats(userIdProfile, match, number, sendReply);
+      }
       return;
     }
     await sb('interactions', {
