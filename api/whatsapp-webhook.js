@@ -661,10 +661,19 @@ export async function handleSharedContact(number, mediaUrl, sendReply) {
     return;
   }
 
-  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name`);
-  const dup = findExistingContactByName(contacts, name);
+  const contacts = await sb(`contacts?user_id=eq.${userIdProfile}&select=id,name,whatsapp`);
+  const phoneNorm = normalizePhone(phone);
+  const dup = findExistingForShared(contacts, name, phoneNorm);
   if (dup) {
-    await sendReply(number, `Você já tem *${dup.name}* cadastrado na sua rede. Se quiser registrar uma conversa com ele, manda "conversei com ${dup.name.split(' ')[0]} hoje" que eu já registro.`);
+    if (phoneNorm && !dup.whatsapp) {
+      await sb(`contacts?id=eq.${dup.id}`, { method: 'PATCH', body: JSON.stringify({ whatsapp: phoneNorm }) });
+      await sendReply(number, `📞 Número de *${dup.name}* salvo na sua rede: ${phone}.`);
+    } else if (phoneNorm && !samePhone(dup.whatsapp, phoneNorm)) {
+      await setPendingAction(userIdProfile, 'shared_phone_update', { updates: [{ contact_id: dup.id, name: dup.name, current: dup.whatsapp, phone: phoneNorm }] });
+      await sendReply(number, `Você já tem *${dup.name}* com outro número (${dup.whatsapp}). Quer trocar pelo ${phone}? Responde *sim* ou *não*.`);
+    } else {
+      await sendReply(number, `Você já tem *${dup.name}* cadastrado na sua rede. Se quiser registrar uma conversa com ele, manda "conversei com ${dup.name.split(' ')[0]} hoje" que eu já registro.`);
+    }
     return;
   }
 
@@ -810,6 +819,8 @@ export async function handleSharedContactData(
 
   const added = [];
   const duplicates = [];
+  const filled = [];
+  const conflicts = [];
 
   for (
     const raw of incoming
@@ -869,36 +880,21 @@ export async function handleSharedContactData(
       continue;
     }
 
-    const duplicateName =
-      findExistingContactByName(
-        existing,
-        name
-      );
-
-    const duplicatePhone =
-      phone
-
-        ? existing.find(
-            c =>
-              normalizePhone(
-                c?.whatsapp
-              ) ===
-              phone
-          )
-
-        : null;
-
     const duplicate =
-      duplicateName ||
-      duplicatePhone;
+      findExistingForShared(existing, name, phone);
 
     if (duplicate) {
-
-      duplicates.push(
-        duplicate.name ||
-        name
-      );
-
+      duplicates.push(duplicate.name || name);
+      if (phone && !duplicate.whatsapp) {
+        await sb(`contacts?id=eq.${duplicate.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ whatsapp: phone }),
+        });
+        duplicate.whatsapp = phone;
+        filled.push({ name: duplicate.name });
+      } else if (phone && !samePhone(duplicate.whatsapp, phone)) {
+        conflicts.push({ contact_id: duplicate.id, name: duplicate.name, current: duplicate.whatsapp, phone });
+      }
       continue;
     }
 
@@ -952,7 +948,19 @@ export async function handleSharedContactData(
     });
   }
 
+  if (conflicts.length) {
+    await setPendingAction(userId, 'shared_phone_update', { updates: conflicts });
+  }
+
   const lines = [];
+
+  if (filled.length) {
+    lines.push(`📞 Número salvo para: ${filled.map(f => f.name).join(', ')}.`);
+  }
+
+  if (conflicts.length) {
+    lines.push(`Já tenho estes com outro número: ${conflicts.map(c => `${c.name} (atual ${c.current}, novo ${c.phone})`).join('; ')}. Quer que eu troque? Responde *sim* ou *não*.`);
+  }
 
   if (
     added.length === 1
@@ -1176,6 +1184,27 @@ export async function handleIncomingMessage(number, text, sendReply, messageId) 
     }
     await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${pending.data?.company ? ` (${pending.data.company})` : ''}\n\nPróximo passo: manda uma mensagem tipo "conversei com ${created.name.split(' ')[0]} hoje" quando tiver a primeira interação, que eu já registro.${APP_ENRICHMENT_NUDGE}`);
     return;
+  }
+
+  // 2.5a Troca de número de contato já cadastrado (vindo de contato compartilhado).
+  if (pending?.intent === 'shared_phone_update') {
+    const resposta = text.trim().toLowerCase();
+    const afirmativo = /^(sim|s|yes|claro|pode|ok|isso|atualiz|troca)/.test(resposta);
+    const negativo = /^(n[aã]o|n|nunca|not)(\s|$|[.!,])/.test(resposta);
+    if (afirmativo) {
+      await clearPendingAction(userIdProfile);
+      const updates = pending.data?.updates || [];
+      for (const u of updates) {
+        await sb(`contacts?id=eq.${u.contact_id}`, { method: 'PATCH', body: JSON.stringify({ whatsapp: normalizePhone(u.phone) }) });
+      }
+      await sendReply(number, `✅ Número atualizado em ${updates.length} contato${updates.length > 1 ? 's' : ''}.`);
+      return;
+    }
+    if (negativo) {
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, 'Combinado, mantive os números atuais. 👍');
+      return;
+    }
   }
 
   // 2.5b Pendência de parabéns (aniversário de hoje): "sim" registra a conversa, "não" só fecha.
@@ -1420,6 +1449,37 @@ function parseBirthdayFromText(text) {
 
 function formatBirthdayDM(iso) {
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+}
+
+// ── Contato compartilhado: achar quem já existe e completar o telefone ──
+function samePhone(a, b) {
+  const x = normalizePhone(a), y = normalizePhone(b);
+  if (!x || !y) return false;
+  return waVariants(x).includes(y) || waVariants(y).includes(x);
+}
+
+function normName(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Ordem: telefone igual → nome igual → nome que começa igual e tem um único candidato
+// ("Jorgiete" x "Jorgiete de Paula"). Evita criar cópia quando a agenda tem o nome completo.
+function findExistingForShared(contacts, name, phone) {
+  if (phone) {
+    const byPhone = (contacts || []).find(c => c.whatsapp && samePhone(c.whatsapp, phone));
+    if (byPhone) return byPhone;
+  }
+  const target = normName(name);
+  if (!target) return null;
+  const exact = (contacts || []).find(c => normName(c.name) === target);
+  if (exact) return exact;
+  const first = target.split(' ')[0];
+  const candidates = (contacts || []).filter(c => {
+    const other = normName(c.name);
+    if (!other || other.split(' ')[0] !== first) return false;
+    return other.startsWith(target + ' ') || target.startsWith(other + ' ');
+  });
+  return candidates.length === 1 ? candidates[0] : null;
 }
 
 const CONGRATS_DESCRIPTION = 'Parabéns pelo aniversário';
