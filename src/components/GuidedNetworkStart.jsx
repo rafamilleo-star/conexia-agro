@@ -38,6 +38,42 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [savedPeople, setSavedPeople] = useState([]); // [{id, name, context, importance, lastTalk}]
   const [editingId, setEditingId] = useState(null);
+  // Fase: 'people' (cadastro das pessoas) → 'conversation' (registrar 1 conversa) → 'result'
+  const [phase, setPhase] = useState('people');
+  const [convo, setConvo] = useState({ contactId: '', date: new Date().toISOString().slice(0, 10), desc: '' });
+  const [convoSaving, setConvoSaving] = useState(false);
+  const [convoError, setConvoError] = useState(null);
+  const [lastConvoName, setLastConvoName] = useState('');
+
+  const goConversation = (firstId) => {
+    const id = firstId || savedPeople[0]?.id;
+    if (!id) { onFinish?.(addedCount); return; }
+    setConvo(c => ({ ...c, contactId: id }));
+    setPhase('conversation');
+  };
+
+  const saveConversation = async () => {
+    if (convoSaving || !convo.contactId || convo.desc.trim().length < 5) return;
+    setConvoSaving(true);
+    setConvoError(null);
+    const occurredIso = new Date(convo.date + 'T12:00:00').toISOString();
+    const { error: iErr } = await supabase.from('interactions').insert({
+      user_id: userId, contact_id: convo.contactId, type: 'mensagem',
+      description: convo.desc.trim(), sentiment: 'positivo', tags: [], value_generated: false,
+      created_at: occurredIso,
+    });
+    if (iErr) { setConvoError('Não consegui salvar a conversa agora. Tenta de novo?'); setConvoSaving(false); return; }
+    // Mesmo efeito do registro normal: atualiza a última conversa e limpa a pendência
+    await supabase.from('contacts').update({
+      last_interaction_at: occurredIso, next_action: null, next_action_date: null,
+    }).eq('id', convo.contactId).eq('user_id', userId).then(() => {}, () => {});
+    supabase.from('page_events').insert({
+      user_id: userId, event_type: 'first_interaction_logged', tab_name: 'startNetwork',
+    }).then(() => {}, () => {});
+    setLastConvoName(savedPeople.find(p => p.id === convo.contactId)?.name || '');
+    setConvoSaving(false);
+    setPhase('result');
+  };
 
   const reset = () => setForm({ name: '', context: '', importance: 3, lastTalk: '', birthday: '' });
 
@@ -109,11 +145,75 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
     setAddedCount(nextCount);
     reset();
     if (step >= 3 || nextCount >= 3) {
-      onFinish?.(nextCount);
+      goConversation(newContact.id);
     } else {
       setStep(step + 1);
     }
   };
+
+  const phaseShell = (children) => (
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ maxWidth: 460, width: '100%' }}>
+        {children}
+      </div>
+    </div>
+  );
+
+  if (phase === 'conversation') {
+    return phaseShell(
+      <>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.micro, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+          Último passo
+        </div>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: TYPE.title, fontWeight: 700, color: C.txt, margin: '0 0 12px' }}>
+          Registre uma conversa recente
+        </h2>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.txM, marginBottom: 8 }}>Com quem foi?</div>
+        <select style={inputStyle()} value={convo.contactId} onChange={e => setConvo(c => ({ ...c, contactId: e.target.value }))}>
+          {savedPeople.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.txM, marginBottom: 8 }}>Quando foi?</div>
+        <input type="date" style={inputStyle()} value={convo.date} onChange={e => setConvo(c => ({ ...c, date: e.target.value }))} />
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.txM, marginBottom: 8 }}>O que foi conversado?</div>
+        <textarea style={{ ...inputStyle(), minHeight: 96 }} value={convo.desc} onChange={e => setConvo(c => ({ ...c, desc: e.target.value }))}
+          placeholder="Ex.: falamos sobre a safra e combinamos uma visita na semana que vem" />
+        {convoError && <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.caption, color: C.err, marginBottom: 12 }}>{convoError}</div>}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, gap: 10 }}>
+          <button disabled={convoSaving} onClick={() => onFinish?.(savedPeople.length)}
+            style={{ background: 'none', border: 'none', color: C.txL, fontFamily: "'DM Sans'", fontSize: TYPE.caption, cursor: 'pointer' }}>
+            Pular por agora
+          </button>
+          <button disabled={convoSaving || !convo.contactId || convo.desc.trim().length < 5} onClick={saveConversation}
+            style={{ background: C.gold, border: 'none', borderRadius: 10, padding: '12px 18px', minHeight: 44, fontFamily: "'DM Sans'", fontSize: TYPE.caption, fontWeight: 700, color: '#0D0D0D', cursor: 'pointer', opacity: convoSaving || convo.desc.trim().length < 5 ? 0.6 : 1 }}>
+            {convoSaving ? 'Salvando...' : 'Salvar conversa'}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (phase === 'result') {
+    return phaseShell(
+      <>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.micro, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+          Pronto
+        </div>
+        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: TYPE.title, fontWeight: 700, color: C.txt, margin: '0 0 12px' }}>
+          Você já começou.
+        </h2>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txM, lineHeight: 1.5, marginBottom: 12 }}>
+          Sua conversa com {lastConvoName || 'essa pessoa'} está registrada.
+        </div>
+        <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.body, color: C.txM, lineHeight: 1.5, marginBottom: 20 }}>
+          Próxima ação sugerida: envie uma mensagem curta para {lastConvoName || 'ela'}, retomando o que ficou combinado.
+        </div>
+        <button onClick={() => onFinish?.(savedPeople.length)}
+          style={{ width: '100%', background: C.gold, border: 'none', borderRadius: 10, padding: '12px 0', minHeight: 44, fontFamily: "'DM Sans'", fontSize: TYPE.caption, fontWeight: 700, color: '#0D0D0D', cursor: 'pointer' }}>
+          Ir para o painel
+        </button>
+      </>
+    );
+  }
 
   return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative' }}>
@@ -195,7 +295,7 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
               )}
             </div>
             {addedCount > 0 && (
-              <button disabled={saving} onClick={() => onFinish?.(addedCount)} style={{ background: 'none', border: 'none', color: C.gold, fontFamily: "'DM Sans'", fontSize: TYPE.caption, fontWeight: 600, cursor: 'pointer' }}>
+              <button disabled={saving} onClick={() => goConversation()} style={{ background: 'none', border: 'none', color: C.gold, fontFamily: "'DM Sans'", fontSize: TYPE.caption, fontWeight: 600, cursor: 'pointer' }}>
                 Já cadastrei o suficiente →
               </button>
             )}
