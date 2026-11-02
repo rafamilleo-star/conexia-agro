@@ -159,8 +159,6 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
     </div>
   );
 
-  const contactName = savedPeople.find(p => p.id === convo.contactId)?.name || 'essa pessoa';
-
   if (phase === 'conversation') {
     return phaseShell(
       <>
