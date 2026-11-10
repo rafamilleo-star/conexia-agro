@@ -325,6 +325,13 @@ Se a mensagem contiver MAIS DE UMA intenção ao mesmo tempo (ex.: "Conheci um p
 ele sexta" = register_contact + schedule_action), retorne as duas no formato de múltiplas ações (formato 2
 abaixo), na ordem em que fazem sentido acontecer.
 
+MÚLTIPLOS CONTATOS NA MESMA INTERAÇÃO — se o usuário relatar UMA conversa, evento ou encontro com VÁRIAS
+pessoas de uma vez (ex.: "Conversamos com Agmar Assis, Rodolfo Albuquerque e Michel Fernandes sobre o
+pagamento dos eventos"), retorne FORMATO 2 com UM objeto register_interaction por pessoa. Cada objeto
+recebe o mesmo fields.note (o relato da conversa) e o seu próprio fields.contact_name, com o nome de uma
+única pessoa, copiado como foi escrito na mensagem. Não junte vários nomes num único contact_name e não
+omita ninguém citado. Isso vale para register_interaction; para as outras intenções, siga as regras acima.
+
 Retorne APENAS JSON, sem markdown, sem texto fora do JSON, em UM dos dois formatos:
 
 FORMATO 1 — uma intenção só:
