@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../utils/supabase";
 import { C } from "../utils/theme";
 
@@ -30,6 +30,9 @@ export default function AgendaTarefas({ userId }) {
   const [prazo, setPrazo] = useState("");
   const [saving, setSaving] = useState(false);
   const [filtro, setFiltro] = useState("abertas"); // abertas | feitas | todas
+  const [editingId, setEditingId] = useState(null);
+  const [editTitulo, setEditTitulo] = useState("");
+  const cancelarEdicao = useRef(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -94,6 +97,25 @@ export default function AgendaTarefas({ userId }) {
       .eq("user_id", userId);
     if (err) {
       setError("Não foi possível excluir a tarefa.");
+      setTasks(anterior);
+    }
+  };
+
+  const saveEdit = async (task) => {
+    if (cancelarEdicao.current) { cancelarEdicao.current = false; setEditingId(null); return; }
+    const t = editTitulo.trim();
+    setEditingId(null);
+    if (!t || t === task.titulo) return;
+    setError("");
+    const anterior = tasks;
+    setTasks((prev) => prev.map((x) => (x.id === task.id ? { ...x, titulo: t } : x)));
+    const { error: err } = await supabase
+      .from("tasks_agenda")
+      .update({ titulo: t, updated_at: new Date().toISOString() })
+      .eq("id", task.id)
+      .eq("user_id", userId);
+    if (err) {
+      setError("Não foi possível salvar a edição.");
       setTasks(anterior);
     }
   };
@@ -188,9 +210,28 @@ export default function AgendaTarefas({ userId }) {
               {st.label}
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, color: t.status === "feita" ? C.txL : C.txt, textDecoration: t.status === "feita" ? "line-through" : "none", overflowWrap: "anywhere" }}>
-                {t.titulo}
-              </div>
+              {editingId === t.id ? (
+                <input
+                  autoFocus
+                  value={editTitulo}
+                  maxLength={200}
+                  onChange={(e) => setEditTitulo(e.target.value)}
+                  onBlur={() => saveEdit(t)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    if (e.key === "Escape") { cancelarEdicao.current = true; e.currentTarget.blur(); }
+                  }}
+                  style={{ width: "100%", background: C.sf, color: C.txt, border: `1px solid ${C.gL}`, borderRadius: 6, padding: "6px 8px", fontFamily: FONT, fontSize: 14, boxSizing: "border-box" }}
+                />
+              ) : (
+                <div
+                  onClick={() => { setEditingId(t.id); setEditTitulo(t.titulo); }}
+                  title="Tocar para editar"
+                  style={{ fontSize: 14, cursor: "text", color: t.status === "feita" ? C.txL : C.txt, textDecoration: t.status === "feita" ? "line-through" : "none", overflowWrap: "anywhere" }}
+                >
+                  {t.titulo}
+                </div>
+              )}
               <div style={{ fontSize: 11, color: late ? C.amb : C.txL, marginTop: 3 }}>
                 {late ? "Atrasada · " : ""}{formatPrazo(t.prazo)}{t.origem === "whatsapp" ? " · via WhatsApp" : ""}
               </div>

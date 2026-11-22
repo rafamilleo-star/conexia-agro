@@ -5,6 +5,7 @@
 import { relationshipMomentum } from '../shared/priorityEngine.js';
 import { answerDannaReadIntent, DANNA_READ_INTENTS } from './_lib/dannaKnowledge.js';
 import { loadCaptureContacts, signedProposal, saveCapture, extractContactPhoto, exportGoogleContact } from './_lib/contactCapture.js';
+import { handleAgendaCommand } from './_lib/agendaWhatsapp.js';
 
 function photoProposalMessage(item) {
   const c = item.candidate;
@@ -1388,6 +1389,9 @@ export async function handleIncomingMessage(number, text, sendReply, messageId) 
     }
     // Ambíguo: mesma lógica dos blocos de calendário acima, cai no fluxo normal.
   }
+
+  // 2.9 Comandos da Agenda (tarefa:, tarefas, feita:) — determinísticos, sem IA
+  if (await handleAgendaCommand({ userId: userIdProfile, text, sendReply, number })) return;
 
   // 3. Entende a intenção da mensagem (pode haver mais de uma ação na mesma mensagem)
   const intentDataList = await analyzeIntent(text, contacts || [], focusContact);
