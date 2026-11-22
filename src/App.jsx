@@ -7,6 +7,7 @@ import ContactCircleField from "./components/ContactCircleField";
 import ContactCircleAssignment from "./components/ContactCircleAssignment";
 import useNetworkCircles from "./lib/useNetworkCircles";
 import GuidedNetworkStart from './components/GuidedNetworkStart';
+import AgendaTarefas from './components/AgendaTarefas';
 import { computePriorities, calculateRelevance as calculateRelevanceCanonical, relationshipMomentum } from '../shared/priorityEngine.js';
 import { detectPatterns, PATTERN_NOTES } from '../shared/relationshipPatternDetector.js';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -3416,6 +3417,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
     { id: "dash", icon: "◎", label: "Hoje" },
     { id: "contacts", icon: "⊛", label: "Rede" },
     { id: "insights", icon: "🧠", label: "Insights" },
+    { id: "agenda", icon: "📅", label: "Agenda" },
     ...(admin ? [{ id: "mentor", icon: "👁", label: "Mentor" }] : []),
     ...(admin ? [{ id: "export", icon: "⬇", label: "Exportar" }] : []),
     ...(isMetricsAdmin ? [{ id: "metrics", icon: "📊", label: "Métricas" }] : []),
@@ -5608,6 +5610,7 @@ ${MENTORIA_LINK || true ? `
         {view === "metrics" && isMetricsAdmin && renderMetrics()}
         {view === "insights" && renderInsightsHub()}
         {view === "perfil" && renderPerfilForm()}
+        {view === "agenda" && <AgendaTarefas userId={user?.id} />}
       </main>
 
 
