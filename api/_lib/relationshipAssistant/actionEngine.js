@@ -55,12 +55,24 @@ export function computeWeeklyAttentionItems(
   feedbackMap = {},
   context = {}
 ) {
+  const agora = Date.now();
   return computeNextBestActions(
     contacts,
     interactions,
     feedbackMap,
     context
-  )
-    .map((a) => a.reason)
-    .slice(0, 3);
+  ).map((a) => {
+    // Cada item nomeia a pessoa e diz o motivo com o número de dias, para o
+    // resumo não virar três frases iguais sem nome. O corte para exibir
+    // (até 3) fica em messages.js, que também conta quantas ficaram de fora.
+    const contato = (contacts || []).find((c) => c.id === a.contactId);
+    const ultimo = contato?.last_interaction_at ? new Date(contato.last_interaction_at).getTime() : null;
+    const dias = ultimo ? Math.floor((agora - ultimo) / 86400000) : null;
+    const ritmo = contato?.ideal_frequency_days;
+    const motivo =
+      a.actionType === 'frequency_exceeded' && dias !== null && ritmo
+        ? `${dias} dias sem contato (seu ritmo é de ${ritmo} dias)`
+        : a.reason;
+    return `*${a.contactName}*: ${motivo}`;
+  });
 }

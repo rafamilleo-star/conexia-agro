@@ -49,7 +49,11 @@ export function weeklySummaryBodyMessage({ firstName, weekInteractionsCount, ite
   }
   if (temItens) {
     const lista = items.slice(0, 3).map((item, i) => `${i + 1}. ${item}`).join('\n');
-    partes.push(`Para esta semana:\n\n${lista}`);
+    const restantes = items.length - 3;
+    const rodape = restantes > 0
+      ? `\n\ne mais ${restantes} ${restantes === 1 ? 'pessoa fora do ritmo' : 'pessoas fora do ritmo'}. Abra o app para ver todas.`
+      : '';
+    partes.push(`Para esta semana:\n\n${lista}${rodape}`);
   } else {
     partes.push(ocultosPorFeedback
       ? 'Os pontos desta semana já foram vistos ou dispensados por você.'
