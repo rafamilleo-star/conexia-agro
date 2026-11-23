@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../utils/supabase";
 import { C } from "../utils/theme";
+import { ativarLembretes, lembretesAtivos, pushSuportado } from "../utils/push";
 
 // Agenda pessoal de tarefas. Cada usuário vê apenas as próprias linhas
 // (RLS na tabela public.tasks_agenda, política "ta_own").
@@ -33,6 +34,7 @@ export default function AgendaTarefas({ userId }) {
   const [editingId, setEditingId] = useState(null);
   const [editTitulo, setEditTitulo] = useState("");
   const cancelarEdicao = useRef(false);
+  const [lembretes, setLembretes] = useState("verificando"); // verificando | ativos | inativos | indisponivel
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -50,6 +52,23 @@ export default function AgendaTarefas({ userId }) {
   }, [userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!pushSuportado()) { setLembretes("indisponivel"); return; }
+    lembretesAtivos().then((ok) => setLembretes(ok ? "ativos" : "inativos")).catch(() => setLembretes("inativos"));
+  }, []);
+
+  const ativar = async () => {
+    setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Entre novamente no Conexia.");
+      await ativarLembretes(session.access_token);
+      setLembretes("ativos");
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   const addTask = async (e) => {
     e.preventDefault();
@@ -144,6 +163,17 @@ export default function AgendaTarefas({ userId }) {
       <p style={{ fontSize: 13, color: C.txM, margin: "0 0 18px", lineHeight: 1.5 }}>
         Suas tarefas pessoais. Só você vê esta lista.
       </p>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: C.card, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: C.txM, lineHeight: 1.4 }}>
+          {lembretes === "ativos" ? "🔔 Lembretes diários ativos (08:00)." : lembretes === "indisponivel" ? "Lembretes indisponíveis neste navegador." : "Receba um lembrete diário das tarefas de hoje."}
+        </div>
+        {(lembretes === "inativos") && (
+          <button onClick={ativar} style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "7px 12px", cursor: "pointer", background: C.gold, color: C.bg, border: "none", whiteSpace: "nowrap" }}>
+            Ativar lembretes
+          </button>
+        )}
+      </div>
 
       <form onSubmit={addTask} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
         <input

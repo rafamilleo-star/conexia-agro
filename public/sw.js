@@ -3,7 +3,7 @@
 // NUNCA intercepta chamadas ao Supabase, APIs, Gemini ou OpenAI, para não
 // servir dados antigos nem interferir em login e sessões.
 
-const VERSION = "conexia-pwa-v1";
+const VERSION = "conexia-pwa-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const SHELL_ASSETS = [
   "/",
@@ -58,4 +58,34 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(caches.match(req).then((hit) => hit || fetch(req)));
   }
   // Demais arquivos (JS/CSS com hash do Vite) seguem direto para a rede.
+});
+
+// Lembretes (Web Push): mostra a notificação com o texto enviado pelo servidor.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+  const title = data.title || "CONÉXIA";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: "agenda-diaria",
+      data: { url: data.url || "/" },
+    })
+  );
+});
+
+// Ao tocar na notificação, abre ou foca o app.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((lista) => {
+      for (const c of lista) {
+        if ("focus" in c) return c.focus();
+      }
+      return self.clients.openWindow(url);
+    })
+  );
 });
