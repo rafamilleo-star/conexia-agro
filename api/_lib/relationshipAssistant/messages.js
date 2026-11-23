@@ -48,8 +48,8 @@ export function weeklySummaryBodyMessage({ firstName, weekInteractionsCount, ite
     partes.push(`Nos últimos 7 dias você registrou ${weekInteractionsCount} interaç${weekInteractionsCount === 1 ? 'ão' : 'ões'} importante${weekInteractionsCount === 1 ? '' : 's'}.`);
   }
   if (temItens) {
-    const lista = items.slice(0, 3).map((item, i) => `${i + 1}. ${item}`).join('\n');
-    const restantes = items.length - 3;
+    const lista = items.slice(0, 10).map((item, i) => `${i + 1}. ${item}`).join('\n');
+    const restantes = items.length - 10;
     const rodape = restantes > 0
       ? `\n\ne mais ${restantes} ${restantes === 1 ? 'pessoa fora do ritmo' : 'pessoas fora do ritmo'}. Abra o app para ver todas.`
       : '';

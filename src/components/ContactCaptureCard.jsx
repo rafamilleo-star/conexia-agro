@@ -5,10 +5,22 @@ import { C } from '../utils/theme.js';
 async function request(path, body, signal) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('Entre novamente no Conexia.');
-  const response = await fetch(path, { method: body ? 'POST' : 'GET', signal,
-    headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-    ...(body ? { body: JSON.stringify(body) } : {}) });
-  const data = await response.json(); if (!response.ok || !data.ok) throw new Error(data.error || 'Não foi possível concluir.');
+  let response;
+  try {
+    response = await fetch(path, { method: body ? 'POST' : 'GET', signal, credentials: 'same-origin',
+      headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}) });
+  } catch (e) {
+    // Abortar um carregamento antigo não é erro para o usuário.
+    if (e?.name === 'AbortError') throw e;
+    // Falha de rede ou bloqueio do navegador: mensagem clara em vez do texto técnico do navegador.
+    console.error('[ContactCaptureCard] falha de rede', path, e);
+    throw new Error('Não consegui falar com o Conexia agora. Toque em "Buscar pessoas" para tentar de novo.');
+  }
+  let data;
+  try { data = await response.json(); }
+  catch { throw new Error('O Conexia respondeu de forma inesperada. Tente de novo em instantes.'); }
+  if (!response.ok || !data.ok) throw new Error(data.error || 'Não foi possível concluir.');
   return data;
 }
 export default function ContactCaptureCard({ userId, isPro, compact = false }) {

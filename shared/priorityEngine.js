@@ -678,12 +678,14 @@ export function computePriorities(
         String(b.contactName || ""),
         "pt-BR"
       );
-    })
-    .slice(0, 3);
+    });
 
   return {
     main: ordered[0] || null,
     secondary: ordered.slice(1, 3),
+    // Lista completa já ordenada: o resumo semanal usa para listar todas as
+    // pessoas fora do ritmo, sem alterar main/secondary usados pelo app.
+    ranked: ordered,
   };
 }
 
