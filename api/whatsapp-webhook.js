@@ -5,7 +5,7 @@
 import { relationshipMomentum } from '../shared/priorityEngine.js';
 import { answerDannaReadIntent, DANNA_READ_INTENTS } from './_lib/dannaKnowledge.js';
 import { loadCaptureContacts, signedProposal, saveCapture, extractContactPhoto, exportGoogleContact } from './_lib/contactCapture.js';
-import { handleAgendaCommand } from './_lib/agendaWhatsapp.js';
+import { handleAgendaCommand, registrarCompromisso } from './_lib/agendaWhatsapp.js';
 
 function photoProposalMessage(item) {
   const c = item.candidate;
@@ -1165,6 +1165,23 @@ export async function handleIncomingMessage(number, text, sendReply, messageId) 
     await handlePhotoConfirmation(userIdProfile, pending, text, number, sendReply);
     return;
   }
+  if (pending?.intent === 'offer_create_contact') {
+    const resp = String(text || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const nome = pending.data?.contact_name;
+    if (/^(sim|s|pode|pode sim|ok|isso|quero|claro)\b/.test(resp)) {
+      await clearPendingAction(userIdProfile);
+      const created = await createContactFromWhatsapp(userIdProfile, { contact_name: nome });
+      await sendReply(number, `✅ *${created.name}* cadastrado na sua rede!${APP_ENRICHMENT_NUDGE}`);
+      return;
+    }
+    if (/^(nao|n)\b/.test(resp)) {
+      await clearPendingAction(userIdProfile);
+      await sendReply(number, `Certo, não cadastrei *${nome}*.`);
+      return;
+    }
+    await sendReply(number, `Responde *sim* ou *não*: quer que eu cadastre *${nome}* nos seus contatos?`);
+    return;
+  }
   if (pending?.intent === 'register_contact_missing_name') {
     const name = text.trim();
     if (!name) {
@@ -1628,7 +1645,19 @@ export async function executeIntent(intentData, { userIdProfile, contacts, numbe
       intentData.contact_name && c.name.toLowerCase().includes(intentData.contact_name.toLowerCase())
     );
     if (!match) {
-      await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
+      // Compromisso com pessoa fora da rede: anota na agenda e pergunta se deve cadastrar a pessoa.
+      const anotado = await registrarCompromisso({ userId: userIdProfile, texto: text }).catch((e) => {
+        console.error('[whatsapp-webhook] falha ao anotar compromisso:', e.message);
+        return null;
+      });
+      if (anotado && intentData.contact_name) {
+        await setPendingAction(userIdProfile, 'offer_create_contact', { contact_name: intentData.contact_name });
+        await sendReply(number, `${anotado.resumo}\n\nQuer que eu cadastre *${intentData.contact_name}* nos seus contatos? Responda *sim* ou *não*.`);
+      } else if (anotado) {
+        await sendReply(number, anotado.resumo);
+      } else {
+        await sendReply(number, `Não encontrei "${intentData.contact_name || 'esse contato'}" na sua rede. Confere o nome ou cadastra ele primeiro pelo app.`);
+      }
       return;
     }
     if (!intentData.next_action) {

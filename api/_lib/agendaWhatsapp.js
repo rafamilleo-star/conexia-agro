@@ -142,3 +142,55 @@ export async function handleAgendaCommand({ userId, text, sendReply, number }) {
   await sendReply(number, resposta);
   return true;
 }
+
+// Interpreta um compromisso em texto livre, ex.:
+//   "Agenda amanhã dia 25/11 às 14:30 médico Natália"
+//   "agendar hoje 16:00 retorno cliente"
+// Devolve { titulo, prazo, horario } ou null se não houver texto útil.
+export function parseCompromisso(texto) {
+  let t = String(texto || '').trim();
+  let prazo = null;
+  let horario = null;
+  let m;
+
+  // 1) Data explícita (dd/mm ou dd/mm/aaaa) tem prioridade e sempre sai do título.
+  if ((m = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/))) {
+    const ano = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : hojeISO(0).slice(0, 4);
+    prazo = `${ano}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    t = t.replace(m[0], ' ');
+  } else {
+    const sem = semAcento(t);
+    if (/\bamanha\b/.test(sem)) { prazo = hojeISO(1); t = t.replace(/amanh[ãa]/i, ' '); }
+    else if (/\bhoje\b/.test(sem)) { prazo = hojeISO(0); t = t.replace(/hoje/i, ' '); }
+  }
+
+  // 2) Horário: 14:30, 14h30, 10h
+  if ((m = t.match(/\b(\d{1,2})(?::|h)(\d{2})?\b/i))) {
+    horario = `${m[1].padStart(2, '0')}:${m[2] || '00'}`;
+    t = t.replace(m[0], ' ');
+  }
+
+  // 3) Sobra o assunto, sem palavras de comando e sem pontuação solta.
+  t = t
+    .replace(/^\s*(agenda(r)?|marca(r)?)\b/i, ' ')
+    .replace(/(^|\s)(dia|às|as|para|amanh[ãa]|hoje)(?=\s|$)/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s,.\-–:]+|[\s,.\-–:]+$/g, '')
+    .trim();
+
+  if (!t) return null;
+  const titulo = horario ? `${t} (${horario})` : t;
+  return { titulo: titulo.slice(0, 200), prazo, horario };
+}
+
+// Grava o compromisso como tarefa na aba Agenda e devolve um resumo para o WhatsApp.
+export async function registrarCompromisso({ userId, texto }) {
+  const c = parseCompromisso(texto);
+  if (!c) return null;
+  await sbAgenda('tasks_agenda', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, titulo: c.titulo, prazo: c.prazo, status: 'pendente', origem: 'whatsapp' }),
+  });
+  const quando = c.prazo ? formatData(c.prazo) : 'sem data';
+  return { ...c, resumo: `✅ Anotado na sua agenda: *${c.titulo}* (${quando}).` };
+}
