@@ -4,7 +4,7 @@
 
 import { relationshipMomentum } from '../shared/priorityEngine.js';
 import { answerDannaReadIntent, DANNA_READ_INTENTS } from './_lib/dannaKnowledge.js';
-import { loadCaptureContacts, signedProposal, saveCapture, extractContactPhoto, exportGoogleContact } from './_lib/contactCapture.js';
+import { loadCaptureContacts, signedProposal, saveCapture, extractPhotoContent, exportGoogleContact, escolhaConversa } from './_lib/contactCapture.js';
 import { handleAgendaCommand, registrarCompromisso } from './_lib/agendaWhatsapp.js';
 
 function photoProposalMessage(item) {
@@ -35,8 +35,10 @@ export async function handleIncomingPhoto(number, download, sendReply, messageId
     if (!(await checkRateLimit(p.id))) return sendReply(number, 'Limite de mensagens atingido. Tente mais tarde.');
     const { buffer, mimeType } = await download();
     const contacts = await loadCaptureContacts(p.id);
-    const candidates = await extractContactPhoto(buffer, mimeType);
+    const { contacts: candidates, conversa } = await extractPhotoContent(buffer, mimeType);
     const queue = candidates.map(c => signedProposal(p.id, c, contacts, 'foto WhatsApp')).filter(p => p.kind !== 'known');
+    // Conversa só é oferecida quando a imagem tem uma única pessoa — com várias, não dá pra saber de quem é.
+    if (conversa && candidates.length === 1 && queue.length === 1) queue[0].conversa = conversa;
     if (!queue.length) return sendReply(number, 'Não encontrei contato novo ou complemento legível na foto. Você pode mandar uma imagem mais nítida.');
     await storePhotoQueue(p.id, queue);
     await sendReply(number, photoProposalMessage(queue[0]));
@@ -60,14 +62,54 @@ async function handlePhotoConfirmation(uid, pending, text, number, sendReply) {
   if (!(selected || (!item.matches.length && command === 'sim') || command === 'nova')) { await sendReply(number, photoProposalMessage(item)); return; }
   try {
     const saved = await saveCapture(uid, { token: item.token, targetId: selected?.id, newPerson: command === 'nova' });
-    queue.shift(); await storePhotoQueue(uid, queue);
+    queue.shift();
     let receipt = saved.action === 'created' ? `${saved.contact.name} cadastrado na sua rede.` : `${saved.contact.name}: cadastro conferido, apenas campos vazios completados.`;
     if (answer.endsWith(' google')) {
       try { receipt += ' ' + (await exportGoogleContact(uid, saved.contact.id)).message; }
       catch (e) { receipt += ' Salvo no Conexia. Google: ' + e.message; }
     }
+    if (item.conversa && saved.contact?.id) {
+      // A conversa do print não vai pro cadastro: antes de gravar, pergunta se é interação ou tarefa.
+      await storePhotoConversation(uid, { queue, contact_id: saved.contact.id, contact_name: saved.contact.name, conversa: item.conversa });
+      await sendReply(number, `${receipt}\n\nEssa conversa com *${saved.contact.name}* vira *interação* ou *tarefa* na agenda? Responda INTERAÇÃO, TAREFA ou NÃO.\n\n"${item.conversa}"`);
+      return;
+    }
+    await storePhotoQueue(uid, queue);
     await sendReply(number, receipt + (queue.length ? '\n\n' + photoProposalMessage(queue[0]) : ''));
   } catch (e) { await sendReply(number, e.message); }
+}
+
+async function storePhotoConversation(uid, data) {
+  await sb('whatsapp_pending_actions?on_conflict=user_id', {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify({ user_id: uid, intent: 'photo_conversation_choice', data, expires_at: new Date(Date.now() + 1800000).toISOString() }),
+  });
+}
+async function handlePhotoConversationChoice(uid, pending, text, number, sendReply) {
+  const { queue = [], contact_id, contact_name, conversa } = pending.data || {};
+  const escolha = escolhaConversa(text);
+  if (!escolha) {
+    await sendReply(number, `Responda INTERAÇÃO para registrar a conversa com *${contact_name}*, TAREFA para anotar na agenda, ou NÃO para ignorar.`);
+    return;
+  }
+  let feedback = 'Conversa ignorada.';
+  if (escolha === 'interacao') {
+    await sb('interactions', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: uid, contact_id, type: 'mensagem', description: conversa, sentiment: 'positivo', value_generated: false }),
+    });
+    await sb(`contacts?id=eq.${contact_id}`, { method: 'PATCH', body: JSON.stringify({ last_interaction_at: new Date().toISOString(), next_action_reminded_at: null }) });
+    feedback = `✅ Interação com *${contact_name}* registrada a partir do print.`;
+  } else if (escolha === 'tarefa') {
+    const titulo = `Conversa com ${contact_name}: ${conversa}`.slice(0, 200);
+    await sb('tasks_agenda', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: uid, titulo, prazo: null, status: 'pendente', origem: 'whatsapp' }),
+    });
+    feedback = `✅ Anotado na sua agenda: *${titulo}*.`;
+  }
+  await storePhotoQueue(uid, queue);
+  await sendReply(number, feedback + (queue.length ? '\n\n' + photoProposalMessage(queue[0]) : ''));
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://goopogicgwqqovmphqrj.supabase.co';
@@ -1163,6 +1205,11 @@ export async function handleIncomingMessage(number, text, sendReply, messageId) 
   const pending = await getPendingAction(userIdProfile);
   if (pending?.intent === 'capture_photo') {
     await handlePhotoConfirmation(userIdProfile, pending, text, number, sendReply);
+    return;
+  }
+  if (pending?.intent === 'photo_conversation_choice') {
+    try { await handlePhotoConversationChoice(userIdProfile, pending, text, number, sendReply); }
+    catch (e) { await sendReply(number, 'Não consegui registrar agora. Tente de novo em instantes.'); }
     return;
   }
   if (pending?.intent === 'offer_create_contact') {
