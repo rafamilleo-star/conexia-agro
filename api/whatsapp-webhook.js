@@ -36,9 +36,18 @@ export async function handleIncomingPhoto(number, download, sendReply, messageId
     const { buffer, mimeType } = await download();
     const contacts = await loadCaptureContacts(p.id);
     const { contacts: candidates, conversa } = await extractPhotoContent(buffer, mimeType);
-    const queue = candidates.map(c => signedProposal(p.id, c, contacts, 'foto WhatsApp')).filter(p => p.kind !== 'known');
+    const all = candidates.map(c => signedProposal(p.id, c, contacts, 'foto WhatsApp'));
+    const queue = all.filter(p => p.kind !== 'known');
     // Conversa só é oferecida quando a imagem tem uma única pessoa — com várias, não dá pra saber de quem é.
-    if (conversa && candidates.length === 1 && queue.length === 1) queue[0].conversa = conversa;
+    if (conversa && all.length === 1) {
+      if (queue.length === 1) queue[0].conversa = conversa;
+      else if (all[0].matches.length === 1) {
+        // Pessoa já cadastrada com os mesmos dados: não há cadastro a confirmar, então a pergunta sobre a conversa vem direto.
+        const m = all[0].matches[0];
+        await storePhotoConversation(p.id, { queue: [], contact_id: m.id, contact_name: m.name, conversa });
+        return sendReply(number, `*${m.name}* já está na sua rede.\n\nEssa conversa vira *interação* ou *tarefa* na agenda? Responda INTERAÇÃO, TAREFA ou NÃO.\n\n"${conversa}"`);
+      }
+    }
     if (!queue.length) return sendReply(number, 'Não encontrei contato novo ou complemento legível na foto. Você pode mandar uma imagem mais nítida.');
     await storePhotoQueue(p.id, queue);
     await sendReply(number, photoProposalMessage(queue[0]));
