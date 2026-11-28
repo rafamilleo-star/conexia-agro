@@ -529,7 +529,15 @@ jobs:
           print('OK - Home V2 com icones conectados e retorno para inicio.')
           CONEXIA_PATCH
 
-          python3 /tmp/conexia_home_patch.py
+         python3 /tmp/conexia_home_patch.py
+
+          sed -i \
+            -e 's|border: 1px solid ${COLORS.border}|border: "1px solid " + COLORS.border|g' \
+            -e 's|? Para olhar agora: ${recommended.name}|? "Para olhar agora: " + recommended.name|' \
+            -e 's|: ${pendingCount} compromisso(s) em aberto}|: String(pendingCount) + " compromisso(s) em aberto"}|' \
+            -e 's|background: ${tile.color}1F|background: tile.color + "1F"|' \
+            src/components/ConexiaV2Hub.jsx
+
           git diff --check
 
       - name: Compilar e verificar
