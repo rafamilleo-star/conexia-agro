@@ -5641,7 +5641,7 @@ ${MENTORIA_LINK || true ? `
         {conexiaV2Preview && view !== "dash" && (
           <button type="button"
             onClick={() => { setView('dash'); setSelId(null); setPreviewVoice(false); }}
-            style={{ background: '#201842', border: '1px solid #8E67FF', color: '#E8DDFF', borderRadius: 10, minHeight: 44, padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginBottom: 16 }}>
+            style={{ background: '#1A1508', border: '1px solid #C9A84C', color: '#C9A84C', borderRadius: 10, minHeight: 44, padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginBottom: 16 }}>
             ← Início V2
           </button>
         )}

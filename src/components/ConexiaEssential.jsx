@@ -51,7 +51,7 @@ export default function ConexiaEssential({userId,contacts=[],interactions=[],isP
     }catch(e){console.error(e);setMessage('Nao foi possivel salvar. Confira a conexao.')}finally{guard.current=false;setBusy(false)}
   };
   return <div style={{color:'#eee',fontFamily:'DM Sans, sans-serif',maxWidth:720,margin:'0 auto'}}>
-    <button type="button" onClick={()=>onBack ? onBack() : window.location.assign(window.location.pathname)} style={{...button,background:'transparent',color:gold}}>← Voltar ao CONEXIA atual</button>
+    <button type="button" onClick={()=>onBack ? onBack() : window.location.assign(window.location.pathname)} style={{...button,background:'transparent',color:gold}}>← Voltar à Home V2</button>
     <section style={card}>
       <p style={{color:gold,fontSize:12,fontWeight:700}}>CONEXIA V2 · PREVIA PROTEGIDA</p>
       <h2 style={{fontSize:27,margin:'8px 0'}}>Seu proximo movimento, com contexto.</h2>

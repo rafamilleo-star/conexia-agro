@@ -56,9 +56,13 @@ export default function ConexiaV2Hub({
   const [subpage, setSubpage] = useState('inicio');
   const [activeContactId, setActiveContactId] = useState(null);
   const [expandedWhy, setExpandedWhy] = useState(false);
+  const [previewDismissed, setPreviewDismissed] = useState([]);
+  const [previewMessage, setPreviewMessage] = useState('');
   const intel = useRelationshipIntelligence(userId, contacts, interactions);
-  const main = intel.main || null;
-  const secondaryDecisions = (intel.secondary || []).slice(0, 2);
+  const decisions = [intel.main, ...(intel.secondary || [])].filter(Boolean);
+  const visibleDecisions = decisions.filter((item) => !previewDismissed.includes(item.recommendationId));
+  const main = visibleDecisions[0] || null;
+  const secondaryDecisions = visibleDecisions.slice(1, 3);
   const selectedPerson = contacts.find((c) => String(c.id) === String(main?.contactId));
   const label = personLabel(selectedPerson, main);
   const greeting = String(firstName).trim().split(/\s+/)[0] || 'você';
@@ -68,6 +72,13 @@ export default function ConexiaV2Hub({
   const companyLine = [selectedPerson?.role, selectedPerson?.company].filter(Boolean).join(' · ');
   const registeredAction = selectedPerson?.next_action || selectedPerson?.nextAction || '';
   const dueDate = shortDate(selectedPerson?.next_action_date || selectedPerson?.nextActionDate);
+
+  function simulateSnooze() {
+    if (!main?.recommendationId) return;
+    setPreviewDismissed((items) => [...items, main.recommendationId]);
+    setPreviewMessage('Prioridade ocultada apenas nesta visualização de teste. Não foi adiada nem alterada na sua rede.');
+    setExpandedWhy(false);
+  }
 
   function goToCycle(mode, contactId) {
     setActiveContactId(contactId || null);
@@ -113,18 +124,20 @@ export default function ConexiaV2Hub({
           <img src={marca} alt="" aria-hidden="true" style={{ width: 39, height: 39, objectFit: 'contain' }} />
           <div>
             <div style={{ fontFamily: SERIF, fontSize: 25, fontWeight: 700, letterSpacing: '.02em', lineHeight: 1 }}>CONÉXIA</div>
-            <div style={{ fontSize: 9, color: C.txM, letterSpacing: '.11em', marginTop: 3 }}>INTELIGÊNCIA RELACIONAL</div>
+            <div style={{ fontSize: 12, color: C.txM, letterSpacing: '.11em', marginTop: 3 }}>INTELIGÊNCIA RELACIONAL</div>
           </div>
         </div>
-        <div style={{ color: C.gold, fontSize: 10, border: GOLD_BORDER, padding: '6px 9px', borderRadius: 18, whiteSpace: 'nowrap' }}>PRÉVIA V2</div>
+        <div style={{ color: C.gold, fontSize: 12, border: GOLD_BORDER, padding: '9px 10px', borderRadius: 18, whiteSpace: 'nowrap' }}>PRÉVIA V2</div>
       </header>
 
       <div style={{ marginBottom: 19 }}>
-        <div style={{ color: C.txM, fontSize: 13, marginBottom: 3 }}>Olá, {greeting}.</div>
+        <div style={{ color: C.txM, fontSize: 15, marginBottom: 3 }}>Olá, {greeting}.</div>
         <h1 style={{ color: C.txt, font: `700 clamp(26px, 5vw, 36px)/1.12 ${SERIF}`, margin: 0 }}>
           Seu próximo movimento importa.
         </h1>
       </div>
+
+      <p style={{ margin: '0 0 13px', color: C.txM, fontSize: 14, lineHeight: 1.5 }}>Uma pessoa em destaque, com motivo e próximo passo. As ferramentas vêm depois.</p>
 
       {/* Destaque absoluto: primeiro a pessoa, a evidência e o próximo passo. */}
       <section aria-label="Pessoa que merece sua atenção" style={{
@@ -132,7 +145,7 @@ export default function ConexiaV2Hub({
         background: `linear-gradient(145deg, ${C.gD} 0%, ${C.card} 52%, ${C.card} 100%)`,
         boxShadow: '0 8px 28px rgba(0,0,0,.25)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.gold, fontSize: 11, fontWeight: 800, letterSpacing: '.10em', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.gold, fontSize: 13, fontWeight: 800, letterSpacing: '.07em', textTransform: 'uppercase' }}>
           <Target size={16} aria-hidden="true" /> SUA ATENÇÃO HOJE
         </div>
 
@@ -143,23 +156,23 @@ export default function ConexiaV2Hub({
             <h2 style={{ fontFamily: SERIF, fontSize: 'clamp(34px, 6vw, 49px)', lineHeight: 1, margin: '16px 0 5px', fontWeight: 700, color: C.txt }}>
               {label}
             </h2>
-            {companyLine && <p style={{ color: C.txM, fontSize: 13, margin: '5px 0 18px' }}>{companyLine}</p>}
+            {companyLine && <p style={{ color: C.txM, fontSize: 15, margin: '5px 0 18px' }}>{companyLine}</p>}
             {realReason && (
-              <p style={{ fontSize: 14, color: C.txt, lineHeight: 1.65, margin: companyLine ? '0 0 16px' : '12px 0 16px', maxWidth: 740 }}>
+              <p style={{ fontSize: 16, color: C.txt, lineHeight: 1.6, margin: companyLine ? '0 0 16px' : '12px 0 16px', maxWidth: 740 }}>
                 {realReason}
               </p>
             )}
             {realAction && (
               <div style={{ borderLeft: `3px solid ${C.gold}`, padding: '5px 0 5px 13px', margin: '12px 0 16px' }}>
-                <div style={{ fontSize: 10, color: C.gold, fontWeight: 800, letterSpacing: '.09em', marginBottom: 5 }}>PRÓXIMO MOVIMENTO</div>
-                <div style={{ color: C.txt, fontSize: 14, lineHeight: 1.5 }}>{realAction}</div>
+                <div style={{ fontSize: 12, color: C.gold, fontWeight: 800, letterSpacing: '.09em', marginBottom: 5 }}>PRÓXIMO MOVIMENTO</div>
+                <div style={{ color: C.txt, fontSize: 16, lineHeight: 1.5 }}>{realAction}</div>
               </div>
             )}
             {!realReason && !realAction && <p style={{ color: C.txM, lineHeight: 1.5 }}>Esta pessoa apareceu como prioridade no seu radar relacional.</p>}
             {registeredAction && (
               <div style={{ background: C.sf, borderRadius: 9, border: BORDER, padding: 11, marginBottom: 16 }}>
-                <div style={{ color: C.txM, fontSize: 11, marginBottom: 4 }}>Compromisso já registrado{dueDate ? ` · ${dueDate}` : ''}</div>
-                <div style={{ color: C.txt, fontSize: 13 }}>{registeredAction}</div>
+                <div style={{ color: C.txM, fontSize: 14, marginBottom: 4 }}>Compromisso já registrado{dueDate ? ` · ${dueDate}` : ''}</div>
+                <div style={{ color: C.txt, fontSize: 15 }}>{registeredAction}</div>
               </div>
             )}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 18 }}>
@@ -172,44 +185,63 @@ export default function ConexiaV2Hub({
               <button type="button" style={quiet} onClick={() => onPerson?.(main.contactId)}>
                 <UserRound size={16} /> Ver pessoa
               </button>
+              <button type="button" style={quiet} onClick={simulateSnooze}>
+                <CalendarDays size={16} /> Simular adiamento
+              </button>
             </div>
             <button type="button" onClick={() => setExpandedWhy((s) => !s)}
-              style={{ border: 0, background: 'transparent', color: C.txM, cursor: 'pointer', fontSize: 12, marginTop: 16, padding: '4px 0', display: 'flex', gap: 6, alignItems: 'center' }}>
+              style={{ border: 0, background: 'transparent', color: C.txM, cursor: 'pointer', fontSize: 14, marginTop: 12, minHeight: 44, padding: '10px 0', display: 'flex', gap: 6, alignItems: 'center' }}>
               <Info size={14} /> {expandedWhy ? 'Ocultar critério' : 'Por que esta pessoa?'}
             </button>
-            {expandedWhy && <p style={{ color: C.txM, fontSize: 12, lineHeight: 1.55, margin: '4px 0 0' }}>
+            {expandedWhy && <p style={{ color: C.txM, fontSize: 14, lineHeight: 1.55, margin: '4px 0 0' }}>
               {realReason || 'O radar prioriza sinais registrados no histórico da sua rede, como compromissos, frequência e momento do relacionamento. Não prevê resultados.'}
             </p>}
           </>
         ) : (
           <div style={{ marginTop: 15 }}>
             <h2 style={{ fontFamily: SERIF, color: C.txt, fontSize: 29, margin: '0 0 7px' }}>A próxima pessoa ainda não apareceu.</h2>
-            <p style={{ color: C.txM, fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>
+            <p style={{ color: C.txM, fontSize: 15, lineHeight: 1.6, marginBottom: 16 }}>
               {intel.error
                 ? 'Não foi possível consultar todas as informações da rede agora.'
                 : contacts.length === 0
                   ? 'Cadastre uma pessoa para começar seu histórico relacional.'
-                  : 'Ainda não há evidências suficientes para indicar uma pessoa com segurança.'}
+                  : previewDismissed.length > 0 && visibleDecisions.length === 0
+                    ? 'Você ocultou todas as prioridades desta prévia. Restaure para vê-las novamente.'
+                    : 'Ainda não há evidências suficientes para indicar uma pessoa com segurança.'}
             </p>
-            <button type="button" style={primary} onClick={() => contacts.length ? chooseTool('pessoas') : onFirstPerson?.()}>
-              {contacts.length ? 'Abrir minha rede' : 'Adicionar primeira pessoa'} <ArrowRight size={16} />
-            </button>
+            {previewDismissed.length ? (
+              <button type="button" style={primary} onClick={() => { setPreviewDismissed([]); setPreviewMessage(''); }}>Restaurar prioridades</button>
+            ) : (
+              <button type="button" style={primary} onClick={() => chooseTool('pessoas')}>
+                Abrir minha rede <ArrowRight size={16} />
+              </button>
+            )}
           </div>
         )}
       </section>
 
+      {previewMessage && (
+        <div role="status" style={{ border: GOLD_BORDER, borderRadius: 10, background: C.gD, color: C.txt, padding: '13px 14px', fontSize: 14, lineHeight: 1.5, marginTop: 14 }}>
+          {previewMessage}
+          <button type="button" style={{ ...secondary, display: 'flex', marginTop: 10 }}
+            onClick={() => { setPreviewDismissed([]); setPreviewMessage(''); }}>
+            Restaurar prioridades
+          </button>
+        </div>
+      )}
+
       {/* Outras prioridades: no máximo duas, sem competir com a principal. */}
       {intel.complete && secondaryDecisions.length > 0 && (
         <section style={{ marginTop: 22 }} aria-label="Outras relações para acompanhar">
-          <div style={{ color: C.txM, fontSize: 12, letterSpacing: '.02em', marginBottom: 10 }}>OUTRAS RELAÇÕES NO RADAR</div>
+          <div style={{ color: C.txM, fontSize: 14, letterSpacing: '.02em', marginBottom: 10 }}>OUTRAS RELAÇÕES NO RADAR</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(235px, 1fr))', gap: 10 }}>
             {secondaryDecisions.map((item) => (
               <button type="button" key={item.recommendationId || item.contactId}
                 onClick={() => onPerson?.(item.contactId)}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textAlign: 'left', border: BORDER, background: C.card, borderRadius: 11, padding: 14, color: C.txt, cursor: 'pointer' }}>
                 <span style={{ minWidth: 0 }}>
-                  <strong style={{ display: 'block', fontSize: 14, fontFamily: FONT }}>{item.contactName}</strong>
-                  {item.nextMove && <span style={{ display: 'block', fontSize: 12, color: C.txM, marginTop: 4, lineHeight: 1.4 }}>{item.nextMove}</span>}
+                  <strong style={{ display: 'block', fontSize: 16, fontFamily: FONT }}>{item.contactName}</strong>
+                  {item.nextMove && <span style={{ display: 'block', fontSize: 14, color: C.txM, marginTop: 4, lineHeight: 1.4 }}>{item.nextMove}</span>}
                 </span>
                 <ArrowRight size={16} color={C.gold} style={{ flexShrink: 0 }} />
               </button>
@@ -222,15 +254,15 @@ export default function ConexiaV2Hub({
       <section style={{ marginTop: 30 }} aria-label="Ferramentas do CONÉXIA">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8 }}>
           <h2 style={{ fontFamily: SERIF, color: C.txt, fontSize: 26, margin: 0 }}>Suas ferramentas</h2>
-          <span style={{ fontSize: 11, color: C.txL }}>Toque para entrar</span>
+          <span style={{ fontSize: 13, color: C.txL }}>Toque para entrar</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: 10 }}>
           {TOOLS.map(({ id, name, caption, Icon }) => (
             <button key={id} type="button" onClick={() => chooseTool(id)}
-              style={{ minHeight: 105, padding: '12px 7px', borderRadius: 12, border: BORDER, background: C.card, color: C.txt, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, cursor: 'pointer', textAlign: 'center' }}>
+              style={{ minHeight: 112, padding: '12px 8px', borderRadius: 12, border: BORDER, background: C.card, color: C.txt, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, cursor: 'pointer', textAlign: 'center' }}>
               <Icon color={C.gold} size={23} strokeWidth={1.8} aria-hidden="true" />
-              <strong style={{ color: C.txt, font: `600 12px/1.15 ${FONT}` }}>{name}</strong>
-              <span style={{ color: C.txM, font: `400 10px/1.2 ${FONT}` }}>{caption}</span>
+              <strong style={{ color: C.txt, font: `600 14px/1.25 ${FONT}` }}>{name}</strong>
+              <span style={{ color: C.txM, font: `400 12px/1.3 ${FONT}` }}>{caption}</span>
             </button>
           ))}
         </div>
@@ -245,8 +277,8 @@ export default function ConexiaV2Hub({
         </button>
       </div>
 
-      <footer style={{ marginTop: 30, textAlign: 'center', color: C.txL, fontSize: 11, lineHeight: 1.5 }}>
-        CONÉXIA · by I.Agro · Prévia de navegação. Não salve alterações neste ambiente.
+      <footer style={{ marginTop: 30, textAlign: 'center', color: C.txL, fontSize: 13, lineHeight: 1.5 }}>
+        CONÉXIA · by I.Agro · Prévia protegida. O adiamento é uma simulação; registros estão bloqueados até existir um banco de testes isolado.
       </footer>
     </div>
   );
