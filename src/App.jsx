@@ -5556,7 +5556,7 @@ ${MENTORIA_LINK || true ? `
           </div>
         </div>
       )}
-      <HelpButton onClick={() => setShowTour(true)} bottom={isMobile ? 78 : 20} />
+      {!(conexiaV2Preview && view === "dash") && <HelpButton onClick={() => setShowTour(true)} bottom={isMobile ? 78 : 20} />}
       {/* PRO Activation Toast */}
       {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
       {!isMobile && !(conexiaV2Preview && view === "dash") && (

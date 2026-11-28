@@ -1,32 +1,52 @@
-import React, { useMemo, useState } from 'react';
+// CONEXIA V2: entrada por relevancia, seguindo os tokens oficiais de marca.
+// Alteracao restrita a apresentacao/navegacao; sem gravacoes diretas.
+import React, { useState } from 'react';
 import {
-  Users, Brain, MessageCircle, CalendarDays, Target,
-  ArrowRight, Sparkles, CheckCircle2, Clock3,
+  ArrowLeft, ArrowRight, Brain as BrainCircuit, CalendarDays,
+  CheckCircle2 as ClipboardList, MessageCircle, Users as Network, Plus, Sparkles,
+  Target, Users as UserRound, Users, Info, CheckCircle2 as ListChecks,
 } from 'lucide-react';
 import ConexiaEssential from './ConexiaEssential';
-import { computeRelationshipIntelligence } from '../../shared/relationshipIntelligence.js';
+import useRelationshipIntelligence from '../lib/useRelationshipIntelligence.js';
+import { C } from '../utils/theme';
+import marca from '../assets/brand/conexia_icone_transparente.svg';
 
-const COLORS = {
-  bg: '#080F23', panel: '#111C37', ink: '#F4F5FF',
-  muted: '#ADBAD5', purple: '#8E67FF', border: '#2B3653',
-};
+const FONT = "'DM Sans', sans-serif";
+const SERIF = "'Cormorant Garamond', Georgia, serif";
+const BORDER = '1px solid ' + C.brd;
+const GOLD_BORDER = '1px solid ' + C.gL;
 
-const tiles = [
-  { id: 'pessoas', title: 'Pessoas', subtitle: 'Seus contatos', icon: Users, color: '#8358F6' },
-  { id: 'teia', title: 'Teia', subtitle: 'Mapa da rede', icon: Target, color: '#4775ED' },
-  { id: 'danna', title: 'Danna', subtitle: 'Sua assistente', icon: Brain, color: '#A156E8' },
-  { id: 'whatsapp', title: 'WhatsApp', subtitle: 'Danna no celular', icon: MessageCircle, color: '#179B68' },
-  { id: 'diagnostico', title: 'Diagnóstico', subtitle: 'Perfil relacional', icon: Sparkles, color: '#E7A13D' },
-  { id: 'insights', title: 'Insights', subtitle: 'Inteligência da rede', icon: Brain, color: '#5C7EF3' },
-  { id: 'plano', title: 'Meu plano', subtitle: 'Próximas etapas', icon: CheckCircle2, color: '#B067EA' },
-  { id: 'agenda', title: 'Agenda', subtitle: 'Acompanhar ações', icon: CalendarDays, color: '#E88E66' },
-  { id: 'perfil', title: 'Meu perfil', subtitle: 'Dados e ajustes', icon: Users, color: '#6795A8' },
+const TOOLS = [
+  { id: 'pessoas', name: 'Pessoas', caption: 'Sua rede', Icon: Users },
+  { id: 'teia', name: 'Teia', caption: 'Conexoes', Icon: Network },
+  { id: 'danna', name: 'Danna', caption: 'Assistente', Icon: BrainCircuit },
+  { id: 'whatsapp', name: 'WhatsApp', caption: 'Danna no zap', Icon: MessageCircle },
+  { id: 'diagnostico', name: 'Diagnostico', caption: 'Seu perfil', Icon: ClipboardList },
+  { id: 'insights', name: 'Insights', caption: 'Sua leitura', Icon: Target },
+  { id: 'plano', name: 'Meu plano', caption: '4 semanas', Icon: ListChecks },
+  { id: 'agenda', name: 'Agenda', caption: 'Compromissos', Icon: CalendarDays },
+  { id: 'perfil', name: 'Meu perfil', caption: 'Minha conta', Icon: UserRound },
 ];
 
-const buttonBase = {
-  border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-  WebkitTapHighlightColor: 'transparent',
+const button = {
+  fontFamily: FONT, cursor: 'pointer', borderRadius: 10, minHeight: 44,
+  padding: '10px 14px', fontWeight: 700, fontSize: 13,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
 };
+const primary = { ...button, border: GOLD_BORDER, background: C.gold, color: C.bg };
+const secondary = { ...button, border: GOLD_BORDER, background: C.gD, color: C.gold };
+const quiet = { ...button, border: BORDER, background: C.sf, color: C.txt };
+
+function personLabel(person, main) {
+  return person?.name || main?.contactName || 'Pessoa da sua rede';
+}
+
+function shortDate(value) {
+  if (!value) return '';
+  const date = new Date(String(value).slice(0, 10) + 'T12:00:00');
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('pt-BR');
+}
 
 export default function ConexiaV2Hub({
   firstName = '', userId, contacts = [], interactions = [], isPro = false,
@@ -34,44 +54,49 @@ export default function ConexiaV2Hub({
   onUpdated, onFirstPerson, onPerson,
 }) {
   const [subpage, setSubpage] = useState('inicio');
-  const displayName = String(firstName).trim().split(/\s+/)[0] || 'você';
-  const pendingCount = contacts.filter((c) => Boolean(c?.next_action ?? c?.nextAction)).length;
+  const [activeContactId, setActiveContactId] = useState(null);
+  const [expandedWhy, setExpandedWhy] = useState(false);
+  const intel = useRelationshipIntelligence(userId, contacts, interactions);
+  const main = intel.main || null;
+  const secondaryDecisions = (intel.secondary || []).slice(0, 2);
+  const selectedPerson = contacts.find((c) => String(c.id) === String(main?.contactId));
+  const label = personLabel(selectedPerson, main);
+  const greeting = String(firstName).trim().split(/\s+/)[0] || 'você';
+  const hasPriority = Boolean(main && main.contactId);
+  const realReason = typeof main?.reason === 'string' ? main.reason.trim() : '';
+  const realAction = typeof main?.nextMove === 'string' ? main.nextMove.trim() : '';
+  const companyLine = [selectedPerson?.role, selectedPerson?.company].filter(Boolean).join(' · ');
+  const registeredAction = selectedPerson?.next_action || selectedPerson?.nextAction || '';
+  const dueDate = shortDate(selectedPerson?.next_action_date || selectedPerson?.nextActionDate);
 
-  const recommendation = useMemo(() => {
-    try { return computeRelationshipIntelligence({ contacts, interactions })?.main ?? null; }
-    catch { return null; }
-  }, [contacts, interactions]);
+  function goToCycle(mode, contactId) {
+    setActiveContactId(contactId || null);
+    setSubpage(mode);
+  }
 
-  const recommended = contacts.find((c) =>
-    c.id === (recommendation?.relationshipId ?? recommendation?.contactId)
-  );
-
-  const enter = (id) => {
-    if (id === 'preparar' || id === 'registrar' || id === 'ciclo') {
-      setSubpage(id);
-      return;
-    }
-    onNavigate?.(id);
-  };
+  function chooseTool(id) {
+    if (id === 'danna' && hasVoiceAccess) onNavigate?.('danna-voz');
+    else onNavigate?.(id);
+  }
 
   if (subpage !== 'inicio') {
     return (
-      <div style={{ maxWidth: 850, margin: '0 auto' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto', color: C.txt, fontFamily: FONT }}>
+        <button type="button" onClick={() => setSubpage('inicio')} style={{ ...secondary, marginBottom: 14 }}>
+          <ArrowLeft size={17} /> Inicio V2
+        </button>
         <ConexiaEssential
-          key={subpage}
+          key={`${subpage}-${activeContactId || 'livre'}`}
           userId={userId}
           contacts={contacts}
           interactions={interactions}
           isPro={isPro}
+          initialContactId={activeContactId}
+          initialMode={subpage === 'preparar' ? 'prepare' : 'register'}
           onUpdated={onUpdated}
           onFirstPerson={onFirstPerson}
           onPerson={onPerson}
           onBack={() => setSubpage('inicio')}
-          initialMode={
-            subpage === 'preparar'
-              ? 'prepare'
-              : subpage === 'registrar' ? 'register' : 'home'
-          }
         />
       </div>
     );
@@ -79,249 +104,150 @@ export default function ConexiaV2Hub({
 
   return (
     <div style={{
-      maxWidth: 1080,
-      margin: '0 auto',
-      padding: 'clamp(18px, 4vw, 32px)',
-      borderRadius: 26,
-      background: COLORS.bg,
-      backgroundImage: 'radial-gradient(circle at 90% 0%, rgba(141,100,255,.24), transparent 35%), radial-gradient(circle at 5% 65%, rgba(45,83,191,.15), transparent 34%)',
-      border: "1px solid " + COLORS.border,
-      color: COLORS.ink,
-      fontFamily: "'DM Sans', sans-serif",
+      color: C.txt, background: C.bg, fontFamily: FONT,
+      width: '100%', maxWidth: 1040, margin: '0 auto', boxSizing: 'border-box',
+      borderRadius: 14, padding: 'clamp(14px, 3vw, 28px)',
     }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 24,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <div aria-hidden="true" style={{
-            width: 42, height: 42,
-            display: 'grid', placeItems: 'center',
-            borderRadius: 13,
-            background: 'linear-gradient(135deg,#A46DFF,#4257D8)',
-            fontSize: 25, fontWeight: 800,
-          }}>∞</div>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 25 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src={marca} alt="" aria-hidden="true" style={{ width: 39, height: 39, objectFit: 'contain' }} />
           <div>
-            <strong style={{ fontSize: 18, letterSpacing: '.06em' }}>CONÉXIA</strong>
-            <div style={{ fontSize: 10, color: COLORS.muted }}>INTELIGÊNCIA RELACIONAL</div>
+            <div style={{ fontFamily: SERIF, fontSize: 25, fontWeight: 700, letterSpacing: '.02em', lineHeight: 1 }}>CONÉXIA</div>
+            <div style={{ fontSize: 9, color: C.txM, letterSpacing: '.11em', marginTop: 3 }}>INTELIGÊNCIA RELACIONAL</div>
           </div>
         </div>
-        <span style={{
-          borderRadius: 30,
-          border: "1px solid " + COLORS.border,
-          color: '#CDC4FF',
-          padding: '7px 11px',
-          fontSize: 11,
-        }}>PRÉVIA V2</span>
-      </div>
+        <div style={{ color: C.gold, fontSize: 10, border: GOLD_BORDER, padding: '6px 9px', borderRadius: 18, whiteSpace: 'nowrap' }}>PRÉVIA V2</div>
+      </header>
 
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ color: '#CDC4FF', fontSize: 13, marginBottom: 8 }}>
-          Olá, {displayName} 👋
-        </div>
-        <h1 style={{
-          fontSize: 'clamp(26px, 5vw, 38px)',
-          lineHeight: 1.12,
-          margin: '0 0 12px',
-          fontWeight: 800,
-        }}>
-          Sua rede de relacionamentos.
-          <span style={{ display: 'block', color: '#AD93FF' }}>Tudo ao seu alcance.</span>
+      <div style={{ marginBottom: 19 }}>
+        <div style={{ color: C.txM, fontSize: 13, marginBottom: 3 }}>Olá, {greeting}.</div>
+        <h1 style={{ color: C.txt, font: `700 clamp(26px, 5vw, 36px)/1.12 ${SERIF}`, margin: 0 }}>
+          Seu próximo movimento importa.
         </h1>
-        <p style={{ color: COLORS.muted, margin: 0, fontSize: 14, lineHeight: 1.5 }}>
-          Escolha o que quer fazer. O CONÉXIA leva você diretamente para a ferramenta certa.
-        </p>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: 12,
+      {/* Destaque absoluto: primeiro a pessoa, a evidência e o próximo passo. */}
+      <section aria-label="Pessoa que merece sua atenção" style={{
+        border: GOLD_BORDER, borderRadius: 16, padding: 'clamp(18px, 4vw, 26px)',
+        background: `linear-gradient(145deg, ${C.gD} 0%, ${C.card} 52%, ${C.card} 100%)`,
+        boxShadow: '0 8px 28px rgba(0,0,0,.25)',
       }}>
-        <button type="button" onClick={() => enter('preparar')}
-          style={{
-            ...buttonBase,
-            textAlign: 'left',
-            padding: 20,
-            borderRadius: 18,
-            color: '#FFFFFF',
-            background: 'linear-gradient(135deg,#8654F7,#5047D8)',
-            boxShadow: '0 12px 36px rgba(79,57,180,.25)',
-          }}>
-          <Sparkles size={27} aria-hidden="true" />
-          <div style={{ fontSize: 17, fontWeight: 800, margin: '16px 0 5px' }}>
-            Preparar uma conversa
-          </div>
-          <div style={{ fontSize: 12, opacity: .93, lineHeight: 1.45 }}>
-            Veja o histórico e o que vale lembrar antes de conversar.
-          </div>
-          <ArrowRight size={19} style={{ marginTop: 12 }} aria-hidden="true" />
-        </button>
-
-        <button type="button" onClick={() => enter('registrar')}
-          style={{
-            ...buttonBase,
-            textAlign: 'left',
-            padding: 20,
-            borderRadius: 18,
-            color: COLORS.ink,
-            background: COLORS.panel,
-            border: '1px solid #455078',
-          }}>
-          <MessageCircle size={27} color="#AD93FF" aria-hidden="true" />
-          <div style={{ fontSize: 17, fontWeight: 800, margin: '16px 0 5px' }}>
-            Registrar conversa
-          </div>
-          <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.45 }}>
-            Guarde o combinado e não perca o próximo passo.
-          </div>
-          <ArrowRight size={19} color="#AD93FF" style={{ marginTop: 12 }} aria-hidden="true" />
-        </button>
-      </div>
-
-      {(recommended || pendingCount > 0) && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          flexWrap: 'wrap',
-          marginTop: 14,
-          padding: '11px 16px',
-          background: 'rgba(255,255,255,.06)',
-          borderRadius: 12,
-          border: "1px solid " + COLORS.border,
-        }}>
-          <Clock3 size={17} color="#B9A3FF" aria-hidden="true" />
-          <span style={{ fontSize: 12, color: COLORS.muted, flex: 1 }}>
-            {recommended
-              ? "Para olhar agora: " + recommended.name
-              : String(pendingCount) + " compromisso(s) em aberto"}
-          </span>
-          <button type="button" onClick={() => enter('ciclo')}
-            style={{
-              ...buttonBase,
-              background: 'transparent',
-              color: '#D7CAFF',
-              fontWeight: 700,
-              fontSize: 12,
-            }}>
-            Ver ação →
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.gold, fontSize: 11, fontWeight: 800, letterSpacing: '.10em', textTransform: 'uppercase' }}>
+          <Target size={16} aria-hidden="true" /> SUA ATENÇÃO HOJE
         </div>
+
+        {!intel.complete ? (
+          <p style={{ color: C.txM, margin: '20px 0' }}>Analisando sua rede e o histórico disponível...</p>
+        ) : hasPriority ? (
+          <>
+            <h2 style={{ fontFamily: SERIF, fontSize: 'clamp(34px, 6vw, 49px)', lineHeight: 1, margin: '16px 0 5px', fontWeight: 700, color: C.txt }}>
+              {label}
+            </h2>
+            {companyLine && <p style={{ color: C.txM, fontSize: 13, margin: '5px 0 18px' }}>{companyLine}</p>}
+            {realReason && (
+              <p style={{ fontSize: 14, color: C.txt, lineHeight: 1.65, margin: companyLine ? '0 0 16px' : '12px 0 16px', maxWidth: 740 }}>
+                {realReason}
+              </p>
+            )}
+            {realAction && (
+              <div style={{ borderLeft: `3px solid ${C.gold}`, padding: '5px 0 5px 13px', margin: '12px 0 16px' }}>
+                <div style={{ fontSize: 10, color: C.gold, fontWeight: 800, letterSpacing: '.09em', marginBottom: 5 }}>PRÓXIMO MOVIMENTO</div>
+                <div style={{ color: C.txt, fontSize: 14, lineHeight: 1.5 }}>{realAction}</div>
+              </div>
+            )}
+            {!realReason && !realAction && <p style={{ color: C.txM, lineHeight: 1.5 }}>Esta pessoa apareceu como prioridade no seu radar relacional.</p>}
+            {registeredAction && (
+              <div style={{ background: C.sf, borderRadius: 9, border: BORDER, padding: 11, marginBottom: 16 }}>
+                <div style={{ color: C.txM, fontSize: 11, marginBottom: 4 }}>Compromisso já registrado{dueDate ? ` · ${dueDate}` : ''}</div>
+                <div style={{ color: C.txt, fontSize: 13 }}>{registeredAction}</div>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 18 }}>
+              <button type="button" style={primary} onClick={() => goToCycle('preparar', main.contactId)}>
+                <Sparkles size={17} /> Preparar conversa <ArrowRight size={16} />
+              </button>
+              <button type="button" style={secondary} onClick={() => goToCycle('registrar', main.contactId)}>
+                <MessageCircle size={16} /> Registrar contato
+              </button>
+              <button type="button" style={quiet} onClick={() => onPerson?.(main.contactId)}>
+                <UserRound size={16} /> Ver pessoa
+              </button>
+            </div>
+            <button type="button" onClick={() => setExpandedWhy((s) => !s)}
+              style={{ border: 0, background: 'transparent', color: C.txM, cursor: 'pointer', fontSize: 12, marginTop: 16, padding: '4px 0', display: 'flex', gap: 6, alignItems: 'center' }}>
+              <Info size={14} /> {expandedWhy ? 'Ocultar critério' : 'Por que esta pessoa?'}
+            </button>
+            {expandedWhy && <p style={{ color: C.txM, fontSize: 12, lineHeight: 1.55, margin: '4px 0 0' }}>
+              {realReason || 'O radar prioriza sinais registrados no histórico da sua rede, como compromissos, frequência e momento do relacionamento. Não prevê resultados.'}
+            </p>}
+          </>
+        ) : (
+          <div style={{ marginTop: 15 }}>
+            <h2 style={{ fontFamily: SERIF, color: C.txt, fontSize: 29, margin: '0 0 7px' }}>A próxima pessoa ainda não apareceu.</h2>
+            <p style={{ color: C.txM, fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>
+              {intel.error
+                ? 'Não foi possível consultar todas as informações da rede agora.'
+                : contacts.length === 0
+                  ? 'Cadastre uma pessoa para começar seu histórico relacional.'
+                  : 'Ainda não há evidências suficientes para indicar uma pessoa com segurança.'}
+            </p>
+            <button type="button" style={primary} onClick={() => contacts.length ? chooseTool('pessoas') : onFirstPerson?.()}>
+              {contacts.length ? 'Abrir minha rede' : 'Adicionar primeira pessoa'} <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Outras prioridades: no máximo duas, sem competir com a principal. */}
+      {intel.complete && secondaryDecisions.length > 0 && (
+        <section style={{ marginTop: 22 }} aria-label="Outras relações para acompanhar">
+          <div style={{ color: C.txM, fontSize: 12, letterSpacing: '.02em', marginBottom: 10 }}>OUTRAS RELAÇÕES NO RADAR</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(235px, 1fr))', gap: 10 }}>
+            {secondaryDecisions.map((item) => (
+              <button type="button" key={item.recommendationId || item.contactId}
+                onClick={() => onPerson?.(item.contactId)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textAlign: 'left', border: BORDER, background: C.card, borderRadius: 11, padding: 14, color: C.txt, cursor: 'pointer' }}>
+                <span style={{ minWidth: 0 }}>
+                  <strong style={{ display: 'block', fontSize: 14, fontFamily: FONT }}>{item.contactName}</strong>
+                  {item.nextMove && <span style={{ display: 'block', fontSize: 12, color: C.txM, marginTop: 4, lineHeight: 1.4 }}>{item.nextMove}</span>}
+                </span>
+                <ArrowRight size={16} color={C.gold} style={{ flexShrink: 0 }} />
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
+      {/* Ferramentas: navegação complementar, não a mensagem principal. */}
       <section style={{ marginTop: 30 }} aria-label="Ferramentas do CONÉXIA">
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          gap: 12,
-          marginBottom: 14,
-        }}>
-          <h2 style={{ fontSize: 17, margin: 0 }}>Suas ferramentas</h2>
-          <span style={{ color: COLORS.muted, fontSize: 12 }}>Toque para entrar</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+          <h2 style={{ fontFamily: SERIF, color: C.txt, fontSize: 26, margin: 0 }}>Suas ferramentas</h2>
+          <span style={{ fontSize: 11, color: C.txL }}>Toque para entrar</span>
         </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
-          gap: 11,
-        }}>
-          {tiles.map((tile) => {
-            const Icon = tile.icon;
-            const subtitle =
-              tile.id === 'whatsapp' && !whatsappEnabled
-                ? 'Configurar acesso'
-                : tile.subtitle;
-
-            return (
-              <button key={tile.id} type="button" onClick={() => enter(tile.id)}
-                style={{
-                  ...buttonBase,
-                  textAlign: 'left',
-                  background: '#FFFFFF',
-                  color: '#14203A',
-                  minHeight: 142,
-                  padding: 16,
-                  borderRadius: 18,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  boxShadow: '0 8px 22px rgba(1,4,18,.12)',
-                }}>
-                <div style={{
-                  width: 46, height: 46,
-                  display: 'grid',
-                  placeItems: 'center',
-                  borderRadius: 14,
-                  background: tile.color + "1F",
-                  color: tile.color,
-                  marginBottom: 'auto',
-                }}>
-                  <Icon size={24} strokeWidth={2.2} aria-hidden="true" />
-                </div>
-                <strong style={{ fontSize: 14, marginTop: 13 }}>
-                  {tile.title}
-                </strong>
-                <span style={{
-                  fontSize: 11,
-                  color: '#60708B',
-                  marginTop: 3,
-                  lineHeight: 1.25,
-                }}>
-                  {subtitle}
-                </span>
-              </button>
-            );
-          })}
-
-          {hasVoiceAccess && (
-            <button type="button" onClick={() => enter('danna-voz')}
-              style={{
-                ...buttonBase,
-                textAlign: 'left',
-                background: '#FFFFFF',
-                color: '#14203A',
-                minHeight: 142,
-                padding: 16,
-                borderRadius: 18,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-              }}>
-              <div style={{
-                width: 46, height: 46,
-                display: 'grid',
-                placeItems: 'center',
-                borderRadius: 14,
-                background: '#AD93FF33',
-                color: '#8156E9',
-                marginBottom: 'auto',
-              }}>
-                <MessageCircle size={24} strokeWidth={2.2} aria-hidden="true" />
-              </div>
-              <strong style={{ fontSize: 14, marginTop: 13 }}>Danna por voz</strong>
-              <span style={{ fontSize: 11, color: '#60708B', marginTop: 3 }}>
-                Conversa ao vivo
-              </span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: 10 }}>
+          {TOOLS.map(({ id, name, caption, Icon }) => (
+            <button key={id} type="button" onClick={() => chooseTool(id)}
+              style={{ minHeight: 105, padding: '12px 7px', borderRadius: 12, border: BORDER, background: C.card, color: C.txt, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, cursor: 'pointer', textAlign: 'center' }}>
+              <Icon color={C.gold} size={23} strokeWidth={1.8} aria-hidden="true" />
+              <strong style={{ color: C.txt, font: `600 12px/1.15 ${FONT}` }}>{name}</strong>
+              <span style={{ color: C.txM, font: `400 10px/1.2 ${FONT}` }}>{caption}</span>
             </button>
-          )}
+          ))}
         </div>
       </section>
 
-      <div style={{
-        color: '#8393AF',
-        fontSize: 11,
-        lineHeight: 1.5,
-        marginTop: 23,
-        textAlign: 'center',
-      }}>
-        Prévia de navegação: as páginas antigas podem acessar o banco real.
-        Não salve alterações durante este teste.
+      <div style={{ marginTop: 18, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => goToCycle('preparar', main?.contactId || null)} style={quiet}>
+          <Sparkles size={16} color={C.gold} /> Preparar outra conversa
+        </button>
+        <button type="button" onClick={() => goToCycle('registrar', main?.contactId || null)} style={quiet}>
+          <Plus size={16} color={C.gold} /> Registrar interação
+        </button>
       </div>
+
+      <footer style={{ marginTop: 30, textAlign: 'center', color: C.txL, fontSize: 11, lineHeight: 1.5 }}>
+        CONÉXIA · by I.Agro · Prévia de navegação. Não salve alterações neste ambiente.
+      </footer>
     </div>
   );
 }

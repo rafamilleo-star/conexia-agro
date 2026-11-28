@@ -8,8 +8,8 @@ const card={background:'#171717',border:'1px solid #504635',borderRadius:14,padd
 const field={boxSizing:'border-box',width:'100%',padding:12,margin:'7px 0 12px',fontSize:16,borderRadius:9,color:'#f4eee5',background:'#282828',border:'1px solid #504635'};
 const button={padding:'12px 16px',minHeight:44,borderRadius:10,border:'1px solid #C9A84C',color:'#111',background:gold,fontSize:14,fontWeight:700,cursor:'pointer'};
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
-export default function ConexiaEssential({userId,contacts=[],interactions=[],isPro,onUpdated,onFirstPerson,onPerson,onBack,initialMode='home'}) {
-  const [selected,setSelected]=useState('');
+export default function ConexiaEssential({userId,contacts=[],interactions=[],isPro,onUpdated,onFirstPerson,onPerson,onBack,initialMode='home',initialContactId=null}) {
+  const [selected,setSelected]=useState(initialContactId || '');
   const [mode,setMode]=useState(initialMode);
   const [note,setNote]=useState('');
   const [action,setAction]=useState('');
