@@ -40,9 +40,9 @@ jobs:
           // Alteracao restrita a apresentacao/navegacao; sem gravacoes diretas.
           import React, { useState } from 'react';
           import {
-            ArrowLeft, ArrowRight, BrainCircuit, CalendarDays,
-            ClipboardList, MessageCircle, Network, Plus, Sparkles,
-            Target, UserRound, Users, Info, ListChecks,
+            ArrowLeft, ArrowRight, Brain as BrainCircuit, CalendarDays,
+            CheckCircle2 as ClipboardList, MessageCircle, Users as Network, Plus, Sparkles,
+            Target, Users as UserRound, Users, Info, CheckCircle2 as ListChecks,
           } from 'lucide-react';
           import ConexiaEssential from './ConexiaEssential';
           import useRelationshipIntelligence from '../lib/useRelationshipIntelligence.js';
