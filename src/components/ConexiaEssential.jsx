@@ -8,9 +8,9 @@ const card={background:'#171717',border:'1px solid #504635',borderRadius:14,padd
 const field={boxSizing:'border-box',width:'100%',padding:12,margin:'7px 0 12px',fontSize:16,borderRadius:9,color:'#f4eee5',background:'#282828',border:'1px solid #504635'};
 const button={padding:'12px 16px',minHeight:44,borderRadius:10,border:'1px solid #C9A84C',color:'#111',background:gold,fontSize:14,fontWeight:700,cursor:'pointer'};
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
-export default function ConexiaEssential({userId,contacts=[],interactions=[],isPro,onUpdated,onFirstPerson,onPerson}) {
+export default function ConexiaEssential({userId,contacts=[],interactions=[],isPro,onUpdated,onFirstPerson,onPerson,onBack,initialMode='home'}) {
   const [selected,setSelected]=useState('');
-  const [mode,setMode]=useState('home');
+  const [mode,setMode]=useState(initialMode);
   const [note,setNote]=useState('');
   const [action,setAction]=useState('');
   const [date,setDate]=useState('');
@@ -51,7 +51,7 @@ export default function ConexiaEssential({userId,contacts=[],interactions=[],isP
     }catch(e){console.error(e);setMessage('Nao foi possivel salvar. Confira a conexao.')}finally{guard.current=false;setBusy(false)}
   };
   return <div style={{color:'#eee',fontFamily:'DM Sans, sans-serif',maxWidth:720,margin:'0 auto'}}>
-    <button type="button" onClick={()=>window.location.assign(window.location.pathname)} style={{...button,background:'transparent',color:gold}}>← Voltar ao CONEXIA atual</button>
+    <button type="button" onClick={()=>onBack ? onBack() : window.location.assign(window.location.pathname)} style={{...button,background:'transparent',color:gold}}>← Voltar ao CONEXIA atual</button>
     <section style={card}>
       <p style={{color:gold,fontSize:12,fontWeight:700}}>CONEXIA V2 · PREVIA PROTEGIDA</p>
       <h2 style={{fontSize:27,margin:'8px 0'}}>Seu proximo movimento, com contexto.</h2>
