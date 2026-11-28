@@ -29,7 +29,7 @@ function inputStyle() {
   };
 }
 
-const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
+const GuidedNetworkStart = ({ userId, onFinish, onExit, singlePerson = false }) => {
   const [step, setStep] = useState(1); // 1..3
   const [form, setForm] = useState({ name: '', context: '', importance: 3, lastTalk: '', birthday: '' });
   const [saving, setSaving] = useState(false);
@@ -144,7 +144,7 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
     const nextCount = addedCount + 1;
     setAddedCount(nextCount);
     reset();
-    if (step >= 3 || nextCount >= 3) {
+    if (singlePerson || step >= 3 || nextCount >= 3) {
       goConversation(newContact.id);
     } else {
       setStep(step + 1);
@@ -234,7 +234,7 @@ const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {
       )}
       <div style={{ maxWidth: 460, width: '100%' }}>
         <div style={{ fontFamily: "'DM Sans'", fontSize: TYPE.micro, color: C.txL, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
-          Pessoa {Math.min(addedCount + 1, 3)} de 3
+          Pessoa {singlePerson ? 1 : Math.min(addedCount + 1, 3)} de {singlePerson ? 1 : 3}
         </div>
         <div style={{ height: 4, borderRadius: 2, background: '#ffffff10', marginBottom: 24 }}>
           <div style={{ height: 4, borderRadius: 2, background: C.gold, width: `${(addedCount / 3) * 100}%`, transition: `width ${MOTION.slow}` }} />

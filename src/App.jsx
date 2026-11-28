@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
+import ConexiaEssential from './components/ConexiaEssential';
 import ConexiaLabHome from './components/ConexiaLabHome';
 import ConexiaCircleNetwork from "./components/ConexiaCircleNetwork";
 import ContactCircleField from "./components/ContactCircleField";
@@ -2910,6 +2911,7 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [openedFromCircle, setOpenedFromCircle] = useState(false);
   const [circleSaveNotice, setCircleSaveNotice] = useState("");
   const [view, setView] = useState("dash");
+  const conexiaV2Preview = new URLSearchParams(window.location.search).get('conexia_v2') === '1';
   const [dannaIaSection, setDannaIaSection] = useState('insights');
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
@@ -4059,6 +4061,12 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
 
   const renderDash = () => {
+    if (conexiaV2Preview) return <ConexiaEssential
+      userId={user?.id} contacts={cts} interactions={its} isPro={isPro}
+      onUpdated={load}
+      onFirstPerson={() => setView('startNetwork')}
+      onPerson={(id) => { setSelId(id); setRedeSubTab('pessoas'); setView('contacts'); }}
+    />;
     // A Home ("Hoje") deixou de acumular 4 mecanismos de prioridade
     // paralelos e contraditórios entre si (arco de saúde/score, "Movimento
     // da Semana", "Ritual Semanal", "Ações Prioritárias" e "Top 5
@@ -5594,6 +5602,7 @@ ${MENTORIA_LINK || true ? `
         {view === "dash" && renderDash()}
         {view === "startNetwork" && (
           <GuidedNetworkStart
+            singlePerson={conexiaV2Preview}
             userId={user?.id}
             onFinish={() => { load(); setView("dash"); }}
             onExit={() => { load(); setView("dash"); }}
