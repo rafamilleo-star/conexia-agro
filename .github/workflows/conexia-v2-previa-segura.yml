@@ -1,0 +1,182 @@
+name: CONEXIA V2 - Previa protegida
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacao:
+        description: Digite PREPARAR
+        required: true
+        type: string
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  criar-previa:
+    if: ${{ inputs.confirmacao == 'PREPARAR' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Proteger o original e criar branch isolada
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=f32f887d4529f813c1c39d670853ef5910b58f06
+          BACKUP=backup/conexia-original-2026-11-27
+          BRANCH=feat/conexia-v2-ciclo-relacional
+          git fetch origin main
+          test "$(git ls-remote --heads origin "refs/heads/$BACKUP" | cut -f1)" = "$BASE"
+          test "$(git rev-parse origin/main:src/App.jsx)" = 17a8a65f15be1ecaa7b25145a9c8cf3ba28a649c
+          test "$(git rev-parse origin/main:src/components/GuidedNetworkStart.jsx)" = e9654f264dee77e464b07017ea1a592e00bb37f1
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo 'Essa branch ja existe. Nada sera sobrescrito.'; exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH" origin/main
+      - name: Instalar a nova experiencia atras de modo de previa
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/conexia-v2-patch.py <<'PY'
+          from pathlib import Path
+          app=Path('src/App.jsx')
+          gui=Path('src/components/GuidedNetworkStart.jsx')
+          a=app.read_text()
+          g=gui.read_text()
+          def one(s, old, new):
+              if s.count(old)!=1: raise SystemExit('A estrutura mudou, alteracao cancelada: '+repr(old[:60]))
+              return s.replace(old,new,1)
+          a=one(a,"import HomeToday from './components/HomeToday';", "import HomeToday from './components/HomeToday';\nimport ConexiaEssential from './components/ConexiaEssential';")
+          a=one(a,'  const [view, setView] = useState("dash");', '''  const [view, setView] = useState("dash");
+            const conexiaV2Preview = new URLSearchParams(window.location.search).get('conexia_v2') === '1';''')
+          a=one(a,'  const renderDash = () => {', '''  const renderDash = () => {
+              if (conexiaV2Preview) return <ConexiaEssential
+                userId={user?.id} contacts={cts} interactions={its} isPro={isPro}
+                onUpdated={load}
+                onFirstPerson={() => setView('startNetwork')}
+                onPerson={(id) => { setSelId(id); setRedeSubTab('pessoas'); setView('contacts'); }}
+              />;''')
+          a=one(a,'          <GuidedNetworkStart\n            userId={user?.id}', '          <GuidedNetworkStart\n            singlePerson={conexiaV2Preview}\n            userId={user?.id}')
+          g=one(g,'const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {', 'const GuidedNetworkStart = ({ userId, onFinish, onExit, singlePerson = false }) => {')
+          g=one(g,'    if (step >= 3 || nextCount >= 3) {','    if (singlePerson || step >= 3 || nextCount >= 3) {')
+          g=one(g,'          Pessoa {Math.min(addedCount + 1, 3)} de 3', "          {singlePerson ? 'Sua primeira pessoa' : Pessoa ${Math.min(addedCount + 1, 3)} de 3}")
+          assert 'const renderDash' in a and 'singlePerson' in g
+          app.write_text(a)
+          gui.write_text(g)
+          PY
+          python3 /tmp/conexia-v2-patch.py
+          cat > src/components/ConexiaEssential.jsx <<'JSX'
+          import React, { useMemo, useRef, useState } from 'react';
+          import { supabase } from '../utils/supabase';
+          import { buildContextCard } from '../../shared/contextCard.js';
+          import { computeRelationshipIntelligence } from '../../shared/relationshipIntelligence.js';
+
+          const gold='#C9A84C';
+          const card={background:'#171717',border:'1px solid #504635',borderRadius:14,padding:18,marginTop:14};
+          const field={boxSizing:'border-box',width:'100%',padding:12,margin:'7px 0 12px',fontSize:16,borderRadius:9,color:'#f4eee5',background:'#282828',border:'1px solid #504635'};
+          const button={padding:'12px 16px',minHeight:44,borderRadius:10,border:'1px solid #C9A84C',color:'#111',background:gold,fontSize:14,fontWeight:700,cursor:'pointer'};
+          const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+          export default function ConexiaEssential({userId,contacts=[],interactions=[],isPro,onUpdated,onFirstPerson,onPerson}) {
+            const [selected,setSelected]=useState('');
+            const [mode,setMode]=useState('home');
+            const [note,setNote]=useState('');
+            const [action,setAction]=useState('');
+            const [date,setDate]=useState('');
+            const [when,setWhen]=useState(today());
+            const [resolve,setResolve]=useState(false);
+            const [busy,setBusy]=useState(false);
+            const [message,setMessage]=useState('');
+            const guard=useRef(false);
+            const contactsOk=contacts.filter(c=>c?.id && c?.name);
+            const decision=useMemo(()=>{try{return computeRelationshipIntelligence({contacts,interactions})?.main}catch{return null}},[contacts,interactions]);
+            const focus=contactsOk.find(c=>c.id===selected)||contactsOk.find(c=>c.id===(decision?.contactId||decision?.relationshipId))||contactsOk[0];
+            const recordCount=interactions.filter(i=>(i.contactId||i.contact_id)===focus?.id).length;
+            const context=useMemo(()=>{try{return focus?buildContextCard(focus,interactions):null}catch{return null}},[focus,interactions]);
+            const devDb=String(import.meta.env.VITE_SUPABASE_URL||'');
+            const writeAllowed=import.meta.env.VITE_CONEXIA_V2_WRITE_ENABLED==='true' && devDb.includes('.supabase.co') && !devDb.includes('goopogicgwqqovmphqrj');
+            const track=(name)=>writeAllowed&&userId&&supabase.from('page_events').insert({user_id:userId,event_type:name,tab_name:'v2'}).then(()=>{},()=>{});
+            const open=(v)=>{setMode(v);setMessage('');if(v==='prepare')void track('relational_cycle_prepared')};
+            const save=async(e)=>{
+              e.preventDefault();
+              if(guard.current||!focus||!userId)return;
+              if(!writeAllowed){setMessage('Modo de visualizacao. Para gravar, configure um banco de testes separado.');return}
+              if(!isPro&&recordCount>=3){setMessage('Limite Free: 3 interacoes por pessoa.');return}
+              if(note.trim().length<5){setMessage('Escreva pelo menos cinco caracteres.');return}
+              if(date&&!action.trim()){setMessage('Informe o proximo passo antes da data.');return}
+              if(when>today()){setMessage('A data da conversa nao pode estar no futuro.');return}
+              guard.current=true;setBusy(true);setMessage('');
+              try{
+                const {error}=await supabase.from('interactions').insert({user_id:userId,contact_id:focus.id,type:'outro',description:note.trim(),sentiment:'neutro',tags:[],value_generated:false,created_at:new Date(when+'T12:00:00').toISOString()});
+                if(error)throw error;
+                const update={};
+                if(!focus.last_interaction_at||new Date(focus.last_interaction_at)<=new Date(when+'T12:00:00'))update.last_interaction_at=new Date(when+'T12:00:00').toISOString();
+                if(action.trim()){update.next_action=action.trim();update.next_action_date=date||null}
+                else if(resolve){update.next_action=null;update.next_action_date=null}
+                const {error:err}=Object.keys(update).length?await supabase.from('contacts').update(update).eq('id',focus.id).eq('user_id',userId):{error:null};
+                setNote('');setAction('');setDate('');setResolve(false);setMode('home');
+                setMessage(err?'Conversa salva; confira a atualizacao do contato.':'Conversa registrada e contexto atualizado.');
+                await onUpdated?.();
+              }catch(e){console.error(e);setMessage('Nao foi possivel salvar. Confira a conexao.')}finally{guard.current=false;setBusy(false)}
+            };
+            return <div style={{color:'#eee',fontFamily:'DM Sans, sans-serif',maxWidth:720,margin:'0 auto'}}>
+              <button type="button" onClick={()=>window.location.assign(window.location.pathname)} style={{...button,background:'transparent',color:gold}}>← Voltar ao CONEXIA atual</button>
+              <section style={card}>
+                <p style={{color:gold,fontSize:12,fontWeight:700}}>CONEXIA V2 · PREVIA PROTEGIDA</p>
+                <h2 style={{fontSize:27,margin:'8px 0'}}>Seu proximo movimento, com contexto.</h2>
+                <p style={{color:'#c7beb0'}}>Uma pessoa. Uma conversa. Um proximo passo.</p>
+                {!contactsOk.length?<button type="button" style={button} onClick={()=>writeAllowed?onFirstPerson():setMessage('Cadastre pessoas somente no banco de testes.')}>Adicionar primeira pessoa</button>:<>
+                  <label>Sobre quem voce quer pensar agora?</label>
+                  <select style={field} value={focus?.id||''} onChange={e=>{setSelected(e.target.value);open('home');setNote('')}}>
+                    {contactsOk.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {decision?.reason&&(decision.contactId===focus.id||decision.relationshipId===focus.id)&&<p style={{color:gold}}>Por que agora? {decision.reason}</p>}
+                  {context?.pendencias?.proximaAcao&&<div style={card}><strong>Compromisso pendente:</strong> {context.pendencias.proximaAcao}<div style={{marginTop:12}}><button type="button" style={button} onClick={()=>{setResolve(true);open('register');setResolve(true)}}>Registrar resultado</button></div></div>}
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:14}}>
+                    <button type="button" style={button} onClick={()=>open('prepare')}>Preparar conversa</button>
+                    <button type="button" style={{...button,background:'transparent',color:gold}} onClick={()=>open('register')}>Registrar conversa</button>
+                    <button type="button" style={{...button,background:'transparent',color:gold}} onClick={()=>writeAllowed?onPerson?.(focus.id):setMessage('Ficha completa disponivel no app atual. Para editar na V2, configure o banco de testes.')}>Ver pessoa</button>
+                  </div>
+                  {mode==='prepare'&&<div style={card}>
+                    <h3>Antes de falar com {focus.name}</h3>
+                    {context?.pendencias?.proximaAcao&&<p><b>Combinado:</b> {context.pendencias.proximaAcao}</p>}
+                    {(context?.memoria?.ultimasInteracoes||[]).length?context.memoria.ultimasInteracoes.slice(0,3).map((i,n)=><p key={n}><b>{i.data?new Date(i.data).toLocaleDateString('pt-BR'):''}</b> — {i.descricao}</p>):<p>Sem conversas registradas ainda.</p>}
+                    <small style={{color:'#bfb5a8'}}>Somente informacoes do historico. Nenhum dado inventado.</small>
+                  </div>}
+                  {mode==='register'&&<form style={card} onSubmit={save}>
+                    <h3>{resolve?'Qual foi o resultado?':'O que conversaram?'}</h3>
+                    <textarea style={field} rows={3} value={note} onChange={e=>setNote(e.target.value)} placeholder="O que aconteceu e o que ficou combinado?" />
+                    <label>Data da conversa<input type="date" style={field} value={when} max={today()} onChange={e=>setWhen(e.target.value)}/></label>
+                    <label>Proximo passo (opcional)<input style={field} value={action} onChange={e=>setAction(e.target.value)} placeholder="Ex.: ligar na semana que vem"/></label>
+                    {action.trim()&&<label>Quando?<input type="date" style={field} min={today()} value={date} onChange={e=>setDate(e.target.value)}/></label>}
+                    <button type="submit" style={button} disabled={busy}>{busy?'Salvando...':'Guardar conversa'}</button>
+                    {!writeAllowed&&<p style={{color:gold,fontSize:12}}>Gravacao bloqueada nesta previa ate conectar banco de desenvolvimento.</p>}
+                  </form>}
+                </>}
+                {message&&<p role="status" style={{color:gold}}>{message}</p>}
+              </section>
+            </div>;
+          }
+          JSX
+          git diff --check
+          git add src/App.jsx src/components/GuidedNetworkStart.jsx src/components/ConexiaEssential.jsx
+      - name: Compilar e conferir sem publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          git diff --cached --check
+      - name: Enviar somente branch da V2
+        shell: bash
+        run: |
+          git commit -m 'feat: ciclo relacional V2 em previa protegida'
+          git push -u origin HEAD:refs/heads/feat/conexia-v2-ciclo-relacional
+      - name: Abrir PR sem mesclar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create --draft --base main --head feat/conexia-v2-ciclo-relacional \
+            --title 'CONEXIA V2 - PREVIA, NAO MESCLAR' \
+            --body 'A nova interface so aparece com ?conexia_v2=1. Banco de producao bloqueado para gravacoes. Nao mesclar sem testes e aprovacao.' \
+            || echo 'Branch criada; abra o PR manualmente.'
