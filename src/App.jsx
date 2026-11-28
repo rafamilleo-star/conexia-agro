@@ -1,6 +1,8 @@
 import { flushSync } from "react-dom";
 import { AbaIA } from './components/AbaIA';
 import HomeToday from './components/HomeToday';
+import ConexiaEssential from './components/ConexiaEssential';
+import ConexiaV2Hub from './components/ConexiaV2Hub';
 import ConexiaLabHome from './components/ConexiaLabHome';
 import ConexiaCircleNetwork from "./components/ConexiaCircleNetwork";
 import ContactCircleField from "./components/ContactCircleField";
@@ -2910,6 +2912,8 @@ function CRM({ profile, assessment, onReset, user, onProfileUpdate }) {
   const [openedFromCircle, setOpenedFromCircle] = useState(false);
   const [circleSaveNotice, setCircleSaveNotice] = useState("");
   const [view, setView] = useState("dash");
+  const conexiaV2Preview = new URLSearchParams(window.location.search).get('conexia_v2') === '1';
+  const [previewVoice, setPreviewVoice] = useState(false);
   const [dannaIaSection, setDannaIaSection] = useState('insights');
   const [orgOverview, setOrgOverview] = useState(null);
   const [orgOverviewLoading, setOrgOverviewLoading] = useState(false);
@@ -4059,6 +4063,49 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
 
 
   const renderDash = () => {
+    if (conexiaV2Preview && !(previewVoice && isConexiaLab)) return (
+      <ConexiaV2Hub
+        firstName={profile?.first_name || profile?.name || ''}
+        userId={user?.id}
+        contacts={cts}
+        interactions={its}
+        isPro={isPro}
+        hasVoiceAccess={hasVoiceAccess}
+        whatsappEnabled={hasWhatsappAccess && Boolean(profile?.whatsapp)}
+        onUpdated={load}
+        onFirstPerson={() => setView('startNetwork')}
+        onPerson={(id) => { setSelId(id); setRedeSubTab('pessoas'); setView('contacts'); }}
+        onNavigate={(target) => {
+          setPreviewVoice(false);
+          setSelId(null);
+          if (target === 'pessoas' || target === 'teia') {
+            setRedeSubTab(target === 'pessoas' ? 'pessoas' : 'teia');
+            setView('contacts');
+            return;
+          }
+          if (target === 'danna-voz') {
+            if (hasVoiceAccess) { setPreviewVoice(true); setDannaHome(true); return; }
+            setInsightsSubTab('ia'); setView('insights'); return;
+          }
+          if (target === 'danna' || target === 'insights') {
+            setInsightsSubTab('ia');
+            setDannaIaSection('insights');
+            setView('insights');
+            return;
+          }
+          if (target === 'whatsapp') {
+            if (hasWhatsappAccess && profile?.whatsapp) {
+              window.open('https://wa.me/5511988630785', '_blank', 'noopener,noreferrer');
+            } else setView('perfil');
+            return;
+          }
+          if (target === 'diagnostico') { setInsightsSubTab('report'); setView('insights'); return; }
+          if (target === 'plano') { setInsightsSubTab('plano'); setView('insights'); return; }
+          if (target === 'agenda') { setView('agenda'); return; }
+          if (target === 'perfil') { setView('perfil'); return; }
+        }}
+      />
+    );
     // A Home ("Hoje") deixou de acumular 4 mecanismos de prioridade
     // paralelos e contraditórios entre si (arco de saúde/score, "Movimento
     // da Semana", "Ritual Semanal", "Ações Prioritárias" e "Top 5
@@ -4094,7 +4141,7 @@ Não invente números além dos fornecidos. Não mencione nomes — você não t
               </div>
             )}
             <button
-              onClick={() => setDannaHome(false)}
+              onClick={() => { setDannaHome(false); setPreviewVoice(false); }}
               style={{ background: "none", border: `1px solid ${C.brd}`, borderRadius: 8, padding: "6px 12px", fontFamily: "'DM Sans'", fontSize: 11, color: C.txM, cursor: "pointer" }}
             >
               ← Voltar ao painel
@@ -5512,7 +5559,7 @@ ${MENTORIA_LINK || true ? `
       <HelpButton onClick={() => setShowTour(true)} bottom={isMobile ? 78 : 20} />
       {/* PRO Activation Toast */}
       {proToast && <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", background:C.gold, color:C.bg, borderRadius:10, padding:"12px 24px", fontFamily:"'DM Sans'", fontSize:13, fontWeight:700, zIndex:9999, boxShadow:"0 4px 20px #c9a22740", whiteSpace:"nowrap" }}>✨ PRO ativado com sucesso!</div>}
-      {!isMobile && (
+      {!isMobile && !(conexiaV2Preview && view === "dash") && (
         <nav style={{ width: 190, flexShrink: 0, background: C.sf, borderRight: `1px solid ${C.brd}`, padding: "20px 12px", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px 18px", borderBottom: `1px solid ${C.brd}`, marginBottom: 14 }}>
             <ConexiaIcon size={30} dark={true} />
@@ -5549,7 +5596,7 @@ ${MENTORIA_LINK || true ? `
       )}
 
 
-      {isMobile && (
+      {isMobile && !(conexiaV2Preview && view === "dash") && (
         <div style={{ background: C.sf, borderBottom: `1px solid ${C.brd}`, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <ConexiaIcon size={26} dark={true} />
@@ -5587,13 +5634,21 @@ ${MENTORIA_LINK || true ? `
           WebkitOverflowScrolling: "touch",
           maxHeight: "none",
           paddingBottom: isMobile
-            ? "calc(104px + env(safe-area-inset-bottom))"
+            ? (conexiaV2Preview && view === "dash" ? "calc(24px + env(safe-area-inset-bottom))" : "calc(104px + env(safe-area-inset-bottom))")
             : 24,
         }}
       >
+        {conexiaV2Preview && view !== "dash" && (
+          <button type="button"
+            onClick={() => { setView('dash'); setSelId(null); setPreviewVoice(false); }}
+            style={{ background: '#201842', border: '1px solid #8E67FF', color: '#E8DDFF', borderRadius: 10, minHeight: 44, padding: '10px 16px', cursor: 'pointer', fontWeight: 700, marginBottom: 16 }}>
+            ← Início V2
+          </button>
+        )}
         {view === "dash" && renderDash()}
         {view === "startNetwork" && (
           <GuidedNetworkStart
+            singlePerson={conexiaV2Preview}
             userId={user?.id}
             onFinish={() => { load(); setView("dash"); }}
             onExit={() => { load(); setView("dash"); }}
@@ -5614,7 +5669,7 @@ ${MENTORIA_LINK || true ? `
       </main>
 
 
-      {isMobile && (
+      {isMobile && !(conexiaV2Preview && view === "dash") && (
         <nav
           style={{
             position: "fixed",
