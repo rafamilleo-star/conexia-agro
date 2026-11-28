@@ -60,7 +60,7 @@ jobs:
           a=one(a,'          <GuidedNetworkStart\n            userId={user?.id}', '          <GuidedNetworkStart\n            singlePerson={conexiaV2Preview}\n            userId={user?.id}')
           g=one(g,'const GuidedNetworkStart = ({ userId, onFinish, onExit }) => {', 'const GuidedNetworkStart = ({ userId, onFinish, onExit, singlePerson = false }) => {')
           g=one(g,'    if (step >= 3 || nextCount >= 3) {','    if (singlePerson || step >= 3 || nextCount >= 3) {')
-          g=one(g,'          Pessoa {Math.min(addedCount + 1, 3)} de 3', "          {singlePerson ? 'Sua primeira pessoa' : Pessoa ${Math.min(addedCount + 1, 3)} de 3}")
+          g=one(g,'          Pessoa {Math.min(addedCount + 1, 3)} de 3', "          {singlePerson ? 'Sua primeira pessoa' : (Pessoa '+ Math.min(addedCount + 1, 3) + ' de 3')}")
           assert 'const renderDash' in a and 'singlePerson' in g
           app.write_text(a)
           gui.write_text(g)
